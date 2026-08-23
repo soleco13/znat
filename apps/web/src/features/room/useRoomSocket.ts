@@ -6,13 +6,18 @@ export type SocketStatus = "connecting" | "connected" | "reconnecting" | "closed
 
 const MAX_BACKOFF_MS = 16_000;
 
-/** WS-канал комнаты урока: только пуш от сервера, переподключение с экспоненциальным бэкоффом. */
-export function useRoomSocket(lessonId: string, onMessage: (message: ServerRoomMessage) => void) {
+/**
+ * WS-канал комнаты урока: только пуш от сервера, переподключение с экспоненциальным
+ * бэкоффом. `enabled=false` держит канал закрытым — используется, пока ученик проходит
+ * экран проверки устройств (Э2.4) и ещё не вошёл в урок.
+ */
+export function useRoomSocket(lessonId: string, onMessage: (message: ServerRoomMessage) => void, enabled = true) {
   const [status, setStatus] = useState<SocketStatus>("connecting");
   const onMessageRef = useRef(onMessage);
   onMessageRef.current = onMessage;
 
   useEffect(() => {
+    if (!enabled) return;
     let socket: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let attempt = 0;
@@ -57,7 +62,7 @@ export function useRoomSocket(lessonId: string, onMessage: (message: ServerRoomM
       if (reconnectTimer) clearTimeout(reconnectTimer);
       socket?.close();
     };
-  }, [lessonId]);
+  }, [lessonId, enabled]);
 
   return status;
 }

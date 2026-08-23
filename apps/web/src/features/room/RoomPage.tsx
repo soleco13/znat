@@ -11,6 +11,7 @@ import type {
 } from "@school/shared";
 import { apiFetch } from "../../shared/api-client.js";
 import { useAuthStore } from "../../shared/auth-store.js";
+import { DeviceCheckScreen } from "./DeviceCheckScreen.js";
 import { MediaAudioStatus } from "./MediaAudioStatus.js";
 import { useRoomSocket } from "./useRoomSocket.js";
 
@@ -35,6 +36,9 @@ export function RoomPage() {
   const [error, setError] = useState<string | null>(null);
   // LiveKit-подключение (Э2, только аудио — см. стоп-лист Э2 в docs/CURRENT_STAGE.md).
   const [media, setMedia] = useState<MediaConnection | null>(null);
+  // Экран проверки устройств (Э2.4) — пока не пройден, в урок не входим (ни HTTP join, ни WS).
+  const [deviceCheckDone, setDeviceCheckDone] = useState(false);
+  const [micDeviceId, setMicDeviceId] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const isTeacher = me?.role === "teacher" || me?.role === "admin";
@@ -72,10 +76,10 @@ export function RoomPage() {
     }
   }, []);
 
-  const status = useRoomSocket(lessonId ?? "", handleMessage);
+  const status = useRoomSocket(lessonId ?? "", handleMessage, deviceCheckDone);
 
   useEffect(() => {
-    if (!lessonId) return;
+    if (!lessonId || !deviceCheckDone) return;
     apiFetch<JoinLessonResponse>(`/lessons/${lessonId}/join`, { method: "POST" })
       .then((data) => {
         setParticipants(data.participants);
@@ -87,7 +91,7 @@ export function RoomPage() {
     apiFetch<{ items: ChatMessage[] }>(`/lessons/${lessonId}/chat`)
       .then((data) => setChat([...data.items].reverse()))
       .catch(() => undefined);
-  }, [lessonId]);
+  }, [lessonId, deviceCheckDone]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -232,6 +236,17 @@ export function RoomPage() {
     </div>
   );
 
+  if (!deviceCheckDone) {
+    return (
+      <DeviceCheckScreen
+        onContinue={(deviceId) => {
+          setMicDeviceId(deviceId);
+          setDeviceCheckDone(true);
+        }}
+      />
+    );
+  }
+
   if (!media) return content;
 
   return (
@@ -239,7 +254,7 @@ export function RoomPage() {
       serverUrl={media.url}
       token={media.token}
       connect
-      audio={self?.permissions.canSpeak ?? false}
+      audio={self?.permissions.canSpeak ? { deviceId: micDeviceId ?? undefined } : false}
       video={false}
       onDisconnected={() => setError("Аудио отключено")}
     >
