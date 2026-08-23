@@ -7,6 +7,7 @@ const { lessonsServiceMock, usersServiceMock, repoMock, mediaServiceMock } = vi.
     startLesson: vi.fn(),
     endLesson: vi.fn(),
     ensureLivekitRoom: vi.fn(),
+    getLessonByLivekitRoom: vi.fn(),
   },
   usersServiceMock: {
     isGroupMember: vi.fn(),
@@ -311,5 +312,42 @@ describe("модерация чата и завершение урока", () =>
 
     await roomsService.deleteChatMessage(SCHOOL_ID, LESSON_ID, teacherToken(), "msg-1");
     expect(repoMock.softDeleteChatMessage).toHaveBeenCalledWith(LESSON_ID, "msg-1", TEACHER_ID);
+  });
+});
+
+describe("вебхуки LiveKit (Э2.7)", () => {
+  const LIVEKIT_ROOM = `lesson-${LESSON_ID}`;
+
+  it("participant_left закрывает открытую сессию посещаемости по имени комнаты", async () => {
+    lessonsServiceMock.getLessonByLivekitRoom.mockResolvedValue(baseLesson());
+
+    await roomsService.handleParticipantLeftWebhook(LIVEKIT_ROOM, STUDENT_ID);
+
+    expect(lessonsServiceMock.getLessonByLivekitRoom).toHaveBeenCalledWith(LIVEKIT_ROOM);
+    expect(repoMock.closeOpenSession).toHaveBeenCalledWith(LESSON_ID, STUDENT_ID);
+  });
+
+  it("participant_left молча ничего не делает, если комната не сопоставлена ни с одним уроком", async () => {
+    lessonsServiceMock.getLessonByLivekitRoom.mockResolvedValue(null);
+
+    await roomsService.handleParticipantLeftWebhook("unknown-room", STUDENT_ID);
+
+    expect(repoMock.closeOpenSession).not.toHaveBeenCalled();
+  });
+
+  it("room_finished завершает ещё живой урок и рассылает lesson_status", async () => {
+    lessonsServiceMock.getLessonByLivekitRoom.mockResolvedValue(baseLesson({ status: "live" }));
+
+    await roomsService.handleRoomFinishedWebhook(LIVEKIT_ROOM);
+
+    expect(lessonsServiceMock.endLesson).toHaveBeenCalledWith(SCHOOL_ID, LESSON_ID);
+  });
+
+  it("room_finished не трогает урок, который уже не live (идемпотентность)", async () => {
+    lessonsServiceMock.getLessonByLivekitRoom.mockResolvedValue(baseLesson({ status: "ended" }));
+
+    await roomsService.handleRoomFinishedWebhook(LIVEKIT_ROOM);
+
+    expect(lessonsServiceMock.endLesson).not.toHaveBeenCalled();
   });
 });

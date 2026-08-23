@@ -17,6 +17,7 @@ import usersRoutes from "./modules/users/routes.js";
 import lessonsRoutes from "./modules/lessons/routes.js";
 import roomsRoutes from "./modules/rooms/routes.js";
 import roomsWsRoutes from "./modules/rooms/ws.js";
+import livekitWebhookRoutes from "./modules/rooms/livekit-webhook.js";
 import { startPresenceSweep, stopPresenceSweep } from "./modules/rooms/service.js";
 import { assetsRoutes, filesRoutes } from "./modules/storage/routes.js";
 import { pool } from "./db/client.js";
@@ -46,6 +47,7 @@ export function buildServer() {
 
   app.register(filesRoutes);
   app.register(roomsWsRoutes);
+  app.register(livekitWebhookRoutes);
 
   app.register(
     async (api) => {

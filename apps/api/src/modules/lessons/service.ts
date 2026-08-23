@@ -44,6 +44,11 @@ export async function ensureLivekitRoom(schoolId: string, id: string): Promise<s
   return updated?.livekitRoom ?? livekitRoom;
 }
 
+/** Для LiveKit-вебхука (Э2.7) — сопоставляет событие с уроком по имени комнаты, без привязки к школе (см. repo.findLessonByLivekitRoom). */
+export async function getLessonByLivekitRoom(livekitRoom: string) {
+  return repo.findLessonByLivekitRoom(livekitRoom);
+}
+
 export async function listLessons(schoolId: string, query: ListLessonsQuery) {
   return repo.listLessons({
     schoolId,

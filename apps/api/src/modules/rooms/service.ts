@@ -300,6 +300,39 @@ export async function muteAllNow(schoolId: string, lessonId: string, requester: 
   await mediaService.muteMicrophones(livekitRoom, studentIds);
 }
 
+/**
+ * LiveKit-вебхук `participant_left` (Э2.7) — дополнительная страховка для
+ * журнала посещаемости, не замена основного пути. Обычный выход (`leave()`)
+ * и sweep по heartbeat уже закрывают `lesson_participants.left_at`; этот
+ * путь ловит случаи, где ни то, ни другое не сработало вовремя (авария
+ * браузера/сети, где WS не успел штатно закрыться). Осознанно НЕ трогает
+ * `presence`/WS-бродкаст — вебхук не знает про grace-период на
+ * переподключение (`RECONNECT_GRACE_MS`), и его наивное «участник вышел»
+ * могло бы конфликтовать с более аккуратной логикой в `markDisconnected`.
+ * Идемпотентно (`repo.closeOpenSession` бьёт по `WHERE left_at IS NULL`).
+ */
+export async function handleParticipantLeftWebhook(livekitRoom: string, userId: string): Promise<void> {
+  const lesson = await lessonsService.getLessonByLivekitRoom(livekitRoom);
+  if (!lesson) return;
+  await repo.closeOpenSession(lesson.id, userId);
+}
+
+/**
+ * LiveKit-вебхук `room_finished` (Э2.7) — авторитетный сигнал от самого
+ * медиасервера, что комната реально закрылась (краш процесса, ручное
+ * `deleteRoom`, истёкший `emptyTimeout`), независимо от нашего собственного
+ * 15-минутного таймера пустой комнаты. Идемпотентно: если урок уже не
+ * `live`, ничего не делает.
+ */
+export async function handleRoomFinishedWebhook(livekitRoom: string): Promise<void> {
+  const lesson = await lessonsService.getLessonByLivekitRoom(livekitRoom);
+  if (!lesson || lesson.status !== "live") return;
+  clearEmptyRoomTimer(lesson.id);
+  await lessonsService.endLesson(lesson.schoolId, lesson.id);
+  emitRoomEvent(lesson.id, { type: "lesson_status", status: "ended" });
+  activeLessons.delete(lesson.id);
+}
+
 export async function sendChatMessage(
   schoolId: string,
   lessonId: string,

@@ -25,6 +25,16 @@ export async function findLessonById(id: string, schoolId: string) {
   return rows[0] ?? null;
 }
 
+/**
+ * Без фильтра по schoolId: LiveKit-вебхук (Э2.7) знает только имя комнаты,
+ * не школу — событие приходит от единого self-hosted LiveKit на все школы,
+ * а подлинность подтверждается подписью в самом вебхуке, не сессией пользователя.
+ */
+export async function findLessonByLivekitRoom(livekitRoom: string) {
+  const rows = await db.select().from(lessons).where(eq(lessons.livekitRoom, livekitRoom)).limit(1);
+  return rows[0] ?? null;
+}
+
 export async function updateLessonStatus(
   id: string,
   schoolId: string,
