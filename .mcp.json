@@ -23,12 +23,9 @@
         "ACCESS_MODE": "restricted"
       }
     },
-    "redis": {
+    "shadcn": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-redis"],
-      "env": {
-        "REDIS_URL": "redis://localhost:6379"
-      }
+      "args": ["shadcn@latest", "mcp"]
     }
   }
 }

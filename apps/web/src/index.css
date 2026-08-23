@@ -16,4 +16,125 @@
     Roboto,
     Arial,
     sans-serif;
+
+  /* ---------------------------------------------------------------
+     Палитра из дизайн-системы Shkola/AutoCheck (claude.ai/design,
+     проект 385aa818-0231-4b1a-bcf1-b73fa54f90bb). Взяты только цвета
+     и токены, нужные формам кнопок (радиусы/переход/тень) — по прямому
+     указанию пользователя, без остального ui-кита дизайн-системы.
+     --------------------------------------------------------------- */
+  --c-primary: #1d4ed8;
+  --c-primary-hover: #1e40af;
+  --c-primary-light: #eff4ff;
+  --c-primary-muted: #c7d7fe;
+  --c-teal: #0d9488;
+  --c-teal-light: #effcf9;
+  --c-cyan: #06d6c4;
+
+  --c-text: #101828;
+  --c-text-2: #475467;
+  --c-text-3: #98a2b3;
+
+  --c-bg: #f6f7f9;
+  --c-surface: #ffffff;
+  --c-surface-2: #f6f7f9;
+  --c-surface-3: #f0f2f5;
+  --c-border: rgba(16, 24, 40, 0.07);
+  --c-border-solid: #e7eaef;
+
+  --c-danger: #dc2626;
+  --c-danger-light: #fef2f2;
+  --c-warn: #d97706;
+  --c-warn-light: #fffaeb;
+  --c-success: #16a34a;
+  --c-success-light: #f0fdf4;
+
+  /* Только то, что нужно формам кнопок — не весь набор радиусов/теней ДС. */
+  --radius-sm: 8px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 99px;
+  --shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --transition: 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ---------------------------------------------------------------
+   Формы кнопок из той же дизайн-системы (components.css, только
+   раздел .btn* — карточки/бейджи/таблицы и остальное не переносились).
+   --------------------------------------------------------------- */
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .btn-primary {
+    background: var(--c-primary);
+    color: #fff;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--c-primary-hover);
+    box-shadow: 0 4px 12px rgba(29, 78, 216, 0.28);
+  }
+  .btn-secondary {
+    background: var(--c-surface);
+    color: var(--c-text);
+    border-color: var(--c-border-solid);
+    box-shadow: var(--shadow-xs);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--c-surface-2);
+    border-color: #d3d8e0;
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--c-text-2);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--c-surface-2);
+    color: var(--c-text);
+  }
+  .btn-danger {
+    background: var(--c-danger);
+    color: #fff;
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: #b91c1c;
+  }
+  .btn-teal {
+    background: var(--c-teal);
+    color: #fff;
+  }
+  .btn-teal:hover:not(:disabled) {
+    background: #0b7d72;
+    box-shadow: 0 4px 12px rgba(13, 148, 136, 0.28);
+  }
+  .btn-sm {
+    padding: 7px 12px;
+    font-size: 13.5px;
+    gap: 6px;
+    border-radius: 9px;
+  }
+  .btn-lg {
+    padding: 13px 22px;
+    font-size: 16px;
+  }
+  .btn-icon {
+    padding: 9px;
+    border-radius: 9px;
+  }
 }
