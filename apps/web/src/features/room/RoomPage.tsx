@@ -15,6 +15,7 @@ import { DeviceCheckScreen } from "./DeviceCheckScreen.js";
 import { MediaAudioStatus } from "./MediaAudioStatus.js";
 import { MicStatusIcon, SelfMicButton } from "./MicControls.js";
 import { MicSync } from "./MicSync.js";
+import { ParticipantPresenceDot } from "./ParticipantPresenceDot.js";
 import { useRoomSocket } from "./useRoomSocket.js";
 
 const STATUS_LABEL: Record<SocketStatusLike, string> = {
@@ -204,7 +205,11 @@ export function RoomPage() {
           {participants.map((p) => (
             <li key={p.userId} className="flex items-center justify-between rounded border px-2 py-1 text-sm">
               <span className="flex items-center gap-2">
-                <span className={`h-2 w-2 rounded-full ${p.connected ? "bg-green-500" : "bg-slate-300"}`} />
+                {media ? (
+                  <ParticipantPresenceDot userId={p.userId} connected={p.connected} />
+                ) : (
+                  <span className={`h-2 w-2 rounded-full ${p.connected ? "bg-green-500" : "bg-slate-300"}`} />
+                )}
                 {p.fullName}
                 <span className="text-xs text-slate-400">({p.role})</span>
                 {p.handRaised && <span title="Поднята рука">✋</span>}
