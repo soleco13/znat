@@ -10,7 +10,9 @@
     "test": "echo \"no tests yet\""
   },
   "dependencies": {
+    "@livekit/components-react": "^2.9.24",
     "@school/shared": "workspace:*",
+    "livekit-client": "^2.22.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.1",

@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import type {
   ChatMessage,
   JoinLessonResponse,
   LessonStatus,
+  MediaConnection,
   ParticipantSnapshot,
   ServerRoomMessage,
 } from "@school/shared";
 import { apiFetch } from "../../shared/api-client.js";
 import { useAuthStore } from "../../shared/auth-store.js";
+import { MediaAudioStatus } from "./MediaAudioStatus.js";
 import { useRoomSocket } from "./useRoomSocket.js";
 
 const STATUS_LABEL: Record<SocketStatusLike, string> = {
@@ -30,6 +33,8 @@ export function RoomPage() {
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [chatDraft, setChatDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // LiveKit-подключение (Э2, только аудио — см. стоп-лист Э2 в docs/CURRENT_STAGE.md).
+  const [media, setMedia] = useState<MediaConnection | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const isTeacher = me?.role === "teacher" || me?.role === "admin";
@@ -75,6 +80,7 @@ export function RoomPage() {
       .then((data) => {
         setParticipants(data.participants);
         setLessonStatus(data.lessonStatus);
+        setMedia(data.media);
       })
       .catch(() => setError("Не удалось войти в урок"));
 
@@ -126,7 +132,7 @@ export function RoomPage() {
     );
   }
 
-  return (
+  const content = (
     <div className="mx-auto mt-8 grid max-w-5xl grid-cols-[2fr_1fr] gap-4 px-4">
       <div>
         <div className="mb-4 flex items-center justify-between">
@@ -134,6 +140,12 @@ export function RoomPage() {
             <h1 className="text-xl font-semibold">Урок</h1>
             <p className="text-sm text-slate-500">
               Статус: {lessonStatus ?? "…"} · <span className={status === "connected" ? "text-green-600" : "text-amber-600"}>{STATUS_LABEL[status]}</span>
+              {media && (
+                <>
+                  {" "}
+                  · <MediaAudioStatus />
+                </>
+              )}
             </p>
           </div>
           <div className="flex gap-2">
@@ -218,5 +230,21 @@ export function RoomPage() {
         </form>
       </div>
     </div>
+  );
+
+  if (!media) return content;
+
+  return (
+    <LiveKitRoom
+      serverUrl={media.url}
+      token={media.token}
+      connect
+      audio={self?.permissions.canSpeak ?? false}
+      video={false}
+      onDisconnected={() => setError("Аудио отключено")}
+    >
+      {content}
+      <RoomAudioRenderer />
+    </LiveKitRoom>
   );
 }

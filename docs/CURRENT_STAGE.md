@@ -20,12 +20,46 @@
 - [x] Э2.1 LiveKit в docker-compose, `network_mode: host`, конфиг, порты в
       ufw. Убрать `stun.l.google.com`, поднять свой coturn.
 - [x] Э2.2 Модуль `media/`: генерация JWT-токенов по ролям (`livekit-server-sdk`).
-- [ ] Э2.3 Подключение клиента: `@livekit/components-react`, только аудио.
+- [x] Э2.3 Подключение клиента: `@livekit/components-react`, только аудио.
 - [ ] Э2.4 Экран проверки устройств до входа.
 - [ ] Э2.5 Управление микрофонами: мьют себя/учителем/всех, лимит 4 одновременных.
 - [ ] Э2.6 Активный говорящий: подсветка в списке участников.
 - [ ] Э2.7 Вебхуки LiveKit → API: посещаемость.
 - [ ] Э2.8 Индикатор качества связи, предупреждение при packet loss > 3%.
+
+## Что сделано технически (Э2.3)
+
+- `apps/web/src/features/room/RoomPage.tsx`: после успешного `join()` (уже
+  содержит `media.token`/`media.url` из Э2.2) весь контент страницы
+  оборачивается в `<LiveKitRoom serverUrl token connect audio={canSpeak}
+  video={false}>` из `@livekit/components-react`, плюс `<RoomAudioRenderer />`
+  для воспроизведения удалённых аудиотреков. Пока `media` не пришёл — страница
+  рендерится как раньше, без LiveKit (`if (!media) return content`).
+- **`video={false}` — жёстко, соответствует стоп-листу Э2.** `audio` берётся
+  из `self.permissions.canSpeak` (право из Э1) — если учитель это право не
+  дал, свой микрофон не публикуется вообще.
+- `apps/web/src/features/room/MediaAudioStatus.tsx` — маленький дочерний
+  компонент на `useConnectionState()`, показывает статус LiveKit-подключения
+  рядом со статусом основного `/ws` в шапке урока. Должен рендериться только
+  внутри `<LiveKitRoom>` (иначе `useRoomContext()` внутри хука падает) —
+  поэтому в JSX условно `{media && <MediaAudioStatus />}`.
+- **Важно для Э2.5, проверено через Context7 по исходникам
+  `components-js/packages/react/src/hooks/useLiveKitRoom.ts`**: пропс `audio`
+  переиспубликовывается только по событию `SignalConnected` (первый коннект и
+  реконнекты), а не при каждом изменении пропса после того как участник уже
+  подключён. Значит когда учитель поменяет `canSpeak` уже подключённому
+  ученику (`PATCH .../permissions`), простое обновление пропса `audio` эффекта
+  не даст — Э2.5 должен явно дёргать
+  `useLocalParticipant().localParticipant.setMicrophoneEnabled()`.
+- Новых зависимостей в `apps/web`: `livekit-client`, `@livekit/components-react`
+  (согласовано с пользователем). CSS-пакет компонентов (`@livekit/components-styles`)
+  не подключён — не используются визуальные компоненты вроде `ParticipantTile`,
+  только `RoomAudioRenderer` (без UI) и хук `useConnectionState`.
+- **Не проверено вживую в браузере** (DoD-пункт "фича проверена руками") —
+  нужен запущенный бэкенд с Postgres/Redis/LiveKit, недоступно без Docker в
+  этой среде (см. известные пробелы). Проверены только `pnpm build`
+  (typecheck строгий, es-бандл собирается, хоть и с предупреждением о
+  размере чанка — `livekit-client` тяжёлый, это ожидаемо) и `pnpm test`/`depcheck`.
 
 ## Что сделано технически (Э2.2)
 
