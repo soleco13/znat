@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, count, type SQL } from "drizzle-orm";
+import { eq, and, gte, lte, count, sql, type SQL } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { lessons } from "../../db/schema.js";
 import type { LessonStatus } from "@school/shared";
@@ -34,6 +34,16 @@ export async function updateLessonStatus(
     .update(lessons)
     .set(patch)
     .where(and(eq(lessons.id, id), eq(lessons.schoolId, schoolId)))
+    .returning();
+  return row ?? null;
+}
+
+/** Идемпотентно: WHERE livekit_room IS NULL — не перезаписывает уже назначенную комнату. */
+export async function setLivekitRoomIfEmpty(id: string, schoolId: string, livekitRoom: string) {
+  const [row] = await db
+    .update(lessons)
+    .set({ livekitRoom })
+    .where(and(eq(lessons.id, id), eq(lessons.schoolId, schoolId), sql`${lessons.livekitRoom} IS NULL`))
     .returning();
   return row ?? null;
 }

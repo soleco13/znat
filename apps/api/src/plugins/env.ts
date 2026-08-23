@@ -13,6 +13,10 @@ const envSchema = z.object({
   PUBLIC_ORIGIN: z.string().url().default("http://localhost:3000"),
   WEB_DIST_DIR: z.string().min(1).default("apps/web/dist"),
   GLITCHTIP_DSN: z.string().url().optional(),
+  LIVEKIT_URL: z.string().url().default("ws://localhost:7880"),
+  LIVEKIT_PUBLIC_URL: z.string().url().default("ws://localhost:7880"),
+  LIVEKIT_API_KEY: z.string().min(1).default("devkey"),
+  LIVEKIT_API_SECRET: z.string().min(1),
 });
 
 export const env = envSchema.parse(process.env);

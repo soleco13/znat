@@ -30,6 +30,20 @@ export async function getLesson(schoolId: string, id: string) {
   return lesson;
 }
 
+/**
+ * Имя комнаты LiveKit для урока — назначается один раз при первом входе и
+ * хранится в lessons.livekit_room (не выводится заново из id при каждом
+ * запросе, чтобы Э2.7 мог сопоставлять вебхуки LiveKit с уроком напрямую по
+ * этому полю).
+ */
+export async function ensureLivekitRoom(schoolId: string, id: string): Promise<string> {
+  const lesson = await getLesson(schoolId, id);
+  if (lesson.livekitRoom) return lesson.livekitRoom;
+  const livekitRoom = `lesson-${id}`;
+  const updated = await repo.setLivekitRoomIfEmpty(id, schoolId, livekitRoom);
+  return updated?.livekitRoom ?? livekitRoom;
+}
+
 export async function listLessons(schoolId: string, query: ListLessonsQuery) {
   return repo.listLessons({
     schoolId,

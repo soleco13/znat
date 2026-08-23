@@ -9,6 +9,7 @@ import type {
 } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
 import * as lessonsService from "../lessons/service.js";
+import * as mediaService from "../media/service.js";
 import * as usersService from "../users/service.js";
 import * as presence from "./presence.js";
 import type { PresenceEntry } from "./presence.js";
@@ -143,7 +144,17 @@ export async function join(
     emitRoomEvent(lessonId, { type: "participant_joined", participant: snapshot });
   }
 
-  return { lessonStatus, participants: await listParticipantsSnapshot(lessonId), self: snapshot };
+  const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
+  const media = await mediaService.createParticipantConnection({
+    livekitRoom,
+    userId: user.sub,
+    fullName,
+    permissions: entry.permissions,
+    lessonStartsAt: lesson.startsAt,
+    lessonDurationMin: lesson.durationMin,
+  });
+
+  return { lessonStatus, participants: await listParticipantsSnapshot(lessonId), self: snapshot, media };
 }
 
 /** Явный выход (кнопка «Выйти»/POST leave) — без grace-периода на переподключение. */

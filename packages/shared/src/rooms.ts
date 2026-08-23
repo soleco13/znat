@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { roleSchema, lessonStatusSchema } from "./roles.js";
+import { mediaConnectionSchema } from "./media.js";
 
 export const participantPermissionsSchema = z.object({
   canDraw: z.boolean(),
@@ -28,6 +29,7 @@ export const joinLessonResponseSchema = z.object({
   lessonStatus: lessonStatusSchema,
   participants: z.array(participantSnapshotSchema),
   self: participantSnapshotSchema,
+  media: mediaConnectionSchema,
 });
 export type JoinLessonResponse = z.infer<typeof joinLessonResponseSchema>;
 

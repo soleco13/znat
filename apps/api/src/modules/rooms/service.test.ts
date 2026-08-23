@@ -6,6 +6,7 @@ const { lessonsServiceMock, usersServiceMock, repoMock } = vi.hoisted(() => ({
     getLesson: vi.fn(),
     startLesson: vi.fn(),
     endLesson: vi.fn(),
+    ensureLivekitRoom: vi.fn(),
   },
   usersServiceMock: {
     isGroupMember: vi.fn(),
@@ -96,6 +97,7 @@ function studentToken(sub = STUDENT_ID): AccessTokenPayload {
 beforeEach(() => {
   vi.clearAllMocks();
   presence.__clear();
+  lessonsServiceMock.ensureLivekitRoom.mockResolvedValue(`lesson-${LESSON_ID}`);
 });
 
 afterEach(() => {
