@@ -6,6 +6,19 @@
 	@metrics path /metrics
 	respond @metrics 404
 
+	# LiveKit (Э2): signaling WS/HTTP наружу только через /rtc — так медиа-сервер
+	# не занимает отдельный публичный порт для сигналинга. Сам медиатрафик
+	# (UDP 50000-60000, TURN 3478) идёт мимо Caddy напрямую, см. ufw в
+	# scripts/server-setup.sh — Caddy тут ни при чём, WebRTC поверх UDP не
+	# проксируется через HTTP-реверс-прокси.
+	handle /rtc/* {
+		uri strip_prefix /rtc
+		# localhost здесь был бы адресом самого контейнера caddy, не хоста —
+		# livekit в network_mode: host виден только через шлюз хоста
+		# (см. extra_hosts у caddy в docker-compose.yml).
+		reverse_proxy host.docker.internal:7880
+	}
+
 	reverse_proxy app:3000
 	encode gzip
 

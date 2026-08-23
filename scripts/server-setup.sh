@@ -8,8 +8,10 @@ set -euo pipefail
 # Использование:
 #   ./scripts/server-setup.sh <новый_SSH_порт> </путь/к/публичному_ключу.pub>
 #
-# Firewall открывает только 80/443/SSH — LiveKit/TURN/coturn добавятся
-# отдельно на Э2 (§10.5 ТЗ), не здесь.
+# Firewall открывает 80/443/SSH и порты LiveKit/coturn (Э2.1, §10.5 ТЗ):
+# 7880 (WS/HTTP-сигналинг), 7881 (TCP-фолбэк), UDP 50000-60000 (медиа),
+# 3478 (TURN/STUN, UDP+TCP), 5349 (TURNS/TLS — порт открыт заранее, сам
+# coturn на нём пока не слушает, см. docs/CURRENT_STAGE.md).
 
 SSH_PORT="${1:?Укажи новый SSH-порт, например: ./server-setup.sh 2222 ~/.ssh/id_ed25519.pub}"
 PUBKEY_PATH="${2:?Укажи путь к публичному SSH-ключу}"
@@ -45,12 +47,18 @@ AllowUsers deploy
 EOF
 systemctl restart ssh
 
-echo "==> ufw: только 80, 443 и SSH-порт наружу"
+echo "==> ufw: 80, 443, SSH-порт и порты LiveKit/coturn наружу"
 ufw default deny incoming
 ufw default allow outgoing
 ufw allow "${SSH_PORT}/tcp"
 ufw allow 80/tcp
 ufw allow 443/tcp
+ufw allow 7880/tcp
+ufw allow 7881/tcp
+ufw allow 50000:60000/udp
+ufw allow 3478/tcp
+ufw allow 3478/udp
+ufw allow 5349/tcp
 ufw --force enable
 
 echo "==> Готово."

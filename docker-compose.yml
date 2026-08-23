@@ -47,6 +47,11 @@ services:
       DATABASE_URL: postgres://school:school@postgres:5432/school_dev
       REDIS_URL: redis://redis:6379
       STORAGE_ROOT: /data/assets
+      # livekit слушает на network_mode: host — из моста (bridge) до него
+      # достучаться можно только через шлюз хоста, не по имени сервиса.
+      LIVEKIT_URL: ws://host.docker.internal:7880
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - assets_data:/data/assets
     ports:
@@ -57,11 +62,78 @@ services:
       timeout: 5s
       retries: 5
 
+  # ВНИМАНИЕ (Э2.1, §10.5 ТЗ): network_mode: host требует Linux-хост с
+  # реальным docker-демоном (прод — Ubuntu). На Docker Desktop (Windows/Mac)
+  # host-сеть не поддерживается штатно — эти два сервиса локально на
+  # Windows-машине разработчика не поднимутся, только на проде/Linux-CI.
+  livekit:
+    image: livekit/livekit-server:latest
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      # Секреты и адрес не кладём в livekit.yaml: сам livekit-server не
+      # раскрывает переменные окружения внутри YAML (проверено через Context7,
+      # pkg/config/config.go — единственное исключение это путь key_file).
+      # Поэтому весь конфиг собираем через LIVEKIT_CONFIG, а ключи — отдельно
+      # через LIVEKIT_KEYS, это штатные переменные окружения самого сервера.
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+      LIVEKIT_CONFIG: |
+        port: 7880
+        rtc:
+          tcp_port: 7881
+          port_range_start: 50000
+          port_range_end: 60000
+          use_external_ip: true
+          stun_servers:
+            - ${TURN_DOMAIN}:3478
+          turn_servers:
+            - host: ${TURN_DOMAIN}
+              port: 3478
+              protocol: udp
+              secret: ${TURN_SHARED_SECRET}
+        redis:
+          address: 127.0.0.1:6379
+        turn:
+          enabled: false
+
+  # Свой TURN (§3.2, §10.5 ТЗ) вместо stun.l.google.com — часть учеников
+  # сидит за школьными/корпоративными NAT, без TURN у них не будет медиа.
+  # TLS (5349) сознательно не включаем в Э2.1: нужен реальный сертификат на
+  # TURN_DOMAIN, это отдельная операционная задача при разворачивании на
+  # боевом домене — см. "Известные пробелы" в docs/CURRENT_STAGE.md.
+  coturn:
+    image: coturn/coturn:latest
+    restart: unless-stopped
+    network_mode: host
+    command:
+      - -n
+      - --log-file=stdout
+      - --listening-port=3478
+      - --min-port=49000
+      - --max-port=49999
+      - --realm=${TURN_DOMAIN}
+      - --use-auth-secret
+      - --static-auth-secret=${TURN_SHARED_SECRET}
+      - --lt-cred-mech
+      - --fingerprint
+      - --no-cli
+      - --no-multicast-peers
+      # relay только наружу — TURN не должен превращаться в открытый шлюз
+      # в приватные сети (SSRF через WebRTC-relay).
+      - --denied-peer-ip=10.0.0.0-10.255.255.255
+      - --denied-peer-ip=172.16.0.0-172.31.255.255
+      - --denied-peer-ip=192.168.0.0-192.168.255.255
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
     depends_on:
       - app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
