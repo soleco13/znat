@@ -84,6 +84,10 @@ export async function getGroupOrThrow(schoolId: string, groupId: string) {
   return group;
 }
 
+export async function isGroupMember(groupId: string, userId: string) {
+  return repo.isGroupMember(groupId, userId);
+}
+
 export type { Role };
 
 function isUniqueViolation(err: unknown): boolean {

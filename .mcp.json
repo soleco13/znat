@@ -1,6 +1,5 @@
 {
   "mcpServers": {
-    // Постоянные (весь проект)
     "context7": {
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp"]
@@ -16,7 +15,6 @@
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
       }
     },
-    // Ситуативные (включать/выключать по этапам)
     "postgres": {
       "command": "npx",
       "args": ["-y", "@crystaldba/postgres-mcp@latest"],
@@ -24,18 +22,6 @@
         "DATABASE_URL": "postgres://mcp_ro:password@localhost:5432/school_dev",
         "ACCESS_MODE": "restricted"
       }
-    },
-    "grafana": {
-      "command": "npx",
-      "args": ["-y", "@grafana/mcp-grafana"],
-      "env": {
-        "GRAFANA_URL": "http://localhost:3000",
-        "GRAFANA_API_KEY": "${GRAFANA_TOKEN}"
-      }
-    },
-    "chrome-devtools": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-chrome-devtools"]
     },
     "redis": {
       "command": "npx",

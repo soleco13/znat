@@ -94,3 +94,12 @@ export async function addGroupMembers(groupId: string, userIds: string[]) {
     .values(userIds.map((userId) => ({ groupId, userId })))
     .onConflictDoNothing();
 }
+
+export async function isGroupMember(groupId: string, userId: string): Promise<boolean> {
+  const rows = await db
+    .select({ userId: groupMembers.userId })
+    .from(groupMembers)
+    .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)))
+    .limit(1);
+  return rows.length > 0;
+}

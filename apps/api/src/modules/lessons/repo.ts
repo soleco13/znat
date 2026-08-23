@@ -1,6 +1,7 @@
 import { eq, and, gte, lte, count, type SQL } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { lessons } from "../../db/schema.js";
+import type { LessonStatus } from "@school/shared";
 
 export async function insertLesson(input: {
   schoolId: string;
@@ -22,6 +23,19 @@ export async function findLessonById(id: string, schoolId: string) {
     .where(and(eq(lessons.id, id), eq(lessons.schoolId, schoolId)))
     .limit(1);
   return rows[0] ?? null;
+}
+
+export async function updateLessonStatus(
+  id: string,
+  schoolId: string,
+  patch: { status: LessonStatus; startedAt?: Date; endedAt?: Date },
+) {
+  const [row] = await db
+    .update(lessons)
+    .set(patch)
+    .where(and(eq(lessons.id, id), eq(lessons.schoolId, schoolId)))
+    .returning();
+  return row ?? null;
 }
 
 export async function listLessons(input: {
