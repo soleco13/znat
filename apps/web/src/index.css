@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Шрифты — только самохостом, без CDN (§10.10 ТЗ, §15 правило №17).
+  TODO(Э0.7): добавить реальный self-hosted webfont в public/fonts и @font-face здесь.
+  До тех пор используется системный стек — это тоже "своё": рендерится
+  шрифтами, уже установленными в ОС пользователя, без сетевых запросов.
+*/
+:root {
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    Arial,
+    sans-serif;
+}

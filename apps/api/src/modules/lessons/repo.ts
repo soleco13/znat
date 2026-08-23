@@ -1,0 +1,53 @@
+import { eq, and, gte, lte, count, type SQL } from "drizzle-orm";
+import { db } from "../../db/client.js";
+import { lessons } from "../../db/schema.js";
+
+export async function insertLesson(input: {
+  schoolId: string;
+  groupId: string;
+  teacherId: string;
+  title: string;
+  subject: string;
+  startsAt: Date;
+  durationMin: number;
+}) {
+  const [row] = await db.insert(lessons).values(input).returning();
+  return row;
+}
+
+export async function findLessonById(id: string, schoolId: string) {
+  const rows = await db
+    .select()
+    .from(lessons)
+    .where(and(eq(lessons.id, id), eq(lessons.schoolId, schoolId)))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function listLessons(input: {
+  schoolId: string;
+  from?: Date;
+  to?: Date;
+  teacherId?: string;
+  page: number;
+  pageSize: number;
+}) {
+  const conditions: SQL[] = [eq(lessons.schoolId, input.schoolId)];
+  if (input.from) conditions.push(gte(lessons.startsAt, input.from));
+  if (input.to) conditions.push(lte(lessons.startsAt, input.to));
+  if (input.teacherId) conditions.push(eq(lessons.teacherId, input.teacherId));
+  const where = and(...conditions);
+
+  const [rows, totalRows] = await Promise.all([
+    db
+      .select()
+      .from(lessons)
+      .where(where)
+      .limit(input.pageSize)
+      .offset((input.page - 1) * input.pageSize)
+      .orderBy(lessons.startsAt),
+    db.select({ total: count() }).from(lessons).where(where),
+  ]);
+
+  return { rows, total: totalRows[0]?.total ?? 0 };
+}
