@@ -22,10 +22,89 @@
 - [x] Э2.2 Модуль `media/`: генерация JWT-токенов по ролям (`livekit-server-sdk`).
 - [x] Э2.3 Подключение клиента: `@livekit/components-react`, только аудио.
 - [x] Э2.4 Экран проверки устройств до входа.
-- [ ] Э2.5 Управление микрофонами: мьют себя/учителем/всех, лимит 4 одновременных.
+- [x] Э2.5 Управление микрофонами: мьют себя/учителем/всех, лимит 4 одновременных.
 - [ ] Э2.6 Активный говорящий: подсветка в списке участников.
 - [ ] Э2.7 Вебхуки LiveKit → API: посещаемость.
 - [ ] Э2.8 Индикатор качества связи, предупреждение при packet loss > 3%.
+
+## Что сделано технически (Э2.5)
+
+- **Закрыт пробел, зафиксированный ещё в Э2.2/Э2.3**: `PATCH
+  .../participants/:userId/permissions` теперь реально действует на уже
+  подключённого к LiveKit участника, не только на следующий вход.
+  `apps/api/src/modules/media/service.ts` получил `RoomServiceClient`
+  (`livekit-server-sdk`) и функцию `updateLivePermissions()` —
+  `roomService.updateParticipant(room, identity, { permission })` с тем же
+  грантом (`buildPublishGrant`), что и при выдаче токена в
+  `createParticipantConnection()` (вынесено в общую функцию, чтобы грант не
+  разъехался между выдачей и live-обновлением). 404 от LiveKit (участник ещё
+  не подключался туда) — не ошибка, тихо пропускается: актуальные права он
+  получит при первом же `POST /join`.
+- **Порядок операций в `rooms/service.ts#updatePermissions` важен и
+  сознателен** (читать построчно, §1.2 CLAUDE.md): сперва
+  `mediaService.updateLivePermissions()`, и только при его успехе —
+  запись в presence (Redis) и WS-бродкаст `permissions_updated`. Если
+  LiveKit недоступен, PATCH целиком падает с ошибкой, а не создаёт ситуацию
+  «UI показывает, что ученика заглушили, а физически его микрофон всё ещё
+  может публиковать звук» — такая рассинхронизация была бы тихой дырой в
+  доступе, а не просто багом UI.
+- **Лимит 4 одновременных микрофонов учеников** (§5.2 ТЗ,
+  [[project_video_platform_media_limits]]) — `countActiveStudentMics()`
+  считает участников с `role === "student" && permissions.canSpeak`,
+  исключая целевого. `updatePermissions` отклоняет `canSpeak: true` для
+  пятого ученика с `409 mic_limit_reached`, если это НЕ переключение уже
+  включённого (значит смена других прав того же участника лимитом не
+  блокируется). Учителя/админы в счётчик не попадают — им `canSpeak: true`
+  по умолчанию (Э1, `presence.defaultPermissions`).
+- Два новых эндпоинта, только учитель урока/админ (та же проверка, что и в
+  `endLessonNow`/`deleteChatMessage`):
+  `POST /lessons/:id/participants/:userId/mute` — принудительный мьют
+  одного участника: `mediaService.muteParticipant()` находит его
+  опубликованный трек микрофона (`getParticipant` → `tracks.find(source ===
+  MICROPHONE)`) и вызывает `mutePublishedTrack(muted: true)`.
+  `POST /lessons/:id/mute-all` — то же самое для всех подключённых учеников
+  разом (`mediaService.muteMicrophones()`), учителя и со-учителей не трогает.
+  **Это «мягкий» мьют**: право `canSpeak` не отзывается, трек просто
+  выключается на стороне LiveKit — ученик технически может включить
+  микрофон обратно сам через свою кнопку (см. ниже). Отзыв самого права
+  говорить — это по-прежнему `PATCH .../permissions` с `canSpeak: false`.
+- Фронт: `apps/web/src/features/room/MicSync.tsx` — компонент без UI,
+  рендерится внутри `<LiveKitRoom>` рядом с `<RoomAudioRenderer/>`, следит за
+  `self.permissions.canSpeak` и дёргает
+  `useLocalParticipant().localParticipant.setMicrophoneEnabled()` при
+  изменении — закрывает пробел, описанный в заметках Э2.3 (пропс `audio` у
+  `<LiveKitRoom>` republish'ится только при (пере)подключении, не при каждом
+  изменении права уже подключённому участнику).
+- `apps/web/src/features/room/MicControls.tsx`:
+  - `SelfMicButton` — «мьют себя», доступен любому с `canSpeak`, чистый
+    клиентский тоггл `setMicrophoneEnabled(!isMicrophoneEnabled)`, без
+    обращения к серверу (в отличие от учительского мьюта это не право, а
+    сиюминутное состояние трека).
+  - `MicStatusIcon` — значок 🎙️ в списке участников, если у него сейчас
+    реально включён микрофон в LiveKit (`useParticipants()` +
+    `isMicrophoneEnabled`, сверка по `identity === userId` — `identity`
+    участника в LiveKit равен `userId`, назначается в
+    `createParticipantConnection`). Не берётся из `presence`/WS — это
+    состояние живёт только в LiveKit и не транслируется через наш `/ws`
+    (осознанно, чтобы не дублировать источник истины).
+  - В `RoomPage.tsx`: кнопка «Заглушить всех» у учителя рядом с «Поднять
+    руку»; «Заглушить» — точечная кнопка учителя в строке участника (только
+    если у того `canSpeak`). Обе, как и `MicStatusIcon`/`SelfMicButton`,
+    рендерятся только когда `media` установлен (нужен контекст
+    `<LiveKitRoom>`) — тот же паттерн условного рендера, что уже был у
+    `MediaAudioStatus` в Э2.3.
+- Тесты: `media/service.test.ts` мокает `global.fetch` (твёрп-транспорт
+  `livekit-server-sdk` — обычный HTTP поверх fetch, подтверждено чтением
+  исходника `TwirpRPC.ts`) и проверяет реальную сериализацию гранта/mute-
+  запроса, а не мок самого SDK. `rooms/service.test.ts` замокал
+  `../media/service.js` (иначе `updatePermissions` бил бы по сети в тестах)
+  и добавил кейсы: лимит на пятом ученике, что переключение других прав уже
+  говорящего не блокируется лимитом, откат при сбое LiveKit-синхронизации,
+  доступ только у учителя/админа к обоим новым роутам, «мьют всех» не
+  трогает учителя. Итого 40/40 тестов зелёных
+  (`pnpm build`/`pnpm test`/`pnpm depcheck` чистые).
+- **Не проверено вживую в браузере** — как и Э2.3/Э2.4, нет живого бэкенда с
+  LiveKit в этой среде.
 
 ## Что сделано технически (Э2.4)
 

@@ -13,6 +13,8 @@ import { apiFetch } from "../../shared/api-client.js";
 import { useAuthStore } from "../../shared/auth-store.js";
 import { DeviceCheckScreen } from "./DeviceCheckScreen.js";
 import { MediaAudioStatus } from "./MediaAudioStatus.js";
+import { MicStatusIcon, SelfMicButton } from "./MicControls.js";
+import { MicSync } from "./MicSync.js";
 import { useRoomSocket } from "./useRoomSocket.js";
 
 const STATUS_LABEL: Record<SocketStatusLike, string> = {
@@ -123,7 +125,21 @@ export function RoomPage() {
     await apiFetch(`/lessons/${lessonId}/participants/${userId}/permissions`, {
       method: "PATCH",
       body: JSON.stringify({ [key]: value }),
-    }).catch(() => undefined);
+    }).catch((e) => setError(e instanceof Error ? e.message : "Не удалось изменить права"));
+  }
+
+  async function muteParticipant(userId: string) {
+    if (!lessonId) return;
+    await apiFetch(`/lessons/${lessonId}/participants/${userId}/mute`, { method: "POST" }).catch(() =>
+      setError("Не удалось заглушить участника"),
+    );
+  }
+
+  async function muteAll() {
+    if (!lessonId) return;
+    await apiFetch(`/lessons/${lessonId}/mute-all`, { method: "POST" }).catch(() =>
+      setError("Не удалось заглушить всех участников"),
+    );
   }
 
   async function sendChat(e: React.FormEvent) {
@@ -166,14 +182,22 @@ export function RoomPage() {
 
         {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
 
-        {!isTeacher && (
-          <button
-            onClick={toggleHand}
-            className={`mb-4 rounded border px-3 py-1 text-sm ${self?.handRaised ? "bg-amber-100 border-amber-400" : ""}`}
-          >
-            {self?.handRaised ? "Опустить руку" : "Поднять руку"}
-          </button>
-        )}
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {!isTeacher && (
+            <button
+              onClick={toggleHand}
+              className={`rounded border px-3 py-1 text-sm ${self?.handRaised ? "bg-amber-100 border-amber-400" : ""}`}
+            >
+              {self?.handRaised ? "Опустить руку" : "Поднять руку"}
+            </button>
+          )}
+          {media && self?.permissions.canSpeak && <SelfMicButton />}
+          {media && isTeacher && (
+            <button onClick={muteAll} className="rounded border px-3 py-1 text-sm">
+              Заглушить всех
+            </button>
+          )}
+        </div>
 
         <h2 className="mb-2 text-sm font-medium text-slate-600">Участники ({participants.length})</h2>
         <ul className="flex flex-col gap-1">
@@ -184,9 +208,10 @@ export function RoomPage() {
                 {p.fullName}
                 <span className="text-xs text-slate-400">({p.role})</span>
                 {p.handRaised && <span title="Поднята рука">✋</span>}
+                {media && <MicStatusIcon userId={p.userId} />}
               </span>
               {isTeacher && p.userId !== me?.id && (
-                <span className="flex gap-2 text-xs">
+                <span className="flex items-center gap-2 text-xs">
                   <label className="flex items-center gap-1">
                     <input
                       type="checkbox"
@@ -203,6 +228,11 @@ export function RoomPage() {
                     />
                     говорить
                   </label>
+                  {media && p.permissions.canSpeak && (
+                    <button onClick={() => muteParticipant(p.userId)} className="rounded border px-2 py-0.5">
+                      Заглушить
+                    </button>
+                  )}
                 </span>
               )}
             </li>
@@ -258,6 +288,7 @@ export function RoomPage() {
       video={false}
       onDisconnected={() => setError("Аудио отключено")}
     >
+      <MicSync enabled={self?.permissions.canSpeak ?? false} />
       {content}
       <RoomAudioRenderer />
     </LiveKitRoom>

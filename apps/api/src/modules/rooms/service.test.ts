@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AccessTokenPayload } from "@school/shared";
 
-const { lessonsServiceMock, usersServiceMock, repoMock } = vi.hoisted(() => ({
+const { lessonsServiceMock, usersServiceMock, repoMock, mediaServiceMock } = vi.hoisted(() => ({
   lessonsServiceMock: {
     getLesson: vi.fn(),
     startLesson: vi.fn(),
@@ -21,11 +21,18 @@ const { lessonsServiceMock, usersServiceMock, repoMock } = vi.hoisted(() => ({
     countOpenSessions: vi.fn(),
     findChatAuthor: vi.fn(),
   },
+  mediaServiceMock: {
+    createParticipantConnection: vi.fn().mockResolvedValue({ token: "fake-token", url: "ws://localhost:7880" }),
+    updateLivePermissions: vi.fn(),
+    muteParticipant: vi.fn(),
+    muteMicrophones: vi.fn(),
+  },
 }));
 
 vi.mock("../lessons/service.js", () => lessonsServiceMock);
 vi.mock("../users/service.js", () => usersServiceMock);
 vi.mock("./repo.js", () => repoMock);
+vi.mock("../media/service.js", () => mediaServiceMock);
 
 // presence.ts общается с реальным Redis — подменяем на in-memory реализацию,
 // оставляя чистые функции (defaultPermissions, isStaleEntry) настоящими.
@@ -178,6 +185,107 @@ describe("права участников", () => {
     await roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, { canSpeak: true });
     const snapshot = await roomsService.listParticipantsSnapshot(LESSON_ID);
     expect(snapshot.find((p) => p.userId === STUDENT_ID)?.permissions.canSpeak).toBe(true);
+  });
+
+  it("выдача canSpeak синхронизирует уже выданный LiveKit-грант вживую (Э2.5)", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+
+    await roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, { canSpeak: true });
+
+    expect(mediaServiceMock.updateLivePermissions).toHaveBeenCalledWith(
+      `lesson-${LESSON_ID}`,
+      STUDENT_ID,
+      expect.objectContaining({ canSpeak: true }),
+    );
+  });
+
+  it("если синхронизация с LiveKit падает, presence не меняется и ученику не начинает казаться замьюченным зря", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+    mediaServiceMock.updateLivePermissions.mockRejectedValueOnce(new Error("livekit unreachable"));
+
+    await expect(
+      roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, { canSpeak: true }),
+    ).rejects.toThrow("livekit unreachable");
+
+    const snapshot = await roomsService.listParticipantsSnapshot(LESSON_ID);
+    expect(snapshot.find((p) => p.userId === STUDENT_ID)?.permissions.canSpeak).toBe(false);
+  });
+
+  it("не пускает пятого одновременно говорящего ученика (лимит §5.2 ТЗ)", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+
+    const studentIds = [
+      STUDENT_ID,
+      OTHER_STUDENT_ID,
+      "88888888-8888-8888-8888-888888888888",
+      "99999999-9999-9999-9999-999999999999",
+    ];
+    for (const id of studentIds) {
+      await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(id), "Ученик");
+      await roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), id, { canSpeak: true });
+    }
+
+    const fifthId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(fifthId), "Пятый ученик");
+
+    await expect(
+      roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), fifthId, { canSpeak: true }),
+    ).rejects.toMatchObject({ statusCode: 409, code: "mic_limit_reached" });
+  });
+
+  it("лимит не мешает переключить уже говорящего ученика (canSpeak не меняется на true впервые)", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+
+    const studentIds = [
+      STUDENT_ID,
+      OTHER_STUDENT_ID,
+      "88888888-8888-8888-8888-888888888888",
+      "99999999-9999-9999-9999-999999999999",
+    ];
+    for (const id of studentIds) {
+      await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(id), "Ученик");
+      await roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), id, { canSpeak: true });
+    }
+
+    await expect(
+      roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, { canDraw: true }),
+    ).resolves.toBeUndefined();
+  });
+});
+
+describe("мьют микрофонов учителем (Э2.5)", () => {
+  it("только учитель этого урока (или админ) может принудительно заглушить участника", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+
+    await expect(
+      roomsService.muteParticipantNow(SCHOOL_ID, LESSON_ID, studentToken(), STUDENT_ID),
+    ).rejects.toMatchObject({ statusCode: 403 });
+
+    await roomsService.muteParticipantNow(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID);
+    expect(mediaServiceMock.muteParticipant).toHaveBeenCalledWith(`lesson-${LESSON_ID}`, STUDENT_ID);
+  });
+
+  it("«мьют всех» глушит только учеников, не трогает учителя", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(OTHER_STUDENT_ID), "Другой ученик");
+    await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+
+    await expect(roomsService.muteAllNow(SCHOOL_ID, LESSON_ID, studentToken())).rejects.toMatchObject({
+      statusCode: 403,
+    });
+
+    await roomsService.muteAllNow(SCHOOL_ID, LESSON_ID, teacherToken());
+    expect(mediaServiceMock.muteMicrophones).toHaveBeenCalledTimes(1);
+    const [, mutedIds] = mediaServiceMock.muteMicrophones.mock.calls[0] as [string, string[]];
+    expect(new Set(mutedIds)).toEqual(new Set([STUDENT_ID, OTHER_STUDENT_ID]));
   });
 });
 

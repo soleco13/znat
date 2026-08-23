@@ -20,6 +20,8 @@ const RECONNECT_GRACE_MS = 30_000;
 const HEARTBEAT_TIMEOUT_MS = 60_000;
 const EMPTY_ROOM_AUTOEND_MS = 15 * 60 * 1000;
 const SWEEP_INTERVAL_MS = 15_000;
+/** §5.2 ТЗ: не более 4 включённых микрофонов учеников одновременно, см. память project-video-platform-media-limits. */
+const MAX_SIMULTANEOUS_STUDENT_MICS = 4;
 
 /** lessonId -> schoolId, для фоновой зачистки и авто-завершения пустых комнат. */
 const activeLessons = new Map<string, string>();
@@ -213,6 +215,25 @@ export async function setHandRaised(
   emitRoomEvent(lessonId, { type: "hand_raised", userId: user.sub, raised });
 }
 
+/** Считает учеников (не учителей/админов) с уже включённым микрофоном, кроме исключённого — для проверки лимита §5.2 ТЗ. */
+async function countActiveStudentMics(lessonId: string, excludeUserId?: string): Promise<number> {
+  const participants = await presence.listParticipants(lessonId);
+  let count = 0;
+  for (const [userId, entry] of participants) {
+    if (userId === excludeUserId) continue;
+    if (entry.role === "student" && entry.permissions.canSpeak) count++;
+  }
+  return count;
+}
+
+/**
+ * Меняет права участника (Э1) и, если это влияет на аудио, синхронизирует уже
+ * выданный LiveKit-грант вживую (Э2.5) — токен неизменяем, простое обновление
+ * presence само по себе звук не включит/не выключит. Читать построчно (§1.2
+ * CLAUDE.md): порядок шагов важен — LiveKit обновляется ДО presence/WS-broadcast,
+ * чтобы при сетевом сбое учитель увидел ошибку и не думал, что ученика
+ * замьютили, пока тот технически всё ещё может говорить.
+ */
 export async function updatePermissions(
   schoolId: string,
   lessonId: string,
@@ -229,9 +250,54 @@ export async function updatePermissions(
   if (!entry) {
     throw new AppError(404, "not_found", "Участник не найден в комнате");
   }
-  entry.permissions = { ...entry.permissions, ...patch };
+
+  if (patch.canSpeak === true && entry.role === "student" && !entry.permissions.canSpeak) {
+    const activeMics = await countActiveStudentMics(lessonId, targetUserId);
+    if (activeMics >= MAX_SIMULTANEOUS_STUDENT_MICS) {
+      throw new AppError(
+        409,
+        "mic_limit_reached",
+        `Одновременно могут говорить не более ${MAX_SIMULTANEOUS_STUDENT_MICS} учеников — сначала выключите чей-то микрофон`,
+      );
+    }
+  }
+
+  const permissions = { ...entry.permissions, ...patch };
+  const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
+  await mediaService.updateLivePermissions(livekitRoom, targetUserId, permissions);
+
+  entry.permissions = permissions;
   await presence.setParticipant(lessonId, targetUserId, entry);
   emitRoomEvent(lessonId, { type: "permissions_updated", userId: targetUserId, permissions: entry.permissions });
+}
+
+/** Учитель принудительно глушит одного ученика (Э2.5) — право говорить не отзывается, ученик может включить микрофон обратно сам. */
+export async function muteParticipantNow(
+  schoolId: string,
+  lessonId: string,
+  requester: AccessTokenPayload,
+  targetUserId: string,
+): Promise<void> {
+  const lesson = await lessonsService.getLesson(schoolId, lessonId);
+  const isOwnerTeacher = requester.role === "teacher" && lesson.teacherId === requester.sub;
+  if (requester.role !== "admin" && !isOwnerTeacher) {
+    throw new AppError(403, "forbidden", "Только учитель урока может глушить микрофоны участников");
+  }
+  const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
+  await mediaService.muteParticipant(livekitRoom, targetUserId);
+}
+
+/** «Мьют всех» (Э2.5) — глушит микрофоны всех подключённых учеников одной кнопкой, учителя не трогает. */
+export async function muteAllNow(schoolId: string, lessonId: string, requester: AccessTokenPayload): Promise<void> {
+  const lesson = await lessonsService.getLesson(schoolId, lessonId);
+  const isOwnerTeacher = requester.role === "teacher" && lesson.teacherId === requester.sub;
+  if (requester.role !== "admin" && !isOwnerTeacher) {
+    throw new AppError(403, "forbidden", "Только учитель урока может заглушить всех участников");
+  }
+  const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
+  const participants = await presence.listParticipants(lessonId);
+  const studentIds = [...participants.entries()].filter(([, entry]) => entry.role === "student").map(([userId]) => userId);
+  await mediaService.muteMicrophones(livekitRoom, studentIds);
 }
 
 export async function sendChatMessage(

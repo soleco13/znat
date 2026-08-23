@@ -50,6 +50,19 @@ export default async function roomsRoutes(app: FastifyInstance) {
     },
   );
 
+  app.post<{ Params: { id: string; userId: string } }>(
+    "/lessons/:id/participants/:userId/mute",
+    async (request, reply) => {
+      await roomsService.muteParticipantNow(request.user.schoolId, request.params.id, request.user, request.params.userId);
+      return reply.status(204).send();
+    },
+  );
+
+  app.post<{ Params: { id: string } }>("/lessons/:id/mute-all", async (request, reply) => {
+    await roomsService.muteAllNow(request.user.schoolId, request.params.id, request.user);
+    return reply.status(204).send();
+  });
+
   app.get<{ Params: { id: string } }>("/lessons/:id/chat", async (request, reply) => {
     const query = listChatQuerySchema.parse(request.query);
     const messages = await roomsService.listChatHistory(request.user.schoolId, request.params.id, request.user, query);
