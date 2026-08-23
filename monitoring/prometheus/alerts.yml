@@ -1,0 +1,35 @@
+groups:
+  - name: school-platform
+    rules:
+      - alert: AppDown
+        expr: up{job="app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Приложение недоступно для Prometheus уже минуту"
+
+      - alert: HighApiLatencyP95
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p95 ответа API превышает 200 мс дольше 5 минут (гейт Э0)"
+
+      - alert: AppMemoryHigh
+        expr: process_resident_memory_bytes{job="app"} > 1073741824
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RAM процесса app превысила 1 ГБ дольше 5 минут (гейт Э0)"
+
+      - alert: PostgresDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "postgres-exporter не может достучаться до PostgreSQL"

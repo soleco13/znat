@@ -1,0 +1,16 @@
+# Продовый конфиг (Э0.8). Подставляется на сервере через переменную окружения CADDY_DOMAIN.
+# Пример: CADDY_DOMAIN=school.example.ru
+{$CADDY_DOMAIN} {
+	# /metrics — только для Prometheus внутри docker-сети (app:3000/metrics
+	# напрямую, минуя Caddy). Наружу закрыт защитой в глубину.
+	@metrics path /metrics
+	respond @metrics 404
+
+	reverse_proxy app:3000
+	encode gzip
+
+	# HMAC-подписанные ссылки на файлы отдаём с длинным кэшем на клиенте —
+	# подпись сама по себе уже ограничивает срок жизни ссылки.
+	@files path /files/*
+	header @files Cache-Control "private, max-age=3600"
+}

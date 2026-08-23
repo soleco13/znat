@@ -12,6 +12,7 @@ const envSchema = z.object({
   STORAGE_HMAC_SECRET: z.string().min(32),
   PUBLIC_ORIGIN: z.string().url().default("http://localhost:3000"),
   WEB_DIST_DIR: z.string().min(1).default("apps/web/dist"),
+  GLITCHTIP_DSN: z.string().url().optional(),
 });
 
 export const env = envSchema.parse(process.env);

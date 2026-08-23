@@ -1,0 +1,133 @@
+# Оверлей мониторинга (Э0.11 ТЗ). Не входит в базовый docker-compose.yml,
+# чтобы Э0.2 оставался минимальным (app, postgres, redis, caddy).
+# Запуск вместе с базовым стеком:
+#   docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+#
+# GlitchTip делит postgres/redis основного стека (отдельные БД/индекс),
+# а не поднимает свою копию — монолитная философия, минимум контейнеров.
+
+services:
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=30d"
+    ports:
+      - "127.0.0.1:9090:9090"
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.16.0
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://school:school@postgres:5432/school_dev?sslmode=disable"
+    depends_on:
+      - postgres
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.66.0
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+    depends_on:
+      - redis
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.0
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "127.0.0.1:9093:9093"
+    depends_on:
+      - ntfy
+
+  grafana:
+    image: grafana/grafana-oss:11.4.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: "${GRAFANA_ROOT_URL:-http://localhost:3001}"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3001:3000"
+    depends_on:
+      - prometheus
+      - loki
+
+  loki:
+    image: grafana/loki:3.3.2
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki-config.yml"]
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    ports:
+      - "127.0.0.1:3100:3100"
+
+  promtail:
+    image: grafana/promtail:3.3.2
+    restart: unless-stopped
+    command: ["-config.file=/etc/promtail/promtail-config.yml"]
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+
+  ntfy:
+    image: binwiederhier/ntfy:v2.11.0
+    restart: unless-stopped
+    command: ["serve"]
+    volumes:
+      - ntfy_data:/var/lib/ntfy
+    ports:
+      - "127.0.0.1:8090:80"
+
+  glitchtip-migrate:
+    image: glitchtip/glitchtip:v4.2.9
+    restart: "no"
+    command: ["./manage.py", "migrate"]
+    environment: &glitchtip-env
+      DATABASE_URL: "postgres://school:school@postgres:5432/glitchtip"
+      REDIS_URL: "redis://redis:6379/1"
+      SECRET_KEY: "${GLITCHTIP_SECRET_KEY:?set GLITCHTIP_SECRET_KEY in .env}"
+      EMAIL_URL: "consolemail://"
+      GLITCHTIP_DOMAIN: "${GLITCHTIP_DOMAIN:-http://localhost:8091}"
+      DEFAULT_FROM_EMAIL: "glitchtip@localhost"
+      ENABLE_OPEN_USER_REGISTRATION: "false"
+    depends_on:
+      - postgres
+      - redis
+
+  glitchtip-web:
+    image: glitchtip/glitchtip:v4.2.9
+    restart: unless-stopped
+    environment: *glitchtip-env
+    depends_on:
+      - glitchtip-migrate
+    ports:
+      - "127.0.0.1:8091:8080"
+
+  glitchtip-worker:
+    image: glitchtip/glitchtip:v4.2.9
+    restart: unless-stopped
+    command: ["./bin/run-celery-with-beat.sh"]
+    environment: *glitchtip-env
+    depends_on:
+      - glitchtip-migrate
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+  ntfy_data:

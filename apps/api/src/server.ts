@@ -9,6 +9,8 @@ import { env } from "./plugins/env.js";
 import errorsPlugin from "./plugins/errors.js";
 import authenticatePlugin from "./plugins/authenticate.js";
 import rbacPlugin from "./plugins/rbac.js";
+import metricsPlugin from "./plugins/metrics.js";
+import { initErrorReporting } from "./plugins/sentry.js";
 import authRoutes from "./modules/auth/routes.js";
 import usersRoutes from "./modules/users/routes.js";
 import lessonsRoutes from "./modules/lessons/routes.js";
@@ -16,6 +18,8 @@ import { assetsRoutes, filesRoutes } from "./modules/storage/routes.js";
 import { pool } from "./db/client.js";
 
 export function buildServer() {
+  initErrorReporting();
+
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === "production" ? "info" : "debug",
@@ -30,6 +34,7 @@ export function buildServer() {
   app.register(errorsPlugin);
   app.register(authenticatePlugin);
   app.register(rbacPlugin);
+  app.register(metricsPlugin);
 
   app.get("/health", async () => ({ status: "ok" }));
 

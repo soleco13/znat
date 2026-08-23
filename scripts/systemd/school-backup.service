@@ -1,0 +1,11 @@
+[Unit]
+Description=School platform: nightly backup (pg_dump + restic)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=deploy
+WorkingDirectory=/home/deploy/school-platform
+EnvironmentFile=/home/deploy/school-platform/.env
+ExecStart=/home/deploy/school-platform/scripts/backup.sh

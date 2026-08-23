@@ -1,0 +1,6 @@
+# Локальная разработка (docker-compose up): без TLS, без домена.
+# Продовый конфиг с доменом и Let's Encrypt — Caddyfile.prod (Э0.8, деплой на боевой сервер).
+:80 {
+	reverse_proxy app:3000
+	encode gzip
+}

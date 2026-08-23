@@ -9,7 +9,7 @@
     "build": "pnpm -r run build",
     "dev": "pnpm -r --parallel run dev",
     "test": "pnpm -r run test",
-    "lint": "pnpm -r run lint",
+    "lint": "pnpm -r --if-present run lint",
     "typecheck": "pnpm -r run typecheck",
     "depcheck": "dependency-cruiser --config .dependency-cruiser.cjs apps/api/src apps/web/src packages/shared/src",
     "db:migrate": "pnpm --filter @school/api run db:migrate"

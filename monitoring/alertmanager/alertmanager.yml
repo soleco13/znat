@@ -1,0 +1,15 @@
+route:
+  receiver: ntfy
+  group_by: ["alertname"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: ntfy
+    webhook_configs:
+      # ntfy умеет напрямую разбирать JSON-вебхук Alertmanager и красиво
+      # форматировать уведомление — отдельный адаптер не нужен.
+      # Топик "school-alerts" — подписаться на него в приложении ntfy на телефоне.
+      - url: "http://ntfy/school-alerts"
+        send_resolved: true
