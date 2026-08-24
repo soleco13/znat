@@ -9,7 +9,16 @@ import {
   primaryKey,
   index,
   pgEnum,
+  customType,
 } from "drizzle-orm/pg-core";
+
+/** Бинарное состояние Y.Doc (§9 ТЗ: `canvas_docs.ydoc BYTEA`). `pg`/node-postgres
+ *  сам маппит bytea <-> Node Buffer, доп. toDriver/fromDriver не нужны. */
+const bytea = customType<{ data: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+});
 
 export const roleEnum = pgEnum("role", ["admin", "methodist", "teacher", "student"]);
 export const lessonStatusEnum = pgEnum("lesson_status", [
@@ -123,6 +132,23 @@ export const chatMessages = pgTable(
   },
   (t) => [index("chat_messages_lesson_created_idx").on(t.lessonId, t.createdAt)],
 );
+
+/**
+ * Один Y.Doc на урок (Э3.2, §9 ТЗ). `lessonId` — сам PK (не отдельный
+ * uuid-суррогат), т.к. документ ровно один на урок и отдельный id не нужен.
+ * Строка появляется только при первом `onStoreDocument` (первое
+ * дебаунсированное сохранение после начала рисования) через upsert — до
+ * этого момента для урока просто нет строки, что отличается от «строка с
+ * пустым бинарным состоянием» и читается репозиторием canvas как «истории
+ * ещё нет, доска пустая».
+ */
+export const canvasDocs = pgTable("canvas_docs", {
+  lessonId: uuid("lesson_id")
+    .primaryKey()
+    .references(() => lessons.id, { onDelete: "cascade" }),
+  ydoc: bytea("ydoc").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const refreshTokens = pgTable(
   "refresh_tokens",

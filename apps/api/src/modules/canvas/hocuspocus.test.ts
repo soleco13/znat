@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Doc, Text as YText, applyUpdate, encodeStateAsUpdate } from "yjs";
+import type { Document as HocuspocusDocument } from "@hocuspocus/server";
 import type { AccessTokenPayload } from "@school/shared";
 
-const { authServiceMock, lessonsServiceMock, usersServiceMock } = vi.hoisted(() => ({
+const { authServiceMock, lessonsServiceMock, usersServiceMock, repoMock } = vi.hoisted(() => ({
   authServiceMock: {
     verifyAccessToken: vi.fn(),
   },
@@ -11,13 +13,18 @@ const { authServiceMock, lessonsServiceMock, usersServiceMock } = vi.hoisted(() 
   usersServiceMock: {
     isGroupMember: vi.fn(),
   },
+  repoMock: {
+    loadDoc: vi.fn(),
+    saveDoc: vi.fn(),
+  },
 }));
 
 vi.mock("../auth/service.js", () => authServiceMock);
 vi.mock("../lessons/service.js", () => lessonsServiceMock);
 vi.mock("../users/service.js", () => usersServiceMock);
+vi.mock("./repo.js", () => repoMock);
 
-const { authenticateCanvasConnection } = await import("./hocuspocus.js");
+const { authenticateCanvasConnection, loadCanvasDocument, storeCanvasDocument } = await import("./hocuspocus.js");
 
 const SCHOOL_ID = "11111111-1111-1111-1111-111111111111";
 const LESSON_ID = "22222222-2222-2222-2222-222222222222";
@@ -115,5 +122,45 @@ describe("authenticateCanvasConnection", () => {
     authServiceMock.verifyAccessToken.mockRejectedValue(new Error("bad token"));
 
     await expect(authenticateCanvasConnection({ token: "bad", documentName: LESSON_ID })).rejects.toThrow();
+  });
+});
+
+describe("loadCanvasDocument (Э3.2)", () => {
+  it("документа ещё нет в БД — возвращает undefined (штатный пустой Y.Doc)", async () => {
+    repoMock.loadDoc.mockResolvedValue(null);
+
+    const result = await loadCanvasDocument({ documentName: LESSON_ID });
+    expect(result).toBeUndefined();
+    expect(repoMock.loadDoc).toHaveBeenCalledWith(LESSON_ID);
+  });
+
+  it("документ есть в БД — возвращает сырые байты как есть", async () => {
+    const saved = Buffer.from([1, 2, 3]);
+    repoMock.loadDoc.mockResolvedValue(saved);
+
+    const result = await loadCanvasDocument({ documentName: LESSON_ID });
+    expect(result).toBe(saved);
+  });
+});
+
+describe("storeCanvasDocument (Э3.2)", () => {
+  it("сохраняет полное состояние Y.Doc, применимое обратно через applyUpdate", async () => {
+    const doc = new Doc();
+    doc.getText("note").insert(0, "привет");
+
+    await storeCanvasDocument({ documentName: LESSON_ID, document: doc as unknown as HocuspocusDocument });
+
+    expect(repoMock.saveDoc).toHaveBeenCalledTimes(1);
+    const [savedLessonId, savedBytes] = repoMock.saveDoc.mock.calls[0] as [string, Buffer];
+    expect(savedLessonId).toBe(LESSON_ID);
+    expect(Buffer.isBuffer(savedBytes)).toBe(true);
+
+    // Круглый путь: применённые к новому документу байты дают тот же текст.
+    const restored = new Doc();
+    applyUpdate(restored, savedBytes);
+    expect((restored.getText("note") as YText).toString()).toBe("привет");
+
+    // Сверка независимым вызовом encodeStateAsUpdate — не мок, реальный Yjs.
+    expect(savedBytes.equals(Buffer.from(encodeStateAsUpdate(doc)))).toBe(true);
   });
 });

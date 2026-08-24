@@ -1,9 +1,16 @@
-import { Hocuspocus, type onAuthenticatePayload } from "@hocuspocus/server";
+import {
+  Hocuspocus,
+  type onAuthenticatePayload,
+  type onLoadDocumentPayload,
+  type onStoreDocumentPayload,
+} from "@hocuspocus/server";
+import { encodeStateAsUpdate } from "yjs";
 import { z } from "zod";
 import { AppError } from "../../plugins/errors.js";
 import { verifyAccessToken } from "../auth/service.js";
 import * as lessonsService from "../lessons/service.js";
 import * as usersService from "../users/service.js";
+import * as repo from "./repo.js";
 
 const documentNameSchema = z.string().uuid();
 
@@ -51,14 +58,48 @@ export async function authenticateCanvasConnection(
 }
 
 /**
+ * Загружает сохранённое бинарное состояние Y.Doc из Postgres при первом
+ * подключении к документу (Э3.2, §9 ТЗ: `canvas_docs.ydoc BYTEA`).
+ * Возврат `Uint8Array` — Hocuspocus сам применит его через `applyUpdate` к
+ * новому пустому `Document` (проверено чтением `Hocuspocus.ts#loadDocument`:
+ * колбэк `onLoadDocument` проверяет `instanceof Doc` ИЛИ `instanceof
+ * Uint8Array` — `Buffer` соответствует второму). Если строки в БД нет —
+ * возвращаем `undefined`, тогда используется штатный пустой документ.
+ */
+export async function loadCanvasDocument(
+  payload: Pick<onLoadDocumentPayload, "documentName">,
+): Promise<Buffer | undefined> {
+  const ydoc = await repo.loadDoc(payload.documentName);
+  return ydoc ?? undefined;
+}
+
+/**
+ * Сохраняет полное бинарное состояние Y.Doc в Postgres (upsert по
+ * `lessonId`). Дебаунсится самим Hocuspocus (`debounce: 3000` в конфиге
+ * ниже, §3.4 ТЗ: «дебаунс 2–5 сек», Э3.2 плана — буквально «3 сек») — сюда
+ * попадают уже готовые к записи, не по каждому штриху.
+ */
+export async function storeCanvasDocument(
+  payload: Pick<onStoreDocumentPayload, "documentName" | "document">,
+): Promise<void> {
+  const state = Buffer.from(encodeStateAsUpdate(payload.document));
+  await repo.saveDoc(payload.documentName, state);
+}
+
+/**
  * Единственный экземпляр Hocuspocus на процесс, монтируется в тот же
  * Fastify-сервер на `/collab` (см. canvas/ws.ts), не отдельным процессом —
  * жёсткое требование §3.4/§4.1.1 ТЗ.
  *
- * Персистентность Y.Doc в Postgres (onLoadDocument/onStoreDocument) —
- * Э3.2, здесь намеренно не реализована: до неё документ живёт только в
- * памяти процесса и теряется при рестарте, это ожидаемо для Э3.1.
+ * `unloadImmediately` намеренно оставлен на значении по умолчанию
+ * (`true`) — выгрузка документа из памяти сразу после ухода последнего
+ * участника. Кастомный 5-минутный grace-период на переподключение (Э3.3
+ * плана) сюда ещё не добавлен — это отдельная задача, трогать её сейчас
+ * значило бы смешивать Э3.2 и Э3.3 в одном коммите.
  */
 export const hocuspocus = new Hocuspocus({
+  debounce: 3000,
   onAuthenticate: authenticateCanvasConnection,
+  onLoadDocument: loadCanvasDocument,
+  onStoreDocument: storeCanvasDocument,
 });

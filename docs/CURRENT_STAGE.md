@@ -24,7 +24,7 @@ project-video-platform-stages) — пользователь явно выбра�
 
 - [x] Э3.1 Hocuspocus смонтирован в тот же Fastify-сервер на `/collab`,
       `onAuthenticate` проверяет права на lesson_id.
-- [ ] Э3.2 Персистентность Y.Doc в Postgres, дебаунс 3 сек + снимок при закрытии.
+- [x] Э3.2 Персистентность Y.Doc в Postgres, дебаунс 3 сек + снимок при закрытии.
 - [ ] Э3.3 Жизненный цикл Y.Doc: выгрузка из памяти через 5 мин после ухода
       последнего участника, метрика «активных Y.Doc».
 - [ ] Э3.4 Excalidraw встроен, шрифты самохостом, лишние инструменты скрыты.
@@ -132,6 +132,81 @@ project-video-platform-stages) — пользователь явно выбра�
   функции авторизации. Первая живая проверка возможна не раньше Э3.4/3.5,
   когда появится браузерный клиент (`@hocuspocus/provider` +
   `y-excalidraw`), который реально откроет `/collab`.
+
+## Что сделано технически (Э3.2)
+
+- `apps/api/src/db/schema.ts`: таблица `canvas_docs` (§9 ТЗ) —
+  `lessonId` сам PK (FK на `lessons.id`, `onDelete: cascade`, без
+  отдельного uuid-суррогата — документ ровно один на урок), `ydoc` —
+  собственный `customType<{ data: Buffer }>({ dataType: () => "bytea" })`
+  (в Drizzle pg-core нет готового хелпера `bytea`, `pg`/node-postgres сам
+  мапит bytea↔Buffer, доп. `toDriver`/`fromDriver` не понадобились),
+  `updatedAt`. Миграция `apps/api/drizzle/0002_complex_diamondback.sql`
+  сгенерирована `drizzle-kit generate` (валидность SQL проверена
+  парсером/чтением, не реальным Postgres — по-прежнему нет Docker в этой
+  среде). Строка появляется только по факту первого сохранения
+  (`onConflictDoUpdate` upsert), не создаётся заранее пустой.
+- `apps/api/src/modules/canvas/repo.ts` — `loadDoc`/`saveDoc`, обычный
+  Drizzle `select`/`insert().onConflictDoUpdate()`.
+- `apps/api/src/modules/canvas/hocuspocus.ts` пополнился двумя хуками,
+  **проверенными построчно чтением исходника `Hocuspocus.ts#loadDocument`
+  (это по-прежнему область Y.Doc из списка «не делегировать вслепую»
+  CLAUDE.md)**:
+  - `onLoadDocument` — возвращает сырые байты (`Buffer | undefined`) из
+    `repo.loadDoc()`. Подтверждено чтением исходника: колбэк хука сам
+    решает, как применить возврат — `instanceof Doc` → `encodeStateAsUpdate`
+    + `applyUpdate`, `instanceof Uint8Array` (чему соответствует `Buffer`)
+    → `applyUpdate` напрямую. Возврат `undefined`, если строки в БД ещё
+    нет, — тогда остаётся штатный пустой `Document`.
+  - `onStoreDocument` — `Buffer.from(encodeStateAsUpdate(document))` →
+    `repo.saveDoc()`. `document` в этом хуке — это `Document extends Doc`
+    (сам Hocuspocus, подтверждено чтением `Document.ts`), поэтому
+    `encodeStateAsUpdate` из `yjs` применим к нему напрямую.
+  - `debounce: 3000` в конфиге `Hocuspocus` — буквальное «дебаунс 3 сек»
+    из формулировки Э3.2 плана (ТЗ §3.4 даёт диапазон 2–5 сек).
+    `maxDebounce`/`unloadImmediately` оставлены на значениях по умолчанию
+    пакета — их настройка под 5-минутный grace-период после ухода
+    последнего участника принадлежит Э3.3, не этой задаче.
+- **«Финальный снимок при закрытии урока»** — новый
+  `apps/api/src/modules/canvas/service.ts#closeCanvasDocument(lessonId)`:
+  `hocuspocus.closeConnections(lessonId)` форсирует закрытие всех
+  `/collab`-сокетов этого урока; штатный `onClose`-путь самого пакета
+  (тот же код, что и при обычном уходе последнего участника, см.
+  `Hocuspocus.ts` — колбэк `clientConnection.onClose` в
+  `handleConnection`) сам сохраняет debounced-изменения немедленно
+  (`unloadImmediately`) и выгружает документ.
+  - **Вызывается из `rooms/service.ts`, а не из `lessons/service.ts`** —
+    осознанно: `canvas` уже зависит от `lessons` (проверка прав в
+    `onAuthenticate`, Э3.1), обратная зависимость `lessons → canvas`
+    создала бы цикл, запрещённый `dependency-cruiser` (§4.1.1 ТЗ). `rooms`
+    зависит от `lessons` и ничем не зависим от `canvas` — безопасная точка
+    интеграции. Добавлено во все три места, где `rooms/service.ts` зовёт
+    `lessonsService.endLesson()`: `endLessonNow` (учитель/админ вручную),
+    `handleRoomFinishedWebhook` (LiveKit `room_finished`, Э2.7) и таймер
+    автозавершения пустой комнаты (`scheduleAutoEndIfEmpty`, Э1.7).
+- Тесты: `canvas/hocuspocus.test.ts` пополнился 3 тестами на
+  `loadCanvasDocument`/`storeCanvasDocument` (мок `repo.js`; для
+  `storeCanvasDocument` — не мок, а настоящий `yjs`: создаётся `Doc`,
+  вставляется текст, проверяется, что сохранённые байты воспроизводят тот
+  же текст через `applyUpdate` на независимом документе, и что они байт-в-
+  байт совпадают с прямым вызовом `encodeStateAsUpdate` — тот же приём
+  «декодировать реальный артефакт, не мокать SDK», что был в Э2.2 для JWT).
+  Новый `canvas/service.test.ts` (1 тест, мок `hocuspocus.js`). Обновлён
+  `rooms/service.test.ts`: добавлен мок `../canvas/service.js`, проверено,
+  что `closeCanvasDocument` вызывается с `LESSON_ID` в `endLessonNow` и в
+  `room_finished`-вебхуке (и НЕ вызывается, если урок уже не `live` —
+  идемпотентность). Третий путь (таймер автозавершения пустой комнаты)
+  юнит-тестами не покрыт — это существовавший до Э3.2 пробел (таймер живёт
+  на реальном `setTimeout` на 15 минут), не новый.
+- `pnpm build`/`pnpm test`/`pnpm depcheck` — зелёные. 62/62 теста бэкенда
+  (было 58, +4). `dependency-cruiser`: 108 модулей, 259 связей, без
+  нарушений (подтверждает отсутствие цикла `rooms ↔ canvas`).
+- **Не проверено вживую** — как и весь проект без Docker: нет реального
+  Postgres, чтобы прогнать миграцию `0002` и проверить upsert/чтение
+  `bytea` против настоящей БД, и нет живого `HocuspocusProvider`-клиента,
+  чтобы увидеть персистентность через реальный рестарт процесса. Логика
+  проверена чтением исходников пакета и байт-в-байт сверкой через
+  настоящий `yjs` в юнит-тестах, не через integration-тест с БД.
 
 ---
 

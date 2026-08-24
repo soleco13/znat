@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AccessTokenPayload } from "@school/shared";
 
-const { lessonsServiceMock, usersServiceMock, repoMock, mediaServiceMock } = vi.hoisted(() => ({
+const { lessonsServiceMock, usersServiceMock, repoMock, mediaServiceMock, canvasServiceMock } = vi.hoisted(() => ({
+  canvasServiceMock: {
+    closeCanvasDocument: vi.fn(),
+  },
   lessonsServiceMock: {
     getLesson: vi.fn(),
     startLesson: vi.fn(),
@@ -34,6 +37,7 @@ vi.mock("../lessons/service.js", () => lessonsServiceMock);
 vi.mock("../users/service.js", () => usersServiceMock);
 vi.mock("./repo.js", () => repoMock);
 vi.mock("../media/service.js", () => mediaServiceMock);
+vi.mock("../canvas/service.js", () => canvasServiceMock);
 
 // presence.ts общается с реальным Redis — подменяем на in-memory реализацию,
 // оставляя чистые функции (defaultPermissions, isStaleEntry) настоящими.
@@ -300,6 +304,8 @@ describe("модерация чата и завершение урока", () =>
 
     await roomsService.endLessonNow(SCHOOL_ID, LESSON_ID, teacherToken());
     expect(lessonsServiceMock.endLesson).toHaveBeenCalledWith(SCHOOL_ID, LESSON_ID);
+    // Э3.2: финальный снимок доски — closeCanvasDocument закрывает /collab-подключения этого урока.
+    expect(canvasServiceMock.closeCanvasDocument).toHaveBeenCalledWith(LESSON_ID);
   });
 
   it("только учитель этого урока может удалить сообщение чата", async () => {
@@ -341,6 +347,7 @@ describe("вебхуки LiveKit (Э2.7)", () => {
     await roomsService.handleRoomFinishedWebhook(LIVEKIT_ROOM);
 
     expect(lessonsServiceMock.endLesson).toHaveBeenCalledWith(SCHOOL_ID, LESSON_ID);
+    expect(canvasServiceMock.closeCanvasDocument).toHaveBeenCalledWith(LESSON_ID);
   });
 
   it("room_finished не трогает урок, который уже не live (идемпотентность)", async () => {
@@ -349,5 +356,6 @@ describe("вебхуки LiveKit (Э2.7)", () => {
     await roomsService.handleRoomFinishedWebhook(LIVEKIT_ROOM);
 
     expect(lessonsServiceMock.endLesson).not.toHaveBeenCalled();
+    expect(canvasServiceMock.closeCanvasDocument).not.toHaveBeenCalled();
   });
 });

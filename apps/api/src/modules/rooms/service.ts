@@ -8,6 +8,7 @@ import type {
   UpdateParticipantPermissionsRequest,
 } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
+import * as canvasService from "../canvas/service.js";
 import * as lessonsService from "../lessons/service.js";
 import * as mediaService from "../media/service.js";
 import * as usersService from "../users/service.js";
@@ -90,6 +91,7 @@ async function scheduleAutoEndIfEmpty(schoolId: string, lessonId: string): Promi
         const lesson = await lessonsService.getLesson(schoolId, lessonId);
         if (lesson.status !== "live") return;
         await lessonsService.endLesson(schoolId, lessonId);
+        canvasService.closeCanvasDocument(lessonId);
         emitRoomEvent(lessonId, { type: "lesson_status", status: "ended" });
         activeLessons.delete(lessonId);
       } catch (err) {
@@ -329,6 +331,7 @@ export async function handleRoomFinishedWebhook(livekitRoom: string): Promise<vo
   if (!lesson || lesson.status !== "live") return;
   clearEmptyRoomTimer(lesson.id);
   await lessonsService.endLesson(lesson.schoolId, lesson.id);
+  canvasService.closeCanvasDocument(lesson.id);
   emitRoomEvent(lesson.id, { type: "lesson_status", status: "ended" });
   activeLessons.delete(lesson.id);
 }
@@ -400,6 +403,7 @@ export async function endLessonNow(schoolId: string, lessonId: string, requester
   }
   clearEmptyRoomTimer(lessonId);
   await lessonsService.endLesson(schoolId, lessonId);
+  canvasService.closeCanvasDocument(lessonId);
   emitRoomEvent(lessonId, { type: "lesson_status", status: "ended" });
   activeLessons.delete(lessonId);
 }
