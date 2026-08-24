@@ -8,6 +8,7 @@ export default defineConfig({
       "/api": { target: "http://localhost:3000", changeOrigin: true },
       "/files": { target: "http://localhost:3000", changeOrigin: true },
       "/ws": { target: "ws://localhost:3000", ws: true },
+      "/collab": { target: "ws://localhost:3000", ws: true },
     },
   },
   build: {

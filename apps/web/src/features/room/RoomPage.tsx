@@ -11,6 +11,7 @@ import type {
 } from "@school/shared";
 import { apiFetch } from "../../shared/api-client.js";
 import { useAuthStore } from "../../shared/auth-store.js";
+import { Board } from "../canvas/Board.js";
 import { ConnectionQualityDot, PacketLossWarning } from "./ConnectionQuality.js";
 import { DeviceCheckScreen } from "./DeviceCheckScreen.js";
 import { MediaAudioStatus } from "./MediaAudioStatus.js";
@@ -155,7 +156,12 @@ export function RoomPage() {
   }
 
   const content = (
-    <div className="mx-auto mt-8 grid max-w-5xl grid-cols-[2fr_1fr] gap-4 px-4">
+    <div className="mx-auto mt-8 max-w-6xl px-4">
+      <div className="mb-4">
+        <Board />
+      </div>
+
+      <div className="grid grid-cols-[2fr_1fr] gap-4">
       <div>
         <div className="mb-4 flex items-center justify-between">
           <div>
@@ -270,6 +276,7 @@ export function RoomPage() {
             Отправить
           </button>
         </form>
+      </div>
       </div>
     </div>
   );
