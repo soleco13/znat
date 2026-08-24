@@ -19,6 +19,7 @@ import roomsRoutes from "./modules/rooms/routes.js";
 import roomsWsRoutes from "./modules/rooms/ws.js";
 import livekitWebhookRoutes from "./modules/rooms/livekit-webhook.js";
 import canvasWsRoutes from "./modules/canvas/ws.js";
+import { startCanvasUnloadSweep, stopCanvasUnloadSweep } from "./modules/canvas/service.js";
 import { startPresenceSweep, stopPresenceSweep } from "./modules/rooms/service.js";
 import { assetsRoutes, filesRoutes } from "./modules/storage/routes.js";
 import { pool } from "./db/client.js";
@@ -81,10 +82,12 @@ export function buildServer() {
 async function main() {
   const app = buildServer();
   startPresenceSweep();
+  startCanvasUnloadSweep();
 
   const shutdown = async (signal: string) => {
     app.log.info({ signal }, "Shutting down");
     stopPresenceSweep();
+    stopCanvasUnloadSweep();
     await app.close();
     await pool.end();
     redis.disconnect();

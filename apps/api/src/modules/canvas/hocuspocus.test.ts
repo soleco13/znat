@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Doc, Text as YText, applyUpdate, encodeStateAsUpdate } from "yjs";
 import type { Document as HocuspocusDocument } from "@hocuspocus/server";
 import type { AccessTokenPayload } from "@school/shared";
@@ -24,7 +24,17 @@ vi.mock("../lessons/service.js", () => lessonsServiceMock);
 vi.mock("../users/service.js", () => usersServiceMock);
 vi.mock("./repo.js", () => repoMock);
 
-const { authenticateCanvasConnection, loadCanvasDocument, storeCanvasDocument } = await import("./hocuspocus.js");
+const {
+  authenticateCanvasConnection,
+  loadCanvasDocument,
+  storeCanvasDocument,
+  clearEmptySinceOnConnect,
+  trackEmptySinceOnDisconnect,
+  vetoUnloadDuringGracePeriod,
+  runCanvasUnloadSweepOnce,
+  getActiveCanvasDocumentsCount,
+  hocuspocus,
+} = await import("./hocuspocus.js");
 
 const SCHOOL_ID = "11111111-1111-1111-1111-111111111111";
 const LESSON_ID = "22222222-2222-2222-2222-222222222222";
@@ -162,5 +172,126 @@ describe("storeCanvasDocument (Э3.2)", () => {
 
     // Сверка независимым вызовом encodeStateAsUpdate — не мок, реальный Yjs.
     expect(savedBytes.equals(Buffer.from(encodeStateAsUpdate(doc)))).toBe(true);
+  });
+});
+
+function fakeDocument(connectionsCount: number): HocuspocusDocument {
+  return { getConnectionsCount: () => connectionsCount } as unknown as HocuspocusDocument;
+}
+
+describe("грейс-период выгрузки Y.Doc (Э3.3)", () => {
+  const FIVE_MIN_MS = 5 * 60 * 1000;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("документ с активными подключениями не помечается пустым при disconnect другого клиента", async () => {
+    const doc = "lesson-still-connected";
+    await trackEmptySinceOnDisconnect({ documentName: doc, document: fakeDocument(1) });
+
+    // getConnectionsCount() > 0 в момент disconnect — значит ушёл не последний,
+    // emptySince не должен был выставиться. Проверяем это через veto: раз
+    // "since" нет, veto уходит в защитную ветку "только начался", а не
+    // "не прошло 5 минут" — но в обоих случаях он отклоняет, поэтому
+    // единственный наблюдаемый способ различить их снаружи — проверить sweep:
+    // документ без записи в emptySince вообще не попадёт в его цикл.
+    hocuspocus.documents.set(doc, fakeDocument(1));
+    const unloadSpy = vi.spyOn(hocuspocus, "unloadDocument").mockResolvedValue(undefined);
+    vi.setSystemTime(Date.now() + FIVE_MIN_MS + 1000);
+    runCanvasUnloadSweepOnce();
+    expect(unloadSpy).not.toHaveBeenCalled();
+    unloadSpy.mockRestore();
+    hocuspocus.documents.delete(doc);
+  });
+
+  it("sweep не выгружает документ, если у него прямо сейчас снова есть подключения (гонка с reconnect)", async () => {
+    const doc = "lesson-reconnected-race";
+    await trackEmptySinceOnDisconnect({ documentName: doc, document: fakeDocument(0) });
+    vi.setSystemTime(Date.now() + FIVE_MIN_MS + 1000);
+    // К моменту sweep кто-то успел переподключиться, но connected-хук по
+    // какой-то причине ещё не вызван (гонка) — sweep обязан сам перепроверить
+    // getConnectionsCount() у актуального документа, а не слепо верить
+    // устаревшей отметке emptySince.
+    hocuspocus.documents.set(doc, fakeDocument(1));
+    const unloadSpy = vi.spyOn(hocuspocus, "unloadDocument").mockResolvedValue(undefined);
+
+    runCanvasUnloadSweepOnce();
+
+    expect(unloadSpy).not.toHaveBeenCalled();
+    unloadSpy.mockRestore();
+    hocuspocus.documents.delete(doc);
+  });
+
+  it("выгрузка отклоняется (veto), пока не прошло 5 минут с момента опустения", async () => {
+    const doc = "lesson-grace-not-elapsed";
+    await trackEmptySinceOnDisconnect({ documentName: doc, document: fakeDocument(0) });
+
+    await expect(vetoUnloadDuringGracePeriod({ documentName: doc })).rejects.toThrow();
+
+    vi.setSystemTime(Date.now() + FIVE_MIN_MS - 1000);
+    await expect(vetoUnloadDuringGracePeriod({ documentName: doc })).rejects.toThrow();
+  });
+
+  it("выгрузка разрешается (не throw) после истечения 5 минут", async () => {
+    const doc = "lesson-grace-elapsed";
+    await trackEmptySinceOnDisconnect({ documentName: doc, document: fakeDocument(0) });
+
+    vi.setSystemTime(Date.now() + FIVE_MIN_MS + 1000);
+    await expect(vetoUnloadDuringGracePeriod({ documentName: doc })).resolves.toBeUndefined();
+  });
+
+  it("переподключение (connected) сбрасывает отметку опустения — грейс-период начинается заново", async () => {
+    const doc = "lesson-reconnected";
+    await trackEmptySinceOnDisconnect({ documentName: doc, document: fakeDocument(0) });
+    vi.setSystemTime(Date.now() + FIVE_MIN_MS + 1000);
+
+    await clearEmptySinceOnConnect({ documentName: doc });
+
+    // Отметка сброшена — следующая попытка выгрузки видит "документ ещё не
+    // помечался пустым" и защитно ветирует заново, а не считает грейс истёкшим.
+    await expect(vetoUnloadDuringGracePeriod({ documentName: doc })).rejects.toThrow();
+  });
+
+  it("sweep выгружает документ без подключений, у которого истёк грейс-период", async () => {
+    const doc = "lesson-swept";
+    await trackEmptySinceOnDisconnect({ documentName: doc, document: fakeDocument(0) });
+    hocuspocus.documents.set(doc, fakeDocument(0));
+    const unloadSpy = vi.spyOn(hocuspocus, "unloadDocument").mockResolvedValue(undefined);
+
+    vi.setSystemTime(Date.now() + FIVE_MIN_MS + 1000);
+    runCanvasUnloadSweepOnce();
+
+    expect(unloadSpy).toHaveBeenCalledTimes(1);
+    unloadSpy.mockRestore();
+    hocuspocus.documents.delete(doc);
+  });
+
+  it("sweep не трогает документ без подключений раньше истечения грейс-периода", async () => {
+    const doc = "lesson-not-yet";
+    await trackEmptySinceOnDisconnect({ documentName: doc, document: fakeDocument(0) });
+    hocuspocus.documents.set(doc, fakeDocument(0));
+    const unloadSpy = vi.spyOn(hocuspocus, "unloadDocument").mockResolvedValue(undefined);
+
+    vi.setSystemTime(Date.now() + FIVE_MIN_MS - 1000);
+    runCanvasUnloadSweepOnce();
+
+    expect(unloadSpy).not.toHaveBeenCalled();
+    unloadSpy.mockRestore();
+    hocuspocus.documents.delete(doc);
+  });
+});
+
+describe("getActiveCanvasDocumentsCount (Э3.3, метрика Prometheus)", () => {
+  it("отражает актуальный размер hocuspocus.documents", () => {
+    const before = getActiveCanvasDocumentsCount();
+    hocuspocus.documents.set("lesson-metric-probe", fakeDocument(0));
+    expect(getActiveCanvasDocumentsCount()).toBe(before + 1);
+    hocuspocus.documents.delete("lesson-metric-probe");
+    expect(getActiveCanvasDocumentsCount()).toBe(before);
   });
 });

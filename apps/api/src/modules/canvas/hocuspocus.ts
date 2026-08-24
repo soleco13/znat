@@ -1,6 +1,9 @@
 import {
   Hocuspocus,
+  type beforeUnloadDocumentPayload,
+  type connectedPayload,
   type onAuthenticatePayload,
+  type onDisconnectPayload,
   type onLoadDocumentPayload,
   type onStoreDocumentPayload,
 } from "@hocuspocus/server";
@@ -86,20 +89,128 @@ export async function storeCanvasDocument(
   await repo.saveDoc(payload.documentName, state);
 }
 
+/** Э3.3 плана: выгрузка Y.Doc из памяти через 5 минут после ухода последнего участника. */
+const UNLOAD_GRACE_MS = 5 * 60 * 1000;
+const UNLOAD_SWEEP_INTERVAL_MS = 30_000;
+
+/**
+ * documentName -> момент, когда `document.getConnectionsCount()` последний
+ * раз стал равен нулю. Своя карта, а не что-то встроенное в пакет —
+ * **проверено чтением исходника, что штатного "unload delay"/"grace
+ * period" механизма в Hocuspocus нет**: `shouldUnloadDocument()` в
+ * `Hocuspocus.ts` считает документ выгружаемым сразу, как только у него 0
+ * подключений и нет ожидающего дебаунсированного сохранения — то есть
+ * штатно документ выгружается практически сразу (в пределах `debounce`/
+ * `maxDebounce`, секунды), а не через 5 минут. Единственное найденное
+ * связанное API — `DisconnectOptions.unloadImmediately` у `DirectConnection`
+ * (см. types.ts) — это для программных серверных подключений
+ * (`server-side transact`), а не для обычных WS-клиентов урока, для нашего
+ * случая не подходит.
+ */
+const emptySince = new Map<string, number>();
+let unloadSweepInterval: NodeJS.Timeout | null = null;
+
+/**
+ * `connected` (не `onConnect`!) — фактическое успешное подключение уже
+ * ПОСЛЕ onAuthenticate, а не попытка. Экспортирована (как и следующие две
+ * функции) для юнит-тестов — тем же приёмом, что `isStaleEntry` в
+ * `rooms/service.ts` (Э1.7): чистая функция от payload проверяется
+ * напрямую, без похода через реальный Hocuspocus-хендшейк.
+ */
+export async function clearEmptySinceOnConnect(payload: Pick<connectedPayload, "documentName">): Promise<void> {
+  emptySince.delete(payload.documentName);
+}
+
+export async function trackEmptySinceOnDisconnect(
+  payload: Pick<onDisconnectPayload, "documentName" | "document">,
+): Promise<void> {
+  if (payload.document.getConnectionsCount() === 0) {
+    emptySince.set(payload.documentName, Date.now());
+  }
+}
+
+/**
+ * Ветирует штатную попытку Hocuspocus выгрузить документ сразу после ухода
+ * последнего участника (throw здесь безопасен — `unloadDocument()` в
+ * `Hocuspocus.ts` оборачивает вызов этого хука в try/catch и просто молча
+ * не выгружает документ при ошибке, без падения процесса). Если карта
+ * `emptySince` почему-то не знает об этом документе (защитный случай — не
+ * должно происходить в норме, раз `unloadDocument` сам вызывается только
+ * при 0 подключений) — считаем, что грейс-период только начался, а не
+ * пропускаем выгрузку: безопаснее по умолчанию подождать, чем случайно
+ * выгрузить документ с недавней историей раньше времени.
+ */
+export async function vetoUnloadDuringGracePeriod(
+  payload: Pick<beforeUnloadDocumentPayload, "documentName">,
+): Promise<void> {
+  const since = emptySince.get(payload.documentName);
+  if (since === undefined) {
+    emptySince.set(payload.documentName, Date.now());
+    throw new Error("grace_period_just_started");
+  }
+  if (Date.now() - since < UNLOAD_GRACE_MS) {
+    throw new Error("grace_period_not_elapsed");
+  }
+  emptySince.delete(payload.documentName);
+}
+
+/**
+ * Ничто внутри Hocuspocus само не перепроверяет документ после того, как
+ * `beforeUnloadDocument` его ветировал — единственные два места, откуда
+ * вообще вызывается `unloadDocument()` (после `onStoreDocument` и при
+ * закрытии последнего соединения), сами больше не сработают, если не
+ * случится новая активность. Поэтому нужен собственный периодический
+ * обход, тем же приёмом, что `startPresenceSweep()` в `rooms/service.ts`
+ * (Э1.7) — иначе документ, у которого истёк грейс-период, но никто не
+ * зашёл и не написал в него снова, повиснет в памяти навсегда.
+ */
+function sweepIdleCanvasDocuments(): void {
+  const now = Date.now();
+  for (const [documentName, since] of emptySince) {
+    if (now - since < UNLOAD_GRACE_MS) continue;
+    const document = hocuspocus.documents.get(documentName);
+    if (!document || document.getConnectionsCount() > 0) {
+      emptySince.delete(documentName);
+      continue;
+    }
+    void hocuspocus.unloadDocument(document);
+  }
+}
+
+export function startCanvasUnloadSweep(): void {
+  if (unloadSweepInterval) return;
+  unloadSweepInterval = setInterval(sweepIdleCanvasDocuments, UNLOAD_SWEEP_INTERVAL_MS);
+  unloadSweepInterval.unref?.();
+}
+
+export function stopCanvasUnloadSweep(): void {
+  if (unloadSweepInterval) {
+    clearInterval(unloadSweepInterval);
+    unloadSweepInterval = null;
+  }
+}
+
+/** Для юнит-тестов sweep-цикла, без ожидания реального `setInterval`. */
+export function runCanvasUnloadSweepOnce(): void {
+  sweepIdleCanvasDocuments();
+}
+
+/** Количество Y.Doc, прямо сейчас находящихся в памяти процесса — метрика Prometheus (Э3.3). */
+export function getActiveCanvasDocumentsCount(): number {
+  return hocuspocus.documents.size;
+}
+
 /**
  * Единственный экземпляр Hocuspocus на процесс, монтируется в тот же
  * Fastify-сервер на `/collab` (см. canvas/ws.ts), не отдельным процессом —
  * жёсткое требование §3.4/§4.1.1 ТЗ.
- *
- * `unloadImmediately` намеренно оставлен на значении по умолчанию
- * (`true`) — выгрузка документа из памяти сразу после ухода последнего
- * участника. Кастомный 5-минутный grace-период на переподключение (Э3.3
- * плана) сюда ещё не добавлен — это отдельная задача, трогать её сейчас
- * значило бы смешивать Э3.2 и Э3.3 в одном коммите.
  */
 export const hocuspocus = new Hocuspocus({
   debounce: 3000,
   onAuthenticate: authenticateCanvasConnection,
   onLoadDocument: loadCanvasDocument,
   onStoreDocument: storeCanvasDocument,
+  connected: clearEmptySinceOnConnect,
+  onDisconnect: trackEmptySinceOnDisconnect,
+  beforeUnloadDocument: vetoUnloadDuringGracePeriod,
 });
