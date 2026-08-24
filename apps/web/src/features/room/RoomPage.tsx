@@ -11,6 +11,7 @@ import type {
 } from "@school/shared";
 import { apiFetch } from "../../shared/api-client.js";
 import { useAuthStore } from "../../shared/auth-store.js";
+import { ConnectionQualityDot, PacketLossWarning } from "./ConnectionQuality.js";
 import { DeviceCheckScreen } from "./DeviceCheckScreen.js";
 import { MediaAudioStatus } from "./MediaAudioStatus.js";
 import { MicStatusIcon, SelfMicButton } from "./MicControls.js";
@@ -168,6 +169,7 @@ export function RoomPage() {
                 </>
               )}
             </p>
+            {media && self?.permissions.canSpeak && <PacketLossWarning />}
           </div>
           <div className="flex gap-2">
             {isTeacher && lessonStatus === "live" && (
@@ -214,6 +216,7 @@ export function RoomPage() {
                 <span className="text-xs text-slate-400">({p.role})</span>
                 {p.handRaised && <span title="Поднята рука">✋</span>}
                 {media && <MicStatusIcon userId={p.userId} />}
+                {media && <ConnectionQualityDot userId={p.userId} />}
               </span>
               {isTeacher && p.userId !== me?.id && (
                 <span className="flex items-center gap-2 text-xs">
