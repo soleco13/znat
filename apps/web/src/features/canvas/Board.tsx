@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Excalidraw } from "@excalidraw/excalidraw";
-import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+import type { ExcalidrawImperativeAPI, NormalizedZoomValue } from "@excalidraw/excalidraw/types";
 import { HocuspocusProvider } from "@hocuspocus/provider";
 import { ExcalidrawBinding } from "y-excalidraw";
 import * as Y from "yjs";
@@ -8,6 +8,16 @@ import { useAuthStore } from "../../shared/auth-store.js";
 import { BACKGROUND_KIND_LABELS, PageBackground, type BackgroundKind } from "./PageBackground.js";
 import "@excalidraw/excalidraw/index.css";
 import "./Board.css";
+
+/** Стабильный цвет курсора участника — из userId, без похода на сервер (Э3.9). */
+function cursorColorFor(userId: string): string {
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) hash = (hash * 31 + userId.charCodeAt(i)) >>> 0;
+  return `hsl(${hash % 360}, 70%, 45%)`;
+}
+
+type ViewportAwarenessState = { scrollX: number; scrollY: number; zoom: number };
+type UserAwarenessState = { name: string; color: string; role: string };
 
 /**
  * Метаданные страницы холста (Э3.6/Э3.7, §3.4/§4.3 ТЗ:
@@ -49,12 +59,19 @@ function sortedPageEntries(pagesMap: Y.Map<PageMeta>): Array<[string, PageMeta]>
  * сервером на уровне `connectionConfig.readOnly` в `canvas/hocuspocus.ts`
  * (Yjs-обновления от read-only подключения молча отбрасываются вне
  * зависимости от того, что показывает клиентский UI).
+ *
+ * Э3.9 добавляет курсоры (через `awareness` + `binding.onPointerUpdate`,
+ * см. проп `onPointerUpdate` у `<Excalidraw>`) и «следовать за учителем»
+ * (свой awareness-канал `viewport`, отдельный от того, что использует сам
+ * `y-excalidraw`).
  */
 export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolean }) {
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null);
   const accessToken = useAuthStore((s) => s.accessToken);
-  const role = useAuthStore((s) => s.user?.role);
+  const me = useAuthStore((s) => s.user);
+  const role = me?.role;
   const isTeacher = role === "teacher" || role === "admin";
+  const [followTeacher, setFollowTeacher] = useState(false);
 
   // Храним `provider`, а не голый `Y.Doc` — `ExcalidrawBinding` реально
   // требует живой `Awareness` (см. комментарий у binding-эффекта ниже), а
@@ -126,6 +143,11 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
     };
   }, [ydoc]);
 
+  // Экземпляр привязки в состоянии (не только внутри эффекта) — нужен
+  // снаружи, чтобы прокинуть `binding.onPointerUpdate` в проп `<Excalidraw
+  // onPointerUpdate>` (Э3.9, курсоры собеседников: см. эффект ниже).
+  const [binding, setBinding] = useState<ExcalidrawBinding | null>(null);
+
   useEffect(() => {
     if (!excalidrawAPI || !ydoc || !provider?.awareness || !activePageId) return;
     const yElements = ydoc.getArray<Y.Map<unknown>>(`elements:${activePageId}`);
@@ -135,12 +157,76 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
     // `TypeError: Cannot read properties of undefined (reading 'getStates')`
     // на безусловном (не под `if (this.awareness)`) обращении в конце
     // конструктора — поймано живой проверкой в браузере (Playwright), не
-    // по докам/типам пакета. Курсоры/имена собеседников (Э3.9) при этом
-    // ещё не настроены — `provider.awareness` передаётся только чтобы не
-    // упасть, локальное состояние (`user.name`/`color`) нигде не выставляется.
-    const binding = new ExcalidrawBinding(yElements, yAssets, excalidrawAPI, provider.awareness);
-    return () => binding.destroy();
+    // по докам/типам пакета.
+    const nextBinding = new ExcalidrawBinding(yElements, yAssets, excalidrawAPI, provider.awareness);
+    setBinding(nextBinding);
+    return () => {
+      setBinding(null);
+      nextBinding.destroy();
+    };
   }, [excalidrawAPI, ydoc, provider, activePageId]);
+
+  /**
+   * Э3.9, §3.4 ТЗ: awareness → курсоры собеседников. `y-excalidraw` сам
+   * строит `Collaborator`-ов из `state.user?.name`/`color` (см. заметку в
+   * Э3.5/Э3.8 про безусловный `getStates()`), но не публикует его САМ —
+   * локальное поле `user` в awareness должны выставить мы, иначе
+   * собеседники увидят анонимный курсор без имени/цвета.
+   */
+  useEffect(() => {
+    if (!provider?.awareness || !me) return;
+    const userState: UserAwarenessState = { name: me.fullName, color: cursorColorFor(me.id), role: me.role };
+    provider.awareness.setLocalStateField("user", userState);
+  }, [provider, me]);
+
+  /**
+   * Э3.9: транслируем собственный viewport (scroll/zoom) в awareness —
+   * это НЕ то же самое, что курсор/`pointer` (который уже покрыт
+   * `binding.onPointerUpdate` ниже): viewport нужен ученикам, следящим за
+   * учителем, чтобы знать, куда именно скроллить свой холст.
+   */
+  useEffect(() => {
+    if (!excalidrawAPI || !provider?.awareness) return;
+    const awareness = provider.awareness;
+    const broadcastViewport = (scrollX: number, scrollY: number, zoomValue: number) => {
+      const viewportState: ViewportAwarenessState = { scrollX, scrollY, zoom: zoomValue };
+      awareness.setLocalStateField("viewport", viewportState);
+    };
+    const state = excalidrawAPI.getAppState();
+    broadcastViewport(state.scrollX, state.scrollY, state.zoom.value);
+    return excalidrawAPI.onScrollChange((scrollX, scrollY, zoom) => broadcastViewport(scrollX, scrollY, zoom.value));
+  }, [excalidrawAPI, provider]);
+
+  /**
+   * Э3.9: «следовать за учителем» — пока включено, viewport этого клиента
+   * подчиняется viewport'у учителя из awareness. Учителя среди состояний
+   * ищем по `user.role`, а не по фиксированному userId — пришедшая с
+   * Э3.1 модель прав не завязана на конкретного «главного» участника
+   * (со-учителя/подмена тоже были бы `role: "teacher"`).
+   */
+  useEffect(() => {
+    if (!followTeacher || !excalidrawAPI || !provider?.awareness) return;
+    const awareness = provider.awareness;
+    const applyTeacherViewport = () => {
+      for (const state of awareness.getStates().values()) {
+        const user = (state as { user?: UserAwarenessState }).user;
+        const viewport = (state as { viewport?: ViewportAwarenessState }).viewport;
+        if (user?.role === "teacher" && viewport) {
+          excalidrawAPI.updateScene({
+            appState: {
+              scrollX: viewport.scrollX,
+              scrollY: viewport.scrollY,
+              zoom: { value: viewport.zoom as NormalizedZoomValue },
+            },
+          });
+          return;
+        }
+      }
+    };
+    applyTeacherViewport();
+    awareness.on("change", applyTeacherViewport);
+    return () => awareness.off("change", applyTeacherViewport);
+  }, [followTeacher, excalidrawAPI, provider]);
 
   function switchPage(pageId: string) {
     ydoc?.getMap("meta").set("activePageId", pageId);
@@ -226,6 +312,14 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
               ))}
             </select>
           )}
+          {!isTeacher && (
+            <button
+              onClick={() => setFollowTeacher((v) => !v)}
+              className={`rounded border px-3 py-1 text-sm ${followTeacher ? "border-blue-500 bg-blue-50 font-medium" : ""}`}
+            >
+              {followTeacher ? "Не следовать за учителем" : "Следовать за учителем"}
+            </button>
+          )}
         </div>
       )}
       <div className="canvas-board" style={{ height: "70vh", position: "relative" }}>
@@ -237,6 +331,10 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
           <Excalidraw
             excalidrawAPI={(api) => setExcalidrawAPI(api)}
             initialData={{ appState: { viewBackgroundColor: "transparent" } }}
+            // Э3.9: без этого собеседники не увидят курсор — ExcalidrawBinding
+            // публикует его в awareness только когда сам вызывается, а вызывает
+            // его именно Excalidraw через этот проп, не сам пакет.
+            onPointerUpdate={binding?.onPointerUpdate}
             // Э3.8, §5.2 ТЗ: без canDraw — доска read-only. `viewModeEnabled`
             // реактивный проп (не только initialData — проверено чтением
             // скомпилированного бандла: сам компонент подхватывает его на
