@@ -270,7 +270,42 @@ export async function updatePermissions(
 
   entry.permissions = permissions;
   await presence.setParticipant(lessonId, targetUserId, entry);
+  // Э3.8: живой пуш canDraw в canvas — тем же способом (rooms → canvas,
+  // не наоборот, см. заметки Э3.2), что closeCanvasDocument. Только когда
+  // patch реально трогает canDraw — иначе бессмысленный вызов на каждое
+  // изменение canSpeak/canShareScreen.
+  if (patch.canDraw !== undefined) {
+    canvasService.setDrawPermission(lessonId, targetUserId, permissions.canDraw);
+  }
   emitRoomEvent(lessonId, { type: "permissions_updated", userId: targetUserId, permissions: entry.permissions });
+}
+
+/**
+ * Глобальный тумблер «ученики могут рисовать» (Э3.8) — массово меняет
+ * canDraw у всех подключённых учеников разом, учителя/со-учителей не
+ * трогает. Не переиспользует `updatePermissions` в цикле: там есть
+ * проверка лимита микрофонов и синхронизация LiveKit-гранта — оба
+ * нерелевантны для canDraw (право рисования не влияет на аудио-грант).
+ */
+export async function setDrawForAllStudents(
+  schoolId: string,
+  lessonId: string,
+  requester: AccessTokenPayload,
+  canDraw: boolean,
+): Promise<void> {
+  const lesson = await lessonsService.getLesson(schoolId, lessonId);
+  const isOwnerTeacher = requester.role === "teacher" && lesson.teacherId === requester.sub;
+  if (requester.role !== "admin" && !isOwnerTeacher) {
+    throw new AppError(403, "forbidden", "Только учитель урока может управлять правом рисования всех участников");
+  }
+  const participants = await presence.listParticipants(lessonId);
+  for (const [userId, entry] of participants) {
+    if (entry.role !== "student") continue;
+    entry.permissions = { ...entry.permissions, canDraw };
+    await presence.setParticipant(lessonId, userId, entry);
+    canvasService.setDrawPermission(lessonId, userId, canDraw);
+  }
+  emitRoomEvent(lessonId, { type: "presence", participants: await listParticipantsSnapshot(lessonId) });
 }
 
 /** Учитель принудительно глушит одного ученика (Э2.5) — право говорить не отзывается, ученик может включить микрофон обратно сам. */

@@ -4,6 +4,7 @@ import type { AccessTokenPayload } from "@school/shared";
 const { lessonsServiceMock, usersServiceMock, repoMock, mediaServiceMock, canvasServiceMock } = vi.hoisted(() => ({
   canvasServiceMock: {
     closeCanvasDocument: vi.fn(),
+    setDrawPermission: vi.fn(),
   },
   lessonsServiceMock: {
     getLesson: vi.fn(),
@@ -261,6 +262,64 @@ describe("права участников", () => {
     await expect(
       roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, { canDraw: true }),
     ).resolves.toBeUndefined();
+  });
+
+  it("изменение canDraw пушится в canvas живым обновлением (Э3.8)", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+
+    await roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, { canDraw: true });
+
+    expect(canvasServiceMock.setDrawPermission).toHaveBeenCalledWith(LESSON_ID, STUDENT_ID, true);
+  });
+
+  it("изменение canSpeak НЕ трогает canvas — canDraw не менялся", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+
+    await roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, { canSpeak: true });
+
+    expect(canvasServiceMock.setDrawPermission).not.toHaveBeenCalled();
+  });
+});
+
+describe("глобальный тумблер рисования (Э3.8)", () => {
+  it("только учитель этого урока (или админ) может переключить право рисования всем разом", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+
+    await expect(
+      roomsService.setDrawForAllStudents(SCHOOL_ID, LESSON_ID, studentToken(), true),
+    ).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("выдаёт canDraw всем подключённым ученикам, учителя не трогает", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(OTHER_STUDENT_ID), "Другой ученик");
+    await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+
+    await roomsService.setDrawForAllStudents(SCHOOL_ID, LESSON_ID, teacherToken(), true);
+
+    const snapshot = await roomsService.listParticipantsSnapshot(LESSON_ID);
+    expect(snapshot.find((p) => p.userId === STUDENT_ID)?.permissions.canDraw).toBe(true);
+    expect(snapshot.find((p) => p.userId === OTHER_STUDENT_ID)?.permissions.canDraw).toBe(true);
+    expect(snapshot.find((p) => p.userId === TEACHER_ID)?.permissions.canDraw).toBe(true); // уже было true по дефолту, не менялось
+    expect(canvasServiceMock.setDrawPermission).toHaveBeenCalledWith(LESSON_ID, STUDENT_ID, true);
+    expect(canvasServiceMock.setDrawPermission).toHaveBeenCalledWith(LESSON_ID, OTHER_STUDENT_ID, true);
+    expect(canvasServiceMock.setDrawPermission).not.toHaveBeenCalledWith(LESSON_ID, TEACHER_ID, expect.anything());
+  });
+
+  it("не синхронизирует LiveKit-грант — canDraw на аудио не влияет", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+
+    await roomsService.setDrawForAllStudents(SCHOOL_ID, LESSON_ID, teacherToken(), true);
+
+    expect(mediaServiceMock.updateLivePermissions).not.toHaveBeenCalled();
   });
 });
 

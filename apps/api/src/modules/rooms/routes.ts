@@ -3,6 +3,7 @@ import {
   handRaiseRequestSchema,
   listChatQuerySchema,
   sendChatMessageRequestSchema,
+  setDrawForAllRequestSchema,
   updateParticipantPermissionsRequestSchema,
 } from "@school/shared";
 import * as usersService from "../users/service.js";
@@ -60,6 +61,12 @@ export default async function roomsRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { id: string } }>("/lessons/:id/mute-all", async (request, reply) => {
     await roomsService.muteAllNow(request.user.schoolId, request.params.id, request.user);
+    return reply.status(204).send();
+  });
+
+  app.post<{ Params: { id: string } }>("/lessons/:id/draw-all", async (request, reply) => {
+    const body = setDrawForAllRequestSchema.parse(request.body);
+    await roomsService.setDrawForAllStudents(request.user.schoolId, request.params.id, request.user, body.canDraw);
     return reply.status(204).send();
   });
 

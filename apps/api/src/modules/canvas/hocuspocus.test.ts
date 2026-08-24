@@ -33,6 +33,8 @@ const {
   vetoUnloadDuringGracePeriod,
   runCanvasUnloadSweepOnce,
   getActiveCanvasDocumentsCount,
+  setDrawPermission,
+  clearDrawPermissionOverrides,
   hocuspocus,
 } = await import("./hocuspocus.js");
 
@@ -40,6 +42,7 @@ const SCHOOL_ID = "11111111-1111-1111-1111-111111111111";
 const LESSON_ID = "22222222-2222-2222-2222-222222222222";
 const TEACHER_ID = "33333333-3333-3333-3333-333333333333";
 const STUDENT_ID = "44444444-4444-4444-4444-444444444444";
+const OTHER_STUDENT_ID = "55555555-5555-5555-5555-555555555555";
 const GROUP_ID = "66666666-6666-6666-6666-666666666666";
 
 function baseLesson(overrides: Partial<Record<string, unknown>> = {}) {
@@ -65,6 +68,11 @@ function tokenFor(payload: Partial<AccessTokenPayload>): AccessTokenPayload {
   return { sub: TEACHER_ID, schoolId: SCHOOL_ID, role: "teacher", ...payload };
 }
 
+/** `connectionConfig` мутируется authenticateCanvasConnection напрямую (Э3.8) — как и реальный Hocuspocus, тест передаёт свежий объект и проверяет его после вызова. */
+function fakeConnectionConfig() {
+  return { readOnly: false, isAuthenticated: false };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
@@ -73,23 +81,27 @@ beforeEach(() => {
 describe("authenticateCanvasConnection", () => {
   it("некорректный documentName (не UUID) отклоняется до похода в БД", async () => {
     await expect(
-      authenticateCanvasConnection({ token: "t", documentName: "not-a-uuid" }),
+      authenticateCanvasConnection({ token: "t", documentName: "not-a-uuid", connectionConfig: fakeConnectionConfig() }),
     ).rejects.toMatchObject({ statusCode: 400 });
     expect(lessonsServiceMock.getLesson).not.toHaveBeenCalled();
   });
 
-  it("админ подключается к любому уроку своей школы", async () => {
+  it("админ подключается к любому уроку своей школы, readOnly не выставляется (Э3.8)", async () => {
     authServiceMock.verifyAccessToken.mockResolvedValue(tokenFor({ role: "admin", sub: "admin-1" }));
+    const connectionConfig = fakeConnectionConfig();
 
-    const result = await authenticateCanvasConnection({ token: "t", documentName: LESSON_ID });
+    const result = await authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig });
     expect(result).toEqual({ userId: "admin-1", role: "admin" });
+    expect(connectionConfig.readOnly).toBe(false);
   });
 
-  it("учитель, ведущий этот урок, подключается", async () => {
+  it("учитель, ведущий этот урок, подключается, readOnly не выставляется (Э3.8)", async () => {
     authServiceMock.verifyAccessToken.mockResolvedValue(tokenFor({ role: "teacher", sub: TEACHER_ID }));
+    const connectionConfig = fakeConnectionConfig();
 
-    const result = await authenticateCanvasConnection({ token: "t", documentName: LESSON_ID });
+    const result = await authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig });
     expect(result).toEqual({ userId: TEACHER_ID, role: "teacher" });
+    expect(connectionConfig.readOnly).toBe(false);
   });
 
   it("учитель, НЕ ведущий этот урок, отклоняется", async () => {
@@ -97,41 +109,45 @@ describe("authenticateCanvasConnection", () => {
       tokenFor({ role: "teacher", sub: "77777777-7777-7777-7777-777777777777" }),
     );
 
-    await expect(authenticateCanvasConnection({ token: "t", documentName: LESSON_ID })).rejects.toMatchObject({
-      statusCode: 403,
-    });
+    await expect(
+      authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig: fakeConnectionConfig() }),
+    ).rejects.toMatchObject({ statusCode: 403 });
   });
 
-  it("ученик из группы урока подключается", async () => {
+  it("ученик из группы урока подключается, но по умолчанию readOnly (Э3.8 — canDraw:false у ученика без явного гранта)", async () => {
     authServiceMock.verifyAccessToken.mockResolvedValue(tokenFor({ role: "student", sub: STUDENT_ID }));
     usersServiceMock.isGroupMember.mockResolvedValue(true);
+    const connectionConfig = fakeConnectionConfig();
 
-    const result = await authenticateCanvasConnection({ token: "t", documentName: LESSON_ID });
+    const result = await authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig });
     expect(result).toEqual({ userId: STUDENT_ID, role: "student" });
     expect(usersServiceMock.isGroupMember).toHaveBeenCalledWith(GROUP_ID, STUDENT_ID);
+    expect(connectionConfig.readOnly).toBe(true);
   });
 
   it("ученик НЕ из группы урока (чужой урок) отклоняется", async () => {
     authServiceMock.verifyAccessToken.mockResolvedValue(tokenFor({ role: "student", sub: STUDENT_ID }));
     usersServiceMock.isGroupMember.mockResolvedValue(false);
 
-    await expect(authenticateCanvasConnection({ token: "t", documentName: LESSON_ID })).rejects.toMatchObject({
-      statusCode: 403,
-    });
+    await expect(
+      authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig: fakeConnectionConfig() }),
+    ).rejects.toMatchObject({ statusCode: 403 });
   });
 
   it("methodist к уроку не допускается", async () => {
     authServiceMock.verifyAccessToken.mockResolvedValue(tokenFor({ role: "methodist", sub: "88888888-8888-8888-8888-888888888888" }));
 
-    await expect(authenticateCanvasConnection({ token: "t", documentName: LESSON_ID })).rejects.toMatchObject({
-      statusCode: 403,
-    });
+    await expect(
+      authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig: fakeConnectionConfig() }),
+    ).rejects.toMatchObject({ statusCode: 403 });
   });
 
   it("невалидный токен отклоняется", async () => {
     authServiceMock.verifyAccessToken.mockRejectedValue(new Error("bad token"));
 
-    await expect(authenticateCanvasConnection({ token: "bad", documentName: LESSON_ID })).rejects.toThrow();
+    await expect(
+      authenticateCanvasConnection({ token: "bad", documentName: LESSON_ID, connectionConfig: fakeConnectionConfig() }),
+    ).rejects.toThrow();
   });
 });
 
@@ -293,5 +309,57 @@ describe("getActiveCanvasDocumentsCount (Э3.3, метрика Prometheus)", () 
     expect(getActiveCanvasDocumentsCount()).toBe(before + 1);
     hocuspocus.documents.delete("lesson-metric-probe");
     expect(getActiveCanvasDocumentsCount()).toBe(before);
+  });
+});
+
+function fakeConnection(userId: string, readOnly: boolean) {
+  return { context: { userId }, readOnly };
+}
+
+describe("setDrawPermission (Э3.8)", () => {
+  afterEach(() => {
+    // Оверрайды — module-level Map, между тестами их нужно чистить самим:
+    // используем тот же путь, что и настоящий afterUnloadDocument-хук.
+    clearDrawPermissionOverrides({ documentName: LESSON_ID });
+  });
+
+  it("влияет на readOnly следующего подключения того же участника (документ ещё не в памяти)", async () => {
+    setDrawPermission(LESSON_ID, STUDENT_ID, true);
+    authServiceMock.verifyAccessToken.mockResolvedValue(tokenFor({ role: "student", sub: STUDENT_ID }));
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+    const connectionConfig = fakeConnectionConfig();
+
+    await authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig });
+
+    expect(connectionConfig.readOnly).toBe(false);
+  });
+
+  it("отзыв права переопределяет даже ранее выданное разрешение", async () => {
+    setDrawPermission(LESSON_ID, STUDENT_ID, true);
+    setDrawPermission(LESSON_ID, STUDENT_ID, false);
+    authServiceMock.verifyAccessToken.mockResolvedValue(tokenFor({ role: "student", sub: STUDENT_ID }));
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+    const connectionConfig = fakeConnectionConfig();
+
+    await authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig });
+
+    expect(connectionConfig.readOnly).toBe(true);
+  });
+
+  it("применяется немедленно к уже открытому подключению этого участника, не трогая чужие", () => {
+    const mine = fakeConnection(STUDENT_ID, true);
+    const someoneElse = fakeConnection(OTHER_STUDENT_ID, true);
+    const document = { ...fakeDocument(2), getConnections: () => [mine, someoneElse] } as unknown as HocuspocusDocument;
+    hocuspocus.documents.set(LESSON_ID, document);
+
+    setDrawPermission(LESSON_ID, STUDENT_ID, true);
+
+    expect(mine.readOnly).toBe(false);
+    expect(someoneElse.readOnly).toBe(true);
+    hocuspocus.documents.delete(LESSON_ID);
+  });
+
+  it("документ этого урока ещё не загружен в память — тихо ничего не делает, не падает", () => {
+    expect(() => setDrawPermission("lesson-not-loaded-yet", STUDENT_ID, true)).not.toThrow();
   });
 });

@@ -1,5 +1,6 @@
 import {
   Hocuspocus,
+  type afterUnloadDocumentPayload,
   type beforeUnloadDocumentPayload,
   type connectedPayload,
   type onAuthenticatePayload,
@@ -18,10 +19,68 @@ import * as repo from "./repo.js";
 const documentNameSchema = z.string().uuid();
 
 /**
+ * Э3.8, §5.2/§3.4 ТЗ: право рисовать — `canDraw`, тот же, что уже
+ * используется в rooms/presence.ts (Э1.6). Здесь НЕ читаем/пишем presence
+ * напрямую (canvas не должен зависеть от rooms — см. комментарий у
+ * `authenticateCanvasConnection` ниже), а держим собственный in-memory
+ * оверрайд наивного дефолта по роли, в который `rooms/service.ts`
+ * ЯВНО пушит текущее значение при каждом изменении прав (тот же
+ * односторонний поток «rooms → canvas», что уже установлен в Э3.2 для
+ * `closeCanvasDocument`). Без явного пуша (типичный случай — свежий
+ * коннект без единого изменения прав в этом уроке) используется тот же
+ * дефолт по роли, что и в `presence.ts#defaultPermissions`: у
+ * учителя/админа `canDraw: true`, у ученика — `false`.
+ */
+const drawPermissionOverrides = new Map<string, Map<string, boolean>>();
+
+function computeCanDraw(role: string, lessonId: string, userId: string): boolean {
+  const override = drawPermissionOverrides.get(lessonId)?.get(userId);
+  if (override !== undefined) return override;
+  return role === "teacher" || role === "admin";
+}
+
+/**
+ * Живой пуш текущего `canDraw` от `rooms/service.ts` (Э3.8) — вызывается
+ * при каждом изменении прав, не только при подключении. Если у урока уже
+ * есть открытое `/collab`-подключение этого участника, применяется
+ * немедленно (`connection.readOnly` — обычное мутируемое публичное поле
+ * `Connection`, проверено чтением `Connection.ts` пакета), без ожидания
+ * переподключения — тот же принцип живого обновления уже выданного
+ * гранта, что `mediaService.updateLivePermissions` для LiveKit (Э2.5).
+ */
+export function setDrawPermission(lessonId: string, userId: string, canDraw: boolean): void {
+  let lessonOverrides = drawPermissionOverrides.get(lessonId);
+  if (!lessonOverrides) {
+    lessonOverrides = new Map();
+    drawPermissionOverrides.set(lessonId, lessonOverrides);
+  }
+  lessonOverrides.set(userId, canDraw);
+
+  const document = hocuspocus.documents.get(lessonId);
+  if (!document) return;
+  for (const connection of document.getConnections()) {
+    if ((connection.context as { userId?: string } | undefined)?.userId === userId) {
+      connection.readOnly = !canDraw;
+    }
+  }
+}
+
+/** Чистит оверрайды урока при выгрузке его документа — иначе карта растёт неограниченно на весь срок жизни процесса. */
+export async function clearDrawPermissionOverrides(
+  payload: Pick<afterUnloadDocumentPayload, "documentName">,
+): Promise<void> {
+  drawPermissionOverrides.delete(payload.documentName);
+}
+
+/**
  * Проверяет права на lesson_id при подключении к Yjs-документу холста (Э3.1,
  * §3.4 ТЗ). documentName у Hocuspocus — это lessonId напрямую (`Y.Doc` один
  * на урок, отдельный namespace-префикс не нужен — коллизий имён документов
- * быть не может).
+ * быть не может). С Э3.8 дополнительно выставляет `connectionConfig.readOnly`
+ * по текущему `canDraw` — мутацией объекта payload напрямую, а не через
+ * возвращаемое значение: подтверждено чтением `ClientConnection.ts`, что
+ * именно `connectionConfig` (не результат хука) читается при создании
+ * `Connection`; возвращаемое значение уходит только в `context`.
  *
  * Логика прав ролей намеренно ДУБЛИРУЕТ rooms/service.ts#assertMembership, а
  * не переиспользует её: canvas не должен зависеть от rooms (это
@@ -30,7 +89,7 @@ const documentNameSchema = z.string().uuid();
  * используются только публичные сервисы lessons/users, как и в rooms.
  */
 export async function authenticateCanvasConnection(
-  payload: Pick<onAuthenticatePayload, "token" | "documentName">,
+  payload: Pick<onAuthenticatePayload, "token" | "documentName" | "connectionConfig">,
 ): Promise<{ userId: string; role: string }> {
   const parsedLessonId = documentNameSchema.safeParse(payload.documentName);
   if (!parsedLessonId.success) {
@@ -42,12 +101,14 @@ export async function authenticateCanvasConnection(
   const lesson = await lessonsService.getLesson(user.schoolId, lessonId);
 
   if (user.role === "admin") {
+    payload.connectionConfig.readOnly = !computeCanDraw(user.role, lessonId, user.sub);
     return { userId: user.sub, role: user.role };
   }
   if (user.role === "teacher") {
     if (lesson.teacherId !== user.sub) {
       throw new AppError(403, "forbidden", "Вы не ведёте этот урок");
     }
+    payload.connectionConfig.readOnly = !computeCanDraw(user.role, lessonId, user.sub);
     return { userId: user.sub, role: user.role };
   }
   if (user.role === "student") {
@@ -55,6 +116,7 @@ export async function authenticateCanvasConnection(
     if (!isMember) {
       throw new AppError(403, "forbidden", "Вы не состоите в группе этого урока");
     }
+    payload.connectionConfig.readOnly = !computeCanDraw(user.role, lessonId, user.sub);
     return { userId: user.sub, role: user.role };
   }
   throw new AppError(403, "forbidden", "Роль не допускается к участию в уроке");
@@ -213,4 +275,5 @@ export const hocuspocus = new Hocuspocus({
   connected: clearEmptySinceOnConnect,
   onDisconnect: trackEmptySinceOnDisconnect,
   beforeUnloadDocument: vetoUnloadDuringGracePeriod,
+  afterUnloadDocument: clearDrawPermissionOverrides,
 });

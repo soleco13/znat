@@ -145,6 +145,15 @@ export function RoomPage() {
     );
   }
 
+  /** Э3.8: глобальный тумблер «ученики могут рисовать» — массово меняет canDraw у всех учеников урока. */
+  async function toggleDrawForAll(canDraw: boolean) {
+    if (!lessonId) return;
+    await apiFetch(`/lessons/${lessonId}/draw-all`, {
+      method: "POST",
+      body: JSON.stringify({ canDraw }),
+    }).catch(() => setError("Не удалось изменить право рисования"));
+  }
+
   async function sendChat(e: React.FormEvent) {
     e.preventDefault();
     if (!lessonId || !chatDraft.trim()) return;
@@ -159,7 +168,7 @@ export function RoomPage() {
     <div className="mx-auto mt-8 max-w-6xl px-4">
       {lessonId && (
         <div className="mb-4">
-          <Board lessonId={lessonId} />
+          <Board lessonId={lessonId} canDraw={self?.permissions.canDraw ?? false} />
         </div>
       )}
 
@@ -207,6 +216,16 @@ export function RoomPage() {
             <button onClick={muteAll} className="rounded border px-3 py-1 text-sm">
               Заглушить всех
             </button>
+          )}
+          {isTeacher && (
+            <>
+              <button onClick={() => toggleDrawForAll(true)} className="rounded border px-3 py-1 text-sm">
+                Разрешить рисовать всем
+              </button>
+              <button onClick={() => toggleDrawForAll(false)} className="rounded border px-3 py-1 text-sm">
+                Запретить рисовать всем
+              </button>
+            </>
           )}
         </div>
 

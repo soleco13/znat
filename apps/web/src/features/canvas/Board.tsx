@@ -43,8 +43,14 @@ function sortedPageEntries(pagesMap: Y.Map<PageMeta>): Array<[string, PageMeta]>
  *    `y-excalidraw` одна привязка = один массив элементов = одна сцена,
  *    отдельного API «переключить сцену на лету» у пакета нет — смена
  *    страницы технически и есть destroy+create новой привязки).
+ *
+ * `canDraw` (Э3.8, §5.2 ТЗ) переключает Excalidraw в `viewModeEnabled` —
+ * это UX-слой, не единственная защита: авторитетное решение уже принято
+ * сервером на уровне `connectionConfig.readOnly` в `canvas/hocuspocus.ts`
+ * (Yjs-обновления от read-only подключения молча отбрасываются вне
+ * зависимости от того, что показывает клиентский UI).
  */
-export function Board({ lessonId }: { lessonId: string }) {
+export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolean }) {
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null);
   const accessToken = useAuthStore((s) => s.accessToken);
   const role = useAuthStore((s) => s.user?.role);
@@ -231,6 +237,12 @@ export function Board({ lessonId }: { lessonId: string }) {
           <Excalidraw
             excalidrawAPI={(api) => setExcalidrawAPI(api)}
             initialData={{ appState: { viewBackgroundColor: "transparent" } }}
+            // Э3.8, §5.2 ТЗ: без canDraw — доска read-only. `viewModeEnabled`
+            // реактивный проп (не только initialData — проверено чтением
+            // скомпилированного бандла: сам компонент подхватывает его на
+            // каждое изменение через componentDidUpdate), поэтому просто
+            // передаём текущее значение без ручного вызова updateScene.
+            viewModeEnabled={!canDraw}
             UIOptions={{
               tools: { image: false },
               canvasActions: { changeViewBackgroundColor: false },

@@ -57,6 +57,10 @@ export type ListChatQuery = z.infer<typeof listChatQuerySchema>;
 export const handRaiseRequestSchema = z.object({ raised: z.boolean() });
 export type HandRaiseRequest = z.infer<typeof handRaiseRequestSchema>;
 
+/** Э3.8: глобальный тумблер «ученики могут рисовать» — массово меняет canDraw у всех учеников урока разом. */
+export const setDrawForAllRequestSchema = z.object({ canDraw: z.boolean() });
+export type SetDrawForAllRequest = z.infer<typeof setDrawForAllRequestSchema>;
+
 // WS /ws?lessonId=&token= — канал только для пуша от сервера клиенту.
 // Действия (поднять руку, чат, права) идут через обычные HTTP-эндпоинты.
 export const serverRoomMessageSchema = z.discriminatedUnion("type", [

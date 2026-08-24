@@ -1,6 +1,7 @@
 import {
   getActiveCanvasDocumentsCount,
   hocuspocus,
+  setDrawPermission,
   startCanvasUnloadSweep,
   stopCanvasUnloadSweep,
 } from "./hocuspocus.js";
@@ -29,4 +30,4 @@ export function closeCanvasDocument(lessonId: string): void {
   hocuspocus.closeConnections(lessonId);
 }
 
-export { getActiveCanvasDocumentsCount, startCanvasUnloadSweep, stopCanvasUnloadSweep };
+export { getActiveCanvasDocumentsCount, setDrawPermission, startCanvasUnloadSweep, stopCanvasUnloadSweep };
