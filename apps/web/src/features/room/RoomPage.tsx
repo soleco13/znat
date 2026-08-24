@@ -157,9 +157,11 @@ export function RoomPage() {
 
   const content = (
     <div className="mx-auto mt-8 max-w-6xl px-4">
-      <div className="mb-4">
-        <Board />
-      </div>
+      {lessonId && (
+        <div className="mb-4">
+          <Board lessonId={lessonId} />
+        </div>
+      )}
 
       <div className="grid grid-cols-[2fr_1fr] gap-4">
       <div>
