@@ -5,16 +5,19 @@ import { HocuspocusProvider } from "@hocuspocus/provider";
 import { ExcalidrawBinding } from "y-excalidraw";
 import * as Y from "yjs";
 import { useAuthStore } from "../../shared/auth-store.js";
+import { BACKGROUND_KIND_LABELS, PageBackground, type BackgroundKind } from "./PageBackground.js";
 import "@excalidraw/excalidraw/index.css";
 import "./Board.css";
 
 /**
- * Метаданные страницы холста (Э3.6, §3.4/§4.3 ТЗ:
+ * Метаданные страницы холста (Э3.6/Э3.7, §3.4/§4.3 ТЗ:
  * `Y.Map "pages"` → `pageId → { backgroundAssetId, order, kind }`).
- * `backgroundAssetId`/`kind` уже в форме, ожидаемой Э3.7 (слой фона), но
- * пока не рендерятся — везде `kind: "blank"`, чтобы не смешивать задачи.
+ * `backgroundAssetId` (фон-изображение) остаётся зарезервированным полем
+ * без своего UI — загрузка изображений с ресайзом на сервере через
+ * `StorageAdapter` (§1.2/§10.10 ТЗ) это отдельная задача Э3.10, заводить
+ * её здесь означало бы смешивать задачи в одном коммите.
  */
-type PageMeta = { order: number; backgroundAssetId: string | null; kind: "blank" };
+type PageMeta = { order: number; backgroundAssetId: string | null; kind: BackgroundKind };
 
 function sortedPageEntries(pagesMap: Y.Map<PageMeta>): Array<[string, PageMeta]> {
   return [...pagesMap.entries()].sort((a, b) => a[1].order - b[1].order);
@@ -148,6 +151,14 @@ export function Board({ lessonId }: { lessonId: string }) {
     });
   }
 
+  function setPageBackgroundKind(pageId: string, kind: BackgroundKind) {
+    if (!ydoc) return;
+    const pagesMap = ydoc.getMap<PageMeta>("pages");
+    const current = pagesMap.get(pageId);
+    if (!current) return;
+    pagesMap.set(pageId, { ...current, kind });
+  }
+
   /** Последнюю страницу удалить нельзя — у урока всегда есть хотя бы одна. */
   function deletePage(pageId: string) {
     if (!ydoc || pages.length <= 1) return;
@@ -196,15 +207,36 @@ export function Board({ lessonId }: { lessonId: string }) {
               Удалить страницу
             </button>
           )}
+          {isTeacher && activePageId && (
+            <select
+              value={pages.find(([id]) => id === activePageId)?.[1].kind ?? "blank"}
+              onChange={(e) => setPageBackgroundKind(activePageId, e.target.value as BackgroundKind)}
+              className="rounded border px-2 py-1 text-sm"
+            >
+              {Object.entries(BACKGROUND_KIND_LABELS).map(([kind, label]) => (
+                <option key={kind} value={kind}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       )}
-      <div className="canvas-board" style={{ height: "70vh" }}>
-        <Excalidraw
-          excalidrawAPI={(api) => setExcalidrawAPI(api)}
-          UIOptions={{
-            tools: { image: false },
-          }}
+      <div className="canvas-board" style={{ height: "70vh", position: "relative" }}>
+        <PageBackground
+          api={excalidrawAPI}
+          kind={pages.find(([id]) => id === activePageId)?.[1].kind ?? "blank"}
         />
+        <div style={{ position: "absolute", inset: 0, zIndex: 1 }}>
+          <Excalidraw
+            excalidrawAPI={(api) => setExcalidrawAPI(api)}
+            initialData={{ appState: { viewBackgroundColor: "transparent" } }}
+            UIOptions={{
+              tools: { image: false },
+              canvasActions: { changeViewBackgroundColor: false },
+            }}
+          />
+        </div>
       </div>
     </div>
   );
