@@ -21,6 +21,9 @@ import roomsWsRoutes from "./modules/rooms/ws.js";
 import livekitWebhookRoutes from "./modules/rooms/livekit-webhook.js";
 import canvasWsRoutes from "./modules/canvas/ws.js";
 import canvasRoutes from "./modules/canvas/routes.js";
+import decksRoutes from "./modules/decks/routes.js";
+import { buildConvertJobHandlers } from "./modules/decks/service.js";
+import { startConvertEvents, stopConvertEvents } from "./modules/jobs/service.js";
 import { startCanvasUnloadSweep, stopCanvasUnloadSweep } from "./modules/canvas/service.js";
 import { startPresenceSweep, stopPresenceSweep } from "./modules/rooms/service.js";
 import { assetsRoutes, filesRoutes } from "./modules/storage/routes.js";
@@ -61,6 +64,7 @@ export function buildServer() {
       api.register(lessonsRoutes);
       api.register(roomsRoutes);
       api.register(canvasRoutes);
+      api.register(decksRoutes);
       api.register(assetsRoutes);
     },
     { prefix: "/api/v1" },
@@ -86,11 +90,13 @@ async function main() {
   const app = buildServer();
   startPresenceSweep();
   startCanvasUnloadSweep();
+  startConvertEvents(buildConvertJobHandlers());
 
   const shutdown = async (signal: string) => {
     app.log.info({ signal }, "Shutting down");
     stopPresenceSweep();
     stopCanvasUnloadSweep();
+    await stopConvertEvents();
     await app.close();
     await pool.end();
     redis.disconnect();

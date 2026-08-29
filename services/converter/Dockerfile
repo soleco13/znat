@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 #
-# Конвертер презентаций (Э4.1). Собирается из контекста корня монорепо
-# (`docker compose` передаёт `context: .`), чтобы переиспользовать
+# Конвертер презентаций (Э4.1 каркас + Э4.3 воркер). Собирается из контекста
+# корня монорепо (`docker compose` передаёт `context: .`), чтобы переиспользовать
 # pnpm-workspace + единый lockfile при `--frozen-lockfile`.
 #
 # Образ тяжёлый (~1,5 ГБ из-за LibreOffice) — поэтому это ОТДЕЛЬНЫЙ контейнер,
@@ -25,6 +25,10 @@ FROM deps AS build
 COPY tsconfig.base.json ./
 COPY services/converter services/converter
 RUN pnpm --filter @school/converter run build
+
+# --- только прод-зависимости (bullmq + его транзитивные) ------------------
+FROM deps AS prod-deps
+RUN pnpm install --frozen-lockfile --prod --filter @school/converter
 
 # --- рантайм: node + LibreOffice + Poppler + ClamAV -------------------------
 FROM node:22-bookworm-slim AS runtime
@@ -50,11 +54,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # и не нужен — база освежается пересборкой образа (ночной ре-деплой).
 RUN freshclam --quiet || (echo "freshclam failed — образ без свежей базы ClamAV" && exit 1)
 
-WORKDIR /app
 RUN groupadd --system app && useradd --system --gid app --create-home app
 
-# Рантайм-зависимостей у конвертера пока нет (Э4.1 — только stdlib + global
-# fetch). BullMQ добавится в Э4.3 вместе с prod-deps слоем.
+# Раскладка повторяет pnpm workspace (как в корневом Dockerfile для apps/api):
+# node из services/converter/dist резолвит зависимости в
+# services/converter/node_modules → /app/node_modules.
+WORKDIR /app/services/converter
+COPY --from=prod-deps /app/node_modules /app/node_modules
+COPY --from=prod-deps /app/services/converter/node_modules ./node_modules
 COPY --from=build /app/services/converter/dist ./dist
 COPY services/converter/package.json ./package.json
 

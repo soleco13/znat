@@ -1,24 +1,22 @@
 /**
- * Конвертер презентаций (Э4.1). Изолированный контейнер: LibreOffice + Poppler +
- * ClamAV, без выхода в интернет (docker-сеть `convnet` с `internal: true`),
- * `read_only` rootfs, `cap_drop: ALL`. Пайплайн BullMQ (скан → soffice → pdftoppm
- * → PNG/WebP → StorageAdapter) — это Э4.3; здесь только каркас процесса и
- * самопроверка среды: нужные бинарники на месте, наружу хода нет.
+ * Конвертер презентаций (Э4.1 каркас + Э4.3 воркер). Изолированный контейнер:
+ * LibreOffice + Poppler + ClamAV, без выхода в интернет (docker-сеть `convnet`
+ * с `internal: true`), `read_only` rootfs, `cap_drop: ALL`.
  *
- * Почему отдельный контейнер (§4.1.1 / §10.2 ТЗ): (1) парсинг недоверенных
- * офисных файлов — классический вектор RCE, его нужно держать в отдельном
- * cgroup без сети; (2) LibreOffice раздувает образ на ~1,5 ГБ; (3) конвертация
- * даёт всплески CPU на 100% нескольких ядер — их нельзя пускать в один cgroup
- * с медиа (раскладка ядер — Э4.2, §10.3 ТЗ).
+ * Забирает задачи из очереди BullMQ `deck-convert` (producer — `apps/api`),
+ * concurrency 1 (§10.3 ТЗ: LibreOffice — всплеск CPU, параллелить нельзя).
+ * Результат возвращается значением задачи; в `apps/api` слушатель QueueEvents
+ * кладёт слайды в БД и шлёт WS-прогресс. Конвертер БД не видит — только Redis
+ * и общий том `/data/assets`.
  */
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { Worker } from "bullmq";
+import { CONVERT_QUEUE_NAME, type ConvertJobData } from "./contract.js";
+import { runConversion } from "./convert.js";
 
 const execFileAsync = promisify(execFile);
 
-const HEARTBEAT_MS = 60_000;
-
-/** Бинарники, которые обязаны быть в образе. Проверяются на старте. */
 const REQUIRED_BINARIES: ReadonlyArray<{ cmd: string; args: string[] }> = [
   { cmd: "soffice", args: ["--version"] },
   { cmd: "pdftoppm", args: ["-v"] },
@@ -29,25 +27,21 @@ const REQUIRED_BINARIES: ReadonlyArray<{ cmd: string; args: string[] }> = [
 
 function log(level: "info" | "warn" | "error", msg: string, extra?: Record<string, unknown>): void {
   const line = { ts: new Date().toISOString(), level, svc: "converter", msg, ...extra };
-  const sink = level === "error" ? process.stderr : process.stdout;
-  sink.write(`${JSON.stringify(line)}\n`);
+  (level === "error" ? process.stderr : process.stdout).write(`${JSON.stringify(line)}\n`);
 }
 
 async function checkBinaries(): Promise<void> {
   const missing: string[] = [];
   for (const { cmd, args } of REQUIRED_BINARIES) {
     try {
-      // pdftoppm/pdfinfo/pdftotext печатают версию в stderr и выходят с кодом 99 —
-      // нам важен сам факт, что бинарник нашёлся и запустился, а не его код.
       await execFileAsync(cmd, args, { timeout: 15_000 });
       log("info", "binary ok", { cmd });
     } catch (err) {
-      const e = err as NodeJS.ErrnoException & { code?: string | number };
+      const e = err as NodeJS.ErrnoException;
       if (e.code === "ENOENT") {
         missing.push(cmd);
         log("error", "binary missing", { cmd });
       } else {
-        // Ненулевой код выхода (как у poppler-утилит на `-v`) — бинарник есть.
         log("info", "binary ok", { cmd, note: "non-zero exit on version probe" });
       }
     }
@@ -58,14 +52,12 @@ async function checkBinaries(): Promise<void> {
 }
 
 /**
- * Самопроверка изоляции: контейнер НЕ должен иметь маршрута в интернет.
- * Успешный ответ извне — это сломанная изоляция (конвертер парсит недоверенные
- * файлы, §17 ТЗ). Логируем громко, но не падаем: единственная граница —
- * конфигурация docker-сети, а не этот процесс.
+ * Самопроверка изоляции: контейнер НЕ должен иметь маршрута в интернет
+ * (парсит недоверенные файлы, §17 ТЗ). Успех запроса наружу = сломанная
+ * изоляция — логируем громко, но не падаем (граница — конфиг docker-сети).
  */
 async function assertNoInternet(): Promise<void> {
-  const probes = ["https://api.github.com", "https://1.1.1.1"];
-  for (const url of probes) {
+  for (const url of ["https://api.github.com", "https://1.1.1.1"]) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(3_000), redirect: "manual" });
       log("warn", "СЕТЕВАЯ ИЗОЛЯЦИЯ НАРУШЕНА: конвертер достучался наружу", {
@@ -74,7 +66,7 @@ async function assertNoInternet(): Promise<void> {
       });
       return;
     } catch {
-      // Ожидаемо: DNS не резолвится / нет маршрута.
+      // Ожидаемо: нет DNS / маршрута.
     }
   }
   log("info", "network isolation confirmed: наружу хода нет");
@@ -88,19 +80,32 @@ async function main(): Promise<void> {
   await checkBinaries();
   await assertNoInternet();
 
-  // Э4.3 подключит сюда BullMQ Worker (concurrency: 1) на очереди convert.
-  log("info", "converter ready (idle — пайплайн подключается в Э4.3)");
+  // connection объектом опций — BullMQ сам создаёт и закрывает соединения.
+  const worker = new Worker<ConvertJobData>(
+    CONVERT_QUEUE_NAME,
+    async (job) => {
+      log("info", "job received", { jobId: job.id, deckId: job.data.deckId });
+      return runConversion(job.data, (p) => job.updateProgress(p));
+    },
+    { connection: { url: redisUrl, maxRetriesPerRequest: null }, concurrency: 1 },
+  );
 
-  const heartbeat = setInterval(() => {
-    log("info", "heartbeat", { rssMb: Math.round(process.memoryUsage().rss / 1024 / 1024) });
-  }, HEARTBEAT_MS);
-  heartbeat.unref();
+  worker.on("failed", (job, err) => {
+    log("error", "job failed", { jobId: job?.id, deckId: job?.data.deckId, err: err.message });
+  });
+  worker.on("completed", (job) => {
+    log("info", "job completed", { jobId: job.id, deckId: job.data.deckId });
+  });
+  worker.on("error", (err) => {
+    log("error", "worker error", { err: err.message });
+  });
+
+  log("info", "converter ready — слушаю очередь", { queue: CONVERT_QUEUE_NAME });
 
   await new Promise<void>((resolve) => {
     const shutdown = (signal: string) => {
       log("info", "shutting down", { signal });
-      clearInterval(heartbeat);
-      resolve();
+      void worker.close().finally(resolve);
     };
     process.on("SIGTERM", () => shutdown("SIGTERM"));
     process.on("SIGINT", () => shutdown("SIGINT"));

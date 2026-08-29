@@ -36,8 +36,8 @@ Linux.
       `internal: true` только до Redis, `read_only`, `cap_drop: ALL`, `tmpfs`.
 - [x] Э4.2 `cpuset` и `cpu_quota` для всех контейнеров по §10.3 ТЗ. Ядра
       LiveKit эксклюзивны. (§ «Чего не урезать никогда» — раскладка ядер.)
-- [ ] Э4.3 Пайплайн BullMQ, `concurrency: 1`: скан → `soffice --convert-to
-      pdf` → `pdftoppm` → PNG@2x + WebP-превью → `StorageAdapter`.
+- [x] Э4.3 Пайплайн BullMQ, `concurrency: 1`: скан → `soffice --convert-to
+      pdf` → `pdftoppm` → PNG@2x + JPEG-превью → `StorageAdapter`.
 - [ ] Э4.4 Прогресс конвертации в UI через WS: «7 из 24».
 - [ ] Э4.5 Дедупликация по `sha256`: та же презентация конвертируется один раз.
 - [ ] Э4.6 Импорт слайдов как страниц холста, лента миниатюр, навигация.
@@ -63,11 +63,17 @@ event loop lag app не вырос; CPU ядер 0-3 (LiveKit) не затрон
 из списка «чего не урезать никогда» ПЛАН.md. Конвертер и воркеры/очереди
 (Э4.1, Э4.3) — делегируются смело.
 
-## Новые зависимости под Э4 (согласовать ДО добавления)
+## Новые зависимости под Э4
 
-Кандидаты: `bullmq` (пайплайн конвертации), возможно `pdfjs-dist` (Э4.7,
-превью PDF в браузере). LibreOffice/Poppler/ClamAV — системные пакеты в
-образе `converter`, не npm-зависимости. Ничего не ставить без явного «да».
+- `bullmq@^6.3.2` — **согласовано и добавлено** (Э4.3), в `apps/api` и
+  `services/converter`. Пайплайн конвертации.
+- `pdfjs-dist` — возможно понадобится в Э4.7 (превью PDF в браузере),
+  согласовать отдельно.
+- LibreOffice/Poppler/ClamAV — системные пакеты в образе `converter`, не
+  npm-зависимости.
+- `sharp`/`cwebp` в конвертер НЕ добавляли — превью слайдов рендерит тот же
+  `pdftoppm` (JPEG на низком DPI), лишняя зависимость в air-gapped-образ не
+  нужна.
 
 ## MCP под Э4
 
@@ -182,6 +188,90 @@ event loop lag app не вырос; CPU ядер 0-3 (LiveKit) не затрон
   inspect` → `CpusetCpus`) — нет Docker, только на Linux-сервере. Гейт Э4
   (конвертация 40 слайдов во время 5 уроков не роняет аудио) тоже
   проверяется только там.
+
+## Что сделано технически (Э4.3)
+
+- **`bullmq@^6.3.2` — согласовано с пользователем**, добавлено в `apps/api`
+  (producer + слушатель событий) и `services/converter` (worker). Схемы
+  контракта очереди уже были в `packages/shared/src/decks.ts` из
+  предыдущего коммита (Zod: `ConvertJobData/Result/Progress`,
+  `CONVERT_QUEUE_NAME`), плюс таблицы `decks`/`deck_slides` + миграция 0003.
+- **`jobId` задачи === `deckId`** (задача 1:1 с презентацией): событие
+  `QueueEvents` несёт только `jobId`, а так по нему сразу известен `deckId`
+  без похода за `job.data`. Заодно бесплатная защита от двойной постановки.
+- **`connection` в BullMQ — объектом опций `{ url, maxRetriesPerRequest:
+  null }`, а не готовым ioredis-клиентом** (проверено по типам
+  установленного `bullmq@6.3.2`: `RedisOptions extends { url?: string }`).
+  Тогда соединения создаёт и закрывает сам BullMQ на `.close()` — не нужно
+  вручную считать дубликаты соединений для `Queue`/`QueueEvents`/`Worker`.
+- **`apps/api/src/modules/jobs/service.ts`** — инфраструктура очереди
+  (§4.1.1 ТЗ). НЕ знает про `decks`: `startConvertEvents(handlers)`
+  принимает колбэки, персистентность делает вызывающий (`server.ts` →
+  `decksService.buildConvertJobHandlers()`). Поэтому зависимость только
+  `decks → jobs`, цикла нет (подтверждено `depcheck`: 137 модулей, 0
+  нарушений). `attempts: 1` — конвертация недоверенного файла не
+  авторетраится (на битом .pptx повтор упадёт так же).
+- **`apps/api/src/modules/decks/`** (`repo.ts`/`service.ts`/`routes.ts`) —
+  новый модуль. `createDeckFromUpload`: валидация mime
+  (`deckSourceMimeTypeSchema` — pptx/odp/docx/pdf), проверка «учитель этого
+  урока или админ», sha256 исходника (в колонку — под дедуп Э4.5, но сам
+  дедуп ещё не включён), сохранение через `storageService`, строка `decks`
+  (status `pending`), `enqueueConvert`. `listDecks`/`getDeckStatus` —
+  доступны любому участнику урока; `deleteDeck` — учителю/админу, чистит и
+  файлы слайдов, и исходник (после строки БД: осиротевший файл безопаснее
+  строки со ссылкой на удалённый файл).
+- Роуты (§8.1 ТЗ): `POST /lessons/:id/uploads` (multipart → `{deckId,
+  jobId, status}`), `GET /lessons/:id/decks`, `DELETE
+  /lessons/:id/decks/:deckId`, `GET /jobs/:jobId`. **`/jobs/:jobId` живёт
+  в `decks/routes.ts`, не в отдельном `jobs/routes.ts`** — иначе была бы
+  зависимость `jobs → decks` в пару к уже существующей `decks → jobs` =
+  цикл. `jobId === deckId`, статус читается из строки `decks` (переживает
+  удаление задачи из Redis по `removeOnComplete`).
+- **`services/converter`** — из каркаса Э4.1 стал воркером:
+  - `contract.ts` — ЛОКАЛЬНАЯ копия контракта очереди (~25 строк типов + имя
+    очереди). Конвертер СОЗНАТЕЛЬНО не тянет `@school/shared` (у пакета
+    `main` — TS-исходник без сборки): держим рантайм контейнера тонким.
+    Тот же контролируемый дубляж, что canvas↔rooms в Э3.1 — при правке
+    контракта в shared синхронно править здесь.
+  - `storage.ts` — мини-адаптер LocalFS (не импорт из `apps/api` — граница
+    модулей + отдельная сборка). Правило CLAUDE.md «файлы только через
+    адаптер» соблюдено: `convert.ts` в ФС ходит только через него.
+  - `convert.ts` — пайплайн: `clamscan` (код 1 = вирус → фейл) → PDF ли
+    исходник, иначе `soffice --headless --convert-to pdf` c
+    `-env:UserInstallation` в per-job каталоге под `/tmp` → `pdfinfo`
+    (число страниц, потолок 500) → по каждой странице `pdftoppm -png -r
+    144` (PNG@2x) + `pdftoppm -jpeg -r 32` (превью) → `storage.putPath` →
+    `job.updateProgress({done,total})`. Размеры PNG читаются из IHDR
+    (байты 16..23) без графических библиотек. Всё промежуточное — в
+    `mkdtemp` под `/tmp` (tmpfs), чистится в `finally`.
+  - `index.ts` — `Worker(CONVERT_QUEUE_NAME, …, { concurrency: 1 })` (§10.3:
+    LibreOffice — всплеск CPU, параллелить нельзя). Самопроверки среды из
+    Э4.1 (бинарники, сетевая изоляция) сохранены.
+  - Dockerfile — добавлен слой `prod-deps` (`pnpm install --prod --filter`),
+    раскладка `/app/services/converter/{dist,node_modules}` + `/app/node_modules`
+    повторяет pnpm workspace (как в корневом Dockerfile для `apps/api`).
+- **Слушатель результатов, а не запись из воркера** — воркер (в `convnet`)
+  БД не видит. Риск: если `apps/api` рестартует ровно в момент завершения
+  задачи, событие `completed` можно пропустить и презентация зависнет в
+  `converting`. **Пока не закрыто** — reconcile-свип на старте `apps/api`
+  (пройтись по decks не в терминальном статусе, спросить статус задачи)
+  напрашивается, но это отдельный кусок; занесено как долг. На практике
+  окно узкое (рестарт именно в ту секунду), презентация перезаливается.
+- Тесты: `apps/api/src/modules/decks/service.test.ts` (+8) — отказ
+  неподдерживаемого типа до похода в хранилище/очередь; чужой учитель →
+  403; happy-path (файл сохранён, строка заведена, `enqueueConvert` с
+  верными полями, `jobId === deckId`, заголовок из имени файла без
+  расширения); `buildConvertJobHandlers` — `onProgress` → converting,
+  `onCompleted` → replaceSlides + ready, `onFailed` → failed с обрезкой до
+  2000; `deleteDeck` — 404 для чужого урока, удаление строки + всех файлов.
+  Итого 98/98 бэкенда (было 90, +8).
+- `pnpm build`/`pnpm test`/`pnpm depcheck` зелёные (137 модулей, 342
+  связи). `pnpm -r typecheck` — 5 пакетов.
+- **Не проверено и не могло быть в этой среде**: реальная конвертация
+  (`soffice`/`pdftoppm` на живом файле), доставка задачи через настоящий
+  Redis, событие `completed` → запись слайдов в настоящий Postgres. Логика
+  — юнит-тесты на моках + typecheck против реальных типов `bullmq@6.3.2`.
+  Первая живая проверка — на Linux при `docker compose up`.
 
 ---
 
