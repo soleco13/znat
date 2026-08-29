@@ -19,6 +19,6 @@
     "typescript": "^5.9.2"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["argon2", "esbuild"]
+    "onlyBuiltDependencies": ["argon2", "esbuild", "sharp"]
   }
 }

@@ -12,3 +12,8 @@ coverage/
 .turbo/
 *.tsbuildinfo
 .playwright-mcp/
+
+# локальные артефакты запуска (Redis-дамп, логи сервера, скриншоты отладки)
+dump.rdb
+server_log.txt
+/room*.png

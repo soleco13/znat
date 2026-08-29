@@ -1,13 +1,26 @@
-import { useEffect, useState } from "react";
-import { Excalidraw } from "@excalidraw/excalidraw";
+import { useEffect, useRef, useState } from "react";
+import { Excalidraw, convertToExcalidrawElements } from "@excalidraw/excalidraw";
 import type { ExcalidrawImperativeAPI, NormalizedZoomValue } from "@excalidraw/excalidraw/types";
+import type { BinaryFileData, DataURL } from "@excalidraw/excalidraw/types";
+import type { FileId } from "@excalidraw/excalidraw/element/types";
 import { HocuspocusProvider } from "@hocuspocus/provider";
 import { ExcalidrawBinding } from "y-excalidraw";
 import * as Y from "yjs";
+import type { CanvasImageUploadResponse } from "@school/shared";
 import { useAuthStore } from "../../shared/auth-store.js";
+import { apiFetch } from "../../shared/api-client.js";
 import { BACKGROUND_KIND_LABELS, PageBackground, type BackgroundKind } from "./PageBackground.js";
 import "@excalidraw/excalidraw/index.css";
 import "./Board.css";
+
+/** Наибольшая сторона изображения при первой вставке на холст (мировые
+ *  единицы, не зависят от zoom) — сервер уже прислал ресайз до 2000px
+ *  (Э3.10), это отдельное ограничение под удобный начальный размер на
+ *  экране; дальше учитель/ученик масштабирует вручную как обычный элемент. */
+const PLACED_IMAGE_MAX_SIDE = 480;
+
+/** Разрешённые для загрузки на доску типы (Э3.10, §3.3 ТЗ) — зеркалит `canvasImageMimeTypeSchema` из packages/shared. */
+const ACCEPTED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 /** Стабильный цвет курсора участника — из userId, без похода на сервер (Э3.9). */
 function cursorColorFor(userId: string): string {
@@ -72,6 +85,8 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
   const role = me?.role;
   const isTeacher = role === "teacher" || role === "admin";
   const [followTeacher, setFollowTeacher] = useState(false);
+  const boardContainerRef = useRef<HTMLDivElement>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Храним `provider`, а не голый `Y.Doc` — `ExcalidrawBinding` реально
   // требует живой `Awareness` (см. комментарий у binding-эффекта ниже), а
@@ -273,6 +288,98 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
     });
   }
 
+  /**
+   * Э3.10, §3.3 ТЗ: «drag&drop, вставка из буфера, с камеры телефона».
+   * Штатная вставка картинок самого Excalidraw (paste/drop) уже отключена
+   * настройкой `UIOptions.tools.image: false` из Э3.4 — проверено чтением
+   * скомпилированного бандла (`isToolSupported("image")` гейтит и
+   * `pasteFromClipboard`, и drop-обработчик изображений одним и тем же
+   * флагом), поэтому конфликта двойной вставки нет: нативный путь просто
+   * ничего не делает с картинкой. Наши обработчики — на CAPTURE-фазе
+   * (`onDropCapture`/`onPasteCapture`), чтобы гарантированно сработать
+   * раньше внутренних DOM-слушателей Excalidraw на дочерних узлах (bubble-
+   * фаза достигла бы их только ПОСЛЕ target-фазы на вложенном canvas).
+   */
+  async function insertImageFromFile(file: File) {
+    if (!excalidrawAPI || !canDraw) return;
+    if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
+      setUploadError("Поддерживаются только PNG, JPEG, WebP");
+      return;
+    }
+    setUploadError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const result = await apiFetch<CanvasImageUploadResponse>(`/lessons/${lessonId}/canvas-images`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const fileId = crypto.randomUUID() as FileId;
+      excalidrawAPI.addFiles([
+        {
+          id: fileId,
+          // Сервер провалидировал mimeType тем же enum, что и
+          // ACCEPTED_IMAGE_TYPES (canvasImageMimeTypeSchema, packages/shared) —
+          // приведение типа сужает string до branded-объединения пакета,
+          // а не обходит проверку (не any).
+          mimeType: result.mimeType as BinaryFileData["mimeType"],
+          dataURL: result.url as DataURL,
+          created: Date.now(),
+        },
+      ]);
+
+      // Формула центра видимой области — то же преобразование координат
+      // Excalidraw, что уже проверено и используется в PageBackground.tsx
+      // (Э3.7): screenX = (sceneX + scrollX) * zoom ⇒ sceneX = screenX/zoom - scrollX.
+      const scale = Math.min(1, PLACED_IMAGE_MAX_SIDE / Math.max(result.width, result.height));
+      const placedWidth = result.width * scale;
+      const placedHeight = result.height * scale;
+      const container = boardContainerRef.current;
+      const appState = excalidrawAPI.getAppState();
+      const centerX = container ? container.clientWidth / 2 / appState.zoom.value - appState.scrollX : 0;
+      const centerY = container ? container.clientHeight / 2 / appState.zoom.value - appState.scrollY : 0;
+
+      const [imageElement] = convertToExcalidrawElements([
+        {
+          type: "image",
+          fileId,
+          x: centerX - placedWidth / 2,
+          y: centerY - placedHeight / 2,
+          width: placedWidth,
+          height: placedHeight,
+        },
+      ]);
+      if (imageElement) {
+        excalidrawAPI.updateScene({ elements: [...excalidrawAPI.getSceneElements(), imageElement] });
+      }
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Не удалось загрузить изображение");
+    }
+  }
+
+  function handleDragOverCapture(e: React.DragEvent<HTMLDivElement>) {
+    if (canDraw) e.preventDefault();
+  }
+
+  function handleDropCapture(e: React.DragEvent<HTMLDivElement>) {
+    if (!canDraw) return;
+    const file = Array.from(e.dataTransfer.files).find((f) => f.type.startsWith("image/"));
+    if (!file) return;
+    e.preventDefault();
+    e.stopPropagation();
+    void insertImageFromFile(file);
+  }
+
+  function handlePasteCapture(e: React.ClipboardEvent<HTMLDivElement>) {
+    if (!canDraw) return;
+    const file = Array.from(e.clipboardData.files).find((f) => f.type.startsWith("image/"));
+    if (!file) return;
+    e.preventDefault();
+    e.stopPropagation();
+    void insertImageFromFile(file);
+  }
+
   return (
     <div>
       {ydoc && (
@@ -320,9 +427,33 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
               {followTeacher ? "Не следовать за учителем" : "Следовать за учителем"}
             </button>
           )}
+          {canDraw && (
+            <label className="cursor-pointer rounded border px-3 py-1 text-sm">
+              Фото на доску
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) void insertImageFromFile(file);
+                }}
+              />
+            </label>
+          )}
+          {uploadError && <span className="text-sm text-red-700">{uploadError}</span>}
         </div>
       )}
-      <div className="canvas-board" style={{ height: "70vh", position: "relative" }}>
+      <div
+        ref={boardContainerRef}
+        className="canvas-board"
+        style={{ height: "70vh", position: "relative" }}
+        onDragOverCapture={handleDragOverCapture}
+        onDropCapture={handleDropCapture}
+        onPasteCapture={handlePasteCapture}
+      >
         <PageBackground
           api={excalidrawAPI}
           kind={pages.find(([id]) => id === activePageId)?.[1].kind ?? "blank"}

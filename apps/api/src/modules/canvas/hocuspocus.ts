@@ -10,6 +10,7 @@ import {
 } from "@hocuspocus/server";
 import { encodeStateAsUpdate } from "yjs";
 import { z } from "zod";
+import type { AccessTokenPayload } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
 import { verifyAccessToken } from "../auth/service.js";
 import * as lessonsService from "../lessons/service.js";
@@ -73,6 +74,43 @@ export async function clearDrawPermissionOverrides(
 }
 
 /**
+ * Проверка «состоит ли user в уроке lessonId» — общая часть для двух мест:
+ * подключения к `/collab` (ниже) и HTTP-загрузки изображений на доску
+ * (Э3.10, `assertCanDrawForLesson`). Вынесена при Э3.10 из
+ * `authenticateCanvasConnection` дословным переносом (порядок вызовов и
+ * тексты ошибок не менялись) — новый вызывающий код появился, сама логика
+ * прав нет.
+ *
+ * Логика прав ролей намеренно ДУБЛИРУЕТ rooms/service.ts#assertMembership, а
+ * не переиспользует её: canvas не должен зависеть от rooms (это
+ * presence/WS-модуль, а не владелец правил доступа к уроку), а правило
+ * модульности CLAUDE.md запрещает модулю тянуть чужой repo.ts — здесь
+ * используются только публичные сервисы lessons/users, как и в rooms.
+ */
+async function assertLessonMembership(
+  user: Pick<AccessTokenPayload, "sub" | "role" | "schoolId">,
+  lessonId: string,
+): Promise<void> {
+  const lesson = await lessonsService.getLesson(user.schoolId, lessonId);
+
+  if (user.role === "admin") return;
+  if (user.role === "teacher") {
+    if (lesson.teacherId !== user.sub) {
+      throw new AppError(403, "forbidden", "Вы не ведёте этот урок");
+    }
+    return;
+  }
+  if (user.role === "student") {
+    const isMember = await usersService.isGroupMember(lesson.groupId, user.sub);
+    if (!isMember) {
+      throw new AppError(403, "forbidden", "Вы не состоите в группе этого урока");
+    }
+    return;
+  }
+  throw new AppError(403, "forbidden", "Роль не допускается к участию в уроке");
+}
+
+/**
  * Проверяет права на lesson_id при подключении к Yjs-документу холста (Э3.1,
  * §3.4 ТЗ). documentName у Hocuspocus — это lessonId напрямую (`Y.Doc` один
  * на урок, отдельный namespace-префикс не нужен — коллизий имён документов
@@ -81,12 +119,6 @@ export async function clearDrawPermissionOverrides(
  * возвращаемое значение: подтверждено чтением `ClientConnection.ts`, что
  * именно `connectionConfig` (не результат хука) читается при создании
  * `Connection`; возвращаемое значение уходит только в `context`.
- *
- * Логика прав ролей намеренно ДУБЛИРУЕТ rooms/service.ts#assertMembership, а
- * не переиспользует её: canvas не должен зависеть от rooms (это
- * presence/WS-модуль, а не владелец правил доступа к уроку), а правило
- * модульности CLAUDE.md запрещает модулю тянуть чужой repo.ts — здесь
- * используются только публичные сервисы lessons/users, как и в rooms.
  */
 export async function authenticateCanvasConnection(
   payload: Pick<onAuthenticatePayload, "token" | "documentName" | "connectionConfig">,
@@ -98,28 +130,28 @@ export async function authenticateCanvasConnection(
   const lessonId = parsedLessonId.data;
 
   const user = await verifyAccessToken(payload.token);
-  const lesson = await lessonsService.getLesson(user.schoolId, lessonId);
+  await assertLessonMembership(user, lessonId);
+  payload.connectionConfig.readOnly = !computeCanDraw(user.role, lessonId, user.sub);
+  return { userId: user.sub, role: user.role };
+}
 
-  if (user.role === "admin") {
-    payload.connectionConfig.readOnly = !computeCanDraw(user.role, lessonId, user.sub);
-    return { userId: user.sub, role: user.role };
+/**
+ * Э3.10: право загрузить изображение на доску урока — тот же гейт, что и
+ * право рисовать (`canDraw`, Э3.8), не просто членство в уроке: вставка
+ * картинки меняет содержимое холста так же, как штрих, и не должна быть
+ * доступна ученику, у которого рисование сейчас выключено. Используется
+ * HTTP-роутом `POST /lessons/:id/canvas-images` (canvas/routes.ts), где
+ * `user` уже проверенный `request.user` от `app.authenticate` — токен здесь
+ * не парсится повторно, в отличие от `authenticateCanvasConnection`.
+ */
+export async function assertCanDrawForLesson(
+  user: Pick<AccessTokenPayload, "sub" | "role" | "schoolId">,
+  lessonId: string,
+): Promise<void> {
+  await assertLessonMembership(user, lessonId);
+  if (!computeCanDraw(user.role, lessonId, user.sub)) {
+    throw new AppError(403, "forbidden", "Нет прав на рисование в этом уроке");
   }
-  if (user.role === "teacher") {
-    if (lesson.teacherId !== user.sub) {
-      throw new AppError(403, "forbidden", "Вы не ведёте этот урок");
-    }
-    payload.connectionConfig.readOnly = !computeCanDraw(user.role, lessonId, user.sub);
-    return { userId: user.sub, role: user.role };
-  }
-  if (user.role === "student") {
-    const isMember = await usersService.isGroupMember(lesson.groupId, user.sub);
-    if (!isMember) {
-      throw new AppError(403, "forbidden", "Вы не состоите в группе этого урока");
-    }
-    payload.connectionConfig.readOnly = !computeCanDraw(user.role, lessonId, user.sub);
-    return { userId: user.sub, role: user.role };
-  }
-  throw new AppError(403, "forbidden", "Роль не допускается к участию в уроке");
 }
 
 /**

@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import Fastify from "fastify";
 import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";
@@ -19,6 +20,7 @@ import roomsRoutes from "./modules/rooms/routes.js";
 import roomsWsRoutes from "./modules/rooms/ws.js";
 import livekitWebhookRoutes from "./modules/rooms/livekit-webhook.js";
 import canvasWsRoutes from "./modules/canvas/ws.js";
+import canvasRoutes from "./modules/canvas/routes.js";
 import { startCanvasUnloadSweep, stopCanvasUnloadSweep } from "./modules/canvas/service.js";
 import { startPresenceSweep, stopPresenceSweep } from "./modules/rooms/service.js";
 import { assetsRoutes, filesRoutes } from "./modules/storage/routes.js";
@@ -58,6 +60,7 @@ export function buildServer() {
       api.register(usersRoutes);
       api.register(lessonsRoutes);
       api.register(roomsRoutes);
+      api.register(canvasRoutes);
       api.register(assetsRoutes);
     },
     { prefix: "/api/v1" },
@@ -99,7 +102,7 @@ async function main() {
   await app.listen({ port: env.PORT, host: "0.0.0.0" });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   main().catch((err) => {
     console.error(err);
     process.exit(1);

@@ -23,8 +23,8 @@ export async function deleteFile(storageKey: string) {
   return adapter.remove(storageKey);
 }
 
-export function getSignedFileUrl(storageKey: string): string {
-  const { exp, sig } = signStorageUrl(storageKey, SIGNED_URL_TTL_SECONDS, env.STORAGE_HMAC_SECRET);
+export function getSignedFileUrl(storageKey: string, ttlSeconds: number = SIGNED_URL_TTL_SECONDS): string {
+  const { exp, sig } = signStorageUrl(storageKey, ttlSeconds, env.STORAGE_HMAC_SECRET);
   const encodedKey = encodeURIComponent(storageKey);
   return `/files/${encodedKey}?exp=${exp}&sig=${sig}`;
 }

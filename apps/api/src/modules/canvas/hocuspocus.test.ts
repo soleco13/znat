@@ -26,6 +26,7 @@ vi.mock("./repo.js", () => repoMock);
 
 const {
   authenticateCanvasConnection,
+  assertCanDrawForLesson,
   loadCanvasDocument,
   storeCanvasDocument,
   clearEmptySinceOnConnect,
@@ -361,5 +362,52 @@ describe("setDrawPermission (Э3.8)", () => {
 
   it("документ этого урока ещё не загружен в память — тихо ничего не делает, не падает", () => {
     expect(() => setDrawPermission("lesson-not-loaded-yet", STUDENT_ID, true)).not.toThrow();
+  });
+});
+
+describe("assertCanDrawForLesson (Э3.10 — право загружать изображение на доску)", () => {
+  afterEach(() => {
+    clearDrawPermissionOverrides({ documentName: LESSON_ID });
+  });
+
+  it("учитель, ведущий урок, проходит (canDraw по умолчанию у роли)", async () => {
+    await expect(
+      assertCanDrawForLesson({ sub: TEACHER_ID, role: "teacher", schoolId: SCHOOL_ID }, LESSON_ID),
+    ).resolves.toBeUndefined();
+  });
+
+  it("учитель, НЕ ведущий этот урок, отклоняется — членство проверяется раньше canDraw", async () => {
+    await expect(
+      assertCanDrawForLesson(
+        { sub: "77777777-7777-7777-7777-777777777777", role: "teacher", schoolId: SCHOOL_ID },
+        LESSON_ID,
+      ),
+    ).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("ученик без явного гранта отклоняется (canDraw:false по умолчанию у роли, Э3.8)", async () => {
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+
+    await expect(
+      assertCanDrawForLesson({ sub: STUDENT_ID, role: "student", schoolId: SCHOOL_ID }, LESSON_ID),
+    ).rejects.toMatchObject({ statusCode: 403, code: "forbidden" });
+  });
+
+  it("ученик с явно выданным canDraw проходит", async () => {
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+    setDrawPermission(LESSON_ID, STUDENT_ID, true);
+
+    await expect(
+      assertCanDrawForLesson({ sub: STUDENT_ID, role: "student", schoolId: SCHOOL_ID }, LESSON_ID),
+    ).resolves.toBeUndefined();
+  });
+
+  it("ученик НЕ из группы урока отклоняется до проверки canDraw", async () => {
+    usersServiceMock.isGroupMember.mockResolvedValue(false);
+    setDrawPermission(LESSON_ID, STUDENT_ID, true);
+
+    await expect(
+      assertCanDrawForLesson({ sub: STUDENT_ID, role: "student", schoolId: SCHOOL_ID }, LESSON_ID),
+    ).rejects.toMatchObject({ statusCode: 403 });
   });
 });
