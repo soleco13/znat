@@ -27,6 +27,12 @@ export const lessonStatusEnum = pgEnum("lesson_status", [
   "ended",
   "cancelled",
 ]);
+export const deckStatusEnum = pgEnum("deck_status", [
+  "pending",
+  "converting",
+  "ready",
+  "failed",
+]);
 
 export const schools = pgTable("schools", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -149,6 +155,61 @@ export const canvasDocs = pgTable("canvas_docs", {
   ydoc: bytea("ydoc").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Презентации урока (Э4, §3.5/§9 ТЗ). Вместо `source_asset_id`/`image_asset_id`
+ * из §9 — `storageKey` строкой: в проекте нет таблицы `assets`, файлы
+ * адресуются ключом + HMAC-URL (как в Э0.5/Э3.10).
+ */
+export const decks = pgTable(
+  "decks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    schoolId: uuid("school_id")
+      .notNull()
+      .references(() => schools.id, { onDelete: "cascade" }),
+    lessonId: uuid("lesson_id")
+      .notNull()
+      .references(() => lessons.id, { onDelete: "cascade" }),
+    sourceStorageKey: text("source_storage_key").notNull(),
+    /** sha256 исходного файла — дедуп повторной конвертации (Э4.5). */
+    sourceSha256: text("source_sha256").notNull(),
+    sourceName: text("source_name").notNull(),
+    title: text("title").notNull(),
+    status: deckStatusEnum("status").notNull().default("pending"),
+    slideCount: integer("slide_count").notNull().default(0),
+    /** Сколько слайдов отрендерено (Э4.4). */
+    progress: integer("progress").notNull().default(0),
+    error: text("error"),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("decks_lesson_idx").on(t.lessonId),
+    // Дедуп (Э4.5): «та же презентация конвертируется один раз» в пределах школы.
+    index("decks_school_sha_idx").on(t.schoolId, t.sourceSha256),
+  ],
+);
+
+export const deckSlides = pgTable(
+  "deck_slides",
+  {
+    deckId: uuid("deck_id")
+      .notNull()
+      .references(() => decks.id, { onDelete: "cascade" }),
+    index: integer("index").notNull(),
+    imageStorageKey: text("image_storage_key").notNull(),
+    thumbStorageKey: text("thumb_storage_key").notNull(),
+    width: integer("width").notNull(),
+    height: integer("height").notNull(),
+    /** Текстовый слой из `pdftotext -bbox` (Э4.8). */
+    textLayer: jsonb("text_layer"),
+  },
+  (t) => [primaryKey({ columns: [t.deckId, t.index] })],
+);
 
 export const refreshTokens = pgTable(
   "refresh_tokens",
