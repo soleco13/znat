@@ -12,8 +12,10 @@ import { Readable } from "node:stream";
 import {
   deckSourceMimeTypeSchema,
   type AccessTokenPayload,
+  type ConvertedSlide,
   type Deck,
   type DeckSlide,
+  type DeckSourceMimeType,
   type DeckUploadResponse,
 } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
@@ -105,6 +107,21 @@ export async function createDeckFromUpload(input: {
     schoolId: input.user.schoolId,
   });
 
+  // Э4.5: та же презентация (совпал sha256 исходника) уже сконвертирована в
+  // этой школе — не гоняем LibreOffice второй раз, копируем готовые слайды.
+  const twin = await repo.findReadyDeckBySha(input.user.schoolId, sha256);
+  if (twin) {
+    return dedupFromTwin({
+      user: input.user,
+      lessonId: input.lessonId,
+      filename: input.filename,
+      mimeType,
+      sha256,
+      sourceStorageKey: storageKey,
+      twinId: twin.id,
+    });
+  }
+
   const deck = await repo.insertDeck({
     schoolId: input.user.schoolId,
     lessonId: input.lessonId,
@@ -129,6 +146,66 @@ export async function createDeckFromUpload(input: {
   broadcastDeckStatus(deck);
 
   return { deckId: deck.id, jobId: deck.id, status: "pending" };
+}
+
+/**
+ * Э4.5: заводит презентацию из уже готового «двойника» — той же презентации,
+ * сконвертированной ранее (совпал sha256 исходника). Конвертация пропускается
+ * целиком. Слайды двойника **копируются** под новыми ключами, а не
+ * переиспользуются: каждый `deck` владеет своими файлами, поэтому `deleteDeck`
+ * не нужен учёт ссылок. Расход диска на дубль ~несколько МБ на презентацию —
+ * приемлемо для MVP; дорогой ресурс (CPU LibreOffice во время уроков) сэкономлен.
+ */
+async function dedupFromTwin(input: {
+  user: AccessTokenPayload;
+  lessonId: string;
+  filename: string;
+  mimeType: DeckSourceMimeType;
+  sha256: string;
+  sourceStorageKey: string;
+  twinId: string;
+}): Promise<DeckUploadResponse> {
+  const twinSlides = await repo.listSlidesByDeck(input.twinId);
+  const copied: ConvertedSlide[] = await Promise.all(
+    twinSlides.map(async (s) => {
+      const [image, thumb] = await Promise.all([
+        storageService.copyFile({ sourceKey: s.imageStorageKey, schoolId: input.user.schoolId }),
+        storageService.copyFile({ sourceKey: s.thumbStorageKey, schoolId: input.user.schoolId }),
+      ]);
+      return {
+        index: s.index,
+        imageStorageKey: image.storageKey,
+        thumbStorageKey: thumb.storageKey,
+        width: s.width,
+        height: s.height,
+        // textLayer — наш же JSON, записанный из ConvertedSlide при конвертации двойника.
+        textLayer: s.textLayer as ConvertedSlide["textLayer"],
+      };
+    }),
+  );
+
+  const deck = await repo.insertDeck({
+    schoolId: input.user.schoolId,
+    lessonId: input.lessonId,
+    sourceStorageKey: input.sourceStorageKey,
+    sourceMimeType: input.mimeType,
+    sourceSha256: input.sha256,
+    sourceName: input.filename,
+    title: input.filename.replace(/\.[^.]+$/, ""),
+    createdBy: input.user.sub,
+  });
+  if (!deck) throw new AppError(500, "deck_create_failed", "Не удалось создать презентацию");
+
+  await repo.replaceDeckSlides(deck.id, copied);
+  const row = await repo.setDeckStatus(deck.id, {
+    status: "ready",
+    progress: copied.length,
+    slideCount: copied.length,
+    error: null,
+  });
+  broadcastDeckStatus(row);
+
+  return { deckId: deck.id, jobId: null, status: "ready" };
 }
 
 type DeckRow = NonNullable<Awaited<ReturnType<typeof repo.findDeckById>>>;

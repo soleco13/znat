@@ -13,6 +13,10 @@ export class S3StorageAdapter implements StorageAdapter {
     throw new Error("not implemented");
   }
 
+  copy(): Promise<{ storageKey: string; sizeBytes: number }> {
+    throw new Error("not implemented");
+  }
+
   remove(): Promise<void> {
     throw new Error("not implemented");
   }

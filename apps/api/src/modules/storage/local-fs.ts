@@ -1,5 +1,5 @@
 import { createReadStream, createWriteStream } from "node:fs";
-import { mkdir, rm, stat } from "node:fs/promises";
+import { copyFile, mkdir, rm, stat } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -32,6 +32,20 @@ export class LocalFsStorageAdapter implements StorageAdapter {
 
   async get(storageKey: string): Promise<NodeJS.ReadableStream> {
     return createReadStream(this.resolve(storageKey));
+  }
+
+  async copy(input: {
+    sourceKey: string;
+    schoolId: string;
+  }): Promise<{ storageKey: string; sizeBytes: number }> {
+    const srcPath = this.resolve(input.sourceKey);
+    const ext = path.extname(input.sourceKey);
+    const storageKey = path.posix.join(input.schoolId, `${randomUUID()}${ext}`);
+    const destPath = this.resolve(storageKey);
+    await mkdir(path.dirname(destPath), { recursive: true });
+    await copyFile(srcPath, destPath);
+    const { size } = await stat(destPath);
+    return { storageKey, sizeBytes: size };
   }
 
   async remove(storageKey: string): Promise<void> {

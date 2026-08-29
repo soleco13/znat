@@ -19,6 +19,11 @@ export async function openFile(storageKey: string) {
   return adapter.get(storageKey);
 }
 
+/** Копия существующего файла под новым ключом — дедуп презентаций (Э4.5). */
+export async function copyFile(input: { sourceKey: string; schoolId: string }) {
+  return adapter.copy(input);
+}
+
 export async function deleteFile(storageKey: string) {
   return adapter.remove(storageKey);
 }

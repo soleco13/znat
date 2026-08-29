@@ -26,6 +26,7 @@ const {
     usersServiceMock: { isGroupMember: vi.fn() },
     storageServiceMock: {
       uploadFile: vi.fn(),
+      copyFile: vi.fn(),
       getSignedFileUrl: vi.fn((k: string) => `/files/${k}?sig=x`),
       deleteFile: vi.fn(),
     },
@@ -66,6 +67,12 @@ beforeEach(() => {
   });
   storageServiceMock.uploadFile.mockResolvedValue({ storageKey: `${SCHOOL}/src.pptx`, sizeBytes: 10 });
   storageServiceMock.deleteFile.mockResolvedValue(undefined);
+  storageServiceMock.copyFile.mockImplementation((input: { sourceKey: string }) =>
+    Promise.resolve({ storageKey: `${SCHOOL}/copy-of-${input.sourceKey}`, sizeBytes: 5 }),
+  );
+  // По умолчанию двойника нет — идёт обычная конвертация (Э4.5).
+  repoMock.findReadyDeckBySha.mockResolvedValue(null);
+  repoMock.listSlidesByDeck.mockResolvedValue([]);
   repoMock.insertDeck.mockResolvedValue({
     id: DECK,
     schoolId: SCHOOL,
@@ -165,6 +172,72 @@ describe("createDeckFromUpload (Э4.3)", () => {
       type: "deck_status",
       deck: { deckId: DECK, title: "Урок 1", status: "pending", progress: 0, slideCount: 0, error: null },
     });
+  });
+});
+
+describe("createDeckFromUpload — дедуп по sha256 (Э4.5)", () => {
+  const TWIN = "55555555-5555-5555-5555-555555555555";
+
+  beforeEach(() => {
+    repoMock.findReadyDeckBySha.mockResolvedValue({ id: TWIN, schoolId: SCHOOL, slideCount: 2 });
+    repoMock.listSlidesByDeck.mockResolvedValue([
+      { index: 0, imageStorageKey: "twin-img-0", thumbStorageKey: "twin-thumb-0", width: 1920, height: 1080, textLayer: null },
+      { index: 1, imageStorageKey: "twin-img-1", thumbStorageKey: "twin-thumb-1", width: 1920, height: 1080, textLayer: null },
+    ]);
+  });
+
+  it("не ставит задачу конвертации, копирует слайды двойника, отдаёт готово сразу", async () => {
+    const res = await createDeckFromUpload({
+      user: teacher,
+      lessonId: LESSON,
+      buffer: Buffer.from("same-bytes"),
+      filename: "Повтор.pptx",
+      mimeType: PPTX,
+    });
+
+    expect(res).toEqual({ deckId: DECK, jobId: null, status: "ready" });
+    expect(jobsServiceMock.enqueueConvert).not.toHaveBeenCalled();
+    // Копия каждого файла (изображение + превью) обоих слайдов двойника.
+    expect(storageServiceMock.copyFile).toHaveBeenCalledTimes(4);
+    expect(storageServiceMock.copyFile).toHaveBeenCalledWith({ sourceKey: "twin-img-0", schoolId: SCHOOL });
+    expect(repoMock.replaceDeckSlides).toHaveBeenCalledWith(DECK, [
+      expect.objectContaining({ index: 0, imageStorageKey: `${SCHOOL}/copy-of-twin-img-0` }),
+      expect.objectContaining({ index: 1, thumbStorageKey: `${SCHOOL}/copy-of-twin-thumb-1` }),
+    ]);
+    expect(repoMock.setDeckStatus).toHaveBeenCalledWith(DECK, {
+      status: "ready",
+      progress: 2,
+      slideCount: 2,
+      error: null,
+    });
+  });
+
+  it("шлёт в WS-канал урока событие deck_status со статусом ready", async () => {
+    await createDeckFromUpload({
+      user: teacher,
+      lessonId: LESSON,
+      buffer: Buffer.from("same-bytes"),
+      filename: "Повтор.pptx",
+      mimeType: PPTX,
+    });
+
+    expect(roomsServiceMock.broadcastToLesson).toHaveBeenCalledWith(
+      LESSON,
+      expect.objectContaining({ type: "deck_status", deck: expect.objectContaining({ status: "ready", slideCount: 2 }) }),
+    );
+  });
+
+  it("двойник ищется по школе и sha256 исходника", async () => {
+    const buffer = Buffer.from("same-bytes");
+    const sha = createHash("sha256").update(buffer).digest("hex");
+    await createDeckFromUpload({
+      user: teacher,
+      lessonId: LESSON,
+      buffer,
+      filename: "Повтор.pptx",
+      mimeType: PPTX,
+    });
+    expect(repoMock.findReadyDeckBySha).toHaveBeenCalledWith(SCHOOL, sha);
   });
 });
 
