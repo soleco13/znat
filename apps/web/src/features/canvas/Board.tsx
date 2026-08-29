@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Excalidraw, convertToExcalidrawElements } from "@excalidraw/excalidraw";
 import type { ExcalidrawImperativeAPI, NormalizedZoomValue } from "@excalidraw/excalidraw/types";
 import type { BinaryFileData, DataURL } from "@excalidraw/excalidraw/types";
-import type { FileId } from "@excalidraw/excalidraw/element/types";
+import type { FileId, OrderedExcalidrawElement } from "@excalidraw/excalidraw/element/types";
 import { HocuspocusProvider } from "@hocuspocus/provider";
 import { ExcalidrawBinding } from "y-excalidraw";
 import * as Y from "yjs";
@@ -21,6 +21,17 @@ const PLACED_IMAGE_MAX_SIDE = 480;
 
 /** Разрешённые для загрузки на доску типы (Э3.10, §3.3 ТЗ) — зеркалит `canvasImageMimeTypeSchema` из packages/shared. */
 const ACCEPTED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+/**
+ * Э3.12, §3.4 ТЗ: «максимум 500 элементов на страницу, предупреждение при
+ * приближении. Доска не деградирует». Это перформанс-ограничитель, не
+ * граница доступа — enforcement клиентский (у всех клиентов одинаковый, а
+ * рисование и так под `canDraw`); при достижении лимита локальные новые
+ * элементы откатываются, удаление/правка существующих остаются доступны,
+ * чтобы можно было разгрузить страницу.
+ */
+const PAGE_ELEMENT_LIMIT = 500;
+const PAGE_ELEMENT_WARN_AT = 450;
 
 /** Стабильный цвет курсора участника — из userId, без похода на сервер (Э3.9). */
 function cursorColorFor(userId: string): string {
@@ -175,6 +186,12 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
     canRedo: boolean;
   } | null>(null);
 
+  // Э3.12: число элементов активной страницы (из её `Y.Array`) — источник
+  // истины для предупреждения и отката. `revertingRef` гасит рекурсию
+  // `onChange` → `updateScene` → `onChange` при обрезке.
+  const [pageElementCount, setPageElementCount] = useState(0);
+  const revertingRef = useRef(false);
+
   useEffect(() => {
     if (!excalidrawAPI || !ydoc || !provider?.awareness || !activePageId) return;
     const yElements = ydoc.getArray<Y.Map<unknown>>(`elements:${activePageId}`);
@@ -254,6 +271,20 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
       undoManager?.destroy();
     };
   }, [excalidrawAPI, ydoc, provider, activePageId, canDraw]);
+
+  /**
+   * Э3.12: следим за числом элементов активной страницы прямо по её
+   * `Y.Array` (а не по сцене Excalidraw) — это то же число у всех
+   * участников, независимо от локального состояния рендера.
+   */
+  useEffect(() => {
+    if (!ydoc || !activePageId) return;
+    const yElements = ydoc.getArray(`elements:${activePageId}`);
+    const sync = () => setPageElementCount(yElements.length);
+    sync();
+    yElements.observe(sync);
+    return () => yElements.unobserve(sync);
+  }, [ydoc, activePageId]);
 
   /**
    * Э3.9, §3.4 ТЗ: awareness → курсоры собеседников. `y-excalidraw` сам
@@ -376,6 +407,10 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
    */
   async function insertImageFromFile(file: File) {
     if (!excalidrawAPI || !canDraw) return;
+    if (pageElementCount >= PAGE_ELEMENT_LIMIT) {
+      setUploadError(`На странице уже ${PAGE_ELEMENT_LIMIT} элементов — создайте новую страницу`);
+      return;
+    }
     if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
       setUploadError("Поддерживаются только PNG, JPEG, WebP");
       return;
@@ -452,6 +487,29 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
     e.preventDefault();
     e.stopPropagation();
     void insertImageFromFile(file);
+  }
+
+  /**
+   * Э3.12: как только на странице оказывается больше `PAGE_ELEMENT_LIMIT`
+   * живых элементов — обрезаем сцену до первых `PAGE_ELEMENT_LIMIT`.
+   * Порядок элементов у `y-excalidraw` детерминирован (дробный индекс
+   * `pos`, сортировка в `yjsToExcalidraw`), поэтому `slice(0, LIMIT)` даёт
+   * один и тот же набор на всех клиентах — обрезка сходится, а не «воюет»:
+   * после неё привязка допишет обрезанный список в общий `Y.Array`, и все
+   * участники приходят ровно к 500. `revertingRef` гасит рекурсию
+   * `onChange` → `updateScene` → `onChange`. Различать «своё» и «чужое»
+   * переполнение не нужно: лимит глобальный, лишние элементы отбрасываются
+   * у всех одинаково.
+   */
+  function handleSceneChange(elements: readonly OrderedExcalidrawElement[]) {
+    if (!excalidrawAPI || revertingRef.current) return;
+    const live = elements.filter((el) => !el.isDeleted);
+    if (live.length <= PAGE_ELEMENT_LIMIT) return;
+    revertingRef.current = true;
+    excalidrawAPI.updateScene({ elements: live.slice(0, PAGE_ELEMENT_LIMIT) });
+    queueMicrotask(() => {
+      revertingRef.current = false;
+    });
   }
 
   return (
@@ -538,6 +596,17 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
             </label>
           )}
           {uploadError && <span className="text-sm text-red-700">{uploadError}</span>}
+          {pageElementCount >= PAGE_ELEMENT_WARN_AT && (
+            <span
+              className={`text-sm ${
+                pageElementCount >= PAGE_ELEMENT_LIMIT ? "font-medium text-red-700" : "text-amber-700"
+              }`}
+            >
+              {pageElementCount >= PAGE_ELEMENT_LIMIT
+                ? `Лимит ${PAGE_ELEMENT_LIMIT} элементов на странице достигнут — новые не добавляются, создайте новую страницу`
+                : `Элементов на странице: ${pageElementCount} / ${PAGE_ELEMENT_LIMIT}`}
+            </span>
+          )}
         </div>
       )}
       <div
@@ -560,6 +629,8 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
             // публикует его в awareness только когда сам вызывается, а вызывает
             // его именно Excalidraw через этот проп, не сам пакет.
             onPointerUpdate={binding?.onPointerUpdate}
+            // Э3.12: откат локальных добавлений сверх лимита 500 (см. handleSceneChange).
+            onChange={handleSceneChange}
             // Э3.8, §5.2 ТЗ: без canDraw — доска read-only. `viewModeEnabled`
             // реактивный проп (не только initialData — проверено чтением
             // скомпилированного бандла: сам компонент подхватывает его на
