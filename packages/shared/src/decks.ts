@@ -108,3 +108,19 @@ export const convertJobProgressSchema = z.object({
   total: z.number().int().nonnegative(),
 });
 export type ConvertJobProgress = z.infer<typeof convertJobProgressSchema>;
+
+// ─── Событие прогресса в WS-канал урока (Э4.4) ────────────────────────────
+// Идёт не в очередь, а в `/ws` (`ServerRoomMessage`, packages/shared/rooms.ts):
+// лёгкая проекция строки `decks`, чтобы учитель видел «7 из 24», смену
+// статуса и текст ошибки без отдельного запроса за списком презентаций.
+
+export const deckProgressEventSchema = z.object({
+  deckId: z.string().uuid(),
+  title: z.string(),
+  status: deckStatusSchema,
+  /** Отрендерено слайдов («7» из «24» — второе число это slideCount). */
+  progress: z.number().int().nonnegative(),
+  slideCount: z.number().int().nonnegative(),
+  error: z.string().nullable(),
+});
+export type DeckProgressEvent = z.infer<typeof deckProgressEventSchema>;

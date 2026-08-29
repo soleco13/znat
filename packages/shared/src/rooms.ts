@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { roleSchema, lessonStatusSchema } from "./roles.js";
 import { mediaConnectionSchema } from "./media.js";
+import { deckProgressEventSchema } from "./decks.js";
 
 export const participantPermissionsSchema = z.object({
   canDraw: z.boolean(),
@@ -75,6 +76,9 @@ export const serverRoomMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("hand_raised"), userId: z.string().uuid(), raised: z.boolean() }),
   z.object({ type: z.literal("chat_message"), message: chatMessageSchema }),
   z.object({ type: z.literal("lesson_status"), status: lessonStatusSchema }),
+  // Э4.4: прогресс конвертации презентации — по одному сообщению на каждую
+  // смену статуса/шаг рендера. Канал `/ws` уже per-lesson, deckId хватает.
+  z.object({ type: z.literal("deck_status"), deck: deckProgressEventSchema }),
   z.object({ type: z.literal("error"), message: z.string() }),
 ]);
 export type ServerRoomMessage = z.infer<typeof serverRoomMessageSchema>;

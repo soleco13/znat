@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import type {
   ChatMessage,
+  DeckProgressEvent,
   JoinLessonResponse,
   LessonStatus,
   MediaConnection,
@@ -12,6 +13,7 @@ import type {
 import { apiFetch } from "../../shared/api-client.js";
 import { useAuthStore } from "../../shared/auth-store.js";
 import { Board } from "../canvas/Board.js";
+import { DeckPanel } from "../decks/DeckPanel.js";
 import { ConnectionQualityDot, PacketLossWarning } from "./ConnectionQuality.js";
 import { DeviceCheckScreen } from "./DeviceCheckScreen.js";
 import { MediaAudioStatus } from "./MediaAudioStatus.js";
@@ -38,6 +40,9 @@ export function RoomPage() {
   const [lessonStatus, setLessonStatus] = useState<LessonStatus | null>(null);
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [chatDraft, setChatDraft] = useState("");
+  // Э4.4: статусы конвертации презентаций урока, по deckId. Копим все —
+  // одновременно могут конвертироваться несколько, а событие несёт одну.
+  const [deckStatuses, setDeckStatuses] = useState<Record<string, DeckProgressEvent>>({});
   const [error, setError] = useState<string | null>(null);
   // LiveKit-подключение (Э2, только аудио — см. стоп-лист Э2 в docs/CURRENT_STAGE.md).
   const [media, setMedia] = useState<MediaConnection | null>(null);
@@ -74,6 +79,9 @@ export function RoomPage() {
         break;
       case "lesson_status":
         setLessonStatus(message.status);
+        break;
+      case "deck_status":
+        setDeckStatuses((prev) => ({ ...prev, [message.deck.deckId]: message.deck }));
         break;
       case "error":
         setError(message.message);
@@ -169,6 +177,12 @@ export function RoomPage() {
       {lessonId && (
         <div className="mb-4">
           <Board lessonId={lessonId} canDraw={self?.permissions.canDraw ?? false} />
+        </div>
+      )}
+
+      {lessonId && (
+        <div className="mb-4">
+          <DeckPanel lessonId={lessonId} isTeacher={isTeacher} statuses={deckStatuses} />
         </div>
       )}
 

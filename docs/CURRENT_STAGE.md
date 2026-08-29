@@ -38,7 +38,7 @@ Linux.
       LiveKit эксклюзивны. (§ «Чего не урезать никогда» — раскладка ядер.)
 - [x] Э4.3 Пайплайн BullMQ, `concurrency: 1`: скан → `soffice --convert-to
       pdf` → `pdftoppm` → PNG@2x + JPEG-превью → `StorageAdapter`.
-- [ ] Э4.4 Прогресс конвертации в UI через WS: «7 из 24».
+- [x] Э4.4 Прогресс конвертации в UI через WS: «7 из 24».
 - [ ] Э4.5 Дедупликация по `sha256`: та же презентация конвертируется один раз.
 - [ ] Э4.6 Импорт слайдов как страниц холста, лента миниатюр, навигация.
 - [ ] Э4.7 Прямая загрузка PDF без конвертации (pdf.js для превью).
@@ -302,6 +302,59 @@ event loop lag app не вырос; CPU ядер 0-3 (LiveKit) не затрон
   `completed` при `missing`-событии; `converting`+`missing` → `failed`
   без переустановки; `pending`+`missing` → переустановка с верными полями;
   `in-progress` → не трогает ничего.
+
+## Что сделано технически (Э4.4)
+
+- **Прогресс идёт в тот же WS-канал урока `/ws`, что и presence/чат** — не
+  отдельный сокет и не поллинг `GET /jobs/:jobId`. Новый вариант
+  `ServerRoomMessage`: `{ type: "deck_status", deck: DeckProgressEvent }`.
+  `deckProgressEventSchema` в `packages/shared/decks.ts` — лёгкая проекция
+  строки `decks` (`deckId`, `title`, `status`, `progress`, `slideCount`,
+  `error`); `packages/shared/rooms.ts` импортирует её (в shared правил
+  dependency-cruiser нет, ребро одностороннее — `decks.ts` не тянет
+  `rooms.ts`).
+- **`decks → rooms`, не наоборот.** `rooms/service.ts` получил
+  `broadcastToLesson(lessonId, message: ServerRoomMessage)` — тонкую
+  обёртку над внутренним `emitRoomEvent`. `rooms` владеет каналом `/ws`,
+  поэтому широковещание по уроку — легитимная часть его API. Прямой импорт
+  `decks → rooms/events.ts` запрещён правилом `no-cross-module-internals`
+  (только чужой `service.ts`), поэтому проход через сервис. Цикла нет:
+  `rooms/service.ts` тянет `canvas`/`lessons`/`media`/`users`, ни один из
+  них — `decks` (подтверждено `depcheck`: 138 модулей, 0 нарушений).
+- **Единая точка отправки — `broadcastDeckStatus(row)` в `decks/service.ts`,
+  вызывается после каждой записи статуса в БД**, поэтому событие всегда
+  отражает то, что реально сохранено (не «оптимистично»). Для этого
+  `repo.setDeckStatus` теперь `.returning()` и отдаёт обновлённую строку;
+  `broadcastDeckStatus(undefined)` (строку успели удалить во время
+  конвертации) — тихий no-op.
+- Точки эмита: `createDeckFromUpload` сразу после `enqueueConvert`
+  (`pending`, чтобы презентация появилась в списке урока до первого шага
+  воркера); `buildConvertJobHandlers.onProgress/onCompleted/onFailed`.
+  Reconcile-свип (Э4.3-долг) идёт через те же handlers → чинит и события
+  тоже, отдельного кода не потребовалось.
+- **Фронт** — новый `apps/web/src/features/decks/DeckPanel.tsx`, встроен в
+  `RoomPage` под доской. Компактный и **временный**: полноценная лента
+  миниатюр и импорт слайдов как страниц холста — Э4.6, здесь только
+  «загрузить .pptx/.pdf» (учителю) + статус/прогресс-бар. Источник истины —
+  WS: `RoomPage` копит `deck_status`-события в `Record<deckId,
+  DeckProgressEvent>` (несколько презентаций могут конвертироваться разом,
+  событие несёт одну) и отдаёт пропом; при входе список разово
+  подтягивается `GET /lessons/:id/decks`, дальше живёт на событиях.
+  Строка «Конвертация: 7 из 24» + полоса `progress/slideCount`.
+- Тесты `decks/service.test.ts` (+1, итого 103/103 бэкенда): при загрузке
+  сразу летит `deck_status`/`pending` в `broadcastToLesson(LESSON, …)`;
+  `onProgress` шлёт `converting` с «3 из 10». `setDeckStatus`-мок теперь
+  возвращает строку. `rooms/service.js` замокан в наборе (как
+  `lessons`/`users`/`storage`/`jobs`).
+- `pnpm -r typecheck` (5 пакетов), `pnpm build`, `pnpm test` (103),
+  `pnpm depcheck` (138 модулей) — зелёные.
+- **Не проверено и не могло быть в этой среде**: живой путь
+  `job.updateProgress` воркера → `QueueEvents` через настоящий Redis →
+  `broadcastToLesson` → WS → полоса прогресса в браузере. Нет Docker
+  (Redis/BullMQ/converter). Логика — юнит-тесты на моках + typecheck;
+  фронтовый компонент собирается (`vite build`), но вживую с бэкендом не
+  прогонялся. Первая живая проверка — на Linux при `docker compose up`
+  (там же гейт Э4).
 
 ---
 

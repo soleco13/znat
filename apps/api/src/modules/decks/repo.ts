@@ -70,10 +70,12 @@ export async function setDeckStatus(
   id: string,
   patch: { status?: DeckStatus; progress?: number; slideCount?: number; error?: string | null },
 ) {
-  await db
+  const [row] = await db
     .update(decks)
     .set({ ...patch, updatedAt: new Date() })
-    .where(eq(decks.id, id));
+    .where(eq(decks.id, id))
+    .returning();
+  return row;
 }
 
 /** Заменяет слайды презентации целиком (результат конвертации). */

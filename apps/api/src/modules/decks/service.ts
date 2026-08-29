@@ -22,6 +22,7 @@ import * as usersService from "../users/service.js";
 import * as storageService from "../storage/service.js";
 import * as jobsService from "../jobs/service.js";
 import type { ConvertJobHandlers } from "../jobs/service.js";
+import * as roomsService from "../rooms/service.js";
 import * as repo from "./repo.js";
 
 /** Слайды доски видны только во время активного урока — тот же длинный TTL,
@@ -52,6 +53,28 @@ async function assertLessonViewer(user: AccessTokenPayload, lessonId: string) {
     return lesson;
   }
   throw new AppError(403, "forbidden", "Нет доступа к этому уроку");
+}
+
+/**
+ * Э4.4: шлёт прогресс/статус презентации в WS-канал урока (`/ws`). Вызывается
+ * из одной точки — после каждой записи статуса в БД — чтобы событие всегда
+ * отражало то, что реально сохранено. `row` может быть `undefined`, если
+ * строку `decks` успели удалить между постановкой и обработкой (учитель
+ * удалил презентацию во время конвертации) — тогда слать нечего.
+ */
+function broadcastDeckStatus(row: Awaited<ReturnType<typeof repo.setDeckStatus>>): void {
+  if (!row) return;
+  roomsService.broadcastToLesson(row.lessonId, {
+    type: "deck_status",
+    deck: {
+      deckId: row.id,
+      title: row.title,
+      status: row.status,
+      progress: row.progress,
+      slideCount: row.slideCount,
+      error: row.error,
+    },
+  });
 }
 
 export async function createDeckFromUpload(input: {
@@ -100,6 +123,10 @@ export async function createDeckFromUpload(input: {
     sourceStorageKey: storageKey,
     sourceMimeType: mimeType,
   });
+
+  // Э4.4: сразу показать презентацию в списке урока со статусом «в очереди»,
+  // не дожидаясь первого события прогресса от воркера.
+  broadcastDeckStatus(deck);
 
   return { deckId: deck.id, jobId: deck.id, status: "pending" };
 }
@@ -187,23 +214,26 @@ export async function deleteDeck(
 export function buildConvertJobHandlers(): ConvertJobHandlers {
   return {
     async onProgress(deckId, progress) {
-      await repo.setDeckStatus(deckId, {
+      const row = await repo.setDeckStatus(deckId, {
         status: "converting",
         progress: progress.done,
         slideCount: progress.total,
       });
+      broadcastDeckStatus(row);
     },
     async onCompleted(deckId, result) {
       await repo.replaceDeckSlides(deckId, result.slides);
-      await repo.setDeckStatus(deckId, {
+      const row = await repo.setDeckStatus(deckId, {
         status: "ready",
         progress: result.slideCount,
         slideCount: result.slideCount,
         error: null,
       });
+      broadcastDeckStatus(row);
     },
     async onFailed(deckId, reason) {
-      await repo.setDeckStatus(deckId, { status: "failed", error: reason.slice(0, 2000) });
+      const row = await repo.setDeckStatus(deckId, { status: "failed", error: reason.slice(0, 2000) });
+      broadcastDeckStatus(row);
     },
   };
 }

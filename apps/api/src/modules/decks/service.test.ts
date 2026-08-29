@@ -2,8 +2,14 @@ import { createHash } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AccessTokenPayload } from "@school/shared";
 
-const { repoMock, lessonsServiceMock, usersServiceMock, storageServiceMock, jobsServiceMock } =
-  vi.hoisted(() => ({
+const {
+  repoMock,
+  lessonsServiceMock,
+  usersServiceMock,
+  storageServiceMock,
+  jobsServiceMock,
+  roomsServiceMock,
+} = vi.hoisted(() => ({
     repoMock: {
       insertDeck: vi.fn(),
       findReadyDeckBySha: vi.fn(),
@@ -24,6 +30,7 @@ const { repoMock, lessonsServiceMock, usersServiceMock, storageServiceMock, jobs
       deleteFile: vi.fn(),
     },
     jobsServiceMock: { enqueueConvert: vi.fn(), getConvertJobOutcome: vi.fn() },
+    roomsServiceMock: { broadcastToLesson: vi.fn() },
   }));
 
 vi.mock("./repo.js", () => repoMock);
@@ -31,6 +38,7 @@ vi.mock("../lessons/service.js", () => lessonsServiceMock);
 vi.mock("../users/service.js", () => usersServiceMock);
 vi.mock("../storage/service.js", () => storageServiceMock);
 vi.mock("../jobs/service.js", () => jobsServiceMock);
+vi.mock("../rooms/service.js", () => roomsServiceMock);
 
 const {
   createDeckFromUpload,
@@ -58,7 +66,29 @@ beforeEach(() => {
   });
   storageServiceMock.uploadFile.mockResolvedValue({ storageKey: `${SCHOOL}/src.pptx`, sizeBytes: 10 });
   storageServiceMock.deleteFile.mockResolvedValue(undefined);
-  repoMock.insertDeck.mockResolvedValue({ id: DECK, schoolId: SCHOOL, lessonId: LESSON });
+  repoMock.insertDeck.mockResolvedValue({
+    id: DECK,
+    schoolId: SCHOOL,
+    lessonId: LESSON,
+    title: "Урок 1",
+    status: "pending",
+    progress: 0,
+    slideCount: 0,
+    error: null,
+  });
+  // Э4.4: setDeckStatus теперь возвращает обновлённую строку (для WS-события).
+  repoMock.setDeckStatus.mockImplementation((id: string, patch: Record<string, unknown>) =>
+    Promise.resolve({
+      id,
+      lessonId: LESSON,
+      title: "Урок 1",
+      status: "converting",
+      progress: 0,
+      slideCount: 0,
+      error: null,
+      ...patch,
+    }),
+  );
 });
 
 describe("createDeckFromUpload (Э4.3)", () => {
@@ -119,6 +149,21 @@ describe("createDeckFromUpload (Э4.3)", () => {
       schoolId: SCHOOL,
       sourceStorageKey: `${SCHOOL}/src.pptx`,
       sourceMimeType: PPTX,
+    });
+  });
+
+  it("Э4.4: сразу шлёт в WS-канал урока событие deck_status со статусом pending", async () => {
+    await createDeckFromUpload({
+      user: teacher,
+      lessonId: LESSON,
+      buffer: Buffer.from("x"),
+      filename: "Урок 1.pptx",
+      mimeType: PPTX,
+    });
+
+    expect(roomsServiceMock.broadcastToLesson).toHaveBeenCalledWith(LESSON, {
+      type: "deck_status",
+      deck: { deckId: DECK, title: "Урок 1", status: "pending", progress: 0, slideCount: 0, error: null },
     });
   });
 });
@@ -188,12 +233,16 @@ describe("reconcileStuckDecks (Э4.3, долг)", () => {
 describe("buildConvertJobHandlers (Э4.3)", () => {
   const handlers = buildConvertJobHandlers();
 
-  it("onProgress помечает презентацию converting с done/total", async () => {
+  it("onProgress помечает презентацию converting с done/total и шлёт WS-событие «3 из 10»", async () => {
     await handlers.onProgress(DECK, { done: 3, total: 10 });
     expect(repoMock.setDeckStatus).toHaveBeenCalledWith(DECK, {
       status: "converting",
       progress: 3,
       slideCount: 10,
+    });
+    expect(roomsServiceMock.broadcastToLesson).toHaveBeenCalledWith(LESSON, {
+      type: "deck_status",
+      deck: { deckId: DECK, title: "Урок 1", status: "converting", progress: 3, slideCount: 10, error: null },
     });
   });
 

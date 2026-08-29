@@ -5,6 +5,7 @@ import type {
   LessonStatus,
   ListChatQuery,
   ParticipantSnapshot,
+  ServerRoomMessage,
   UpdateParticipantPermissionsRequest,
 } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
@@ -39,6 +40,16 @@ function toSnapshot(userId: string, entry: PresenceEntry): ParticipantSnapshot {
     permissions: entry.permissions,
     joinedAt: entry.joinedAt,
   };
+}
+
+/**
+ * Э4.4: мост для других модулей (`decks`) — отправить своё серверное
+ * сообщение в тот же WS-канал урока `/ws`. `rooms` владеет этим каналом,
+ * поэтому широковещание по уроку — легитимная часть его API. Обратная
+ * зависимость `decks → rooms` цикла не создаёт: `rooms` не импортирует `decks`.
+ */
+export function broadcastToLesson(lessonId: string, message: ServerRoomMessage): void {
+  emitRoomEvent(lessonId, message);
 }
 
 export async function listParticipantsSnapshot(lessonId: string): Promise<ParticipantSnapshot[]> {
