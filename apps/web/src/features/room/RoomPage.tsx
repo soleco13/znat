@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import type {
   ChatMessage,
+  Deck,
   DeckProgressEvent,
   JoinLessonResponse,
   LessonStatus,
@@ -43,6 +44,10 @@ export function RoomPage() {
   // Э4.4: статусы конвертации презентаций урока, по deckId. Копим все —
   // одновременно могут конвертироваться несколько, а событие несёт одну.
   const [deckStatuses, setDeckStatuses] = useState<Record<string, DeckProgressEvent>>({});
+  // Э4.6: полный список презентаций урока (со слайдами) — источник для панели
+  // и для импорта слайдов на холст. Прогресс приходит через WS (deckStatuses),
+  // а слайды готовой презентации подтягиваются этим запросом.
+  const [decks, setDecks] = useState<Deck[]>([]);
   const [error, setError] = useState<string | null>(null);
   // LiveKit-подключение (Э2, только аудио — см. стоп-лист Э2 в docs/CURRENT_STAGE.md).
   const [media, setMedia] = useState<MediaConnection | null>(null);
@@ -110,6 +115,36 @@ export function RoomPage() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat]);
 
+  const refreshDecks = useCallback(() => {
+    if (!lessonId) return;
+    apiFetch<{ decks: Deck[] }>(`/lessons/${lessonId}/decks`)
+      .then((data) => setDecks(data.decks))
+      .catch(() => undefined);
+  }, [lessonId]);
+
+  useEffect(() => {
+    refreshDecks();
+  }, [refreshDecks]);
+
+  // Как только презентация досконвертировалась (WS-событие `ready`), а слайдов
+  // для неё ещё нет в `decks` — подтягиваем список заново, чтобы получить их.
+  // `refetchedDecksRef` не даёт зациклиться, если сервер почему-то так и не
+  // отдаёт слайды по `ready`-презентации.
+  const refetchedDecksRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const pending = Object.values(deckStatuses).filter(
+      (ev) =>
+        ev.status === "ready" &&
+        ev.slideCount > 0 &&
+        !decks.some((d) => d.id === ev.deckId && d.slides.length > 0) &&
+        !refetchedDecksRef.current.has(ev.deckId),
+    );
+    if (pending.length > 0) {
+      for (const ev of pending) refetchedDecksRef.current.add(ev.deckId);
+      refreshDecks();
+    }
+  }, [deckStatuses, decks, refreshDecks]);
+
   const self = participants.find((p) => p.userId === me?.id);
 
   async function leaveRoom() {
@@ -176,13 +211,19 @@ export function RoomPage() {
     <div className="mx-auto mt-8 max-w-6xl px-4">
       {lessonId && (
         <div className="mb-4">
-          <Board lessonId={lessonId} canDraw={self?.permissions.canDraw ?? false} />
+          <Board lessonId={lessonId} canDraw={self?.permissions.canDraw ?? false} decks={decks} />
         </div>
       )}
 
       {lessonId && (
         <div className="mb-4">
-          <DeckPanel lessonId={lessonId} isTeacher={isTeacher} statuses={deckStatuses} />
+          <DeckPanel
+            lessonId={lessonId}
+            isTeacher={isTeacher}
+            decks={decks}
+            statuses={deckStatuses}
+            onChanged={refreshDecks}
+          />
         </div>
       )}
 

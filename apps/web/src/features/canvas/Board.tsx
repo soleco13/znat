@@ -6,10 +6,15 @@ import type { FileId, OrderedExcalidrawElement } from "@excalidraw/excalidraw/el
 import { HocuspocusProvider } from "@hocuspocus/provider";
 import { ExcalidrawBinding } from "y-excalidraw";
 import * as Y from "yjs";
-import type { CanvasImageUploadResponse } from "@school/shared";
+import type { CanvasImageUploadResponse, Deck } from "@school/shared";
 import { useAuthStore } from "../../shared/auth-store.js";
 import { apiFetch } from "../../shared/api-client.js";
-import { BACKGROUND_KIND_LABELS, PageBackground, type BackgroundKind } from "./PageBackground.js";
+import {
+  BACKGROUND_KIND_LABELS,
+  PageBackground,
+  type BackgroundKind,
+  type SlidePageRef,
+} from "./PageBackground.js";
 import "@excalidraw/excalidraw/index.css";
 import "./Board.css";
 
@@ -46,12 +51,17 @@ type UserAwarenessState = { name: string; color: string; role: string };
 /**
  * Метаданные страницы холста (Э3.6/Э3.7, §3.4/§4.3 ТЗ:
  * `Y.Map "pages"` → `pageId → { backgroundAssetId, order, kind }`).
- * `backgroundAssetId` (фон-изображение) остаётся зарезервированным полем
- * без своего UI — загрузка изображений с ресайзом на сервере через
- * `StorageAdapter` (§1.2/§10.10 ТЗ) это отдельная задача Э3.10, заводить
- * её здесь означало бы смешивать задачи в одном коммите.
+ * `backgroundAssetId` (фон-изображение, загруженное вручную) остаётся
+ * зарезервированным полем без своего UI. `slide` (Э4.6) заполняется при
+ * импорте презентации: страница с `kind: "image"` показывает отрендеренный
+ * слайд как фон, поверх которого можно рисовать.
  */
-type PageMeta = { order: number; backgroundAssetId: string | null; kind: BackgroundKind };
+type PageMeta = {
+  order: number;
+  backgroundAssetId: string | null;
+  kind: BackgroundKind;
+  slide?: SlidePageRef | null;
+};
 
 function sortedPageEntries(pagesMap: Y.Map<PageMeta>): Array<[string, PageMeta]> {
   return [...pagesMap.entries()].sort((a, b) => a[1].order - b[1].order);
@@ -89,7 +99,16 @@ function sortedPageEntries(pagesMap: Y.Map<PageMeta>): Array<[string, PageMeta]>
  * (свой awareness-канал `viewport`, отдельный от того, что использует сам
  * `y-excalidraw`).
  */
-export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolean }) {
+export function Board({
+  lessonId,
+  canDraw,
+  decks = [],
+}: {
+  lessonId: string;
+  canDraw: boolean;
+  /** Э4.6: готовые презентации урока — учитель импортирует их слайды как страницы. */
+  decks?: Deck[];
+}) {
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null);
   const accessToken = useAuthStore((s) => s.accessToken);
   const me = useAuthStore((s) => s.user);
@@ -102,6 +121,9 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
   // кнопок «Undo»/«Redo» в тулбаре по `[aria-label]` (Э3.11).
   const excalidrawWrapperRef = useRef<HTMLDivElement>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // Э4.6: выбранная в селекторе презентация для импорта + короткая заметка.
+  const [importDeckId, setImportDeckId] = useState<string>("");
+  const [importNote, setImportNote] = useState<string | null>(null);
 
   // Храним `provider`, а не голый `Y.Doc` — `ExcalidrawBinding` реально
   // требует живой `Awareness` (см. комментарий у binding-эффекта ниже), а
@@ -394,6 +416,76 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
   }
 
   /**
+   * Э4.6, §3.5 ТЗ: импорт слайдов презентации как страниц холста. Каждый
+   * слайд → новая страница с `kind: "image"` и фоном-слайдом; поверх можно
+   * рисовать как на обычной странице. Навигация синхронная (тот же
+   * `activePageId` в `Y.Map "meta"`, что и у обычных страниц) — учитель
+   * листает, у всех листается. Повторный импорт той же презентации
+   * блокируется: страницы уже на холсте.
+   */
+  function importDeckSlides(deck: Deck) {
+    if (!ydoc || deck.slides.length === 0) return;
+    const pagesMap = ydoc.getMap<PageMeta>("pages");
+    const alreadyImported = [...pagesMap.values()].some((m) => m.slide?.deckId === deck.id);
+    if (alreadyImported) {
+      setImportNote(`«${deck.title}» уже на холсте`);
+      return;
+    }
+    let order = pages.reduce((max, [, meta]) => Math.max(max, meta.order), -1) + 1;
+    let firstNewId: string | null = null;
+    ydoc.transact(() => {
+      for (const s of [...deck.slides].sort((a, b) => a.index - b.index)) {
+        const id = crypto.randomUUID();
+        if (!firstNewId) firstNewId = id;
+        pagesMap.set(id, {
+          order: order++,
+          backgroundAssetId: null,
+          kind: "image",
+          slide: {
+            deckId: deck.id,
+            index: s.index,
+            imageUrl: s.imageUrl,
+            thumbUrl: s.thumbUrl,
+            width: s.width,
+            height: s.height,
+          },
+        });
+      }
+      if (firstNewId) ydoc.getMap("meta").set("activePageId", firstNewId);
+    });
+    setImportNote(null);
+  }
+
+  /**
+   * Э4.6: убрать с холста все страницы одной презентации. Если после этого
+   * не осталось ни одной страницы — заводим пустую (у урока всегда минимум
+   * одна, как и в `deletePage`).
+   */
+  function removeDeckSlides(deckId: string) {
+    if (!ydoc) return;
+    const pagesMap = ydoc.getMap<PageMeta>("pages");
+    const metaMap = ydoc.getMap<unknown>("meta");
+    const toRemove = [...pagesMap.entries()].filter(([, m]) => m.slide?.deckId === deckId);
+    if (toRemove.length === 0) return;
+    ydoc.transact(() => {
+      for (const [pageId] of toRemove) {
+        pagesMap.delete(pageId);
+        const orphaned = ydoc.getArray(`elements:${pageId}`);
+        orphaned.delete(0, orphaned.length);
+      }
+      if (pagesMap.size === 0) {
+        const blankId = crypto.randomUUID();
+        pagesMap.set(blankId, { order: 0, backgroundAssetId: null, kind: "blank" });
+      }
+      const active = metaMap.get("activePageId");
+      if (typeof active === "string" && !pagesMap.has(active)) {
+        const remaining = sortedPageEntries(pagesMap);
+        if (remaining[0]) metaMap.set("activePageId", remaining[0][0]);
+      }
+    });
+  }
+
+  /**
    * Э3.10, §3.3 ТЗ: «drag&drop, вставка из буфера, с камеры телефона».
    * Штатная вставка картинок самого Excalidraw (paste/drop) уже отключена
    * настройкой `UIOptions.tools.image: false` из Э3.4 — проверено чтением
@@ -512,11 +604,21 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
     });
   }
 
+  const activeMeta = pages.find(([id]) => id === activePageId)?.[1] ?? null;
+  // Э4.6: обычные страницы — нумерованными кнопками, страницы-слайды — лентой
+  // миниатюр ниже (иначе 40 слайдов дают 40 неразличимых кнопок-номеров).
+  const nonSlidePages = pages.filter(([, m]) => m.kind !== "image" || !m.slide);
+  const slidePages = pages.filter(([, m]) => m.kind === "image" && m.slide);
+  const readyDecks = decks.filter((d) => d.status === "ready" && d.slides.length > 0);
+  const importedDeckIds = new Set(
+    pages.map(([, m]) => m.slide?.deckId).filter((v): v is string => typeof v === "string"),
+  );
+
   return (
     <div>
       {ydoc && (
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          {pages.map(([pageId], index) => (
+          {nonSlidePages.map(([pageId], index) => (
             <button
               key={pageId}
               onClick={() => isTeacher && switchPage(pageId)}
@@ -538,9 +640,9 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
               Удалить страницу
             </button>
           )}
-          {isTeacher && activePageId && (
+          {isTeacher && activePageId && activeMeta?.kind !== "image" && (
             <select
-              value={pages.find(([id]) => id === activePageId)?.[1].kind ?? "blank"}
+              value={activeMeta?.kind ?? "blank"}
               onChange={(e) => setPageBackgroundKind(activePageId, e.target.value as BackgroundKind)}
               className="rounded border px-2 py-1 text-sm"
             >
@@ -551,6 +653,44 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
               ))}
             </select>
           )}
+          {isTeacher && readyDecks.length > 0 && (
+            <span className="flex items-center gap-1">
+              <select
+                value={importDeckId}
+                onChange={(e) => {
+                  setImportDeckId(e.target.value);
+                  setImportNote(null);
+                }}
+                className="rounded border px-2 py-1 text-sm"
+              >
+                <option value="">Презентация…</option>
+                {readyDecks.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.title} ({d.slides.length}){importedDeckIds.has(d.id) ? " ✓" : ""}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => {
+                  const d = readyDecks.find((x) => x.id === importDeckId);
+                  if (d) importDeckSlides(d);
+                }}
+                disabled={!importDeckId || importedDeckIds.has(importDeckId)}
+                className="rounded border px-3 py-1 text-sm disabled:opacity-40"
+              >
+                Импортировать слайды
+              </button>
+              {importDeckId && importedDeckIds.has(importDeckId) && (
+                <button
+                  onClick={() => removeDeckSlides(importDeckId)}
+                  className="rounded border px-3 py-1 text-sm text-red-700"
+                >
+                  Убрать слайды
+                </button>
+              )}
+            </span>
+          )}
+          {importNote && <span className="text-sm text-amber-700">{importNote}</span>}
           {!isTeacher && (
             <button
               onClick={() => setFollowTeacher((v) => !v)}
@@ -609,6 +749,28 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
           )}
         </div>
       )}
+      {ydoc && slidePages.length > 0 && (
+        <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1">
+          {slidePages.map(([pageId, meta], i) => (
+            <button
+              key={pageId}
+              onClick={() => isTeacher && switchPage(pageId)}
+              disabled={!isTeacher}
+              title={`Слайд ${i + 1}`}
+              className={`shrink-0 overflow-hidden rounded border ${
+                pageId === activePageId ? "border-blue-500 ring-2 ring-blue-300" : "border-slate-300"
+              } ${isTeacher ? "" : "cursor-default"}`}
+            >
+              <img
+                src={meta.slide!.thumbUrl}
+                alt={`Слайд ${i + 1}`}
+                className="h-16 w-auto"
+                draggable={false}
+              />
+            </button>
+          ))}
+        </div>
+      )}
       <div
         ref={boardContainerRef}
         className="canvas-board"
@@ -619,7 +781,8 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
       >
         <PageBackground
           api={excalidrawAPI}
-          kind={pages.find(([id]) => id === activePageId)?.[1].kind ?? "blank"}
+          kind={activeMeta?.kind ?? "blank"}
+          slide={activeMeta?.slide ?? null}
         />
         <div ref={excalidrawWrapperRef} style={{ position: "absolute", inset: 0, zIndex: 1 }}>
           <Excalidraw
