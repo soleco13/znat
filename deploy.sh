@@ -7,6 +7,10 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
+# Базовый compose-файл + прод-оверлей с раскладкой ядер (Э4.2, §10.3 ТЗ).
+# Локальная разработка использует только базовый файл без COMPOSE_FILE.
+export COMPOSE_FILE="docker-compose.yml:docker-compose.prod.yml"
+
 FORCE=false
 if [[ "${1:-}" == "--force" ]]; then
   FORCE=true

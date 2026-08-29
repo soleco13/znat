@@ -34,7 +34,7 @@ Linux.
 
 - [x] Э4.1 Контейнер `converter`: LibreOffice + Poppler + ClamAV. Сеть
       `internal: true` только до Redis, `read_only`, `cap_drop: ALL`, `tmpfs`.
-- [ ] Э4.2 `cpuset` и `cpu_quota` для всех контейнеров по §10.3 ТЗ. Ядра
+- [x] Э4.2 `cpuset` и `cpu_quota` для всех контейнеров по §10.3 ТЗ. Ядра
       LiveKit эксклюзивны. (§ «Чего не урезать никогда» — раскладка ядер.)
 - [ ] Э4.3 Пайплайн BullMQ, `concurrency: 1`: скан → `soffice --convert-to
       pdf` → `pdftoppm` → PNG@2x + WebP-превью → `StorageAdapter`.
@@ -147,6 +147,41 @@ event loop lag app не вырос; CPU ядер 0-3 (LiveKit) не затрон
   из контейнера (`assertNoInternet` против настоящей `convnet`), запуск
   `soffice --headless` под `read_only`+`cap_drop: ALL`. Всё это — на
   Linux-сервере при первом `docker compose build/up`.
+
+## Что сделано технически (Э4.2)
+
+- **Раскладка ядер вынесена в отдельный оверлей `docker-compose.prod.yml`,
+  не в базовый файл** — осознанно. `cpuset: "0-3"` и т.п. привязаны к
+  8-ядерной машине; в базовом `docker-compose.yml` это сломало бы
+  `docker compose up` на любой машине разработчика с <8 ядрами (там
+  postgres/redis/app/caddy реально поднимаются локально, в отличие от
+  livekit/coturn с host-сетью). Тот же приём разделения, что уже был для
+  `Caddyfile`/`Caddyfile.prod` и `docker-compose.monitoring.yml`.
+- `docker-compose.prod.yml` (по таблице §10.3 ТЗ, 8 ядер):
+  - `livekit` + `coturn` → `cpuset: "0-3"` ЭКСКЛЮЗИВНО (медиа чувствительно
+    к джиттеру планировщика; конвертация не должна делить с ними ядра);
+  - `app` → `cpuset: "4-5"`;
+  - `postgres` + `redis` → `cpuset: "6"`;
+  - `converter` → `cpuset: "7"` + `cpu_quota: 80000` (period по умолчанию
+    100000 мкс → не больше 0.8 ядра даже при очереди);
+  - `caddy` → `cpuset: "7"` + `cpu_quota: 20000` (0.2 ядра).
+  Заголовок файла явно говорит «пересчитать под своё железо».
+- `deploy.sh`: `export COMPOSE_FILE="docker-compose.yml:docker-compose.prod.yml"`
+  в начале — все последующие `docker compose` (build / run миграций /
+  up -d / ps) автоматически берут оба файла. Локальная разработка
+  `COMPOSE_FILE` не ставит → только базовый файл, раскладки ядер нет.
+- **Мониторинг** (`docker-compose.monitoring.yml`) по §10.3 тоже должен
+  быть на ядре 7 с квотой ~0.2 — но его `cpuset` не задан: файл
+  запускается отдельной командой и используется локально (Grafana MCP на
+  Э4). Оставлено на потом отдельным оверлеем; экспортёры почти не едят CPU.
+  Зафиксировано комментарием в `docker-compose.prod.yml`.
+- **Проверки**: `docker-compose.prod.yml` — валидный YAML, все 7 сервисов
+  оверлея существуют в базовом файле (проверено парсером); `bash -n
+  deploy.sh` — синтаксис ок. **Не проверено**: реальный `docker compose
+  -f ... -f ...` merge и то, что ядра действительно пиннятся (`docker
+  inspect` → `CpusetCpus`) — нет Docker, только на Linux-сервере. Гейт Э4
+  (конвертация 40 слайдов во время 5 уроков не роняет аудио) тоже
+  проверяется только там.
 
 ---
 
