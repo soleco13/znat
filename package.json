@@ -11,7 +11,7 @@
     "test": "pnpm -r run test",
     "lint": "pnpm -r --if-present run lint",
     "typecheck": "pnpm -r run typecheck",
-    "depcheck": "dependency-cruiser --config .dependency-cruiser.cjs apps/api/src apps/web/src packages/shared/src",
+    "depcheck": "dependency-cruiser --config .dependency-cruiser.cjs apps/api/src apps/web/src packages/shared/src services/converter/src",
     "db:migrate": "pnpm --filter @school/api run db:migrate"
   },
   "devDependencies": {

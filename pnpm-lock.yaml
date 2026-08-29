@@ -168,6 +168,15 @@ importers:
         specifier: ^5.9.2
         version: 5.9.3
 
+  services/converter:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.5
+        version: 22.20.1
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+
 packages:
 
   '@alloc/quick-lru@5.2.0':

@@ -25,6 +25,11 @@ services:
       - redis_data:/data
     ports:
       - "127.0.0.1:6379:6379"
+    # convnet (internal: true) — общая шина только с изолированным converter'ом
+    # (Э4.1). default — всё остальное (app, миграции). redis виден в обеих.
+    networks:
+      - default
+      - convnet
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -137,6 +142,38 @@ services:
       - --denied-peer-ip=172.16.0.0-172.31.255.255
       - --denied-peer-ip=192.168.0.0-192.168.255.255
 
+  # Конвертер презентаций (Э4.1, §10.2/§10.3/§17 ТЗ). ИЗОЛИРОВАН:
+  # - convnet (internal: true) — видит только redis, маршрута в интернет нет
+  #   (парсинг недоверенных офисных файлов — вектор RCE);
+  # - read_only rootfs, cap_drop ALL, no-new-privileges — минимум привилегий;
+  # - /tmp как tmpfs — единственная writable точка (профиль LibreOffice туда же
+  #   через HOME=/tmp, задаётся в Dockerfile).
+  # cpuset/cpu_quota (жёсткая раскладка ядер, чтобы конвертация не заикала
+  # звук) добавляются в Э4.2. Пайплайн BullMQ — Э4.3.
+  converter:
+    build:
+      context: .
+      dockerfile: services/converter/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: redis://redis:6379
+      STORAGE_ROOT: /data/assets
+    networks:
+      - convnet
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - "no-new-privileges:true"
+    tmpfs:
+      - "/tmp:size=2g"
+    mem_limit: 3g
+    volumes:
+      - assets_data:/data/assets
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -151,6 +188,13 @@ services:
     ports:
       - "80:80"
       - "443:443"
+
+networks:
+  default:
+  # internal: true — у сети нет маршрута наружу (§10.3 ТЗ). В ней сидят только
+  # converter и redis. Ключевой барьер изоляции конвертера.
+  convnet:
+    internal: true
 
 volumes:
   pg_data:
