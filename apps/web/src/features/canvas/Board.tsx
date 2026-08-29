@@ -86,6 +86,10 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
   const isTeacher = role === "teacher" || role === "admin";
   const [followTeacher, setFollowTeacher] = useState(false);
   const boardContainerRef = useRef<HTMLDivElement>(null);
+  // Обёртка непосредственно вокруг <Excalidraw> — нужна `y-excalidraw` для
+  // перехвата Ctrl+Z/Ctrl+Shift+Z (capture-слушатель keydown) и для поиска
+  // кнопок «Undo»/«Redo» в тулбаре по `[aria-label]` (Э3.11).
+  const excalidrawWrapperRef = useRef<HTMLDivElement>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Храним `provider`, а не голый `Y.Doc` — `ExcalidrawBinding` реально
@@ -163,23 +167,93 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
   // onPointerUpdate>` (Э3.9, курсоры собеседников: см. эффект ниже).
   const [binding, setBinding] = useState<ExcalidrawBinding | null>(null);
 
+  // Э3.11: `Y.UndoManager` активной страницы + его текущее состояние для
+  // наших кнопок Undo/Redo (штатные кнопки Excalidraw спрятаны — см. ниже).
+  const [undoState, setUndoState] = useState<{
+    manager: Y.UndoManager;
+    canUndo: boolean;
+    canRedo: boolean;
+  } | null>(null);
+
   useEffect(() => {
     if (!excalidrawAPI || !ydoc || !provider?.awareness || !activePageId) return;
     const yElements = ydoc.getArray<Y.Map<unknown>>(`elements:${activePageId}`);
     const yAssets = ydoc.getMap<unknown>("assets");
+
+    // Э3.11, §3.4 ТЗ: undo/redo в мультиплеере через `Y.UndoManager` со
+    // scope по клиенту. Scope — `Y.Array` ИМЕННО активной страницы (у
+    // каждой страницы свой массив с Э3.6), поэтому менеджер живёт и
+    // умирает вместе с привязкой, пересоздаётся при листании.
+    //
+    // «Scope по клиенту» получается сам: `trackedOrigins: new Set()`
+    // (пусто) + `y-excalidraw` внутри `setupUndoRedo` добавляет саму
+    // привязку через `undoManager.addTrackedOrigin(binding)`. Локальные
+    // правки этого клиента применяются к `yElements` с origin === привязка
+    // (проверено чтением бандла `y-excalidraw`: `applyElementOperations(...,
+    // this)`), а удалённые правки `HocuspocusProvider` применяет с
+    // origin === сам провайдер (проверено чтением бандла провайдера:
+    // `readSyncMessage(decoder, encoder, provider.document, provider)` —
+    // 4-й аргумент это `transactionOrigin`). Значит менеджер захватывает
+    // ровно свои изменения и никогда — чужие: Ctrl+Z не откатывает работу
+    // соседа.
+    //
+    // `undoConfig` заводится только при `canDraw`: в `viewModeEnabled`
+    // (ученик без права рисовать, Э3.8) само рисование недоступно, undo не
+    // нужен. `excalidrawDom` — обёртка вокруг <Excalidraw>: `y-excalidraw`
+    // вешает на неё capture-слушатель keydown (Ctrl+Z/Ctrl+Shift+Z) и
+    // `stopPropagation`, чтобы родная история Excalidraw не конфликтовала с
+    // `Y.UndoManager`. `canDraw` в зависимостях эффекта — смена права
+    // пересоздаёт привязку.
+    const undoConfig =
+      canDraw && excalidrawWrapperRef.current
+        ? {
+            excalidrawDom: excalidrawWrapperRef.current,
+            undoManager: new Y.UndoManager(yElements, { trackedOrigins: new Set<unknown>() }),
+          }
+        : undefined;
+
     // `awareness` формально помечен опциональным в типах `y-excalidraw`, но
     // это не так на практике: без него конструктор падает с
     // `TypeError: Cannot read properties of undefined (reading 'getStates')`
     // на безусловном (не под `if (this.awareness)`) обращении в конце
     // конструктора — поймано живой проверкой в браузере (Playwright), не
     // по докам/типам пакета.
-    const nextBinding = new ExcalidrawBinding(yElements, yAssets, excalidrawAPI, provider.awareness);
+    const nextBinding = new ExcalidrawBinding(
+      yElements,
+      yAssets,
+      excalidrawAPI,
+      provider.awareness,
+      undoConfig,
+    );
     setBinding(nextBinding);
+
+    // Штатные кнопки Undo/Redo Excalidraw `y-excalidraw` перехватывает по
+    // клику, но их доступность (`disabled`) остаётся завязана на РОДНУЮ
+    // историю Excalidraw, а не на `Y.UndoManager` — из-за `stopPropagation`
+    // в его же keydown-хендлере родной redo-стек никогда не наполняется, и
+    // кнопка Redo всегда серая (поймано живой проверкой). Поэтому штатные
+    // кнопки спрятаны (Board.css), а рисуем свои — от состояния менеджера.
+    const undoManager = undoConfig?.undoManager ?? null;
+    if (undoManager) {
+      const syncUndo = () =>
+        setUndoState({ manager: undoManager, canUndo: undoManager.canUndo(), canRedo: undoManager.canRedo() });
+      syncUndo();
+      undoManager.on("stack-item-added", syncUndo);
+      undoManager.on("stack-item-popped", syncUndo);
+      undoManager.on("stack-item-updated", syncUndo);
+    }
+
     return () => {
       setBinding(null);
+      setUndoState(null);
       nextBinding.destroy();
+      // `nextBinding.destroy()` только снимает свои подписи/слушатели
+      // (проверено чтением бандла — прогоняет `this.subscriptions`), но
+      // НЕ трогает переданный `Y.UndoManager`. Уничтожаем сами — это же
+      // снимает все три подписки `stack-item-*` выше.
+      undoManager?.destroy();
     };
-  }, [excalidrawAPI, ydoc, provider, activePageId]);
+  }, [excalidrawAPI, ydoc, provider, activePageId, canDraw]);
 
   /**
    * Э3.9, §3.4 ТЗ: awareness → курсоры собеседников. `y-excalidraw` сам
@@ -427,6 +501,26 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
               {followTeacher ? "Не следовать за учителем" : "Следовать за учителем"}
             </button>
           )}
+          {canDraw && undoState && (
+            <>
+              <button
+                onClick={() => undoState.manager.undo()}
+                disabled={!undoState.canUndo}
+                className="rounded border px-3 py-1 text-sm disabled:opacity-40"
+                title="Отменить (Ctrl+Z)"
+              >
+                ↶ Отменить
+              </button>
+              <button
+                onClick={() => undoState.manager.redo()}
+                disabled={!undoState.canRedo}
+                className="rounded border px-3 py-1 text-sm disabled:opacity-40"
+                title="Повторить (Ctrl+Shift+Z)"
+              >
+                ↷ Повторить
+              </button>
+            </>
+          )}
           {canDraw && (
             <label className="cursor-pointer rounded border px-3 py-1 text-sm">
               Фото на доску
@@ -458,7 +552,7 @@ export function Board({ lessonId, canDraw }: { lessonId: string; canDraw: boolea
           api={excalidrawAPI}
           kind={pages.find(([id]) => id === activePageId)?.[1].kind ?? "blank"}
         />
-        <div style={{ position: "absolute", inset: 0, zIndex: 1 }}>
+        <div ref={excalidrawWrapperRef} style={{ position: "absolute", inset: 0, zIndex: 1 }}>
           <Excalidraw
             excalidrawAPI={(api) => setExcalidrawAPI(api)}
             initialData={{ appState: { viewBackgroundColor: "transparent" } }}

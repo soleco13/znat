@@ -33,3 +33,18 @@
 .canvas-board label.sidebar-trigger__label-element:has(.default-sidebar-trigger) {
   display: none !important;
 }
+
+/*
+ * Э3.11: штатные кнопки Undo/Redo Excalidraw спрятаны, заменены своими в
+ * тулбаре Board.tsx. Причина: `y-excalidraw` перехватывает КЛИК по ним на
+ * `Y.UndoManager`, но их `disabled` остаётся от родной истории Excalidraw
+ * (которую тот же `y-excalidraw` через `stopPropagation` в keydown-хендлере
+ * фактически замораживает) — кнопка Redo всегда серая, кнопка Undo может
+ * оставаться активной без причины. `display: none` (не удаление) — чтобы
+ * `y-excalidraw` при инициализации всё ещё находил их через
+ * `querySelector('[aria-label="Undo"]')` и не падал. Клавиши
+ * Ctrl+Z / Ctrl+Shift+Z продолжают работать (свой keydown-хендлер пакета).
+ */
+.canvas-board .undo-redo-buttons {
+  display: none !important;
+}
