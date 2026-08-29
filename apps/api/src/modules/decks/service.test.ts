@@ -11,6 +11,7 @@ const { repoMock, lessonsServiceMock, usersServiceMock, storageServiceMock, jobs
       listDecksByLesson: vi.fn(),
       listSlidesByDeck: vi.fn(),
       listSlidesForDecks: vi.fn(),
+      listUnfinishedDecks: vi.fn(),
       setDeckStatus: vi.fn(),
       replaceDeckSlides: vi.fn(),
       deleteDeck: vi.fn(),
@@ -22,7 +23,7 @@ const { repoMock, lessonsServiceMock, usersServiceMock, storageServiceMock, jobs
       getSignedFileUrl: vi.fn((k: string) => `/files/${k}?sig=x`),
       deleteFile: vi.fn(),
     },
-    jobsServiceMock: { enqueueConvert: vi.fn() },
+    jobsServiceMock: { enqueueConvert: vi.fn(), getConvertJobOutcome: vi.fn() },
   }));
 
 vi.mock("./repo.js", () => repoMock);
@@ -35,6 +36,7 @@ const {
   createDeckFromUpload,
   deleteDeck,
   buildConvertJobHandlers,
+  reconcileStuckDecks,
 } = await import("./service.js");
 
 const SCHOOL = "11111111-1111-1111-1111-111111111111";
@@ -109,12 +111,77 @@ describe("createDeckFromUpload (Э4.3)", () => {
         createdBy: TEACHER,
       }),
     );
+    expect(repoMock.insertDeck).toHaveBeenCalledWith(
+      expect.objectContaining({ sourceMimeType: PPTX }),
+    );
     expect(jobsServiceMock.enqueueConvert).toHaveBeenCalledWith({
       deckId: DECK,
       schoolId: SCHOOL,
       sourceStorageKey: `${SCHOOL}/src.pptx`,
       sourceMimeType: PPTX,
     });
+  });
+});
+
+describe("reconcileStuckDecks (Э4.3, долг)", () => {
+  it("подхватывает пропущенное завершение: missing-событие, задача completed", async () => {
+    repoMock.listUnfinishedDecks.mockResolvedValue([
+      { id: DECK, schoolId: SCHOOL, status: "converting", sourceStorageKey: "k", sourceMimeType: PPTX },
+    ]);
+    const slides = [
+      { index: 0, imageStorageKey: "a", thumbStorageKey: "b", width: 1, height: 1, textLayer: null },
+    ];
+    jobsServiceMock.getConvertJobOutcome.mockResolvedValue({ kind: "completed", result: { slideCount: 1, slides } });
+
+    await reconcileStuckDecks();
+
+    expect(repoMock.replaceDeckSlides).toHaveBeenCalledWith(DECK, slides);
+    expect(repoMock.setDeckStatus).toHaveBeenCalledWith(DECK, expect.objectContaining({ status: "ready" }));
+  });
+
+  it("converting + задачи в Redis нет → failed с просьбой перезалить", async () => {
+    repoMock.listUnfinishedDecks.mockResolvedValue([
+      { id: DECK, schoolId: SCHOOL, status: "converting", sourceStorageKey: "k", sourceMimeType: PPTX },
+    ]);
+    jobsServiceMock.getConvertJobOutcome.mockResolvedValue({ kind: "missing" });
+
+    await reconcileStuckDecks();
+
+    expect(repoMock.setDeckStatus).toHaveBeenCalledWith(
+      DECK,
+      expect.objectContaining({ status: "failed" }),
+    );
+    expect(jobsServiceMock.enqueueConvert).not.toHaveBeenCalled();
+  });
+
+  it("pending + задачи нет → переставляет в очередь", async () => {
+    repoMock.listUnfinishedDecks.mockResolvedValue([
+      { id: DECK, schoolId: SCHOOL, status: "pending", sourceStorageKey: "src-k", sourceMimeType: PPTX },
+    ]);
+    jobsServiceMock.getConvertJobOutcome.mockResolvedValue({ kind: "missing" });
+
+    await reconcileStuckDecks();
+
+    expect(jobsServiceMock.enqueueConvert).toHaveBeenCalledWith({
+      deckId: DECK,
+      schoolId: SCHOOL,
+      sourceStorageKey: "src-k",
+      sourceMimeType: PPTX,
+    });
+    expect(repoMock.setDeckStatus).not.toHaveBeenCalled();
+  });
+
+  it("задача ещё выполняется → ничего не трогает", async () => {
+    repoMock.listUnfinishedDecks.mockResolvedValue([
+      { id: DECK, schoolId: SCHOOL, status: "converting", sourceStorageKey: "k", sourceMimeType: PPTX },
+    ]);
+    jobsServiceMock.getConvertJobOutcome.mockResolvedValue({ kind: "in-progress" });
+
+    await reconcileStuckDecks();
+
+    expect(repoMock.setDeckStatus).not.toHaveBeenCalled();
+    expect(repoMock.replaceDeckSlides).not.toHaveBeenCalled();
+    expect(jobsServiceMock.enqueueConvert).not.toHaveBeenCalled();
   });
 });
 

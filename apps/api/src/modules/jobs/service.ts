@@ -45,6 +45,28 @@ export async function enqueueConvert(data: ConvertJobData): Promise<void> {
   });
 }
 
+export type ConvertJobOutcome =
+  | { kind: "completed"; result: ConvertJobResult }
+  | { kind: "failed"; reason: string }
+  | { kind: "in-progress" }
+  | { kind: "missing" };
+
+/**
+ * Текущий исход задачи по deckId — для reconcile-свипа `decks` (событие
+ * `completed`/`failed` могло быть пропущено, если `apps/api` рестартовал
+ * ровно в момент завершения). `missing` — задачи в Redis нет вовсе.
+ */
+export async function getConvertJobOutcome(deckId: string): Promise<ConvertJobOutcome> {
+  const job = await getConvertQueue().getJob(deckId);
+  if (!job) return { kind: "missing" };
+  const state = await job.getState();
+  if (state === "completed") return { kind: "completed", result: job.returnvalue };
+  if (state === "failed") {
+    return { kind: "failed", reason: job.failedReason || "Конвертация завершилась ошибкой" };
+  }
+  return { kind: "in-progress" };
+}
+
 export interface ConvertJobHandlers {
   onProgress(deckId: string, progress: ConvertJobProgress): Promise<void> | void;
   onCompleted(deckId: string, result: ConvertJobResult): Promise<void> | void;

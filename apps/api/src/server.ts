@@ -22,7 +22,11 @@ import livekitWebhookRoutes from "./modules/rooms/livekit-webhook.js";
 import canvasWsRoutes from "./modules/canvas/ws.js";
 import canvasRoutes from "./modules/canvas/routes.js";
 import decksRoutes from "./modules/decks/routes.js";
-import { buildConvertJobHandlers } from "./modules/decks/service.js";
+import {
+  buildConvertJobHandlers,
+  startDeckReconcileSweep,
+  stopDeckReconcileSweep,
+} from "./modules/decks/service.js";
 import { startConvertEvents, stopConvertEvents } from "./modules/jobs/service.js";
 import { startCanvasUnloadSweep, stopCanvasUnloadSweep } from "./modules/canvas/service.js";
 import { startPresenceSweep, stopPresenceSweep } from "./modules/rooms/service.js";
@@ -91,11 +95,13 @@ async function main() {
   startPresenceSweep();
   startCanvasUnloadSweep();
   startConvertEvents(buildConvertJobHandlers());
+  startDeckReconcileSweep();
 
   const shutdown = async (signal: string) => {
     app.log.info({ signal }, "Shutting down");
     stopPresenceSweep();
     stopCanvasUnloadSweep();
+    stopDeckReconcileSweep();
     await stopConvertEvents();
     await app.close();
     await pool.end();

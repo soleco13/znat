@@ -86,6 +86,7 @@ export async function createDeckFromUpload(input: {
     schoolId: input.user.schoolId,
     lessonId: input.lessonId,
     sourceStorageKey: storageKey,
+    sourceMimeType: mimeType,
     sourceSha256: sha256,
     sourceName: input.filename,
     title: input.filename.replace(/\.[^.]+$/, ""),
@@ -205,4 +206,69 @@ export function buildConvertJobHandlers(): ConvertJobHandlers {
       await repo.setDeckStatus(deckId, { status: "failed", error: reason.slice(0, 2000) });
     },
   };
+}
+
+// ─── Reconcile: страховка от пропущенного события очереди ─────────────────
+// Событие `completed`/`failed` теряется, если `apps/api` рестартовал ровно
+// когда воркер закончил задачу — презентация зависнет в `converting`
+// навсегда. Свип (как `startPresenceSweep`/`startCanvasUnloadSweep`) раз в
+// минуту сверяет застрявшие decks с реальным состоянием задачи.
+
+const RECONCILE_INTERVAL_MS = 60_000;
+let reconcileTimer: NodeJS.Timeout | null = null;
+
+export async function reconcileStuckDecks(): Promise<void> {
+  const stuck = await repo.listUnfinishedDecks();
+  if (stuck.length === 0) return;
+  const handlers = buildConvertJobHandlers();
+
+  for (const deck of stuck) {
+    try {
+      const outcome = await jobsService.getConvertJobOutcome(deck.id);
+      if (outcome.kind === "completed") {
+        await handlers.onCompleted(deck.id, outcome.result);
+      } else if (outcome.kind === "failed") {
+        await handlers.onFailed(deck.id, outcome.reason);
+      } else if (outcome.kind === "missing") {
+        const mime = deckSourceMimeTypeSchema.safeParse(deck.sourceMimeType);
+        if (deck.status === "pending" && mime.success) {
+          // Задача так и не появилась в Redis (потеряна до старта) — переставить.
+          await jobsService.enqueueConvert({
+            deckId: deck.id,
+            schoolId: deck.schoolId,
+            sourceStorageKey: deck.sourceStorageKey,
+            sourceMimeType: mime.data,
+          });
+        } else {
+          await handlers.onFailed(
+            deck.id,
+            "Задача конвертации потеряна — перезагрузите презентацию",
+          );
+        }
+      }
+      // in-progress — ничего, дождёмся события или следующего свипа.
+    } catch (err) {
+      console.error("decks: reconcile failed", deck.id, err);
+    }
+  }
+}
+
+export function startDeckReconcileSweep(): void {
+  if (reconcileTimer) return;
+  void reconcileStuckDecks().catch((err: unknown) => {
+    console.error("decks: initial reconcile failed", err);
+  });
+  reconcileTimer = setInterval(() => {
+    void reconcileStuckDecks().catch((err: unknown) => {
+      console.error("decks: reconcile sweep failed", err);
+    });
+  }, RECONCILE_INTERVAL_MS);
+  reconcileTimer.unref?.();
+}
+
+export function stopDeckReconcileSweep(): void {
+  if (reconcileTimer) {
+    clearInterval(reconcileTimer);
+    reconcileTimer = null;
+  }
 }

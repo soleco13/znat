@@ -172,6 +172,8 @@ export const decks = pgTable(
       .notNull()
       .references(() => lessons.id, { onDelete: "cascade" }),
     sourceStorageKey: text("source_storage_key").notNull(),
+    /** MIME исходника — нужен для повторной постановки в очередь (reconcile). */
+    sourceMimeType: text("source_mime_type").notNull(),
     /** sha256 исходного файла — дедуп повторной конвертации (Э4.5). */
     sourceSha256: text("source_sha256").notNull(),
     sourceName: text("source_name").notNull(),

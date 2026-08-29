@@ -7,6 +7,7 @@ export async function insertDeck(input: {
   schoolId: string;
   lessonId: string;
   sourceStorageKey: string;
+  sourceMimeType: string;
   sourceSha256: string;
   sourceName: string;
   title: string;
@@ -14,6 +15,14 @@ export async function insertDeck(input: {
 }) {
   const [row] = await db.insert(decks).values(input).returning();
   return row;
+}
+
+/** Презентации, застрявшие в неконечном статусе — для reconcile-свипа. */
+export async function listUnfinishedDecks() {
+  return db
+    .select()
+    .from(decks)
+    .where(inArray(decks.status, ["pending", "converting"]));
 }
 
 export async function findReadyDeckBySha(schoolId: string, sourceSha256: string) {

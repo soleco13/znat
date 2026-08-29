@@ -251,12 +251,10 @@ event loop lag app не вырос; CPU ядер 0-3 (LiveKit) не затрон
     раскладка `/app/services/converter/{dist,node_modules}` + `/app/node_modules`
     повторяет pnpm workspace (как в корневом Dockerfile для `apps/api`).
 - **Слушатель результатов, а не запись из воркера** — воркер (в `convnet`)
-  БД не видит. Риск: если `apps/api` рестартует ровно в момент завершения
-  задачи, событие `completed` можно пропустить и презентация зависнет в
-  `converting`. **Пока не закрыто** — reconcile-свип на старте `apps/api`
-  (пройтись по decks не в терминальном статусе, спросить статус задачи)
-  напрашивается, но это отдельный кусок; занесено как долг. На практике
-  окно узкое (рестарт именно в ту секунду), презентация перезаливается.
+  БД не видит, поэтому `apps/api` пишет слайды по событию `completed`
+  очереди. Риск пропущенного события (рестарт `apps/api` ровно в момент
+  завершения задачи → презентация висит в `converting`) **закрыт
+  reconcile-свипом** — см. следующий блок «долг».
 - Тесты: `apps/api/src/modules/decks/service.test.ts` (+8) — отказ
   неподдерживаемого типа до похода в хранилище/очередь; чужой учитель →
   403; happy-path (файл сохранён, строка заведена, `enqueueConvert` с
@@ -272,6 +270,38 @@ event loop lag app не вырос; CPU ядер 0-3 (LiveKit) не затрон
   Redis, событие `completed` → запись слайдов в настоящий Postgres. Логика
   — юнит-тесты на моках + typecheck против реальных типов `bullmq@6.3.2`.
   Первая живая проверка — на Linux при `docker compose up`.
+
+## Что сделано технически (Э4.3, долг — reconcile-свип)
+
+- **Закрыт риск пропущенного события очереди** (`apps/api` рестартовал
+  ровно когда воркер закончил задачу → `completed` не долетел → презентация
+  навсегда в `converting`). Решение — свип, как
+  `startPresenceSweep`/`startCanvasUnloadSweep`: раз в 60 с + сразу на
+  старте (`startDeckReconcileSweep` в `server.ts`, парный
+  `stopDeckReconcileSweep` в shutdown).
+- `jobsService.getConvertJobOutcome(deckId)` — спрашивает BullMQ о реальном
+  состоянии задачи по `deckId` (`queue.getJob` → `job.getState()`):
+  `completed` (+ `job.returnvalue`) / `failed` (+ `job.failedReason`) /
+  `in-progress` / `missing` (задачи в Redis нет вовсе — reaped по
+  `removeOnComplete` или Redis чистили).
+- `decksService.reconcileStuckDecks()` — по каждой строке `decks` в
+  `pending`/`converting`:
+  - `completed`/`failed` → те же `buildConvertJobHandlers()`, что и
+    штатный слушатель (одна кодовая точка записи);
+  - `missing` + `pending` → **переставить в очередь** (задача потерялась
+    до старта воркера, слайдов нет — просто повторяем);
+  - `missing` + `converting` → пометить `failed` с просьбой перезалить
+    (слайды могли отрендериться, но результат не сохранился и уже reaped —
+    честнее показать ошибку, чем вечный «конвертируется»);
+  - `in-progress` → ничего, дождёмся события или следующего свипа.
+- Для переустановки в очередь понадобился `sourceMimeType` в строке
+  `decks` — **новая колонка + миграция `0004`** (0003 не трогал, он уже
+  закоммичен; append-only, как весь `drizzle/`). `mimeType` при этом
+  ре-валидируется `deckSourceMimeTypeSchema` перед `enqueueConvert`.
+- Тесты `decks/service.test.ts` (+4, итого 102/102 бэкенда): подхват
+  `completed` при `missing`-событии; `converting`+`missing` → `failed`
+  без переустановки; `pending`+`missing` → переустановка с верными полями;
+  `in-progress` → не трогает ничего.
 
 ---
 
