@@ -1,11 +1,20 @@
 import type { PublicQuestionBlock, PublicQuestionInteraction, QuestionResponse } from "@school/shared";
+import {
+  ClozeDropdownPlayer,
+  ClozeTextPlayer,
+  MatchingPlayer,
+  OpenAnswerPlayer,
+  OrderingPlayer,
+} from "./AdvancedInteractionPlayers.js";
 import { sanitizeHtml } from "../../shared/sanitize-html.js";
 
 /**
- * Плеер заданий (Э8.4, §16 ТЗ: «клавиатурная навигация во всех типах
+ * Плеер заданий (Э8.4/8.5, §16 ТЗ: «клавиатурная навигация во всех типах
  * заданий»). Типы 1–5 (`single_choice`, `multiple_choice`, `true_false`,
- * `text_input`, `numeric_input`) — типы 6–10 добавит Э8.5 отдельным файлом
- * с тем же диспетчером ниже.
+ * `text_input`, `numeric_input`) — здесь; 6–10 (`open_answer`,
+ * `cloze_dropdown`, `cloze_text`, `matching`, `ordering`, Э8.5) —
+ * `AdvancedInteractionPlayers.tsx` (drag-and-drop через `dnd-kit`),
+ * подключены в тот же диспетчер ниже.
  *
  * Принципиально — НАТИВНЫЕ элементы формы (`input[type=radio/checkbox/
  * text/number]` в `<label>`), а не кастомные `<div onClick>`: радио/чекбоксы
@@ -139,9 +148,56 @@ function InteractionPlayer({
           disabled={disabled}
         />
       );
-    default:
-      // Типы 6–10 — Э8.5, ещё не подключены сюда.
-      return <p className="text-xs text-red-600">Тип задания «{interaction.type}» пока не поддержан плеером.</p>;
+    case "open_answer":
+      return (
+        <OpenAnswerPlayer
+          questionId={questionId}
+          maxLength={interaction.maxLength}
+          value={value?.type === "open_answer" ? value : undefined}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      );
+    case "cloze_dropdown":
+      return (
+        <ClozeDropdownPlayer
+          questionId={questionId}
+          template={interaction.template}
+          gaps={interaction.gaps}
+          value={value?.type === "cloze_dropdown" ? value : undefined}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      );
+    case "cloze_text":
+      return (
+        <ClozeTextPlayer
+          template={interaction.template}
+          gapIds={interaction.gapIds}
+          value={value?.type === "cloze_text" ? value : undefined}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      );
+    case "matching":
+      return (
+        <MatchingPlayer
+          left={interaction.left}
+          right={interaction.right}
+          value={value?.type === "matching" ? value : undefined}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      );
+    case "ordering":
+      return (
+        <OrderingPlayer
+          items={interaction.items}
+          value={value?.type === "ordering" ? value : undefined}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      );
   }
 }
 
