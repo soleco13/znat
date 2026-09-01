@@ -16,7 +16,7 @@ import { apiFetch } from "../../shared/api-client.js";
 import { useAuthStore } from "../../shared/auth-store.js";
 import { Board } from "../canvas/Board.js";
 import { DeckPanel } from "../decks/DeckPanel.js";
-import { SelfCameraButton } from "./CameraControls.js";
+import { SelfCameraButton, VideoDegradeSuggestion } from "./CameraControls.js";
 import { ConnectionQualityDot, PacketLossWarning } from "./ConnectionQuality.js";
 import { DeviceCheckScreen } from "./DeviceCheckScreen.js";
 import { MediaAudioStatus } from "./MediaAudioStatus.js";
@@ -274,6 +274,7 @@ export function RoomPage() {
               )}
             </p>
             {media && self?.permissions.canSpeak && <PacketLossWarning />}
+            {media && isTeacher && <VideoDegradeSuggestion />}
           </div>
           <div className="flex gap-2">
             {isTeacher && lessonStatus === "live" && (
