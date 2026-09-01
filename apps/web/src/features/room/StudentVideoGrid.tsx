@@ -16,6 +16,8 @@ import { MicStatusIcon } from "./MicControls.js";
  * уже есть у `RoomPage`), а не из LiveKit — нужен состав ВСЕХ учеников
  * урока, включая тех, кто ещё не опубликовал видео (для них — просто
  * аватар); `useTracks` знает только про тех, кто уже что-то опубликовал.
+ * `s.pinned` (Э6.3) читается из того же снапшота — только для бейджа 📌 на
+ * плитке, сам выбор видимых по этому полю уже сделал `VideoSubscriptionManager`.
  */
 export function StudentVideoGrid({ participants }: { participants: ParticipantSnapshot[] }) {
   const videoTracks = useTracks([Track.Source.Camera]);
@@ -35,6 +37,7 @@ export function StudentVideoGrid({ participants }: { participants: ParticipantSn
             <div key={s.userId} className="relative aspect-video overflow-hidden rounded border bg-slate-900">
               <VideoTrack trackRef={videoByUserId.get(s.userId)!} className="h-full w-full object-cover" />
               <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white">
+                {s.pinned && "📌 "}
                 {s.fullName}
               </span>
             </div>

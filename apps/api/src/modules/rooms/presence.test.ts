@@ -10,6 +10,7 @@ function entry(overrides: Partial<PresenceEntry> = {}): PresenceEntry {
     role: "student",
     connected: true,
     handRaised: false,
+    pinned: false,
     permissions: defaultPermissions("student"),
     joinedAt: new Date().toISOString(),
     lastSeenAt: Date.now(),

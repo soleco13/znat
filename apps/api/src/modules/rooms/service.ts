@@ -37,6 +37,7 @@ function toSnapshot(userId: string, entry: PresenceEntry): ParticipantSnapshot {
     role: entry.role,
     connected: entry.connected,
     handRaised: entry.handRaised,
+    pinned: entry.pinned,
     permissions: entry.permissions,
     joinedAt: entry.joinedAt,
   };
@@ -136,6 +137,7 @@ export async function join(
         role: user.role,
         connected: true,
         handRaised: false,
+        pinned: false,
         permissions: presence.defaultPermissions(user.role),
         joinedAt: new Date().toISOString(),
         lastSeenAt: Date.now(),
@@ -227,6 +229,35 @@ export async function setHandRaised(
   entry.lastSeenAt = Date.now();
   await presence.setParticipant(lessonId, user.sub, entry);
   emitRoomEvent(lessonId, { type: "hand_raised", userId: user.sub, raised });
+}
+
+/**
+ * Учитель закрепляет/открепляет участника в видимой сетке видео (Э6.3,
+ * §5.3 ТЗ) — не право (не в `ParticipantPermissions`, участник сам себя
+ * закрепить не может), обычное ephemeral-состояние на presence-записи, тот
+ * же паттерн, что `setHandRaised`, но выставляет не сам участник, а учитель
+ * над кем-то другим — авторизация как у `updatePermissions`/
+ * `muteParticipantNow`.
+ */
+export async function setPinned(
+  schoolId: string,
+  lessonId: string,
+  requester: AccessTokenPayload,
+  targetUserId: string,
+  pinned: boolean,
+): Promise<void> {
+  const lesson = await lessonsService.getLesson(schoolId, lessonId);
+  const isOwnerTeacher = requester.role === "teacher" && lesson.teacherId === requester.sub;
+  if (requester.role !== "admin" && !isOwnerTeacher) {
+    throw new AppError(403, "forbidden", "Только учитель урока может закреплять участников в сетке видео");
+  }
+  const entry = await presence.getParticipant(lessonId, targetUserId);
+  if (!entry) {
+    throw new AppError(404, "not_found", "Участник не найден в комнате");
+  }
+  entry.pinned = pinned;
+  await presence.setParticipant(lessonId, targetUserId, entry);
+  emitRoomEvent(lessonId, { type: "participant_pinned", userId: targetUserId, pinned });
 }
 
 /** Считает учеников (не учителей/админов) с уже включённым микрофоном, кроме исключённого — для проверки лимита §5.2 ТЗ. */

@@ -6,6 +6,8 @@ export interface PresenceEntry {
   role: Role;
   connected: boolean;
   handRaised: boolean;
+  /** Э6.3, §5.3 ТЗ: закреплено учителем в видимой сетке видео — не право, обычное ephemeral-состояние, как handRaised. */
+  pinned: boolean;
   permissions: ParticipantPermissions;
   joinedAt: string;
   lastSeenAt: number;

@@ -111,6 +111,11 @@ export function RoomPage() {
           prev.map((p) => (p.userId === message.userId ? { ...p, handRaised: message.raised } : p)),
         );
         break;
+      case "participant_pinned":
+        setParticipants((prev) =>
+          prev.map((p) => (p.userId === message.userId ? { ...p, pinned: message.pinned } : p)),
+        );
+        break;
       case "chat_message":
         setChat((prev) => [...prev, message.message]);
         break;
@@ -224,6 +229,15 @@ export function RoomPage() {
     await apiFetch(`/lessons/${lessonId}/mute-all`, { method: "POST" }).catch(() =>
       setError("Не удалось заглушить всех участников"),
     );
+  }
+
+  /** Э6.3, §5.3 ТЗ: учитель закрепляет ученика в видимой сетке видео (приоритет над активным говорящим). */
+  async function togglePin(userId: string, pinned: boolean) {
+    if (!lessonId) return;
+    await apiFetch(`/lessons/${lessonId}/participants/${userId}/pin`, {
+      method: "PATCH",
+      body: JSON.stringify({ pinned }),
+    }).catch(() => setError("Не удалось закрепить участника"));
   }
 
   /** Э3.8: глобальный тумблер «ученики могут рисовать» — массово меняет canDraw у всех учеников урока. */
@@ -342,6 +356,7 @@ export function RoomPage() {
                 {p.fullName}
                 <span className="text-xs text-slate-400">({p.role})</span>
                 {p.handRaised && <span title="Поднята рука">✋</span>}
+                {p.pinned && <span title="Закреплён в сетке видео">📌</span>}
                 {media && <MicStatusIcon userId={p.userId} />}
                 {media && <ConnectionQualityDot userId={p.userId} />}
               </span>
@@ -374,6 +389,15 @@ export function RoomPage() {
                   {media && p.permissions.canSpeak && (
                     <button onClick={() => muteParticipant(p.userId)} className="rounded border px-2 py-0.5">
                       Заглушить
+                    </button>
+                  )}
+                  {media && p.role === "student" && (
+                    <button
+                      onClick={() => togglePin(p.userId, !p.pinned)}
+                      title="Закрепить в сетке видео"
+                      className={`rounded border px-2 py-0.5 ${p.pinned ? "border-amber-400 bg-amber-100" : ""}`}
+                    >
+                      📌
                     </button>
                   )}
                 </span>
@@ -452,7 +476,7 @@ export function RoomPage() {
       onDisconnected={() => setError("Аудио отключено")}
     >
       <MicSync enabled={self?.permissions.canSpeak ?? false} />
-      <VideoSubscriptionManager />
+      <VideoSubscriptionManager participants={participants} />
       <TeacherVideoTile />
       {content}
       <RoomAudioRenderer />

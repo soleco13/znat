@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import {
   handRaiseRequestSchema,
   listChatQuerySchema,
+  pinParticipantRequestSchema,
   sendChatMessageRequestSchema,
   setDrawForAllRequestSchema,
   updateParticipantPermissionsRequestSchema,
@@ -63,6 +64,15 @@ export default async function roomsRoutes(app: FastifyInstance) {
     await roomsService.muteAllNow(request.user.schoolId, request.params.id, request.user);
     return reply.status(204).send();
   });
+
+  app.patch<{ Params: { id: string; userId: string } }>(
+    "/lessons/:id/participants/:userId/pin",
+    async (request, reply) => {
+      const body = pinParticipantRequestSchema.parse(request.body);
+      await roomsService.setPinned(request.user.schoolId, request.params.id, request.user, request.params.userId, body.pinned);
+      return reply.status(204).send();
+    },
+  );
 
   app.post<{ Params: { id: string } }>("/lessons/:id/draw-all", async (request, reply) => {
     const body = setDrawForAllRequestSchema.parse(request.body);

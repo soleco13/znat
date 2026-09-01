@@ -23,6 +23,8 @@ export const participantSnapshotSchema = z.object({
   role: roleSchema,
   connected: z.boolean(),
   handRaised: z.boolean(),
+  /** Э6.3, §5.3 ТЗ: закреплено учителем в видимой сетке видео — ephemeral-состояние, не право (см. participantPermissionsSchema). */
+  pinned: z.boolean(),
   permissions: participantPermissionsSchema,
   joinedAt: z.string(),
 });
@@ -60,6 +62,10 @@ export type ListChatQuery = z.infer<typeof listChatQuerySchema>;
 export const handRaiseRequestSchema = z.object({ raised: z.boolean() });
 export type HandRaiseRequest = z.infer<typeof handRaiseRequestSchema>;
 
+/** Э6.3, §5.3 ТЗ: учитель закрепляет ученика в видимой сетке видео. */
+export const pinParticipantRequestSchema = z.object({ pinned: z.boolean() });
+export type PinParticipantRequest = z.infer<typeof pinParticipantRequestSchema>;
+
 /** Э3.8: глобальный тумблер «ученики могут рисовать» — массово меняет canDraw у всех учеников урока разом. */
 export const setDrawForAllRequestSchema = z.object({ canDraw: z.boolean() });
 export type SetDrawForAllRequest = z.infer<typeof setDrawForAllRequestSchema>;
@@ -76,6 +82,7 @@ export const serverRoomMessageSchema = z.discriminatedUnion("type", [
     permissions: participantPermissionsSchema,
   }),
   z.object({ type: z.literal("hand_raised"), userId: z.string().uuid(), raised: z.boolean() }),
+  z.object({ type: z.literal("participant_pinned"), userId: z.string().uuid(), pinned: z.boolean() }),
   z.object({ type: z.literal("chat_message"), message: chatMessageSchema }),
   z.object({ type: z.literal("lesson_status"), status: lessonStatusSchema }),
   // Э4.4: прогресс конвертации презентации — по одному сообщению на каждую

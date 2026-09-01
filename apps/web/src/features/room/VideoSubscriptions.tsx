@@ -1,6 +1,7 @@
 import { useEffect } from "react";
-import { useTracks } from "@livekit/components-react";
+import { useSpeakingParticipants, useTracks } from "@livekit/components-react";
 import { RemoteTrackPublication, Track } from "livekit-client";
+import type { ParticipantSnapshot } from "@school/shared";
 
 /** Э6.2, §5.2 ТЗ: не более 9 одновременно видимых видео учеников. */
 export const MAX_VISIBLE_STUDENT_VIDEOS = 9;
@@ -26,10 +27,18 @@ function isTeacherRole(role: string | undefined): boolean {
  * - камера учителя/админа — подписывается всегда: это отдельная плитка
  *   (`TeacherVideoTile`), не «ученик в сетке», в лимит на 9 не входит;
  * - камера ученика — подписывается, только если участник входит в текущий
- *   видимый набор (максимум `MAX_VISIBLE_STUDENT_VIDEOS`). Выбор набора —
- *   Э6.2 берёт простой стабильный порядок по `identity`; активный
- *   говорящий + закреплённые учителем — отдельная задача Э6.3, заменит
- *   только этот выбор, не сам механизм подписки.
+ *   видимый набор (максимум `MAX_VISIBLE_STUDENT_VIDEOS`).
+ *
+ * **Выбор видимого набора (Э6.3, §5.2 ТЗ)**: закреплённые учителем
+ * (`participants[].pinned`, право учителя — `rooms/service.ts#setPinned`)
+ * + активные говорящие (`useSpeakingParticipants`, решение и сглаживание
+ * «говорит/не говорит» целиком на стороне LiveKit — `Participant.isSpeaking`
+ * не пересчитывается здесь заново). Если оба набора вместе не влезают в
+ * лимit, закреплённые в приоритете (учитель явно решил их видеть). Если
+ * никто не закреплён и не говорит — сетка видео пуста, все ученики видны
+ * как аватары; ТЗ определяет видимый набор именно как «говорящие +
+ * закреплённые», а не «до 9 первых попавшихся», поэтому пустая сетка при
+ * полной тишине — ожидаемое поведение, не бага Э6.2.
  *
  * `useTracks(..., { onlySubscribed: false })` — намеренно `false` (дефолт
  * самого хука — `true`, прочитано в установленном `@livekit/components-react`):
@@ -39,17 +48,26 @@ function isTeacherRole(role: string | undefined): boolean {
  * свой же трек не нужно и нельзя (`LocalTrackPublication.setSubscribed` не
  * существует).
  */
-export function VideoSubscriptionManager() {
+export function VideoSubscriptionManager({ participants }: { participants: ParticipantSnapshot[] }) {
   const tracks = useTracks([Track.Source.Microphone, Track.Source.Camera], { onlySubscribed: false });
+  const speakingParticipants = useSpeakingParticipants();
 
   useEffect(() => {
-    const visibleStudentIds = new Set(
+    const pinnedIds = new Set(participants.filter((p) => p.pinned).map((p) => p.userId));
+    const speakingIds = new Set(
+      speakingParticipants.filter((p) => !isTeacherRole(p.attributes.role)).map((p) => p.identity),
+    );
+    const publishingStudentIds = new Set(
       tracks
         .filter((t) => t.source === Track.Source.Camera && !isTeacherRole(t.participant.attributes.role))
-        .map((t) => t.participant.identity)
-        .sort()
-        .slice(0, MAX_VISIBLE_STUDENT_VIDEOS),
+        .map((t) => t.participant.identity),
     );
+
+    const priority = [
+      ...[...pinnedIds].filter((id) => publishingStudentIds.has(id)).sort(),
+      ...[...speakingIds].filter((id) => publishingStudentIds.has(id) && !pinnedIds.has(id)).sort(),
+    ];
+    const visibleStudentIds = new Set(priority.slice(0, MAX_VISIBLE_STUDENT_VIDEOS));
 
     for (const t of tracks) {
       const pub = t.publication;
@@ -62,7 +80,7 @@ export function VideoSubscriptionManager() {
 
       if (pub.isSubscribed !== shouldSubscribe) pub.setSubscribed(shouldSubscribe);
     }
-  }, [tracks]);
+  }, [tracks, speakingParticipants, participants]);
 
   return null;
 }

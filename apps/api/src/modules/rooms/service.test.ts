@@ -354,6 +354,42 @@ describe("мьют микрофонов учителем (Э2.5)", () => {
   });
 });
 
+describe("закрепление в сетке видео (Э6.3)", () => {
+  it("только учитель этого урока (или админ) может закреплять участников", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+
+    await expect(
+      roomsService.setPinned(SCHOOL_ID, LESSON_ID, studentToken(OTHER_STUDENT_ID), STUDENT_ID, true),
+    ).rejects.toMatchObject({ statusCode: 403 });
+
+    await roomsService.setPinned(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, true);
+    const snapshot = await roomsService.listParticipantsSnapshot(LESSON_ID);
+    expect(snapshot.find((p) => p.userId === STUDENT_ID)?.pinned).toBe(true);
+  });
+
+  it("открепление возвращает pinned в false", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+    await roomsService.setPinned(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, true);
+
+    await roomsService.setPinned(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, false);
+
+    const snapshot = await roomsService.listParticipantsSnapshot(LESSON_ID);
+    expect(snapshot.find((p) => p.userId === STUDENT_ID)?.pinned).toBe(false);
+  });
+
+  it("404, если участника нет в комнате", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+
+    await expect(
+      roomsService.setPinned(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, true),
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
 describe("модерация чата и завершение урока", () => {
   it("только учитель этого урока может завершить урок", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson({ status: "live" }));
