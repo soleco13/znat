@@ -23,8 +23,10 @@ import { MediaAudioStatus } from "./MediaAudioStatus.js";
 import { MicStatusIcon, SelfMicButton } from "./MicControls.js";
 import { MicSync } from "./MicSync.js";
 import { ParticipantPresenceDot } from "./ParticipantPresenceDot.js";
+import { StudentVideoGrid } from "./StudentVideoGrid.js";
 import { TeacherVideoTile } from "./TeacherVideoTile.js";
 import { useRoomSocket } from "./useRoomSocket.js";
+import { VideoSubscriptionManager } from "./VideoSubscriptions.js";
 
 // Э5.1: 720p с автослоями simulcast h360/h180 (§5.2 ТЗ) — вынесено из JSX,
 // один и тот же объект на все рендеры (LiveKitRoom реагирует на identity
@@ -325,6 +327,8 @@ export function RoomPage() {
           )}
         </div>
 
+        {media && <StudentVideoGrid participants={participants} />}
+
         <h2 className="mb-2 text-sm font-medium text-slate-600">Участники ({participants.length})</h2>
         <ul className="flex flex-col gap-1">
           {participants.map((p) => (
@@ -426,6 +430,12 @@ export function RoomPage() {
       token={media.token}
       connect
       options={ROOM_OPTIONS}
+      // Э6.2, §5.2 ТЗ: автоподписка LiveKit выключена намеренно — без неё
+      // каждый участник подписался бы на КАЖДЫЙ опубликованный трек в
+      // комнате (при 30 учениках с камерой — арифметика §5.1 ТЗ, сотни
+      // видеопотоков). Подпиской управляет `VideoSubscriptionManager`
+      // ниже — единственное место, которое решает, кого подписывать.
+      connectOptions={{ autoSubscribe: false }}
       audio={self?.permissions.canSpeak ? { deviceId: micDeviceId ?? undefined } : false}
       // Э5.1: камера учителя — 720p, автозапуск при входе, как и микрофон;
       // ручной тумблер — `SelfCameraButton`. Э5.4: deviceId — то, что выбрано
@@ -442,6 +452,7 @@ export function RoomPage() {
       onDisconnected={() => setError("Аудио отключено")}
     >
       <MicSync enabled={self?.permissions.canSpeak ?? false} />
+      <VideoSubscriptionManager />
       <TeacherVideoTile />
       {content}
       <RoomAudioRenderer />
