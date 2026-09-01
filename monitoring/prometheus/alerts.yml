@@ -33,3 +33,11 @@ groups:
           severity: critical
         annotations:
           summary: "postgres-exporter не может достучаться до PostgreSQL"
+
+      - alert: PlatformTrafficHigh
+        expr: sum(lesson_traffic_mbit) > 600
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Суммарный расчётный трафик уроков превышает 600 Мбит/с (80% медиа-бюджета, §10.8 ТЗ) дольше 2 минут"

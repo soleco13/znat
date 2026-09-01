@@ -41,6 +41,20 @@
       "targets": [
         { "expr": "sum(rate(http_request_duration_seconds_count[5m])) by (status_code)", "refId": "A" }
       ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Трафик по урокам (Мбит/с, расчёт — Э6.5/Э6.6, §5.2 ТЗ)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [{ "expr": "sum(lesson_traffic_mbit) by (lesson_id, mode)", "refId": "A" }]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Суммарный трафик платформы (Мбит/с), алерт > 600",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [{ "expr": "sum(lesson_traffic_mbit)", "refId": "A" }]
     }
   ]
 }

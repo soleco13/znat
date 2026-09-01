@@ -163,15 +163,35 @@ export function estimateTotalTrafficMbit(lessons: { mode: LessonMode; participan
  * ограничитель просто не видит уже идущие уроки — то же ограничение, что
  * уже принято для остального in-memory состояния этого модуля.
  */
+async function getLessonTrafficInfo(
+  lessonId: string,
+): Promise<{ lessonId: string; mode: LessonMode; participantCount: number; estimatedMbit: number }> {
+  const [mode, participantCount] = await Promise.all([
+    presence.getLessonMode(lessonId),
+    presence.countConnected(lessonId),
+  ]);
+  return { lessonId, mode, participantCount, estimatedMbit: estimateLessonMbit(mode, participantCount) };
+}
+
 async function estimatePlatformTrafficMbit(excludeLessonId?: string): Promise<number> {
   const others = [...activeLessons.keys()].filter((id) => id !== excludeLessonId);
-  const lessons = await Promise.all(
-    others.map(async (id) => ({
-      mode: await presence.getLessonMode(id),
-      participantCount: await presence.countConnected(id),
-    })),
-  );
+  const lessons = await Promise.all(others.map((id) => getLessonTrafficInfo(id)));
   return estimateTotalTrafficMbit(lessons);
+}
+
+/**
+ * Снимок расчётного трафика по каждому активному уроку (Э6.6, §10.8 ТЗ:
+ * «трафик по урокам» в Grafana, «видно, кто ест канал») — экспортируется
+ * для `plugins/metrics.ts#lesson_traffic_mbit`, тот же паттерн, что уже
+ * есть у `canvas/service.ts#getActiveCanvasDocumentsCount` для
+ * `canvas_active_ydocs` (Э3.3): вычисляемая метрика читает состояние
+ * модуля напрямую в момент скрейпа, без параллельного счётчика, который
+ * мог бы разойтись с реальностью.
+ */
+export async function getActiveLessonTrafficSnapshot(): Promise<
+  { lessonId: string; mode: LessonMode; participantCount: number; estimatedMbit: number }[]
+> {
+  return Promise.all([...activeLessons.keys()].map((id) => getLessonTrafficInfo(id)));
 }
 
 export async function join(

@@ -475,6 +475,21 @@ describe("оценка трафика платформы (Э6.5)", () => {
 
     expect(result.lessonMode).toBe("discussion");
   });
+
+  it("getActiveLessonTrafficSnapshot (Э6.6) отдаёт оценку по каждому активному уроку — источник данных для lesson_traffic_mbit", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+
+    await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+    await roomsService.setLessonMode(SCHOOL_ID, LESSON_ID, teacherToken(), "discussion");
+    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+
+    const snapshot = await roomsService.getActiveLessonTrafficSnapshot();
+    const entry = snapshot.find((s) => s.lessonId === LESSON_ID);
+
+    expect(entry).toMatchObject({ mode: "discussion", participantCount: 2 });
+    expect(entry?.estimatedMbit).toBeCloseTo(roomsService.estimateLessonMbit("discussion", 2));
+  });
 });
 
 describe("модерация чата и завершение урока", () => {
