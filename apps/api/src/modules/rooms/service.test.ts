@@ -89,6 +89,7 @@ const TEACHER_ID = "33333333-3333-3333-3333-333333333333";
 const STUDENT_ID = "44444444-4444-4444-4444-444444444444";
 const OTHER_STUDENT_ID = "55555555-5555-5555-5555-555555555555";
 const GROUP_ID = "66666666-6666-6666-6666-666666666666";
+const SECOND_LESSON_ID = "77777777-7777-7777-7777-777777777701";
 
 function baseLesson(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -419,6 +420,59 @@ describe("режим урока (Э6.4)", () => {
 
     await roomsService.setLessonMode(SCHOOL_ID, LESSON_ID, teacherToken(), "discussion");
     const result = await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+    expect(result.lessonMode).toBe("discussion");
+  });
+});
+
+describe("оценка трафика платформы (Э6.5)", () => {
+  it("estimateLessonMbit — коэффициенты §5.2/§5.2.1 ТЗ (класс 30)", () => {
+    expect(roomsService.estimateLessonMbit("lecture", 30)).toBeCloseTo(50);
+    expect(roomsService.estimateLessonMbit("discussion", 30)).toBeCloseTo(180);
+    expect(roomsService.estimateLessonMbit("assignment", 30)).toBe(5);
+    expect(roomsService.estimateLessonMbit("assignment", 1)).toBe(5);
+  });
+
+  it("estimateTotalTrafficMbit суммирует по всем урокам", () => {
+    const total = roomsService.estimateTotalTrafficMbit([
+      { mode: "discussion", participantCount: 30 },
+      { mode: "lecture", participantCount: 30 },
+    ]);
+    expect(total).toBeCloseTo(230);
+  });
+
+  it("новая комната открывается принудительно в Лекции, если платформа уже перегружена (>600 Мбит/с, §10.8 ТЗ)", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+
+    // "Другой" урок — Обсуждение с большим классом, суммарно > 600 Мбит/с (106 × 6 = 636).
+    await roomsService.join(SCHOOL_ID, SECOND_LESSON_ID, teacherToken(), "Учитель");
+    await roomsService.setLessonMode(SCHOOL_ID, SECOND_LESSON_ID, teacherToken(), "discussion");
+    for (let i = 0; i < 105; i++) {
+      await roomsService.join(SCHOOL_ID, SECOND_LESSON_ID, studentToken(`traffic-student-${i}`), "Ученик");
+    }
+
+    // Новая комната LESSON_ID должна открыться в Лекции, даже если её режим
+    // был заранее (или по ошибке) выставлен в discussion.
+    await roomsService.setLessonMode(SCHOOL_ID, LESSON_ID, teacherToken(), "discussion");
+    const result = await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+
+    expect(result.lessonMode).toBe("lecture");
+  });
+
+  it("не трогает режим новой комнаты, пока платформа не перегружена", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+
+    await roomsService.join(SCHOOL_ID, SECOND_LESSON_ID, teacherToken(), "Учитель");
+    await roomsService.setLessonMode(SCHOOL_ID, SECOND_LESSON_ID, teacherToken(), "discussion");
+    // Всего 5 участников в "другом" уроке — далеко не 600 Мбит/с.
+    for (let i = 0; i < 5; i++) {
+      await roomsService.join(SCHOOL_ID, SECOND_LESSON_ID, studentToken(`light-student-${i}`), "Ученик");
+    }
+
+    await roomsService.setLessonMode(SCHOOL_ID, LESSON_ID, teacherToken(), "discussion");
+    const result = await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+
     expect(result.lessonMode).toBe("discussion");
   });
 });

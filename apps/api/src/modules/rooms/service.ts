@@ -25,6 +25,8 @@ const EMPTY_ROOM_AUTOEND_MS = 15 * 60 * 1000;
 const SWEEP_INTERVAL_MS = 15_000;
 /** §5.2 ТЗ: не более 4 включённых микрофонов учеников одновременно, см. память project-video-platform-media-limits. */
 const MAX_SIMULTANEOUS_STUDENT_MICS = 4;
+/** §10.8 ТЗ: тот же порог, что Grafana-алерт Э6.6 (80% медиа-бюджета ~750 Мбит/с) — одно число на автоматическую деградацию (Э6.5) и уведомление человека (Э6.6). */
+const PLATFORM_TRAFFIC_LIMIT_MBPS = 600;
 
 /** lessonId -> schoolId, для фоновой зачистки и авто-завершения пустых комнат. */
 const activeLessons = new Map<string, string>();
@@ -116,6 +118,62 @@ async function scheduleAutoEndIfEmpty(schoolId: string, lessonId: string): Promi
   emptyRoomTimers.set(lessonId, timer);
 }
 
+/**
+ * Грубая оценка исходящего трафика ОДНОГО урока по режиму и числу
+ * участников (Э6.5) — коэффициенты выведены из §5.2/§5.2.1 ТЗ (класс 30:
+ * Лекция ~50 Мбит/с — только даунлинк камеры учителя; Обсуждение ~180
+ * Мбит/с — плюс 9 видимых учеников). Оба числа линейны по числу
+ * подписчиков в исходном расчёте ТЗ, поэтому коэффициент — просто
+ * табличное число, делённое на 30. `assignment` («Работа над заданием,
+ * любой размер») в таблице §5.2.1 ТЗ ~5 Мбит/с ПЛОСКО, не растёт с числом
+ * участников — видео там выключено целиком (Э6.4), остаётся только
+ * аудио учителя. `spotlight` ТЗ отдельно не табулирует — приближение по
+ * аналогии с `lecture` (тоже один канал видео на подписчика вниз), но
+ * потоков не один, а два (учитель + один ученик), коэффициент удвоен.
+ * ТЗ прямо предупреждает: настоящие цифры даёт только `livekit-cli
+ * load-test` (гейт Э6) — это ОЦЕНКА для решения «пускать ли новую комнату
+ * сразу в Обсуждение», а не замена измерению.
+ */
+export function estimateLessonMbit(mode: LessonMode, participantCount: number): number {
+  const CLASS_SIZE = 30;
+  switch (mode) {
+    case "lecture":
+      return (50 / CLASS_SIZE) * participantCount;
+    case "discussion":
+      return (180 / CLASS_SIZE) * participantCount;
+    case "spotlight":
+      return (100 / CLASS_SIZE) * participantCount;
+    case "assignment":
+      return 5;
+  }
+}
+
+/** Сумма оценок по всем урокам — вынесена отдельно от сбора данных (`activeLessons`/Redis), чтобы саму арифметику можно было проверить юнит-тестом без presence-моков. */
+export function estimateTotalTrafficMbit(lessons: { mode: LessonMode; participantCount: number }[]): number {
+  return lessons.reduce((sum, l) => sum + estimateLessonMbit(l.mode, l.participantCount), 0);
+}
+
+/**
+ * Суммарная оценка по ВСЕМ активным урокам, кроме `excludeLessonId`
+ * (обычно — только что открываемая комната, которая ещё не должна сама
+ * себя учитывать при решении, форсировать ли ей Лекцию). Источник списка
+ * уроков — `activeLessons` (тот же in-memory кеш, что уже используют
+ * auto-end/sweep — «состояние, которое можно потерять», допустимо по
+ * CLAUDE.md); при рестарте `apps/api` он пуст, и до первого нового `join()`
+ * ограничитель просто не видит уже идущие уроки — то же ограничение, что
+ * уже принято для остального in-memory состояния этого модуля.
+ */
+async function estimatePlatformTrafficMbit(excludeLessonId?: string): Promise<number> {
+  const others = [...activeLessons.keys()].filter((id) => id !== excludeLessonId);
+  const lessons = await Promise.all(
+    others.map(async (id) => ({
+      mode: await presence.getLessonMode(id),
+      participantCount: await presence.countConnected(id),
+    })),
+  );
+  return estimateTotalTrafficMbit(lessons);
+}
+
 export async function join(
   schoolId: string,
   lessonId: string,
@@ -153,6 +211,18 @@ export async function join(
     const updated = await lessonsService.startLesson(schoolId, lessonId);
     lessonStatus = updated.status;
     emitRoomEvent(lessonId, { type: "lesson_status", status: lessonStatus });
+
+    // Э6.5, §10.8 ТЗ: НОВАЯ комната (только что перешедшая scheduled→live)
+    // принудительно открывается в Лекции, если платформа уже перегружена —
+    // независимо от того, что могло быть выставлено в режиме этого урока
+    // раньше (ephemeral-ключ Redis без TTL, Э6.4). Уже идущие уроки этой
+    // проверкой не трогаются — переключить их обратно при превышении
+    // порога задача не просит (см. docs/CURRENT_STAGE.md, Э6.5).
+    const platformTrafficMbit = await estimatePlatformTrafficMbit(lessonId);
+    if (platformTrafficMbit > PLATFORM_TRAFFIC_LIMIT_MBPS) {
+      await presence.setLessonMode(lessonId, "lecture");
+      emitRoomEvent(lessonId, { type: "lesson_mode", mode: "lecture" });
+    }
   }
 
   const snapshot = toSnapshot(user.sub, entry);
