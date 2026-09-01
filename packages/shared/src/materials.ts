@@ -124,6 +124,7 @@ export const textMatchRuleSchema = z.object({
   value: z.string(),
   match: textMatchModeSchema,
 });
+export type TextMatchRule = z.infer<typeof textMatchRuleSchema>;
 
 export const textInputInteractionSchema = z.object({
   type: z.literal("text_input"),
