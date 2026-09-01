@@ -6,8 +6,10 @@ import {
   jsonb,
   boolean,
   integer,
+  numeric,
   primaryKey,
   index,
+  unique,
   pgEnum,
   customType,
 } from "drizzle-orm/pg-core";
@@ -33,6 +35,7 @@ export const deckStatusEnum = pgEnum("deck_status", [
   "ready",
   "failed",
 ]);
+export const activityModeEnum = pgEnum("activity_mode", ["lesson", "homework"]);
 
 export const schools = pgTable("schools", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -232,4 +235,133 @@ export const refreshTokens = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("refresh_tokens_family_idx").on(t.familyId)],
+);
+
+/**
+ * Материал (Э8.2, §6.1/§6.5 ТЗ) — тонкая обёртка идентичности/владения, БЕЗ
+ * содержимого. Содержимое (title/subject/grades/blocks — всё, что описывает
+ * `materialSchema` в `packages/shared`) живёт только в `material_versions`,
+ * не дублируется здесь: два источника правды для одного и того же поля —
+ * готовый рецепт рассинхронизации при правке. Редактора/публикации ещё нет
+ * (Э9) — на Э8 материалы заводятся JSON-ом через seed-скрипт/Postman
+ * (стоп-лист Э8), поэтому `currentVersionId`-указателя тоже нет: «текущая»
+ * версия — последняя по `version` (см. `material_versions` ниже), без
+ * циклической связи между двумя таблицами.
+ */
+export const materials = pgTable("materials", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  schoolId: uuid("school_id")
+    .notNull()
+    .references(() => schools.id, { onDelete: "cascade" }),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "restrict" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Версия материала (Э8.2, §6.1 ТЗ) — `content` целиком проверяется
+ * `materialSchema` (`packages/shared`) до записи, это ЕДИНСТВЕННОЕ место
+ * хранения содержимого (title/subject/grades/blocks/settings — включая
+ * ключи ответов, `stripInteractionAnswerKey` их снимает только при отдаче
+ * ученику, не здесь). Append-only, без `updatedAt` — правка публикованной
+ * версии создаёт НОВУЮ строку с большим `version` (задел на workflow
+ * черновик→ревью→публикация, Э9.8), а не мутирует существующую.
+ */
+export const materialVersions = pgTable(
+  "material_versions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    materialId: uuid("material_id")
+      .notNull()
+      .references(() => materials.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    content: jsonb("content").notNull(),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique("material_versions_material_version_idx").on(t.materialId, t.version)],
+);
+
+/**
+ * Выдача материала классу или ученику (Э8.2/8.6, §8 ТЗ — сам эндпоинт
+ * `POST /lessons/:id/activities` ещё не сделан, это только таблица).
+ * `lessonId` nullable — «домашняя работа» (Э8.11) не привязана к
+ * конкретному уроку. Ссылается на `materialVersions`, не `materials`
+ * напрямую — какую именно версию видел ученик, должно быть воспроизводимо
+ * даже после того, как методист опубликует новую (Э9.8).
+ */
+export const activities = pgTable(
+  "activities",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    materialVersionId: uuid("material_version_id")
+      .notNull()
+      .references(() => materialVersions.id, { onDelete: "restrict" }),
+    lessonId: uuid("lesson_id").references(() => lessons.id, { onDelete: "cascade" }),
+    mode: activityModeEnum("mode").notNull(),
+    assignedBy: uuid("assigned_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    deadline: timestamp("deadline", { withTimezone: true }),
+    timerSeconds: integer("timer_seconds"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("activities_lesson_idx").on(t.lessonId)],
+);
+
+/**
+ * Ответ ученика на один вопрос одной попытки (Э8.2, §6.5 ТЗ — колонки
+ * взяты дословно из спецификации: `attempt_id, material_id, lesson_id
+ * (nullable), user_id, question_id, response, score, max_score,
+ * auto_graded, graded_by, graded_at, time_spent_ms, attempt_number,
+ * submitted_at`). Отдельной таблицы `attempts` нет — ТЗ не заводит её,
+ * `attemptId` здесь просто UUID, сгенерированный при старте попытки
+ * (Э8.6, ещё не сделан), группирующий строки одной попытки без отдельной
+ * сущности. `activityId`/`materialId` — оба сразу: `materialId` — как в
+ * ТЗ (аналитика по материалу вне привязки к конкретной выдаче, Э8.9),
+ * `activityId` — необходимое дополнение (в ТЗ не названо явно): один и
+ * тот же материал можно выдать дважды (разным урокам или как домашнюю
+ * работу), без него ответы разных выдач было бы не различить.
+ * `questionId` — `text`, не FK: вопросы живут внутри `material_versions.content`
+ * (JSONB), не в отдельной таблице.
+ *
+ * `response` хранится ВСЕГДА, независимо от `autoGraded` — «чтобы можно
+ * было перепроверить после исправления ключа ответа» (§6.5 ТЗ дословно).
+ */
+export const responses = pgTable(
+  "responses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    attemptId: uuid("attempt_id").notNull(),
+    activityId: uuid("activity_id")
+      .notNull()
+      .references(() => activities.id, { onDelete: "cascade" }),
+    materialId: uuid("material_id")
+      .notNull()
+      .references(() => materials.id, { onDelete: "cascade" }),
+    lessonId: uuid("lesson_id").references(() => lessons.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    questionId: text("question_id").notNull(),
+    response: jsonb("response").notNull(),
+    score: numeric("score", { precision: 10, scale: 4 }),
+    maxScore: numeric("max_score", { precision: 10, scale: 4 }),
+    autoGraded: boolean("auto_graded").notNull(),
+    gradedBy: uuid("graded_by").references(() => users.id, { onDelete: "set null" }),
+    gradedAt: timestamp("graded_at", { withTimezone: true }),
+    timeSpentMs: integer("time_spent_ms").notNull().default(0),
+    attemptNumber: integer("attempt_number").notNull().default(1),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // Естественный ключ автосохранения (Э8.7) — upsert-цель «этот ответ этой попытки этого вопроса».
+    unique("responses_attempt_question_idx").on(t.attemptId, t.questionId),
+    index("responses_activity_user_idx").on(t.activityId, t.userId),
+    // Аналитика по вопросу (Э8.9): «17 из 24 выбрали B» — агрегат по материалу+вопросу вне привязки к конкретной выдаче.
+    index("responses_material_question_idx").on(t.materialId, t.questionId),
+  ],
 );

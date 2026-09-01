@@ -50,6 +50,13 @@
       "when": 1788270727686,
       "tag": "0006_modern_monster_badoon",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788284910776,
+      "tag": "0007_sleepy_trish_tilby",
+      "breakpoints": true
     }
   ]
 }
