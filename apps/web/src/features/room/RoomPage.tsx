@@ -7,6 +7,7 @@ import type {
   Deck,
   DeckProgressEvent,
   JoinLessonResponse,
+  LessonMode,
   LessonStatus,
   MediaConnection,
   ParticipantSnapshot,
@@ -58,6 +59,14 @@ const STATUS_LABEL: Record<SocketStatusLike, string> = {
   closed: "Нет связи",
 };
 
+/** Э6.4, §5.3 ТЗ. */
+const LESSON_MODE_LABEL: Record<LessonMode, string> = {
+  lecture: "Лекция",
+  discussion: "Обсуждение",
+  assignment: "Работа над заданием",
+  spotlight: "У доски",
+};
+
 type SocketStatusLike = "connecting" | "connected" | "reconnecting" | "closed";
 
 export function RoomPage() {
@@ -67,6 +76,9 @@ export function RoomPage() {
 
   const [participants, setParticipants] = useState<ParticipantSnapshot[]>([]);
   const [lessonStatus, setLessonStatus] = useState<LessonStatus | null>(null);
+  // Э6.4, §5.3 ТЗ: режим урока — управляет медиапрофилем видео (VideoSubscriptionManager),
+  // не правами участников. "lecture" — тот же дефолт, что и на сервере до первого ответа join.
+  const [lessonMode, setLessonMode] = useState<LessonMode>("lecture");
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [chatDraft, setChatDraft] = useState("");
   // Э4.4: статусы конвертации презентаций урока, по deckId. Копим все —
@@ -122,6 +134,9 @@ export function RoomPage() {
       case "lesson_status":
         setLessonStatus(message.status);
         break;
+      case "lesson_mode":
+        setLessonMode(message.mode);
+        break;
       case "deck_status":
         setDeckStatuses((prev) => ({ ...prev, [message.deck.deckId]: message.deck }));
         break;
@@ -139,6 +154,7 @@ export function RoomPage() {
       .then((data) => {
         setParticipants(data.participants);
         setLessonStatus(data.lessonStatus);
+        setLessonMode(data.lessonMode);
         setMedia(data.media);
       })
       .catch(() => setError("Не удалось войти в урок"));
@@ -240,6 +256,15 @@ export function RoomPage() {
     }).catch(() => setError("Не удалось закрепить участника"));
   }
 
+  /** Э6.4, §5.3 ТЗ: режим урока — меняет медиапрофиль видео для всех, а не только своё отображение. */
+  async function changeLessonMode(mode: LessonMode) {
+    if (!lessonId) return;
+    await apiFetch(`/lessons/${lessonId}/mode`, {
+      method: "PATCH",
+      body: JSON.stringify({ mode }),
+    }).catch(() => setError("Не удалось изменить режим урока"));
+  }
+
   /** Э3.8: глобальный тумблер «ученики могут рисовать» — массово меняет canDraw у всех учеников урока. */
   async function toggleDrawForAll(canDraw: boolean) {
     if (!lessonId) return;
@@ -292,6 +317,22 @@ export function RoomPage() {
                   · <MediaAudioStatus />
                 </>
               )}
+              {" "}
+              · Режим: {isTeacher ? (
+                <select
+                  value={lessonMode}
+                  onChange={(e) => changeLessonMode(e.target.value as LessonMode)}
+                  className="rounded border px-1 py-0.5 text-xs"
+                >
+                  {Object.entries(LESSON_MODE_LABEL).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                LESSON_MODE_LABEL[lessonMode]
+              )}
             </p>
             {media && self?.permissions.canSpeak && <PacketLossWarning />}
             {media && (isTeacher || self?.permissions.canPublishVideo) && <VideoDegradeSuggestion />}
@@ -341,7 +382,7 @@ export function RoomPage() {
           )}
         </div>
 
-        {media && <StudentVideoGrid participants={participants} />}
+        {media && <StudentVideoGrid participants={participants} mode={lessonMode} />}
 
         <h2 className="mb-2 text-sm font-medium text-slate-600">Участники ({participants.length})</h2>
         <ul className="flex flex-col gap-1">
@@ -476,7 +517,7 @@ export function RoomPage() {
       onDisconnected={() => setError("Аудио отключено")}
     >
       <MicSync enabled={self?.permissions.canSpeak ?? false} />
-      <VideoSubscriptionManager participants={participants} />
+      <VideoSubscriptionManager participants={participants} mode={lessonMode} />
       <TeacherVideoTile />
       {content}
       <RoomAudioRenderer />

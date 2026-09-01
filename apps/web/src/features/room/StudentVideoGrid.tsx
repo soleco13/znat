@@ -1,6 +1,6 @@
 import { useTracks, VideoTrack } from "@livekit/components-react";
 import { Track } from "livekit-client";
-import type { ParticipantSnapshot } from "@school/shared";
+import type { LessonMode, ParticipantSnapshot } from "@school/shared";
 import { MicStatusIcon } from "./MicControls.js";
 
 /**
@@ -8,9 +8,18 @@ import { MicStatusIcon } from "./MicControls.js";
  * (см. `VideoSubscriptions.tsx`) реальных видео, остальные ученики —
  * маленький кружок с инициалом + индикатор микрофона, видео для них не
  * подписано вовсе. Кто именно попадает в «видимые» и подписку на его трек
- * решает `VideoSubscriptionManager` (Э6.2) — этот компонент только читает
- * уже подписанные треки (`useTracks` без `onlySubscribed: false`, дефолт
- * хука — `true`) и рендерит; сам он ничего не подписывает и не отписывает.
+ * решает `VideoSubscriptionManager` — этот компонент только читает уже
+ * подписанные треки (`useTracks` без `onlySubscribed: false`, дефолт хука —
+ * `true`) и рендерит; сам он ничего не подписывает и не отписывает. Поэтому
+ * для режимов `lecture`/`assignment` (Э6.4) отдельного условия здесь нет —
+ * `VideoSubscriptionManager` просто не подписывает никого из учеников,
+ * `visible` сам получается пустым.
+ *
+ * `mode` (Э6.4) используется ТОЛЬКО для формы отображения: в `spotlight`
+ * («Опрос/у доски», §5.3 ТЗ — «1 ученик крупно») видимых и так не больше
+ * одного (гарантирует `computeVisibleStudentIds`), но сеточная плитка
+ * `grid-cols-3` рисовала бы его маленьким, поэтому рендерим единственную
+ * видимую плитку крупно, во всю ширину колонки.
  *
  * Полный список учеников идёт из `participants` (WS presence-снапшот,
  * уже есть у `RoomPage`), а не из LiveKit — нужен состав ВСЕХ учеников
@@ -19,7 +28,13 @@ import { MicStatusIcon } from "./MicControls.js";
  * `s.pinned` (Э6.3) читается из того же снапшота — только для бейджа 📌 на
  * плитке, сам выбор видимых по этому полю уже сделал `VideoSubscriptionManager`.
  */
-export function StudentVideoGrid({ participants }: { participants: ParticipantSnapshot[] }) {
+export function StudentVideoGrid({
+  participants,
+  mode,
+}: {
+  participants: ParticipantSnapshot[];
+  mode: LessonMode;
+}) {
   const videoTracks = useTracks([Track.Source.Camera]);
   const videoByUserId = new Map(videoTracks.map((t) => [t.participant.identity, t]));
 
@@ -32,9 +47,12 @@ export function StudentVideoGrid({ participants }: { participants: ParticipantSn
   return (
     <div className="mb-4">
       {visible.length > 0 && (
-        <div className="grid grid-cols-3 gap-2">
+        <div className={mode === "spotlight" ? "grid grid-cols-1" : "grid grid-cols-3 gap-2"}>
           {visible.map((s) => (
-            <div key={s.userId} className="relative aspect-video overflow-hidden rounded border bg-slate-900">
+            <div
+              key={s.userId}
+              className={`relative overflow-hidden rounded border bg-slate-900 ${mode === "spotlight" ? "aspect-video max-w-md" : "aspect-video"}`}
+            >
               <VideoTrack trackRef={videoByUserId.get(s.userId)!} className="h-full w-full object-cover" />
               <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white">
                 {s.pinned && "📌 "}

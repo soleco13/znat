@@ -1,5 +1,8 @@
-import type { ParticipantPermissions, Role } from "@school/shared";
+import type { LessonMode, ParticipantPermissions, Role } from "@school/shared";
 import { redis } from "../../db/redis.js";
+
+/** Э6.4, §5.2 ТЗ: продуктовый рычаг — экономит 3–4× трафика, переключение осознанное действие учителя. */
+const DEFAULT_LESSON_MODE: LessonMode = "lecture";
 
 export interface PresenceEntry {
   fullName: string;
@@ -50,6 +53,20 @@ export async function countConnected(lessonId: string): Promise<number> {
   let n = 0;
   for (const entry of all.values()) if (entry.connected) n++;
   return n;
+}
+
+function modeKey(lessonId: string): string {
+  return `room:${lessonId}:mode`;
+}
+
+/** Э6.4: режим урока — ephemeral, не в Postgres (см. rooms/service.ts#setLessonMode). Сбрасывается в дефолт естественно с новым Redis-ключом урока, отдельного TTL/очистки не заводили — тот же режим, в котором уже живёт остальной presence. */
+export async function getLessonMode(lessonId: string): Promise<LessonMode> {
+  const raw = await redis.get(modeKey(lessonId));
+  return (raw as LessonMode | null) ?? DEFAULT_LESSON_MODE;
+}
+
+export async function setLessonMode(lessonId: string, mode: LessonMode): Promise<void> {
+  await redis.set(modeKey(lessonId), mode);
 }
 
 /** Отдельная функция без Redis-эффектов — детерминированное правило зачистки, легко тестируется. */

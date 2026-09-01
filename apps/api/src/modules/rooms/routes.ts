@@ -5,6 +5,7 @@ import {
   pinParticipantRequestSchema,
   sendChatMessageRequestSchema,
   setDrawForAllRequestSchema,
+  setLessonModeRequestSchema,
   updateParticipantPermissionsRequestSchema,
 } from "@school/shared";
 import * as usersService from "../users/service.js";
@@ -73,6 +74,12 @@ export default async function roomsRoutes(app: FastifyInstance) {
       return reply.status(204).send();
     },
   );
+
+  app.patch<{ Params: { id: string } }>("/lessons/:id/mode", async (request, reply) => {
+    const body = setLessonModeRequestSchema.parse(request.body);
+    await roomsService.setLessonMode(request.user.schoolId, request.params.id, request.user, body.mode);
+    return reply.status(204).send();
+  });
 
   app.post<{ Params: { id: string } }>("/lessons/:id/draw-all", async (request, reply) => {
     const body = setDrawForAllRequestSchema.parse(request.body);

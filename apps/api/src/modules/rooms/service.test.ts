@@ -45,6 +45,7 @@ vi.mock("../canvas/service.js", () => canvasServiceMock);
 vi.mock("./presence.js", async () => {
   const actual = await vi.importActual<typeof import("./presence.js")>("./presence.js");
   const rooms = new Map<string, Map<string, unknown>>();
+  const modes = new Map<string, string>();
   const roomMap = (lessonId: string) => {
     let m = rooms.get(lessonId);
     if (!m) {
@@ -67,7 +68,15 @@ vi.mock("./presence.js", async () => {
       async (lessonId: string) =>
         [...roomMap(lessonId).values()].filter((e) => (e as { connected: boolean }).connected).length,
     ),
-    __clear: () => rooms.clear(),
+    // Э6.4: тоже бьёт в реальный Redis в оригинале — тот же in-memory приём, что и выше.
+    getLessonMode: vi.fn(async (lessonId: string) => modes.get(lessonId) ?? "lecture"),
+    setLessonMode: vi.fn(async (lessonId: string, mode: string) => {
+      modes.set(lessonId, mode);
+    }),
+    __clear: () => {
+      rooms.clear();
+      modes.clear();
+    },
   };
 });
 
@@ -387,6 +396,30 @@ describe("закрепление в сетке видео (Э6.3)", () => {
     await expect(
       roomsService.setPinned(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, true),
     ).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+describe("режим урока (Э6.4)", () => {
+  it("по умолчанию урок в режиме lecture", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+
+    const result = await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+
+    expect(result.lessonMode).toBe("lecture");
+  });
+
+  it("только учитель этого урока (или админ) может менять режим", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+
+    await expect(
+      roomsService.setLessonMode(SCHOOL_ID, LESSON_ID, studentToken(), "discussion"),
+    ).rejects.toMatchObject({ statusCode: 403 });
+
+    await roomsService.setLessonMode(SCHOOL_ID, LESSON_ID, teacherToken(), "discussion");
+    const result = await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+    expect(result.lessonMode).toBe("discussion");
   });
 });
 

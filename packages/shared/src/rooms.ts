@@ -30,8 +30,20 @@ export const participantSnapshotSchema = z.object({
 });
 export type ParticipantSnapshot = z.infer<typeof participantSnapshotSchema>;
 
+/**
+ * Э6.4, §5.3 ТЗ: режим урока — управляет медиапрофилем видео, не правами
+ * участников. `lecture` — по умолчанию (продуктовый рычаг §5.2 ТЗ: экономит
+ * 3–4× трафика, переключение в `discussion` — осознанное действие учителя).
+ */
+export const lessonModeSchema = z.enum(["lecture", "discussion", "assignment", "spotlight"]);
+export type LessonMode = z.infer<typeof lessonModeSchema>;
+
+export const setLessonModeRequestSchema = z.object({ mode: lessonModeSchema });
+export type SetLessonModeRequest = z.infer<typeof setLessonModeRequestSchema>;
+
 export const joinLessonResponseSchema = z.object({
   lessonStatus: lessonStatusSchema,
+  lessonMode: lessonModeSchema,
   participants: z.array(participantSnapshotSchema),
   self: participantSnapshotSchema,
   media: mediaConnectionSchema,
@@ -85,6 +97,7 @@ export const serverRoomMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("participant_pinned"), userId: z.string().uuid(), pinned: z.boolean() }),
   z.object({ type: z.literal("chat_message"), message: chatMessageSchema }),
   z.object({ type: z.literal("lesson_status"), status: lessonStatusSchema }),
+  z.object({ type: z.literal("lesson_mode"), mode: lessonModeSchema }),
   // Э4.4: прогресс конвертации презентации — по одному сообщению на каждую
   // смену статуса/шаг рендера. Канал `/ws` уже per-lesson, deckId хватает.
   z.object({ type: z.literal("deck_status"), deck: deckProgressEventSchema }),

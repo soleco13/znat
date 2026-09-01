@@ -2,6 +2,7 @@ import type {
   AccessTokenPayload,
   ChatMessage,
   JoinLessonResponse,
+  LessonMode,
   LessonStatus,
   ListChatQuery,
   ParticipantSnapshot,
@@ -172,7 +173,9 @@ export async function join(
     lessonDurationMin: lesson.durationMin,
   });
 
-  return { lessonStatus, participants: await listParticipantsSnapshot(lessonId), self: snapshot, media };
+  const lessonMode = await presence.getLessonMode(lessonId);
+
+  return { lessonStatus, lessonMode, participants: await listParticipantsSnapshot(lessonId), self: snapshot, media };
 }
 
 /** Явный выход (кнопка «Выйти»/POST leave) — без grace-периода на переподключение. */
@@ -258,6 +261,28 @@ export async function setPinned(
   entry.pinned = pinned;
   await presence.setParticipant(lessonId, targetUserId, entry);
   emitRoomEvent(lessonId, { type: "participant_pinned", userId: targetUserId, pinned });
+}
+
+/**
+ * Учитель переключает режим урока (Э6.4, §5.3 ТЗ) — управляет медиапрофилем
+ * видео (какой видимый набор строит `VideoSubscriptionManager` на клиенте),
+ * не правами участников. Хранится в Redis (`presence.ts`), не в Postgres —
+ * ephemeral переключатель одного текущего урока, не аудируемая история, тот
+ * же характер хранения, что у presence-записей участников.
+ */
+export async function setLessonMode(
+  schoolId: string,
+  lessonId: string,
+  requester: AccessTokenPayload,
+  mode: LessonMode,
+): Promise<void> {
+  const lesson = await lessonsService.getLesson(schoolId, lessonId);
+  const isOwnerTeacher = requester.role === "teacher" && lesson.teacherId === requester.sub;
+  if (requester.role !== "admin" && !isOwnerTeacher) {
+    throw new AppError(403, "forbidden", "Только учитель урока может менять режим урока");
+  }
+  await presence.setLessonMode(lessonId, mode);
+  emitRoomEvent(lessonId, { type: "lesson_mode", mode });
 }
 
 /** Считает учеников (не учителей/админов) с уже включённым микрофоном, кроме исключённого — для проверки лимита §5.2 ТЗ. */

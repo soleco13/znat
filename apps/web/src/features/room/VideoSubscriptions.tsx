@@ -1,13 +1,49 @@
 import { useEffect } from "react";
 import { useSpeakingParticipants, useTracks } from "@livekit/components-react";
 import { RemoteTrackPublication, Track } from "livekit-client";
-import type { ParticipantSnapshot } from "@school/shared";
+import type { LessonMode, ParticipantSnapshot } from "@school/shared";
 
-/** Э6.2, §5.2 ТЗ: не более 9 одновременно видимых видео учеников. */
+/** Э6.2, §5.2 ТЗ: не более 9 одновременно видимых видео учеников (лимит применяется только в режиме "discussion", см. computeVisibleStudentIds). */
 export const MAX_VISIBLE_STUDENT_VIDEOS = 9;
 
 function isTeacherRole(role: string | undefined): boolean {
   return role === "teacher" || role === "admin";
+}
+
+/**
+ * Выбор видимого набора учеников по режиму урока (Э6.4, §5.3 ТЗ) —
+ * вынесено отдельной функцией от `VideoSubscriptionManager`, чтобы менять
+ * ТОЛЬКО выбор при следующей задаче на эту тему, не механизм подписки:
+ * - `lecture` (дефолт, §5.2 ТЗ — экономит 3–4× трафика) — видео учеников не
+ *   подписывается ВООБЩЕ, пустой набор;
+ * - `assignment` — «видео полностью выключено» (медиапрофиль из таблицы
+ *   §5.3 ТЗ), тоже пустой набор для учеников (камера учителя гасится
+ *   отдельно, см. `VideoSubscriptionManager`, это не про учеников);
+ * - `spotlight` («Опрос/у доски») — «1 ученик крупно» — ровно один,
+ *   закреплённый учителем (`pinned`); активный говорящий здесь
+ *   сознательно НЕ подставляется вместо пина — режим про то, что учитель
+ *   явно выбрал, кто у доски, а не про то, кто громче всех;
+ * - `discussion` — закреплённые ∪ говорящие (Э6.3), до `MAX_VISIBLE_STUDENT_VIDEOS`,
+ *   закреплённые в приоритете при превышении лимита.
+ */
+function computeVisibleStudentIds(
+  mode: LessonMode,
+  pinnedIds: Set<string>,
+  speakingIds: Set<string>,
+  publishingStudentIds: Set<string>,
+): Set<string> {
+  if (mode === "lecture" || mode === "assignment") return new Set();
+
+  if (mode === "spotlight") {
+    const pinned = [...pinnedIds].filter((id) => publishingStudentIds.has(id)).sort();
+    return new Set(pinned.slice(0, 1));
+  }
+
+  const priority = [
+    ...[...pinnedIds].filter((id) => publishingStudentIds.has(id)).sort(),
+    ...[...speakingIds].filter((id) => publishingStudentIds.has(id) && !pinnedIds.has(id)).sort(),
+  ];
+  return new Set(priority.slice(0, MAX_VISIBLE_STUDENT_VIDEOS));
 }
 
 /**
@@ -20,25 +56,17 @@ function isTeacherRole(role: string | undefined): boolean {
  * сотни видеопотоков на один урок). `autoSubscribe` теперь выключен
  * (`RoomPage.tsx`, `connectOptions`), и этот компонент — единственное
  * место, которое решает, что подписывать:
- * - микрофон — подписывается всегда, для любого участника. Лимит §5.2 —
- *   не на подписку, а на ОДНОВРЕМЕННО ВКЛЮЧЁННЫЕ микрофоны учеников (уже
- *   есть на уровне права `canSpeak`, см. `rooms/service.ts`), аудиотрафик
- *   на подписчика не растёт с числом участников так резко, как видео;
- * - камера учителя/админа — подписывается всегда: это отдельная плитка
- *   (`TeacherVideoTile`), не «ученик в сетке», в лимит на 9 не входит;
- * - камера ученика — подписывается, только если участник входит в текущий
- *   видимый набор (максимум `MAX_VISIBLE_STUDENT_VIDEOS`).
- *
- * **Выбор видимого набора (Э6.3, §5.2 ТЗ)**: закреплённые учителем
- * (`participants[].pinned`, право учителя — `rooms/service.ts#setPinned`)
- * + активные говорящие (`useSpeakingParticipants`, решение и сглаживание
- * «говорит/не говорит» целиком на стороне LiveKit — `Participant.isSpeaking`
- * не пересчитывается здесь заново). Если оба набора вместе не влезают в
- * лимit, закреплённые в приоритете (учитель явно решил их видеть). Если
- * никто не закреплён и не говорит — сетка видео пуста, все ученики видны
- * как аватары; ТЗ определяет видимый набор именно как «говорящие +
- * закреплённые», а не «до 9 первых попавшихся», поэтому пустая сетка при
- * полной тишине — ожидаемое поведение, не бага Э6.2.
+ * - микрофон — подписывается всегда, для любого участника, независимо от
+ *   режима урока (лимит §5.2 — не на подписку, а на ОДНОВРЕМЕННО ВКЛЮЧЁННЫЕ
+ *   микрофоны учеников, уже есть на уровне права `canSpeak`); §5.3 ТЗ
+ *   называет медиапрофиль `assignment` «только аудио учителя», но это про
+ *   то, что обычно слышно, а не про запрет подписки на чужой микрофон —
+ *   право `canSpeak` и так решает, кто вообще может говорить;
+ * - камера учителя/админа — подписывается всегда, КРОМЕ режима `assignment`
+ *   (§5.3 ТЗ: «видео полностью выключено» — единственный режим, где гасится
+ *   даже учитель, не только сетка учеников);
+ * - камера ученика — подписывается по набору из `computeVisibleStudentIds`
+ *   (Э6.4 меняет только выбор набора по режиму, см. её docstring).
  *
  * `useTracks(..., { onlySubscribed: false })` — намеренно `false` (дефолт
  * самого хука — `true`, прочитано в установленном `@livekit/components-react`):
@@ -48,7 +76,13 @@ function isTeacherRole(role: string | undefined): boolean {
  * свой же трек не нужно и нельзя (`LocalTrackPublication.setSubscribed` не
  * существует).
  */
-export function VideoSubscriptionManager({ participants }: { participants: ParticipantSnapshot[] }) {
+export function VideoSubscriptionManager({
+  participants,
+  mode,
+}: {
+  participants: ParticipantSnapshot[];
+  mode: LessonMode;
+}) {
   const tracks = useTracks([Track.Source.Microphone, Track.Source.Camera], { onlySubscribed: false });
   const speakingParticipants = useSpeakingParticipants();
 
@@ -62,12 +96,8 @@ export function VideoSubscriptionManager({ participants }: { participants: Parti
         .filter((t) => t.source === Track.Source.Camera && !isTeacherRole(t.participant.attributes.role))
         .map((t) => t.participant.identity),
     );
-
-    const priority = [
-      ...[...pinnedIds].filter((id) => publishingStudentIds.has(id)).sort(),
-      ...[...speakingIds].filter((id) => publishingStudentIds.has(id) && !pinnedIds.has(id)).sort(),
-    ];
-    const visibleStudentIds = new Set(priority.slice(0, MAX_VISIBLE_STUDENT_VIDEOS));
+    const visibleStudentIds = computeVisibleStudentIds(mode, pinnedIds, speakingIds, publishingStudentIds);
+    const teacherVisible = mode !== "assignment";
 
     for (const t of tracks) {
       const pub = t.publication;
@@ -75,12 +105,12 @@ export function VideoSubscriptionManager({ participants }: { participants: Parti
 
       const shouldSubscribe =
         t.source === Track.Source.Microphone ||
-        isTeacherRole(t.participant.attributes.role) ||
+        (isTeacherRole(t.participant.attributes.role) && teacherVisible) ||
         visibleStudentIds.has(t.participant.identity);
 
       if (pub.isSubscribed !== shouldSubscribe) pub.setSubscribed(shouldSubscribe);
     }
-  }, [tracks, speakingParticipants, participants]);
+  }, [tracks, speakingParticipants, participants, mode]);
 
   return null;
 }
