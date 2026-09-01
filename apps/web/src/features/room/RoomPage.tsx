@@ -80,6 +80,10 @@ export function RoomPage() {
   // Экран проверки устройств (Э2.4) — пока не пройден, в урок не входим (ни HTTP join, ни WS).
   const [deviceCheckDone, setDeviceCheckDone] = useState(false);
   const [micDeviceId, setMicDeviceId] = useState<string | null>(null);
+  // Э5.4: камера, выбранная на экране проверки устройств — используется
+  // только учителем/админом (`video` проп `<LiveKitRoom>` ниже), у ученика
+  // просто лежит невостребованным до Э6.
+  const [camDeviceId, setCamDeviceId] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const isTeacher = me?.role === "teacher" || me?.role === "admin";
@@ -389,8 +393,9 @@ export function RoomPage() {
   if (!deviceCheckDone) {
     return (
       <DeviceCheckScreen
-        onContinue={(deviceId) => {
-          setMicDeviceId(deviceId);
+        onContinue={(micId, camId) => {
+          setMicDeviceId(micId);
+          setCamDeviceId(camId);
           setDeviceCheckDone(true);
         }}
       />
@@ -408,8 +413,9 @@ export function RoomPage() {
       audio={self?.permissions.canSpeak ? { deviceId: micDeviceId ?? undefined } : false}
       // Э5.1: камера — только у учителя/админа (грант на сервере уже
       // ограничивает источник CAMERA той же ролью), автозапуск при входе,
-      // как и микрофон; ручной тумблер — `SelfCameraButton`.
-      video={isTeacher ? { resolution: VideoPresets.h720.resolution } : false}
+      // как и микрофон; ручной тумблер — `SelfCameraButton`. Э5.4: устройство —
+      // то, что выбрано (и проверено превью) на `DeviceCheckScreen`.
+      video={isTeacher ? { resolution: VideoPresets.h720.resolution, deviceId: camDeviceId ?? undefined } : false}
       onDisconnected={() => setError("Аудио отключено")}
     >
       <MicSync enabled={self?.permissions.canSpeak ?? false} />

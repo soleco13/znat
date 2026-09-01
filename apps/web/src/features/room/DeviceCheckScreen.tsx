@@ -6,17 +6,41 @@ type EchoState = "idle" | "recording" | "ready" | "playing";
 const RECORD_MS = 3000;
 
 /**
- * Экран проверки устройств перед входом в урок (Э2.4): выбор микрофона,
- * индикатор уровня и тест эха (запись/прослушивание своего голоса).
- * Не должен блокировать вход — при ошибке доступа к микрофону даёт войти
- * без проверки, чтобы сбой устройства не останавливал урок (§1.2 ТЗ).
+ * Экран проверки устройств перед входом в урок (Э2.4 — микрофон, Э5.4 —
+ * камера): выбор микрофона, индикатор уровня, тест эха и — отдельным,
+ * необязательным блоком — превью камеры с выбором устройства («Ученик
+ * видит себя до урока», ПЛАН.md Э5.4).
+ *
+ * Камера здесь показывается ВСЕМ, а не только учителю/админу, хотя
+ * публиковать видео в LiveKit пока может только их роль
+ * (`media/service.ts#buildPublishGrant`, Э5.1) — стоп-лист Э5 запрещает
+ * публикацию камеры учеником, но не локальный просмотр себя в браузере:
+ * `getUserMedia` для превью никуда не отправляет поток, сервера и LiveKit
+ * не касается, нагрузки не создаёт. Выбранная камера передаётся дальше
+ * (`onContinue`), чтобы учитель вошёл в урок сразу с нужным устройством;
+ * для ученика значение просто не используется, пока у него нет права
+ * публиковать (запасено на Э6).
+ *
+ * Не должен блокировать вход — при ошибке доступа к микрофону/камере даёт
+ * войти без проверки, чтобы сбой устройства не останавливал урок (§1.2 ТЗ).
  */
-export function DeviceCheckScreen({ onContinue }: { onContinue: (deviceId: string | null) => void }) {
+export function DeviceCheckScreen({
+  onContinue,
+}: {
+  onContinue: (micDeviceId: string | null, camDeviceId: string | null) => void;
+}) {
   const [permission, setPermission] = useState<PermissionState>("idle");
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [echoState, setEchoState] = useState<EchoState>("idle");
+
+  // Э5.4: камера — отдельное необязательное состояние, независимое от
+  // микрофона (свой поток, своё разрешение браузера, свой список устройств).
+  const [camPermission, setCamPermission] = useState<PermissionState>("idle");
+  const [camDevices, setCamDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCamId, setSelectedCamId] = useState<string>("");
+  const [camErrorMessage, setCamErrorMessage] = useState<string | null>(null);
 
   const streamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -25,6 +49,8 @@ export function DeviceCheckScreen({ onContinue }: { onContinue: (deviceId: strin
   const recorderRef = useRef<MediaRecorder | null>(null);
   const audioElRef = useRef<HTMLAudioElement>(null);
   const objectUrlRef = useRef<string | null>(null);
+  const camStreamRef = useRef<MediaStream | null>(null);
+  const camVideoRef = useRef<HTMLVideoElement>(null);
 
   function stopLevelMeter() {
     if (rafRef.current !== null) {
@@ -38,6 +64,44 @@ export function DeviceCheckScreen({ onContinue }: { onContinue: (deviceId: strin
   function stopStream() {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
+  }
+
+  function stopCamStream() {
+    camStreamRef.current?.getTracks().forEach((t) => t.stop());
+    camStreamRef.current = null;
+  }
+
+  async function openCamStream(deviceId: string | null) {
+    setCamErrorMessage(null);
+    setCamPermission("requesting");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: deviceId ? { deviceId: { exact: deviceId } } : true,
+      });
+      stopCamStream();
+      camStreamRef.current = stream;
+      setCamPermission("granted");
+      if (camVideoRef.current) camVideoRef.current.srcObject = stream;
+
+      const list = await navigator.mediaDevices.enumerateDevices();
+      setCamDevices(list.filter((d) => d.kind === "videoinput"));
+      const activeId = stream.getVideoTracks()[0]?.getSettings().deviceId;
+      if (activeId) setSelectedCamId(activeId);
+    } catch (err) {
+      stopCamStream();
+      if (err instanceof DOMException && (err.name === "NotFoundError" || err.name === "OverconstrainedError")) {
+        setCamPermission("unavailable");
+        setCamErrorMessage("Камера не найдена.");
+      } else {
+        setCamPermission("denied");
+        setCamErrorMessage("Нет доступа к камере. Разрешите доступ в браузере и попробуйте снова.");
+      }
+    }
+  }
+
+  function handleCamDeviceChange(deviceId: string) {
+    setSelectedCamId(deviceId);
+    openCamStream(deviceId);
   }
 
   function startLevelMeter(stream: MediaStream) {
@@ -100,6 +164,7 @@ export function DeviceCheckScreen({ onContinue }: { onContinue: (deviceId: strin
     return () => {
       stopLevelMeter();
       stopStream();
+      stopCamStream();
       if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
       recorderRef.current?.stop();
     };
@@ -144,7 +209,10 @@ export function DeviceCheckScreen({ onContinue }: { onContinue: (deviceId: strin
   }
 
   function handleContinue() {
-    onContinue(permission === "granted" ? selectedDeviceId || null : null);
+    onContinue(
+      permission === "granted" ? selectedDeviceId || null : null,
+      camPermission === "granted" ? selectedCamId || null : null,
+    );
   }
 
   return (
@@ -206,6 +274,50 @@ export function DeviceCheckScreen({ onContinue }: { onContinue: (deviceId: strin
           </div>
         </>
       )}
+
+      <div className="mb-6 border-t pt-4">
+        <label className="mb-1 block text-xs font-medium text-slate-600">Камера (необязательно)</label>
+
+        {camPermission === "idle" && (
+          <button onClick={() => openCamStream(null)} className="rounded border px-3 py-1 text-sm">
+            Проверить камеру
+          </button>
+        )}
+
+        {camPermission === "requesting" && <p className="text-sm text-slate-500">Запрашиваем доступ к камере…</p>}
+
+        {(camPermission === "denied" || camPermission === "unavailable") && (
+          <div className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+            <p className="mb-2">{camErrorMessage}</p>
+            <button onClick={() => openCamStream(null)} className="rounded border border-amber-400 px-2 py-1 text-xs">
+              Попробовать снова
+            </button>
+          </div>
+        )}
+
+        {camPermission === "granted" && (
+          <>
+            <select
+              className="mb-2 w-full rounded border px-2 py-1 text-sm"
+              value={selectedCamId}
+              onChange={(e) => handleCamDeviceChange(e.target.value)}
+            >
+              {camDevices.map((d) => (
+                <option key={d.deviceId} value={d.deviceId}>
+                  {d.label || "Камера"}
+                </option>
+              ))}
+            </select>
+            <video
+              ref={camVideoRef}
+              autoPlay
+              playsInline
+              muted
+              className="aspect-video w-full scale-x-[-1] rounded bg-slate-900 object-cover"
+            />
+          </>
+        )}
+      </div>
 
       <button onClick={handleContinue} className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-white">
         Войти в урок
