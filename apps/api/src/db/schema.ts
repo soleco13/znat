@@ -211,6 +211,8 @@ export const deckSlides = pgTable(
     height: integer("height").notNull(),
     /** Текстовый слой из `pdftotext -bbox` (Э4.8). */
     textLayer: jsonb("text_layer"),
+    /** Заметки докладчика из исходного .pptx/.odp (Э4.9) — «видны только учителю». */
+    notes: text("notes"),
   },
   (t) => [primaryKey({ columns: [t.deckId, t.index] })],
 );

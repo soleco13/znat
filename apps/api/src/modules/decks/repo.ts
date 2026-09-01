@@ -98,6 +98,7 @@ export async function replaceDeckSlides(deckId: string, slides: ConvertedSlide[]
           width: s.width,
           height: s.height,
           textLayer: s.textLayer,
+          notes: s.notes,
         })),
       );
     }

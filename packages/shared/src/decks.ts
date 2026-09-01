@@ -45,6 +45,12 @@ export const deckSlideSchema = z.object({
   height: z.number().int().positive(),
   /** Текстовый слой для поиска (Э4.8). `null` — слайд без распознанного текста. */
   textLayer: z.array(slideTextBoxSchema).nullable(),
+  /**
+   * Заметки докладчика (Э4.9) — сервер отдаёт РЕАЛЬНЫЙ текст только
+   * учителю/админу урока; остальным здесь всегда `null`, независимо от
+   * того, есть ли заметки на самом деле (см. `decks/service.ts#toSlideDto`).
+   */
+  notes: z.string().nullable(),
 });
 export type DeckSlide = z.infer<typeof deckSlideSchema>;
 
@@ -112,6 +118,8 @@ export const convertedSlideSchema = z.object({
   height: z.number().int().positive(),
   /** Текстовый слой из `pdftotext -bbox` (Э4.8) — для поиска по презентации. */
   textLayer: z.array(slideTextBoxSchema).nullable(),
+  /** Заметки докладчика из исходного .pptx/.odp (Э4.9). `null` — нет заметок/.docx/.pdf. */
+  notes: z.string().nullable(),
 });
 export type ConvertedSlide = z.infer<typeof convertedSlideSchema>;
 

@@ -631,6 +631,19 @@ export function Board({
   }
 
   const activeMeta = pages.find(([id]) => id === activePageId)?.[1] ?? null;
+  // Э4.9: заметки докладчика читаем НЕ из Y.Doc (общий документ реплицируется
+  // всем участникам целиком, readOnly ограничивает только запись — см.
+  // комментарий у toSlideDto в decks/service.ts), а из уже
+  // role-gated ответа API (decks проп, GET /lessons/:id/decks): не-учителю
+  // сервер всегда отдаёт notes: null, так что доп. проверка isTeacher здесь
+  // не для доступа к данным (сервер уже решил), а чтобы не показывать
+  // пустой блок остальным.
+  const activeSlideNotes =
+    isTeacher && activeMeta?.slide
+      ? (decks
+          .find((d) => d.id === activeMeta.slide!.deckId)
+          ?.slides.find((s) => s.index === activeMeta.slide!.index)?.notes ?? null)
+      : null;
   // Э4.6: обычные страницы — нумерованными кнопками, страницы-слайды — лентой
   // миниатюр ниже (иначе 40 слайдов дают 40 неразличимых кнопок-номеров).
   const nonSlidePages = pages.filter(([, m]) => m.kind !== "image" || !m.slide);
@@ -849,6 +862,12 @@ export function Board({
           />
         </div>
       </div>
+      {activeSlideNotes && (
+        <div className="mt-2 rounded border border-amber-200 bg-amber-50 p-2 text-sm">
+          <div className="mb-1 text-xs font-medium text-amber-700">Заметки докладчика (видно только вам)</div>
+          <p className="whitespace-pre-wrap text-slate-700">{activeSlideNotes}</p>
+        </div>
+      )}
     </div>
   );
 }

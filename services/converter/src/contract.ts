@@ -41,6 +41,12 @@ export interface ConvertedSlide {
   width: number;
   height: number;
   textLayer: SlideTextBox[] | null;
+  /**
+   * Заметки докладчика (Э4.9) — из исходного .pptx/.odp, не из PDF.
+   * `null` — заметок нет либо исходник .docx/.pdf. Видимость (только
+   * учителю) обеспечивает `apps/api` в ответе API, здесь просто текст.
+   */
+  notes: string | null;
 }
 
 export interface ConvertJobResult {

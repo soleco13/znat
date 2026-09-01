@@ -32,6 +32,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import type { ConvertJobData, ConvertJobResult, ConvertedSlide, SlideTextBox } from "./contract.js";
+import { extractSpeakerNotes } from "./notes.js";
 import * as storage from "./storage.js";
 
 const execFileAsync = promisify(execFile);
@@ -258,6 +259,9 @@ export async function runConversion(
     }
 
     const textLayers = await extractTextLayers(pdfPath, total);
+    // Э4.9: заметки — из ИСХОДНОГО файла (src), не из промежуточного pdfPath
+    // (обычный экспорт `--convert-to pdf` их не несёт).
+    const notesLayers = await extractSpeakerNotes(src, data.sourceMimeType, total);
 
     const slides: ConvertedSlide[] = [];
     for (let page = 1; page <= total; page++) {
@@ -288,6 +292,7 @@ export async function runConversion(
         width,
         height,
         textLayer: textLayer.length > 0 ? textLayer : null,
+        notes: notesLayers[page - 1] ?? null,
       });
 
       await rm(fullPath, { force: true });

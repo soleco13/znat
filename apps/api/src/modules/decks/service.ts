@@ -209,8 +209,10 @@ async function dedupFromTwin(input: {
         thumbStorageKey: thumb.storageKey,
         width: s.width,
         height: s.height,
-        // textLayer — наш же JSON, записанный из ConvertedSlide при конвертации двойника.
+        // textLayer/notes — наш же JSON/текст, записанные из ConvertedSlide при
+        // конвертации двойника (Э4.5/Э4.8/Э4.9), не any.
         textLayer: s.textLayer as ConvertedSlide["textLayer"],
+        notes: s.notes as ConvertedSlide["notes"],
       };
     }),
   );
@@ -233,7 +235,16 @@ async function dedupFromTwin(input: {
 type DeckRow = NonNullable<Awaited<ReturnType<typeof repo.findDeckById>>>;
 type SlideRow = Awaited<ReturnType<typeof repo.listSlidesByDeck>>[number];
 
-function toSlideDto(s: SlideRow): DeckSlide {
+/**
+ * Э4.9: `includeNotes` решает не UI, а сервер — не учитель/админ этого урока
+ * получает `notes: null` в самом ответе API, даже если заметки реально есть
+ * в БД. Держать это в общем `Y.Doc` холста было бы утечкой: документ
+ * реплицируется ВСЕМ подключённым клиентам целиком (read-only ограничивает
+ * только запись, не чтение, см. находку про `connectionConfig.readOnly` в
+ * Э3.1) — учитель читает заметки из этого DTO на своей стороне (Board.tsx),
+ * никогда из общего документа.
+ */
+function toSlideDto(s: SlideRow, includeNotes: boolean): DeckSlide {
   return {
     index: s.index,
     imageUrl: storageService.getSignedFileUrl(s.imageStorageKey, SLIDE_URL_TTL_SECONDS),
@@ -242,10 +253,11 @@ function toSlideDto(s: SlideRow): DeckSlide {
     height: s.height,
     // Наш же JSON, записанный из ConvertedSlide при конвертации (Э4.8) — не any.
     textLayer: (s.textLayer as ConvertedSlide["textLayer"]) ?? null,
+    notes: includeNotes ? ((s.notes as ConvertedSlide["notes"]) ?? null) : null,
   };
 }
 
-function toDeckDto(deck: DeckRow, slides: SlideRow[]): Deck {
+function toDeckDto(deck: DeckRow, slides: SlideRow[], includeNotes: boolean): Deck {
   const renderMode = deck.renderMode === "pdf" ? "pdf" : "images";
   return {
     id: deck.id,
@@ -257,7 +269,7 @@ function toDeckDto(deck: DeckRow, slides: SlideRow[]): Deck {
     progress: deck.progress,
     error: deck.error,
     createdAt: deck.createdAt.toISOString(),
-    slides: slides.map(toSlideDto),
+    slides: slides.map((s) => toSlideDto(s, includeNotes)),
     // Э4.7: PDF рендерит pdf.js в браузере — отдаём подписанный URL исходника
     // (тот же длинный TTL, что у слайдов). У обычных презентаций поле пустое.
     pdfUrl:
@@ -268,7 +280,8 @@ function toDeckDto(deck: DeckRow, slides: SlideRow[]): Deck {
 }
 
 export async function listDecks(user: AccessTokenPayload, lessonId: string): Promise<Deck[]> {
-  await assertLessonViewer(user, lessonId);
+  const lesson = await assertLessonViewer(user, lessonId);
+  const includeNotes = user.role === "admin" || (user.role === "teacher" && lesson.teacherId === user.sub);
   const rows = await repo.listDecksByLesson(lessonId);
   const slides = await repo.listSlidesForDecks(rows.map((d) => d.id));
   const byDeck = new Map<string, typeof slides>();
@@ -277,7 +290,7 @@ export async function listDecks(user: AccessTokenPayload, lessonId: string): Pro
     list.push(s);
     byDeck.set(s.deckId, list);
   }
-  return rows.map((d) => toDeckDto(d, byDeck.get(d.id) ?? []));
+  return rows.map((d) => toDeckDto(d, byDeck.get(d.id) ?? [], includeNotes));
 }
 
 export async function getDeckStatus(

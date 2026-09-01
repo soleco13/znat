@@ -55,8 +55,11 @@ const TEACHER = "33333333-3333-3333-3333-333333333333";
 const DECK = "44444444-4444-4444-4444-444444444444";
 const PPTX = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
+const STUDENT = "66666666-6666-6666-6666-666666666666";
+
 const teacher: AccessTokenPayload = { sub: TEACHER, schoolId: SCHOOL, role: "teacher" };
 const otherTeacher: AccessTokenPayload = { sub: "99999999-9999-9999-9999-999999999999", schoolId: SCHOOL, role: "teacher" };
+const student: AccessTokenPayload = { sub: STUDENT, schoolId: SCHOOL, role: "student" };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -329,6 +332,58 @@ describe("listDecks (Э4.8)", () => {
   });
 });
 
+describe("listDecks — заметки докладчика видны только учителю (Э4.9)", () => {
+  beforeEach(() => {
+    repoMock.listDecksByLesson.mockResolvedValue([
+      {
+        id: DECK,
+        lessonId: LESSON,
+        title: "Т",
+        status: "ready",
+        renderMode: "images",
+        slideCount: 1,
+        progress: 1,
+        error: null,
+        createdAt: new Date(0),
+        sourceStorageKey: "src-key",
+      },
+    ]);
+    repoMock.listSlidesForDecks.mockResolvedValue([
+      {
+        deckId: DECK,
+        index: 0,
+        imageStorageKey: "img-0",
+        thumbStorageKey: "thumb-0",
+        width: 1920,
+        height: 1080,
+        textLayer: null,
+        notes: "Не забыть сказать про формулу",
+      },
+    ]);
+  });
+
+  it("хозяину урока (учителю) заметки видны", async () => {
+    const [deck] = await listDecks(teacher, LESSON);
+    expect(deck?.slides[0]?.notes).toBe("Не забыть сказать про формулу");
+  });
+
+  it("админу заметки видны", async () => {
+    const admin: AccessTokenPayload = { sub: "77777777-7777-7777-7777-777777777777", schoolId: SCHOOL, role: "admin" };
+    const [deck] = await listDecks(admin, LESSON);
+    expect(deck?.slides[0]?.notes).toBe("Не забыть сказать про формулу");
+  });
+
+  it("ученику заметки не видны — сервер отдаёт null независимо от БД", async () => {
+    usersServiceMock.isGroupMember.mockResolvedValue(true);
+    const [deck] = await listDecks(student, LESSON);
+    expect(deck?.slides[0]?.notes).toBeNull();
+  });
+
+  it("чужому учителю (не хозяину урока) заметки не видны", async () => {
+    await expect(listDecks(otherTeacher, LESSON)).rejects.toMatchObject({ statusCode: 403 });
+  });
+});
+
 describe("reconcileStuckDecks (Э4.3, долг)", () => {
   it("подхватывает пропущенное завершение: missing-событие, задача completed", async () => {
     repoMock.listUnfinishedDecks.mockResolvedValue([
@@ -409,7 +464,7 @@ describe("buildConvertJobHandlers (Э4.3)", () => {
 
   it("onCompleted заменяет слайды и ставит ready", async () => {
     const slides = [
-      { index: 0, imageStorageKey: "a", thumbStorageKey: "b", width: 1, height: 2, textLayer: null },
+      { index: 0, imageStorageKey: "a", thumbStorageKey: "b", width: 1, height: 2, textLayer: null, notes: null },
     ];
     await handlers.onCompleted(DECK, { slideCount: 1, slides });
     expect(repoMock.replaceDeckSlides).toHaveBeenCalledWith(DECK, slides);
