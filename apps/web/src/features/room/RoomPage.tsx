@@ -33,9 +33,20 @@ import { useRoomSocket } from "./useRoomSocket.js";
 // livekit-client при пустом поле (проверено чтением options.d.ts установленного
 // livekit-client@2.22.0) — оставлено явным комментарием, а не полем, чтобы
 // не разойтись с версией пакета при апгрейде.
+//
+// Э5.2 (§5.2 ТЗ): `adaptiveStream`/`dynacast` ОБА выключены по умолчанию в
+// самом livekit-client (проверено чтением `roomOptionDefaults` в
+// установленном dist/livekit-client.esm.mjs@2.22.0 — `adaptiveStream: false,
+// dynacast: false`), поэтому без явного включения здесь требование ТЗ «не
+// публиковать слои, на которые никто не подписан» и «понижать слой для
+// маленькой плитки» тихо не выполнялось бы. При одной плитке учителя (Э5)
+// эффект пока минимален — раскроется на сетке из 9 в Э6, но должен быть
+// включён с самого начала, а не довинчен потом.
 const ROOM_OPTIONS: RoomOptions = {
   videoCaptureDefaults: { resolution: VideoPresets.h720.resolution },
   publishDefaults: { simulcast: true },
+  adaptiveStream: true,
+  dynacast: true,
 };
 
 const STATUS_LABEL: Record<SocketStatusLike, string> = {
