@@ -12,9 +12,11 @@ import { apiFetch } from "../../shared/api-client.js";
 import {
   BACKGROUND_KIND_LABELS,
   PageBackground,
+  SlideThumb,
   type BackgroundKind,
   type SlidePageRef,
 } from "./PageBackground.js";
+import { getPdfPageSizes } from "./pdf.js";
 import "@excalidraw/excalidraw/index.css";
 import "./Board.css";
 
@@ -416,40 +418,63 @@ export function Board({
   }
 
   /**
-   * Э4.6, §3.5 ТЗ: импорт слайдов презентации как страниц холста. Каждый
+   * Э4.6/Э4.7, §3.5 ТЗ: импорт слайдов презентации как страниц холста. Каждый
    * слайд → новая страница с `kind: "image"` и фоном-слайдом; поверх можно
    * рисовать как на обычной странице. Навигация синхронная (тот же
    * `activePageId` в `Y.Map "meta"`, что и у обычных страниц) — учитель
    * листает, у всех листается. Повторный импорт той же презентации
    * блокируется: страницы уже на холсте.
+   *
+   * `renderMode: "pdf"` (Э4.7) — серверных PNG нет, страницу рендерит pdf.js;
+   * размеры страниц читаем из самого PDF перед записью в холст (нужны для
+   * пропорций мирового прямоугольника слайда).
    */
-  function importDeckSlides(deck: Deck) {
-    if (!ydoc || deck.slides.length === 0) return;
+  async function importDeckSlides(deck: Deck) {
+    if (!ydoc) return;
     const pagesMap = ydoc.getMap<PageMeta>("pages");
-    const alreadyImported = [...pagesMap.values()].some((m) => m.slide?.deckId === deck.id);
-    if (alreadyImported) {
+    if ([...pagesMap.values()].some((m) => m.slide?.deckId === deck.id)) {
       setImportNote(`«${deck.title}» уже на холсте`);
       return;
     }
+
+    let slideRefs: SlidePageRef[];
+    if (deck.renderMode === "pdf" && deck.pdfUrl) {
+      const pdfUrl = deck.pdfUrl;
+      setImportNote(`Открываю «${deck.title}»…`);
+      try {
+        const sizes = await getPdfPageSizes(pdfUrl);
+        slideRefs = sizes.map((sz, i) => ({
+          deckId: deck.id,
+          index: i,
+          width: sz.width,
+          height: sz.height,
+          pdfUrl,
+        }));
+      } catch {
+        setImportNote(`Не удалось открыть PDF «${deck.title}»`);
+        return;
+      }
+    } else {
+      slideRefs = [...deck.slides]
+        .sort((a, b) => a.index - b.index)
+        .map((s) => ({
+          deckId: deck.id,
+          index: s.index,
+          imageUrl: s.imageUrl,
+          thumbUrl: s.thumbUrl,
+          width: s.width,
+          height: s.height,
+        }));
+    }
+    if (slideRefs.length === 0) return;
+
     let order = pages.reduce((max, [, meta]) => Math.max(max, meta.order), -1) + 1;
     let firstNewId: string | null = null;
     ydoc.transact(() => {
-      for (const s of [...deck.slides].sort((a, b) => a.index - b.index)) {
+      for (const slide of slideRefs) {
         const id = crypto.randomUUID();
         if (!firstNewId) firstNewId = id;
-        pagesMap.set(id, {
-          order: order++,
-          backgroundAssetId: null,
-          kind: "image",
-          slide: {
-            deckId: deck.id,
-            index: s.index,
-            imageUrl: s.imageUrl,
-            thumbUrl: s.thumbUrl,
-            width: s.width,
-            height: s.height,
-          },
-        });
+        pagesMap.set(id, { order: order++, backgroundAssetId: null, kind: "image", slide });
       }
       if (firstNewId) ydoc.getMap("meta").set("activePageId", firstNewId);
     });
@@ -609,7 +634,12 @@ export function Board({
   // миниатюр ниже (иначе 40 слайдов дают 40 неразличимых кнопок-номеров).
   const nonSlidePages = pages.filter(([, m]) => m.kind !== "image" || !m.slide);
   const slidePages = pages.filter(([, m]) => m.kind === "image" && m.slide);
-  const readyDecks = decks.filter((d) => d.status === "ready" && d.slides.length > 0);
+  const readyDecks = decks.filter(
+    (d) =>
+      d.status === "ready" &&
+      (d.slides.length > 0 || (d.renderMode === "pdf" && !!d.pdfUrl)),
+  );
+  const deckPageCount = (d: Deck) => (d.renderMode === "pdf" ? d.slideCount : d.slides.length);
   const importedDeckIds = new Set(
     pages.map(([, m]) => m.slide?.deckId).filter((v): v is string => typeof v === "string"),
   );
@@ -666,14 +696,15 @@ export function Board({
                 <option value="">Презентация…</option>
                 {readyDecks.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.title} ({d.slides.length}){importedDeckIds.has(d.id) ? " ✓" : ""}
+                    {d.title} ({deckPageCount(d)}){d.renderMode === "pdf" ? " · PDF" : ""}
+                    {importedDeckIds.has(d.id) ? " ✓" : ""}
                   </option>
                 ))}
               </select>
               <button
                 onClick={() => {
                   const d = readyDecks.find((x) => x.id === importDeckId);
-                  if (d) importDeckSlides(d);
+                  if (d) void importDeckSlides(d);
                 }}
                 disabled={!importDeckId || importedDeckIds.has(importDeckId)}
                 className="rounded border px-3 py-1 text-sm disabled:opacity-40"
@@ -761,12 +792,7 @@ export function Board({
                 pageId === activePageId ? "border-blue-500 ring-2 ring-blue-300" : "border-slate-300"
               } ${isTeacher ? "" : "cursor-default"}`}
             >
-              <img
-                src={meta.slide!.thumbUrl}
-                alt={`Слайд ${i + 1}`}
-                className="h-16 w-auto"
-                draggable={false}
-              />
+              <SlideThumb slide={meta.slide!} alt={`Слайд ${i + 1}`} />
             </button>
           ))}
         </div>

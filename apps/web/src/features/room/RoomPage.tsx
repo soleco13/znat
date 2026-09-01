@@ -127,16 +127,18 @@ export function RoomPage() {
   }, [refreshDecks]);
 
   // Как только презентация досконвертировалась (WS-событие `ready`), а слайдов
-  // для неё ещё нет в `decks` — подтягиваем список заново, чтобы получить их.
-  // `refetchedDecksRef` не даёт зациклиться, если сервер почему-то так и не
-  // отдаёт слайды по `ready`-презентации.
+  // (или, для PDF из Э4.7, ссылки `pdfUrl`) для неё ещё нет в `decks` —
+  // подтягиваем список заново. `refetchedDecksRef` не даёт зациклиться, если
+  // сервер почему-то так и не отдаёт слайды по `ready`-презентации.
   const refetchedDecksRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     const pending = Object.values(deckStatuses).filter(
       (ev) =>
         ev.status === "ready" &&
         ev.slideCount > 0 &&
-        !decks.some((d) => d.id === ev.deckId && d.slides.length > 0) &&
+        !decks.some(
+          (d) => d.id === ev.deckId && (d.slides.length > 0 || d.renderMode === "pdf"),
+        ) &&
         !refetchedDecksRef.current.has(ev.deckId),
     );
     if (pending.length > 0) {

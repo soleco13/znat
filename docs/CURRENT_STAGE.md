@@ -41,7 +41,7 @@ Linux.
 - [x] Э4.4 Прогресс конвертации в UI через WS: «7 из 24».
 - [x] Э4.5 Дедупликация по `sha256`: та же презентация конвертируется один раз.
 - [x] Э4.6 Импорт слайдов как страниц холста, лента миниатюр, навигация.
-- [ ] Э4.7 Прямая загрузка PDF без конвертации (pdf.js для превью).
+- [x] Э4.7 Прямая загрузка PDF без конвертации (pdf.js для превью).
 - [ ] Э4.8 Текстовый слой из `pdftotext -bbox`: поиск по презентации.
 - [ ] Э4.9 Заметки докладчика — видны только учителю.
 
@@ -67,8 +67,10 @@ event loop lag app не вырос; CPU ядер 0-3 (LiveKit) не затрон
 
 - `bullmq@^6.3.2` — **согласовано и добавлено** (Э4.3), в `apps/api` и
   `services/converter`. Пайплайн конвертации.
-- `pdfjs-dist` — возможно понадобится в Э4.7 (превью PDF в браузере),
-  согласовать отдельно.
+- `pdfjs-dist@^4.10.38` — **согласовано и добавлено** (Э4.7), в `apps/web`.
+  Рендер страниц PDF в браузере; воркер бандлится Vite локально (`?worker`),
+  ничего с чужих CDN. Взят v4 (`node >=20`), не v6 (`node >=22.13`) —
+  локальная среда разработки на Node 20.
 - LibreOffice/Poppler/ClamAV — системные пакеты в образе `converter`, не
   npm-зависимости.
 - `sharp`/`cwebp` в конвертер НЕ добавляли — превью слайдов рендерит тот же
@@ -448,6 +450,65 @@ event loop lag app не вырос; CPU ядер 0-3 (LiveKit) не затрон
   рендерит воркер в контейнере). Yjs-запись страниц и переключение
   `activePageId` в одном клиенте работают локально (механизм из Э3.6).
   Первая живая проверка — на Linux при `docker compose up`.
+
+## Что сделано технически (Э4.7)
+
+- **PDF минует серверную растеризацию.** Решение пользователя: PDF всё равно
+  ставится в очередь, но воркер для `application/pdf` делает только
+  `clamscan` + `pdfinfo` (число страниц), **без `pdftoppm`**. Сам PDF
+  рендерит `pdf.js` в браузере из подписанного URL исходника. Прямо
+  экономит CPU LibreOffice/Poppler во время уроков — предмет гейта Э4.
+- **Контракт очереди** (`packages/shared/decks.ts` + локальная копия
+  `services/converter/src/contract.ts`): `ConvertJobResult` получил
+  необязательное `pdf?: boolean`. Для PDF воркер возвращает
+  `{ slideCount: N, slides: [], pdf: true }`. Обратно совместимо — старый
+  путь (`pdf` не задан) не тронут, дискриминированный union заводить не
+  стал (меньше правок в тестах/`getConvertJobOutcome`/reconcile).
+- **`decks.render_mode`** — новая колонка (`text NOT NULL DEFAULT 'images'`,
+  миграция `0005_ordinary_maggott.sql`, append-only). `'pdf'` ставится в
+  `buildConvertJobHandlers.onCompleted` при `result.pdf` — слайды тогда не
+  пишутся (`replaceDeckSlides(deckId, [])`), только статус + `slideCount`.
+  `toDeckDto` при `render_mode: 'pdf'` кладёт в ответ `pdfUrl` (подписанный
+  URL `sourceStorageKey`, тот же длинный TTL, что у слайдов); у обычных
+  презентаций `pdfUrl: null`. `deckSchema` в shared пополнена
+  `renderMode` + `pdfUrl`.
+- **Дедуп (Э4.5) для PDF-двойника** — `dedupFromTwin` рано отрабатывает
+  ветку `twinRenderMode === "pdf"`: копировать нечего (слайдов нет),
+  `clamscan` не нужен (тот же sha256 уже просканирован), сразу `ready` +
+  `render_mode: pdf` + `slideCount` из двойника.
+- **Фронт** — новый `apps/web/src/features/canvas/pdf.ts`: настройка
+  воркера `pdf.js` (бандл Vite `?worker`, не CDN), кеш распарсенного
+  документа (миниатюры и полноразмерная страница делят один
+  `PDFDocumentProxy`), `getPdfPageSizes` (размеры страниц для раскладки
+  холста), `renderPdfPage(url, index, widthPx)` → PNG data-URL с очередью
+  «2 рендера за раз» (лента на 40 страниц иначе плодит 40 canvas разом).
+  Исходник грузится одним `fetch` в `ArrayBuffer` и отдаётся `pdf.js` как
+  `data` — наш `/files/*` не поддерживает Range-запросы.
+- **`PageBackground.tsx`** — `SlidePageRef` стал `imageUrl?`/`thumbUrl?`
+  (Э4.6) **либо** `pdfUrl?` (Э4.7). Хук `useSlideImage(slide)`: серверный
+  PNG отдаёт сразу, PDF-страницу рендерит `pdf.js` в data-URL (при 1600px)
+  — дальше та же формула позиционирования мирового прямоугольника слайда,
+  что и для PNG. Новый компонент `SlideThumb` для ленты миниатюр (JPEG
+  сервера либо `pdf.js`-рендер при 200px).
+- **`Board.tsx`** — `importDeckSlides` стал `async`: для `renderMode: "pdf"`
+  сначала `getPdfPageSizes(deck.pdfUrl)` (нужны пропорции), потом та же
+  запись N страниц в `Y.Map "pages"` с `slide.pdfUrl` вместо `imageUrl`.
+  `readyDecks` теперь включает PDF-презентации (у них `slides` пуст, но
+  есть `pdfUrl`). `RoomPage` — guard рефетча списка после `ready`-события
+  учитывает `renderMode === "pdf"` (у PDF `slides` всегда пуст, иначе
+  рефетчился бы один раз впустую).
+- **Проверки**: `pnpm -r typecheck` (4 пакета), `pnpm build` (converter +
+  `vite build`; воркер `pdf.worker.min` — отдельным локальным чанком),
+  `pnpm test` (108/108 бэкенда, +2: `onCompleted` с `pdf: true`; дедуп
+  PDF-двойника), `pnpm depcheck` (142 модуля, 0 нарушений) — зелёные.
+- **Не проверено и не могло быть в этой среде**: живой путь «загрузил PDF →
+  воркер просканировал и вернул число страниц → в браузере `pdf.js`
+  отрендерил страницы на холсте» (нужен Redis/converter/Postgres — нет
+  Docker); рендер конкретных PDF со сложными/невстроенными шрифтами (без
+  запечённых cmap/standard_fonts `pdf.js` подставит дефолтные — приемлемо
+  для MVP, ассеты шрифтов — задел на потом). Логика — юнит-тесты на моках
+  + typecheck; фронт собирается. Первая живая проверка — на Linux при
+  `docker compose up` (там же гейт Э4).
 
 ---
 

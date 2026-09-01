@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+import { renderPdfPage } from "./pdf.js";
 
 /**
  * Э3.7, §3.3 ТЗ: "шаблон (клетка, линейка, координатная плоскость, нотный
@@ -8,15 +9,79 @@ import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
  */
 export type BackgroundKind = "blank" | "grid" | "lined" | "coordinate" | "staff" | "image";
 
-/** Фон импортированного слайда (Э4.6). Хранится в `PageMeta.slide` (Board.tsx). */
+/**
+ * Фон импортированного слайда. Хранится в `PageMeta.slide` (Board.tsx).
+ * Э4.6: `imageUrl`/`thumbUrl` — серверный PNG-слайд. Э4.7: `pdfUrl` — исходный
+ * PDF, страницу рендерит pdf.js в браузере (тогда `imageUrl`/`thumbUrl` пусты).
+ */
 export type SlidePageRef = {
   deckId: string;
   index: number;
-  imageUrl: string;
-  thumbUrl: string;
   width: number;
   height: number;
+  imageUrl?: string;
+  thumbUrl?: string;
+  pdfUrl?: string;
 };
+
+/** Ширина рендера PDF-страницы в пикселях (≈PNG@2x для слайда шириной SLIDE_WORLD_WIDTH). */
+const PDF_SLIDE_RENDER_WIDTH_PX = 1600;
+const PDF_THUMB_RENDER_WIDTH_PX = 200;
+
+/** Миниатюра слайда для ленты (Э4.6): серверный JPEG либо pdf.js-рендер (Э4.7). */
+export function SlideThumb({ slide, alt }: { slide: SlidePageRef; alt: string }) {
+  const [src, setSrc] = useState<string | undefined>(slide.thumbUrl);
+
+  useEffect(() => {
+    if (slide.thumbUrl) {
+      setSrc(slide.thumbUrl);
+      return;
+    }
+    if (!slide.pdfUrl) return;
+    let alive = true;
+    renderPdfPage(slide.pdfUrl, slide.index, PDF_THUMB_RENDER_WIDTH_PX)
+      .then((url) => alive && setSrc(url))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [slide.thumbUrl, slide.pdfUrl, slide.index]);
+
+  if (!src) return <div className="h-16 w-24 bg-slate-200" />;
+  return <img src={src} alt={alt} className="h-16 w-auto" draggable={false} />;
+}
+
+/**
+ * Картинка слайда для показа: серверный PNG отдаётся сразу, PDF-страница
+ * (Э4.7) рендерится pdf.js в PNG data-URL. `undefined`, пока PDF рендерится.
+ */
+export function useSlideImage(slide?: SlidePageRef | null): string | undefined {
+  const [src, setSrc] = useState<string | undefined>(slide?.imageUrl);
+  const imageUrl = slide?.imageUrl;
+  const pdfUrl = slide?.pdfUrl;
+  const pageIndex = slide?.index;
+
+  useEffect(() => {
+    if (imageUrl) {
+      setSrc(imageUrl);
+      return;
+    }
+    if (!pdfUrl || pageIndex == null) {
+      setSrc(undefined);
+      return;
+    }
+    let alive = true;
+    setSrc(undefined);
+    renderPdfPage(pdfUrl, pageIndex, PDF_SLIDE_RENDER_WIDTH_PX)
+      .then((url) => alive && setSrc(url))
+      .catch(() => alive && setSrc(undefined));
+    return () => {
+      alive = false;
+    };
+  }, [imageUrl, pdfUrl, pageIndex]);
+
+  return src;
+}
 
 /** Только выбираемые учителем вручную шаблоны — `"image"` ставится импортом слайдов, не из селектора. */
 export const BACKGROUND_KIND_LABELS: Record<Exclude<BackgroundKind, "image">, string> = {
@@ -103,6 +168,7 @@ export function PageBackground({
   const axisYRef = useRef<HTMLDivElement>(null);
   const slideRef = useRef<HTMLImageElement>(null);
 
+  const slideSrc = useSlideImage(slide);
   const slideAspect = slide && slide.width > 0 ? slide.height / slide.width : 0.75;
 
   useEffect(() => {
@@ -134,17 +200,18 @@ export function PageBackground({
     applyTransform(state.scrollX, state.scrollY, state.zoom.value);
 
     return api.onScrollChange((scrollX, scrollY, zoom) => applyTransform(scrollX, scrollY, zoom.value));
-  }, [api, kind, slideAspect]);
+    // slideSrc — чтобы позиционировать <img> сразу, как pdf.js дорендерил страницу.
+  }, [api, kind, slideAspect, slideSrc]);
 
   const { backgroundImage } = patternFor(kind);
 
   return (
     <div style={{ position: "absolute", inset: 0, zIndex: 0, overflow: "hidden", pointerEvents: "none" }}>
       <div ref={patternRef} style={{ position: "absolute", inset: 0, backgroundImage }} />
-      {kind === "image" && slide && (
+      {kind === "image" && slide && slideSrc && (
         <img
           ref={slideRef}
-          src={slide.imageUrl}
+          src={slideSrc}
           alt=""
           draggable={false}
           style={{ position: "absolute", left: 0, top: 0, background: "#fff", boxShadow: "0 0 0 1px #d8dde3" }}

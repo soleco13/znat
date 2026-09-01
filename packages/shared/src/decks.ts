@@ -32,18 +32,31 @@ export const deckSlideSchema = z.object({
 });
 export type DeckSlide = z.infer<typeof deckSlideSchema>;
 
+/**
+ * Как показывать презентацию на холсте:
+ * - `images` — слайды отрендерены в PNG@2x на сервере (`slides` заполнен);
+ * - `pdf` — исходный PDF отдаётся браузеру как есть, страницы рендерит pdf.js
+ *   (Э4.7). `slides` пуст, `slideCount` — число страниц, картинку страницы
+ *   строит клиент из `pdfUrl`.
+ */
+export const deckRenderModeSchema = z.enum(["images", "pdf"]);
+export type DeckRenderMode = z.infer<typeof deckRenderModeSchema>;
+
 /** Презентация в ответах API (учителю/ученикам урока). */
 export const deckSchema = z.object({
   id: z.string().uuid(),
   lessonId: z.string().uuid(),
   title: z.string(),
   status: deckStatusSchema,
+  renderMode: deckRenderModeSchema,
   slideCount: z.number().int().nonnegative(),
   /** Сколько слайдов уже отрендерено (Э4.4, «7 из 24»). */
   progress: z.number().int().nonnegative(),
   error: z.string().nullable(),
   createdAt: z.string(),
   slides: z.array(deckSlideSchema),
+  /** Подписанный URL исходного PDF — только при `renderMode: "pdf"` (Э4.7). */
+  pdfUrl: z.string().nullable(),
 });
 export type Deck = z.infer<typeof deckSchema>;
 
@@ -99,6 +112,12 @@ export type ConvertedSlide = z.infer<typeof convertedSlideSchema>;
 export const convertJobResultSchema = z.object({
   slideCount: z.number().int().positive(),
   slides: z.array(convertedSlideSchema),
+  /**
+   * Э4.7: исходник — PDF, отдан браузеру как есть (pdf.js рендерит страницы).
+   * Воркер только проверил файл ClamAV и посчитал страницы: `slides` пуст,
+   * `slideCount` — число страниц. Отсутствие/`false` — обычные PNG-слайды.
+   */
+  pdf: z.boolean().optional(),
 });
 export type ConvertJobResult = z.infer<typeof convertJobResultSchema>;
 

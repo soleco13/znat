@@ -3,6 +3,11 @@
  *   ClamAV-скан → [LibreOffice → PDF] → pdfinfo → pdftoppm (PNG@2x + JPEG-превью)
  *   → StorageAdapter, с прогрессом «N из total».
  *
+ * Э4.7: если исходник уже PDF — растеризация пропускается целиком. Воркер
+ * только сканирует файл ClamAV и считает страницы (pdfinfo); сам PDF
+ * рендерит pdf.js в браузере из подписанного URL исходника. Экономит CPU
+ * LibreOffice/Poppler во время уроков — прямой предмет гейта Э4.
+ *
  * Всё промежуточное — в изолированном каталоге под /tmp (tmpfs, единственная
  * writable точка read_only-контейнера). Внешние бинарники вызываются через
  * execFile с массивом аргументов (без shell) и таймаутами.
@@ -135,14 +140,28 @@ export async function runConversion(
   onProgress: ProgressFn,
 ): Promise<ConvertJobResult> {
   const src = storage.sourcePath(data.sourceStorageKey);
+  log("info", "conversion start", { deckId: data.deckId, mime: data.sourceMimeType });
+
+  await clamScan(src);
+
+  // Э4.7: PDF отдаётся браузеру как есть — только считаем страницы, не рендерим.
+  // Растеризации нет → и tmpfs-каталог под LibreOffice не нужен.
+  if (data.sourceMimeType === "application/pdf") {
+    const pages = await pdfPageCount(src);
+    if (pages < 1) throw new Error("В PDF нет страниц");
+    if (pages > MAX_SLIDES) {
+      throw new Error(`Слишком много страниц: ${pages} (максимум ${MAX_SLIDES})`);
+    }
+    log("info", "pdf passthrough — растеризация пропущена", { deckId: data.deckId, pages });
+    await onProgress({ done: pages, total: pages });
+    return { slideCount: pages, slides: [], pdf: true };
+  }
+
   const workDir = await mkdtemp(path.join(tmpdir(), "deck-"));
-  log("info", "conversion start", { deckId: data.deckId, workDir });
+  log("info", "office → pdf", { deckId: data.deckId, workDir });
 
   try {
-    await clamScan(src);
-
-    const pdfPath =
-      data.sourceMimeType === "application/pdf" ? src : await officeToPdf(src, workDir);
+    const pdfPath = await officeToPdf(src, workDir);
 
     const total = await pdfPageCount(pdfPath);
     if (total < 1) throw new Error("В документе нет страниц");

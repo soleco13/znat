@@ -227,6 +227,35 @@ describe("createDeckFromUpload — дедуп по sha256 (Э4.5)", () => {
     );
   });
 
+  it("Э4.7: двойник — PDF (renderMode pdf) → готово сразу, без копирования и ClamAV", async () => {
+    repoMock.findReadyDeckBySha.mockResolvedValue({
+      id: TWIN,
+      schoolId: SCHOOL,
+      slideCount: 8,
+      renderMode: "pdf",
+    });
+
+    const res = await createDeckFromUpload({
+      user: teacher,
+      lessonId: LESSON,
+      buffer: Buffer.from("same-pdf-bytes"),
+      filename: "Повтор.pdf",
+      mimeType: "application/pdf",
+    });
+
+    expect(res).toEqual({ deckId: DECK, jobId: null, status: "ready" });
+    expect(jobsServiceMock.enqueueConvert).not.toHaveBeenCalled();
+    expect(storageServiceMock.copyFile).not.toHaveBeenCalled();
+    expect(repoMock.listSlidesByDeck).not.toHaveBeenCalled();
+    expect(repoMock.setDeckStatus).toHaveBeenCalledWith(DECK, {
+      status: "ready",
+      renderMode: "pdf",
+      progress: 8,
+      slideCount: 8,
+      error: null,
+    });
+  });
+
   it("двойник ищется по школе и sha256 исходника", async () => {
     const buffer = Buffer.from("same-bytes");
     const sha = createHash("sha256").update(buffer).digest("hex");
@@ -327,8 +356,21 @@ describe("buildConvertJobHandlers (Э4.3)", () => {
     expect(repoMock.replaceDeckSlides).toHaveBeenCalledWith(DECK, slides);
     expect(repoMock.setDeckStatus).toHaveBeenCalledWith(DECK, {
       status: "ready",
+      renderMode: "images",
       progress: 1,
       slideCount: 1,
+      error: null,
+    });
+  });
+
+  it("Э4.7: onCompleted с pdf: true — слайды не пишет, ставит renderMode pdf", async () => {
+    await handlers.onCompleted(DECK, { slideCount: 12, slides: [], pdf: true });
+    expect(repoMock.replaceDeckSlides).toHaveBeenCalledWith(DECK, []);
+    expect(repoMock.setDeckStatus).toHaveBeenCalledWith(DECK, {
+      status: "ready",
+      renderMode: "pdf",
+      progress: 12,
+      slideCount: 12,
       error: null,
     });
   });

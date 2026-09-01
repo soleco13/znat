@@ -1,0 +1,1 @@
+ALTER TABLE "decks" ADD COLUMN "render_mode" text DEFAULT 'images' NOT NULL;

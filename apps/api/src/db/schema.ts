@@ -179,6 +179,8 @@ export const decks = pgTable(
     sourceName: text("source_name").notNull(),
     title: text("title").notNull(),
     status: deckStatusEnum("status").notNull().default("pending"),
+    /** Э4.7: 'images' — PNG-слайды на сервере; 'pdf' — исходный PDF рендерит pdf.js в браузере. */
+    renderMode: text("render_mode").notNull().default("images"),
     slideCount: integer("slide_count").notNull().default(0),
     /** Сколько слайдов отрендерено (Э4.4). */
     progress: integer("progress").notNull().default(0),

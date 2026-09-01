@@ -1,7 +1,7 @@
 import { and, eq, desc, inArray } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { decks, deckSlides } from "../../db/schema.js";
-import type { ConvertedSlide, DeckStatus } from "@school/shared";
+import type { ConvertedSlide, DeckRenderMode, DeckStatus } from "@school/shared";
 
 export async function insertDeck(input: {
   schoolId: string;
@@ -68,7 +68,13 @@ export async function listSlidesForDecks(deckIds: string[]) {
 
 export async function setDeckStatus(
   id: string,
-  patch: { status?: DeckStatus; progress?: number; slideCount?: number; error?: string | null },
+  patch: {
+    status?: DeckStatus;
+    renderMode?: DeckRenderMode;
+    progress?: number;
+    slideCount?: number;
+    error?: string | null;
+  },
 ) {
   const [row] = await db
     .update(decks)

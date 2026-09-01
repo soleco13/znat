@@ -45,6 +45,12 @@ export interface ConvertedSlide {
 export interface ConvertJobResult {
   slideCount: number;
   slides: ConvertedSlide[];
+  /**
+   * Э4.7: исходник — PDF, отдан браузеру как есть (pdf.js рендерит страницы).
+   * Воркер только просканировал ClamAV и посчитал страницы: `slides` пуст,
+   * `slideCount` — число страниц.
+   */
+  pdf?: boolean;
 }
 
 export interface ConvertJobProgress {

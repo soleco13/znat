@@ -119,6 +119,8 @@ export async function createDeckFromUpload(input: {
       sha256,
       sourceStorageKey: storageKey,
       twinId: twin.id,
+      twinRenderMode: twin.renderMode === "pdf" ? "pdf" : "images",
+      twinSlideCount: twin.slideCount,
     });
   }
 
@@ -164,7 +166,36 @@ async function dedupFromTwin(input: {
   sha256: string;
   sourceStorageKey: string;
   twinId: string;
+  twinRenderMode: "images" | "pdf";
+  twinSlideCount: number;
 }): Promise<DeckUploadResponse> {
+  const deckBase = {
+    schoolId: input.user.schoolId,
+    lessonId: input.lessonId,
+    sourceStorageKey: input.sourceStorageKey,
+    sourceMimeType: input.mimeType,
+    sourceSha256: input.sha256,
+    sourceName: input.filename,
+    title: input.filename.replace(/\.[^.]+$/, ""),
+    createdBy: input.user.sub,
+  };
+
+  // Э4.7: двойник — PDF, отдаваемый браузеру. Копировать нечего (слайдов нет),
+  // ClamAV не нужен — тот же файл (совпал sha256) уже был просканирован.
+  if (input.twinRenderMode === "pdf") {
+    const deck = await repo.insertDeck(deckBase);
+    if (!deck) throw new AppError(500, "deck_create_failed", "Не удалось создать презентацию");
+    const row = await repo.setDeckStatus(deck.id, {
+      status: "ready",
+      renderMode: "pdf",
+      progress: input.twinSlideCount,
+      slideCount: input.twinSlideCount,
+      error: null,
+    });
+    broadcastDeckStatus(row);
+    return { deckId: deck.id, jobId: null, status: "ready" };
+  }
+
   const twinSlides = await repo.listSlidesByDeck(input.twinId);
   const copied: ConvertedSlide[] = await Promise.all(
     twinSlides.map(async (s) => {
@@ -184,16 +215,7 @@ async function dedupFromTwin(input: {
     }),
   );
 
-  const deck = await repo.insertDeck({
-    schoolId: input.user.schoolId,
-    lessonId: input.lessonId,
-    sourceStorageKey: input.sourceStorageKey,
-    sourceMimeType: input.mimeType,
-    sourceSha256: input.sha256,
-    sourceName: input.filename,
-    title: input.filename.replace(/\.[^.]+$/, ""),
-    createdBy: input.user.sub,
-  });
+  const deck = await repo.insertDeck(deckBase);
   if (!deck) throw new AppError(500, "deck_create_failed", "Не удалось создать презентацию");
 
   await repo.replaceDeckSlides(deck.id, copied);
@@ -222,16 +244,24 @@ function toSlideDto(s: SlideRow): DeckSlide {
 }
 
 function toDeckDto(deck: DeckRow, slides: SlideRow[]): Deck {
+  const renderMode = deck.renderMode === "pdf" ? "pdf" : "images";
   return {
     id: deck.id,
     lessonId: deck.lessonId,
     title: deck.title,
     status: deck.status,
+    renderMode,
     slideCount: deck.slideCount,
     progress: deck.progress,
     error: deck.error,
     createdAt: deck.createdAt.toISOString(),
     slides: slides.map(toSlideDto),
+    // Э4.7: PDF рендерит pdf.js в браузере — отдаём подписанный URL исходника
+    // (тот же длинный TTL, что у слайдов). У обычных презентаций поле пустое.
+    pdfUrl:
+      renderMode === "pdf"
+        ? storageService.getSignedFileUrl(deck.sourceStorageKey, SLIDE_URL_TTL_SECONDS)
+        : null,
   };
 }
 
@@ -299,9 +329,13 @@ export function buildConvertJobHandlers(): ConvertJobHandlers {
       broadcastDeckStatus(row);
     },
     async onCompleted(deckId, result) {
-      await repo.replaceDeckSlides(deckId, result.slides);
+      // Э4.7: PDF отдан браузеру как есть — воркер вернул только число страниц,
+      // слайдов нет, рендерит pdf.js. Помечаем renderMode, слайды не пишем.
+      const renderMode = result.pdf ? "pdf" : "images";
+      await repo.replaceDeckSlides(deckId, result.pdf ? [] : result.slides);
       const row = await repo.setDeckStatus(deckId, {
         status: "ready",
+        renderMode,
         progress: result.slideCount,
         slideCount: result.slideCount,
         error: null,
