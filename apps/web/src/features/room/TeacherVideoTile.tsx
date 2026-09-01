@@ -19,11 +19,16 @@ const NEXT_CORNER: Record<Corner, Corner> = {
 
 /**
  * Плитка камеры учителя (Э5.1, UI-контролы Э5.3) — видна всем участникам
- * урока. Источник CAMERA в LiveKit-гранте выдаётся только роли teacher/admin
- * (`media/service.ts#buildPublishGrant`), поэтому любой опубликованный трек
- * камеры в комнате — это и есть учитель; искать участника по identity не
- * нужно. Стоп-лист Э5: плитка ровно одна, сетки нет (камер учеников не
- * будет ни у кого до Э6).
+ * урока. До Э6.1 источник CAMERA в LiveKit-гранте выдавался только роли
+ * teacher/admin, поэтому ЛЮБОЙ трек камеры в комнате однозначно был
+ * учителем. С Э6.1 ученик с правом `canPublishVideo` тоже может публиковать
+ * CAMERA (`media/service.ts#buildPublishGrant`) — эта плитка больше не может
+ * брать первый попавшийся трек, ищем именно участника с ролью teacher/admin
+ * по LiveKit-атрибуту `role` (проставлен сервером в токен, см.
+ * `media/service.ts#createParticipantConnection`). Сетка видимых видео
+ * учеников — отдельный компонент Э6.2/6.3, ещё не сделан; трек ученика эта
+ * плитка сознательно игнорирует, а не показывает вместо учителя. Стоп-лист
+ * Э5/Э6: эта плитка — ровно одна, сетки здесь нет.
  *
  * «Учитель прячется одной кнопкой» (результат Э5.3) — это `SelfCameraButton`
  * из Э5.1: выключение камеры останавливает публикацию трека, эта плитка
@@ -39,7 +44,9 @@ export function TeacherVideoTile() {
   const [collapsed, setCollapsed] = useState(false);
   const [corner, setCorner] = useState<Corner>("bottom-right");
   const tracks = useTracks([Track.Source.Camera], { onlySubscribed: true });
-  const teacherTrack = tracks[0];
+  const teacherTrack = tracks.find(
+    (t) => t.participant.attributes.role === "teacher" || t.participant.attributes.role === "admin",
+  );
   if (!teacherTrack) return null;
 
   const micOn = teacherTrack.participant.isMicrophoneEnabled;

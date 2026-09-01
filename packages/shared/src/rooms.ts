@@ -7,6 +7,8 @@ export const participantPermissionsSchema = z.object({
   canDraw: z.boolean(),
   canSpeak: z.boolean(),
   canShareScreen: z.boolean(),
+  /** Э6.1, §5.2 ТЗ: камера ученика публикуется только по этому праву от учителя, максимум 360p (см. media/service.ts#buildPublishGrant). */
+  canPublishVideo: z.boolean(),
 });
 export type ParticipantPermissions = z.infer<typeof participantPermissionsSchema>;
 

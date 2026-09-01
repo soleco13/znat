@@ -23,14 +23,22 @@ export function ttlSecondsUntilLessonGraceEnd(lessonStartsAt: Date, lessonDurati
 /**
  * Источники трека жёстко перечислены на уровне гранта, а не выведены из
  * одного булева canPublish — микрофон управляется правом "canSpeak", камера
- * с Э5.1 разрешена ролью (§5.2 ТЗ: «камера учителя — всегда», не переключаемое
- * право участника, в отличие от canSpeak). Демонстрация экрана — источник
- * TrackSource.SCREEN_SHARE, всё ещё не добавлен до Э7 (стоп-лист Э5). Общая
- * для выдачи токена (`createParticipantConnection`) и живого обновления прав
+ * учителя (Э5.1) разрешена ролью (§5.2 ТЗ: «камера учителя — всегда», не
+ * переключаемое право), камера ученика (Э6.1) — отдельным переключаемым
+ * правом `canPublishVideo` (§5.2 ТЗ: «публикуется только когда ученик в
+ * активной сетке», выдаёт учитель, как и canSpeak). Разрешение на 360p, а
+ * не 720p, — это НЕ часть гранта: LiveKit не ограничивает резолюцию
+ * публикуемого трека на уровне прав, это чисто клиентская настройка
+ * VideoCaptureOptions (`RoomPage.tsx`) — тот же доверительный периметр, что
+ * уже принят для остальных клиентских настроек качества в проекте.
+ * Демонстрация экрана — источник TrackSource.SCREEN_SHARE, всё ещё не
+ * добавлен до Э7 (стоп-лист Э5/Э6). Общая для выдачи токена
+ * (`createParticipantConnection`) и живого обновления прав
  * (`updateLivePermissions`) — грант должен совпадать в обоих местах.
  */
 function buildPublishGrant(permissions: ParticipantPermissions, role: Role) {
-  const canPublishCamera = role === "teacher" || role === "admin";
+  const isStaff = role === "teacher" || role === "admin";
+  const canPublishCamera = isStaff || permissions.canPublishVideo;
   const sources = [TrackSource.MICROPHONE];
   if (canPublishCamera) sources.push(TrackSource.CAMERA);
   return {
@@ -55,6 +63,11 @@ export async function createParticipantConnection(params: {
     identity: params.userId,
     name: params.fullName,
     ttl: ttlSecondsUntilLessonGraceEnd(params.lessonStartsAt, params.lessonDurationMin),
+    // Э6.1: роль как LiveKit-атрибут участника — клиенту (`TeacherVideoTile`)
+    // нужно отличить камеру учителя от камеры ученика с granted canPublishVideo
+    // без похода за отдельным WS presence-списком. Роль на время урока
+    // неизменна, живое обновление (в отличие от прав) не требуется.
+    attributes: { role: params.role },
   });
   at.addGrant({ roomJoin: true, room: params.livekitRoom, ...buildPublishGrant(params.permissions, params.role) });
   const token = await at.toJwt();

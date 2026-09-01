@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { useLocalParticipant } from "@livekit/components-react";
-import { Track, VideoPresets } from "livekit-client";
+import { Track, VideoPresets, type VideoResolution } from "livekit-client";
 
 /**
- * Кнопка «камера учителя» (Э5.1) — источник CAMERA в LiveKit-гранте
- * учителя разрешён всегда (роль, не переключаемое право, см.
- * `media/service.ts#buildPublishGrant`), но публикация трека остаётся
- * ручной, как и микрофон (`SelfMicButton`) — автозапуск камеры на входе
- * без разрешения браузера или при отсутствии вебкамеры не должен ронять
- * подключение к уроку.
+ * Кнопка «камера» — источник CAMERA в LiveKit-гранте разрешён учителю/админу
+ * всегда ролью (Э5.1) либо ученику отдельным правом `canPublishVideo`,
+ * выданным учителем (Э6.1, см. `media/service.ts#buildPublishGrant`). Сама
+ * кнопка одна и та же для обеих ролей — публикация трека ручная, как и
+ * микрофон (`SelfMicButton`): автозапуск камеры без разрешения браузера или
+ * при отсутствии вебкамеры не должен ронять подключение к уроку.
  *
  * Это и есть «одна кнопка», которой учитель прячется (результат Э5.3, §
  * ПЛАН.md): выключение трека убирает плитку у всех сразу (`TeacherVideoTile`
@@ -16,14 +16,17 @@ import { Track, VideoPresets } from "livekit-client";
  * доска»» не заводили — второй выключатель того же состояния только
  * запутал бы. Подпись явно называет доску, а не просто «камеру», чтобы
  * назначение кнопки было понятно без чтения ТЗ.
+ *
+ * `maxResolution` передаётся вызывающей стороной (`RoomPage.tsx`, знает
+ * `isTeacher`), а не решается внутри кнопки — учителю 720p (Э5.1), ученику
+ * максимум 360p (§5.2 ТЗ, Э6.1). Грант на сервере это не ограничивает
+ * (`buildPublishGrant`), резолюция — целиком клиентская настройка.
  */
-export function SelfCameraButton() {
+export function SelfCameraButton({ maxResolution = VideoPresets.h720.resolution }: { maxResolution?: VideoResolution }) {
   const { localParticipant, isCameraEnabled } = useLocalParticipant();
   return (
     <button
-      onClick={() =>
-        localParticipant.setCameraEnabled(!isCameraEnabled, { resolution: VideoPresets.h720.resolution })
-      }
+      onClick={() => localParticipant.setCameraEnabled(!isCameraEnabled, { resolution: maxResolution })}
       className={`rounded border px-3 py-1 text-sm ${isCameraEnabled ? "" : "border-red-300 text-red-700"}`}
     >
       {isCameraEnabled ? "Скрыть видео (только доска)" : "Показать видео"}

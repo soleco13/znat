@@ -14,7 +14,7 @@ export interface PresenceEntry {
 /** Учитель и админ по умолчанию управляют комнатой, ученик получает права от учителя. */
 export function defaultPermissions(role: Role): ParticipantPermissions {
   const isStaff = role === "teacher" || role === "admin";
-  return { canDraw: isStaff, canSpeak: isStaff, canShareScreen: isStaff };
+  return { canDraw: isStaff, canSpeak: isStaff, canShareScreen: isStaff, canPublishVideo: isStaff };
 }
 
 function key(lessonId: string): string {

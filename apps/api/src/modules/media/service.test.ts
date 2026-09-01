@@ -32,52 +32,67 @@ describe("ttlSecondsUntilLessonGraceEnd", () => {
   });
 });
 
-describe("createParticipantConnection: источники трека по роли и праву canSpeak (Э2 + Э5.1)", () => {
+describe("createParticipantConnection: источники трека по роли и правам (Э2 + Э5.1 + Э6.1)", () => {
   const startsAt = new Date();
 
-  async function grantOf(canSpeak: boolean, role: "teacher" | "student" | "admin" = "student") {
+  async function grantOf(
+    canSpeak: boolean,
+    role: "teacher" | "student" | "admin" = "student",
+    canPublishVideo = false,
+  ) {
     const media = await createParticipantConnection({
       livekitRoom: "lesson-test-room",
       userId: "user-1",
       fullName: "Тест Тестов",
       role,
-      permissions: { canDraw: false, canSpeak, canShareScreen: false },
+      permissions: { canDraw: false, canSpeak, canShareScreen: false, canPublishVideo },
       lessonStartsAt: startsAt,
       lessonDurationMin: 45,
     });
-    const payload = decodeJwt(media.token) as { video?: Record<string, unknown> };
-    return payload.video!;
+    const payload = decodeJwt(media.token) as { video?: Record<string, unknown>; attributes?: Record<string, string> };
+    return { grant: payload.video!, attributes: payload.attributes };
   }
 
   it("canPublish повторяет право canSpeak участника-ученика", async () => {
-    expect((await grantOf(true, "student")).canPublish).toBe(true);
-    expect((await grantOf(false, "student")).canPublish).toBe(false);
+    expect((await grantOf(true, "student")).grant.canPublish).toBe(true);
+    expect((await grantOf(false, "student")).grant.canPublish).toBe(false);
   });
 
-  it("источник публикации ученика жёстко ограничен микрофоном, даже если canSpeak=true", async () => {
-    const grant = await grantOf(true, "student");
+  it("источник публикации ученика жёстко ограничен микрофоном, даже если canSpeak=true, без canPublishVideo", async () => {
+    const { grant } = await grantOf(true, "student");
     expect(grant.canPublishSources).toEqual(["microphone"]);
     expect(grant.canPublishData).toBe(false);
   });
 
+  it("Э6.1: ученик с canPublishVideo получает источник camera и canPublish=true даже при canSpeak=false", async () => {
+    const { grant } = await grantOf(false, "student", true);
+    expect(grant.canPublish).toBe(true);
+    expect(grant.canPublishSources).toEqual(expect.arrayContaining(["microphone", "camera"]));
+  });
+
   it("Э5.1: учитель получает источник camera всегда, независимо от canSpeak", async () => {
-    const grant = await grantOf(false, "teacher");
+    const { grant } = await grantOf(false, "teacher");
     expect(grant.canPublish).toBe(true);
     expect(grant.canPublishSources).toEqual(expect.arrayContaining(["microphone", "camera"]));
   });
 
   it("Э5.1: admin тоже получает источник camera (роль, не отдельное право)", async () => {
-    const grant = await grantOf(false, "admin");
+    const { grant } = await grantOf(false, "admin");
     expect(grant.canPublishSources).toEqual(expect.arrayContaining(["microphone", "camera"]));
   });
 
-  it("демонстрация экрана по-прежнему не входит ни в один грант (стоп-лист Э5, до Э7)", async () => {
-    const grant = await grantOf(true, "teacher");
+  it("демонстрация экрана по-прежнему не входит ни в один грант (стоп-лист Э5/Э6, до Э7)", async () => {
+    const { grant } = await grantOf(true, "teacher");
     expect(grant.canPublishSources).not.toContain("screen_share");
+  });
+
+  it("Э6.1: токен несёт роль в attributes — клиент отличает камеру учителя от камеры ученика", async () => {
+    expect((await grantOf(false, "teacher")).attributes).toEqual({ role: "teacher" });
+    expect((await grantOf(false, "student")).attributes).toEqual({ role: "student" });
   });
 });
 
-describe("updateLivePermissions: живое обновление гранта уже подключённого участника (Э2.5 + Э5.1)", () => {
+describe("updateLivePermissions: живое обновление гранта уже подключённого участника (Э2.5 + Э5.1 + Э6.1)", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("для ученика отправляет canPublish, равный canSpeak, и жёстко ограничивает источник микрофоном", async () => {
@@ -87,7 +102,7 @@ describe("updateLivePermissions: живое обновление гранта у
     await updateLivePermissions(
       "lesson-room",
       "user-1",
-      { canDraw: false, canSpeak: true, canShareScreen: false },
+      { canDraw: false, canSpeak: true, canShareScreen: false, canPublishVideo: false },
       "student",
     );
 
@@ -107,7 +122,7 @@ describe("updateLivePermissions: живое обновление гранта у
     await updateLivePermissions(
       "lesson-room",
       "teacher-1",
-      { canDraw: true, canSpeak: false, canShareScreen: true },
+      { canDraw: true, canSpeak: false, canShareScreen: true, canPublishVideo: true },
       "teacher",
     );
 
@@ -117,6 +132,39 @@ describe("updateLivePermissions: живое обновление гранта у
     expect(body.permission.canPublishSources).toEqual(expect.arrayContaining(["MICROPHONE", "CAMERA"]));
   });
 
+  it("Э6.1: для ученика с granted canPublishVideo=true включает источник CAMERA", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, {}));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await updateLivePermissions(
+      "lesson-room",
+      "user-1",
+      { canDraw: false, canSpeak: false, canShareScreen: false, canPublishVideo: true },
+      "student",
+    );
+
+    const [, init] = fetchMock.mock.calls[0] as [unknown, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.permission.canPublish).toBe(true);
+    expect(body.permission.canPublishSources).toEqual(expect.arrayContaining(["MICROPHONE", "CAMERA"]));
+  });
+
+  it("Э6.1: отзыв canPublishVideo у ученика убирает CAMERA из источников", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, {}));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await updateLivePermissions(
+      "lesson-room",
+      "user-1",
+      { canDraw: false, canSpeak: false, canShareScreen: false, canPublishVideo: false },
+      "student",
+    );
+
+    const [, init] = fetchMock.mock.calls[0] as [unknown, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.permission.canPublishSources).toEqual(["MICROPHONE"]);
+  });
+
   it("молча проглатывает 404 — участник ещё не подключался к LiveKit, обновлять нечего", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(404, { code: "not_found", msg: "not found" })));
 
@@ -124,7 +172,7 @@ describe("updateLivePermissions: живое обновление гранта у
       updateLivePermissions(
         "lesson-room",
         "user-1",
-        { canDraw: false, canSpeak: false, canShareScreen: false },
+        { canDraw: false, canSpeak: false, canShareScreen: false, canPublishVideo: false },
         "student",
       ),
     ).resolves.toBeUndefined();
@@ -137,7 +185,7 @@ describe("updateLivePermissions: живое обновление гранта у
       updateLivePermissions(
         "lesson-room",
         "user-1",
-        { canDraw: false, canSpeak: true, canShareScreen: false },
+        { canDraw: false, canSpeak: true, canShareScreen: false, canPublishVideo: false },
         "student",
       ),
     ).rejects.toThrow();

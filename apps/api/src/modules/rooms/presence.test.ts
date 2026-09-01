@@ -19,13 +19,33 @@ function entry(overrides: Partial<PresenceEntry> = {}): PresenceEntry {
 
 describe("defaultPermissions", () => {
   it("учитель и админ получают все права по умолчанию", () => {
-    expect(defaultPermissions("teacher")).toEqual({ canDraw: true, canSpeak: true, canShareScreen: true });
-    expect(defaultPermissions("admin")).toEqual({ canDraw: true, canSpeak: true, canShareScreen: true });
+    expect(defaultPermissions("teacher")).toEqual({
+      canDraw: true,
+      canSpeak: true,
+      canShareScreen: true,
+      canPublishVideo: true,
+    });
+    expect(defaultPermissions("admin")).toEqual({
+      canDraw: true,
+      canSpeak: true,
+      canShareScreen: true,
+      canPublishVideo: true,
+    });
   });
 
   it("ученик и методист без прав по умолчанию", () => {
-    expect(defaultPermissions("student")).toEqual({ canDraw: false, canSpeak: false, canShareScreen: false });
-    expect(defaultPermissions("methodist")).toEqual({ canDraw: false, canSpeak: false, canShareScreen: false });
+    expect(defaultPermissions("student")).toEqual({
+      canDraw: false,
+      canSpeak: false,
+      canShareScreen: false,
+      canPublishVideo: false,
+    });
+    expect(defaultPermissions("methodist")).toEqual({
+      canDraw: false,
+      canSpeak: false,
+      canShareScreen: false,
+      canPublishVideo: false,
+    });
   });
 });
 

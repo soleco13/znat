@@ -198,7 +198,11 @@ export function RoomPage() {
     }).catch(() => undefined);
   }
 
-  async function togglePermission(userId: string, key: "canDraw" | "canSpeak" | "canShareScreen", value: boolean) {
+  async function togglePermission(
+    userId: string,
+    key: "canDraw" | "canSpeak" | "canShareScreen" | "canPublishVideo",
+    value: boolean,
+  ) {
     if (!lessonId) return;
     await apiFetch(`/lessons/${lessonId}/participants/${userId}/permissions`, {
       method: "PATCH",
@@ -274,7 +278,7 @@ export function RoomPage() {
               )}
             </p>
             {media && self?.permissions.canSpeak && <PacketLossWarning />}
-            {media && isTeacher && <VideoDegradeSuggestion />}
+            {media && (isTeacher || self?.permissions.canPublishVideo) && <VideoDegradeSuggestion />}
           </div>
           <div className="flex gap-2">
             {isTeacher && lessonStatus === "live" && (
@@ -301,6 +305,9 @@ export function RoomPage() {
           )}
           {media && self?.permissions.canSpeak && <SelfMicButton />}
           {media && isTeacher && <SelfCameraButton />}
+          {media && !isTeacher && self?.permissions.canPublishVideo && (
+            <SelfCameraButton maxResolution={VideoPresets.h360.resolution} />
+          )}
           {media && isTeacher && (
             <button onClick={muteAll} className="rounded border px-3 py-1 text-sm">
               Заглушить всех
@@ -351,6 +358,14 @@ export function RoomPage() {
                       onChange={(e) => togglePermission(p.userId, "canSpeak", e.target.checked)}
                     />
                     говорить
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={p.permissions.canPublishVideo}
+                      onChange={(e) => togglePermission(p.userId, "canPublishVideo", e.target.checked)}
+                    />
+                    видео
                   </label>
                   {media && p.permissions.canSpeak && (
                     <button onClick={() => muteParticipant(p.userId)} className="rounded border px-2 py-0.5">
@@ -412,10 +427,17 @@ export function RoomPage() {
       connect
       options={ROOM_OPTIONS}
       audio={self?.permissions.canSpeak ? { deviceId: micDeviceId ?? undefined } : false}
-      // Э5.1: камера — только у учителя/админа (грант на сервере уже
-      // ограничивает источник CAMERA той же ролью), автозапуск при входе,
-      // как и микрофон; ручной тумблер — `SelfCameraButton`. Э5.4: устройство —
-      // то, что выбрано (и проверено превью) на `DeviceCheckScreen`.
+      // Э5.1: камера учителя — 720p, автозапуск при входе, как и микрофон;
+      // ручной тумблер — `SelfCameraButton`. Э5.4: deviceId — то, что выбрано
+      // (и проверено превью) на `DeviceCheckScreen`.
+      //
+      // Э6.1: ученик с granted правом canPublishVideo camera НЕ автозапускает
+      // здесь (в отличие от учителя) — право может быть выдано учителем
+      // посреди урока, когда `<LiveKitRoom video>` уже не перечитывается.
+      // Публикует сам кнопкой `SelfCameraButton maxResolution={h360}` (§5.2
+      // ТЗ: максимум 360p, сервер резолюцию не ограничивает —
+      // `media/service.ts#buildPublishGrant`), тем же образом, каким
+      // канал микрофона включает `canSpeak` через `SelfMicButton`.
       video={isTeacher ? { resolution: VideoPresets.h720.resolution, deviceId: camDeviceId ?? undefined } : false}
       onDisconnected={() => setError("Аудио отключено")}
     >
