@@ -66,7 +66,11 @@ function computeVisibleStudentIds(
  *   (§5.3 ТЗ: «видео полностью выключено» — единственный режим, где гасится
  *   даже учитель, не только сетка учеников);
  * - камера ученика — подписывается по набору из `computeVisibleStudentIds`
- *   (Э6.4 меняет только выбор набора по режиму, см. её docstring).
+ *   (Э6.4 меняет только выбор набора по режиму, см. её docstring);
+ * - демонстрация экрана (Э7.1) — подписывается ВСЕГДА, независимо от роли
+ *   и режима: максимум 1 одновременно на всю комнату (Э7.2, сервер сам это
+ *   гарантирует), лишней нагрузки в духе «сетки из 9» тут в принципе не
+ *   может возникнуть, гейтить нечего.
  *
  * `useTracks(..., { onlySubscribed: false })` — намеренно `false` (дефолт
  * самого хука — `true`, прочитано в установленном `@livekit/components-react`):
@@ -83,7 +87,9 @@ export function VideoSubscriptionManager({
   participants: ParticipantSnapshot[];
   mode: LessonMode;
 }) {
-  const tracks = useTracks([Track.Source.Microphone, Track.Source.Camera], { onlySubscribed: false });
+  const tracks = useTracks([Track.Source.Microphone, Track.Source.Camera, Track.Source.ScreenShare], {
+    onlySubscribed: false,
+  });
   const speakingParticipants = useSpeakingParticipants();
 
   useEffect(() => {
@@ -105,6 +111,7 @@ export function VideoSubscriptionManager({
 
       const shouldSubscribe =
         t.source === Track.Source.Microphone ||
+        t.source === Track.Source.ScreenShare ||
         (isTeacherRole(t.participant.attributes.role) && teacherVisible) ||
         visibleStudentIds.has(t.participant.identity);
 

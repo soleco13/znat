@@ -24,6 +24,8 @@ import { MediaAudioStatus } from "./MediaAudioStatus.js";
 import { MicStatusIcon, SelfMicButton } from "./MicControls.js";
 import { MicSync } from "./MicSync.js";
 import { ParticipantPresenceDot } from "./ParticipantPresenceDot.js";
+import { SelfScreenShareButton } from "./ScreenShareControls.js";
+import { ScreenShareTile } from "./ScreenShareTile.js";
 import { StudentVideoGrid } from "./StudentVideoGrid.js";
 import { TeacherVideoTile } from "./TeacherVideoTile.js";
 import { useRoomSocket } from "./useRoomSocket.js";
@@ -286,6 +288,8 @@ export function RoomPage() {
 
   const content = (
     <div className="mx-auto mt-8 max-w-6xl px-4">
+      {media && <ScreenShareTile />}
+
       {lessonId && (
         <div className="mb-4">
           <Board lessonId={lessonId} canDraw={self?.permissions.canDraw ?? false} decks={decks} />
@@ -365,6 +369,7 @@ export function RoomPage() {
           {media && !isTeacher && self?.permissions.canPublishVideo && (
             <SelfCameraButton maxResolution={VideoPresets.h360.resolution} />
           )}
+          {media && (isTeacher || self?.permissions.canShareScreen) && <SelfScreenShareButton />}
           {media && isTeacher && (
             <button onClick={muteAll} className="rounded border px-3 py-1 text-sm">
               Заглушить всех
@@ -426,6 +431,14 @@ export function RoomPage() {
                       onChange={(e) => togglePermission(p.userId, "canPublishVideo", e.target.checked)}
                     />
                     видео
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={p.permissions.canShareScreen}
+                      onChange={(e) => togglePermission(p.userId, "canShareScreen", e.target.checked)}
+                    />
+                    экран
                   </label>
                   {media && p.permissions.canSpeak && (
                     <button onClick={() => muteParticipant(p.userId)} className="rounded border px-2 py-0.5">

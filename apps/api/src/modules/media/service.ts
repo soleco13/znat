@@ -31,19 +31,29 @@ export function ttlSecondsUntilLessonGraceEnd(lessonStartsAt: Date, lessonDurati
  * публикуемого трека на уровне прав, это чисто клиентская настройка
  * VideoCaptureOptions (`RoomPage.tsx`) — тот же доверительный периметр, что
  * уже принят для остальных клиентских настроек качества в проекте.
- * Демонстрация экрана — источник TrackSource.SCREEN_SHARE, всё ещё не
- * добавлен до Э7 (стоп-лист Э5/Э6). Общая для выдачи токена
- * (`createParticipantConnection`) и живого обновления прав
- * (`updateLivePermissions`) — грант должен совпадать в обоих местах.
+ * Демонстрация экрана (Э7.1/Э7.4) — источник TrackSource.SCREEN_SHARE,
+ * управляется правом `canShareScreen` (существовало в схеме с ранних
+ * этапов как задел, реально не выдавало источник до сих пор — стоп-лист
+ * Э5/Э6). Право одно и то же для учителя (получает его по умолчанию,
+ * `presence.ts#defaultPermissions`) и для ученика по разрешению учителя
+ * (Э7.4) — не отдельная роль-проверка, как у камеры учителя, потому что
+ * демонстрация никогда не была «всегда включена по роли». Максимум 1
+ * одновременно и приоритет учителю (§5.2 ТЗ) — НЕ часть гранта (грант лишь
+ * разрешает ИСТОЧНИК, не следит за тем, сколько таких треков уже
+ * опубликовано в комнате) — отдельная задача Э7.2, ещё не сделана здесь.
+ * Общая для выдачи токена (`createParticipantConnection`) и живого
+ * обновления прав (`updateLivePermissions`) — грант должен совпадать в
+ * обоих местах.
  */
 function buildPublishGrant(permissions: ParticipantPermissions, role: Role) {
   const isStaff = role === "teacher" || role === "admin";
   const canPublishCamera = isStaff || permissions.canPublishVideo;
   const sources = [TrackSource.MICROPHONE];
   if (canPublishCamera) sources.push(TrackSource.CAMERA);
+  if (permissions.canShareScreen) sources.push(TrackSource.SCREEN_SHARE);
   return {
     canSubscribe: true,
-    canPublish: permissions.canSpeak || canPublishCamera,
+    canPublish: permissions.canSpeak || canPublishCamera || permissions.canShareScreen,
     canPublishSources: sources,
     canPublishData: false,
     hidden: false,

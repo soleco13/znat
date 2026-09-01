@@ -32,20 +32,21 @@ describe("ttlSecondsUntilLessonGraceEnd", () => {
   });
 });
 
-describe("createParticipantConnection: источники трека по роли и правам (Э2 + Э5.1 + Э6.1)", () => {
+describe("createParticipantConnection: источники трека по роли и правам (Э2 + Э5.1 + Э6.1 + Э7.1)", () => {
   const startsAt = new Date();
 
   async function grantOf(
     canSpeak: boolean,
     role: "teacher" | "student" | "admin" = "student",
     canPublishVideo = false,
+    canShareScreen = false,
   ) {
     const media = await createParticipantConnection({
       livekitRoom: "lesson-test-room",
       userId: "user-1",
       fullName: "Тест Тестов",
       role,
-      permissions: { canDraw: false, canSpeak, canShareScreen: false, canPublishVideo },
+      permissions: { canDraw: false, canSpeak, canShareScreen, canPublishVideo },
       lessonStartsAt: startsAt,
       lessonDurationMin: 45,
     });
@@ -81,9 +82,20 @@ describe("createParticipantConnection: источники трека по рол
     expect(grant.canPublishSources).toEqual(expect.arrayContaining(["microphone", "camera"]));
   });
 
-  it("демонстрация экрана по-прежнему не входит ни в один грант (стоп-лист Э5/Э6, до Э7)", async () => {
+  it("демонстрация экрана не входит в грант без права canShareScreen", async () => {
     const { grant } = await grantOf(true, "teacher");
     expect(grant.canPublishSources).not.toContain("screen_share");
+  });
+
+  it("Э7.1/Э7.4: право canShareScreen добавляет источник screen_share и canPublish=true — учителю и ученику одинаково", async () => {
+    const teacher = await grantOf(false, "teacher", false, true);
+    expect(teacher.grant.canPublish).toBe(true);
+    expect(teacher.grant.canPublishSources).toEqual(expect.arrayContaining(["microphone", "camera", "screen_share"]));
+
+    const student = await grantOf(false, "student", false, true);
+    expect(student.grant.canPublish).toBe(true);
+    expect(student.grant.canPublishSources).toEqual(expect.arrayContaining(["microphone", "screen_share"]));
+    expect(student.grant.canPublishSources).not.toContain("camera");
   });
 
   it("Э6.1: токен несёт роль в attributes — клиент отличает камеру учителя от камеры ученика", async () => {
@@ -163,6 +175,23 @@ describe("updateLivePermissions: живое обновление гранта у
     const [, init] = fetchMock.mock.calls[0] as [unknown, RequestInit];
     const body = JSON.parse(init.body as string);
     expect(body.permission.canPublishSources).toEqual(["MICROPHONE"]);
+  });
+
+  it("Э7.4: для ученика с granted canShareScreen=true включает источник SCREEN_SHARE", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, {}));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await updateLivePermissions(
+      "lesson-room",
+      "user-1",
+      { canDraw: false, canSpeak: false, canShareScreen: true, canPublishVideo: false },
+      "student",
+    );
+
+    const [, init] = fetchMock.mock.calls[0] as [unknown, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.permission.canPublish).toBe(true);
+    expect(body.permission.canPublishSources).toEqual(expect.arrayContaining(["MICROPHONE", "SCREEN_SHARE"]));
   });
 
   it("молча проглатывает 404 — участник ещё не подключался к LiveKit, обновлять нечего", async () => {
