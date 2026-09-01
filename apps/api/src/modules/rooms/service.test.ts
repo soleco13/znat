@@ -204,6 +204,7 @@ describe("права участников", () => {
       `lesson-${LESSON_ID}`,
       STUDENT_ID,
       expect.objectContaining({ canSpeak: true }),
+      "student",
     );
   });
 

@@ -164,6 +164,7 @@ export async function join(
     livekitRoom,
     userId: user.sub,
     fullName,
+    role: entry.role,
     permissions: entry.permissions,
     lessonStartsAt: lesson.startsAt,
     lessonDurationMin: lesson.durationMin,
@@ -277,7 +278,7 @@ export async function updatePermissions(
 
   const permissions = { ...entry.permissions, ...patch };
   const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
-  await mediaService.updateLivePermissions(livekitRoom, targetUserId, permissions);
+  await mediaService.updateLivePermissions(livekitRoom, targetUserId, permissions, entry.role);
 
   entry.permissions = permissions;
   await presence.setParticipant(lessonId, targetUserId, entry);

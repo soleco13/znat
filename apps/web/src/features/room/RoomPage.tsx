@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
+import { VideoPresets, type RoomOptions } from "livekit-client";
 import type {
   ChatMessage,
   Deck,
@@ -15,13 +16,27 @@ import { apiFetch } from "../../shared/api-client.js";
 import { useAuthStore } from "../../shared/auth-store.js";
 import { Board } from "../canvas/Board.js";
 import { DeckPanel } from "../decks/DeckPanel.js";
+import { SelfCameraButton } from "./CameraControls.js";
 import { ConnectionQualityDot, PacketLossWarning } from "./ConnectionQuality.js";
 import { DeviceCheckScreen } from "./DeviceCheckScreen.js";
 import { MediaAudioStatus } from "./MediaAudioStatus.js";
 import { MicStatusIcon, SelfMicButton } from "./MicControls.js";
 import { MicSync } from "./MicSync.js";
 import { ParticipantPresenceDot } from "./ParticipantPresenceDot.js";
+import { TeacherVideoTile } from "./TeacherVideoTile.js";
 import { useRoomSocket } from "./useRoomSocket.js";
+
+// Э5.1: 720p с автослоями simulcast h360/h180 (§5.2 ТЗ) — вынесено из JSX,
+// один и тот же объект на все рендеры (LiveKitRoom реагирует на identity
+// пропа options, пересоздание на каждый рендер лишний раз пересобирало бы
+// комнату). `videoSimulcastLayers` не пишем: то же самое даёт дефолт
+// livekit-client при пустом поле (проверено чтением options.d.ts установленного
+// livekit-client@2.22.0) — оставлено явным комментарием, а не полем, чтобы
+// не разойтись с версией пакета при апгрейде.
+const ROOM_OPTIONS: RoomOptions = {
+  videoCaptureDefaults: { resolution: VideoPresets.h720.resolution },
+  publishDefaults: { simulcast: true },
+};
 
 const STATUS_LABEL: Record<SocketStatusLike, string> = {
   connecting: "Подключение…",
@@ -269,6 +284,7 @@ export function RoomPage() {
             </button>
           )}
           {media && self?.permissions.canSpeak && <SelfMicButton />}
+          {media && isTeacher && <SelfCameraButton />}
           {media && isTeacher && (
             <button onClick={muteAll} className="rounded border px-3 py-1 text-sm">
               Заглушить всех
@@ -377,11 +393,16 @@ export function RoomPage() {
       serverUrl={media.url}
       token={media.token}
       connect
+      options={ROOM_OPTIONS}
       audio={self?.permissions.canSpeak ? { deviceId: micDeviceId ?? undefined } : false}
-      video={false}
+      // Э5.1: камера — только у учителя/админа (грант на сервере уже
+      // ограничивает источник CAMERA той же ролью), автозапуск при входе,
+      // как и микрофон; ручной тумблер — `SelfCameraButton`.
+      video={isTeacher ? { resolution: VideoPresets.h720.resolution } : false}
       onDisconnected={() => setError("Аудио отключено")}
     >
       <MicSync enabled={self?.permissions.canSpeak ?? false} />
+      <TeacherVideoTile />
       {content}
       <RoomAudioRenderer />
     </LiveKitRoom>

@@ -1,5 +1,5 @@
 import { AccessToken, RoomServiceClient, TrackSource } from "livekit-server-sdk";
-import type { MediaConnection, ParticipantPermissions } from "@school/shared";
+import type { MediaConnection, ParticipantPermissions, Role } from "@school/shared";
 import { env } from "../../plugins/env.js";
 
 const GRACE_AFTER_END_MS = 15 * 60 * 1000;
@@ -21,17 +21,22 @@ export function ttlSecondsUntilLessonGraceEnd(lessonStartsAt: Date, lessonDurati
 }
 
 /**
- * Стоп-лист Э2: только аудио. Даже если у участника canPublish=true (право
- * "canSpeak"), источник трека жёстко ограничен микрофоном на уровне гранта —
- * камеру и демонстрацию экрана публиковать нечем до Э5/Э7. Общая для выдачи
- * токена (`createParticipantConnection`) и живого обновления прав
+ * Источники трека жёстко перечислены на уровне гранта, а не выведены из
+ * одного булева canPublish — микрофон управляется правом "canSpeak", камера
+ * с Э5.1 разрешена ролью (§5.2 ТЗ: «камера учителя — всегда», не переключаемое
+ * право участника, в отличие от canSpeak). Демонстрация экрана — источник
+ * TrackSource.SCREEN_SHARE, всё ещё не добавлен до Э7 (стоп-лист Э5). Общая
+ * для выдачи токена (`createParticipantConnection`) и живого обновления прав
  * (`updateLivePermissions`) — грант должен совпадать в обоих местах.
  */
-function buildPublishGrant(permissions: ParticipantPermissions) {
+function buildPublishGrant(permissions: ParticipantPermissions, role: Role) {
+  const canPublishCamera = role === "teacher" || role === "admin";
+  const sources = [TrackSource.MICROPHONE];
+  if (canPublishCamera) sources.push(TrackSource.CAMERA);
   return {
     canSubscribe: true,
-    canPublish: permissions.canSpeak,
-    canPublishSources: [TrackSource.MICROPHONE],
+    canPublish: permissions.canSpeak || canPublishCamera,
+    canPublishSources: sources,
     canPublishData: false,
     hidden: false,
   };
@@ -41,6 +46,7 @@ export async function createParticipantConnection(params: {
   livekitRoom: string;
   userId: string;
   fullName: string;
+  role: Role;
   permissions: ParticipantPermissions;
   lessonStartsAt: Date;
   lessonDurationMin: number;
@@ -50,7 +56,7 @@ export async function createParticipantConnection(params: {
     name: params.fullName,
     ttl: ttlSecondsUntilLessonGraceEnd(params.lessonStartsAt, params.lessonDurationMin),
   });
-  at.addGrant({ roomJoin: true, room: params.livekitRoom, ...buildPublishGrant(params.permissions) });
+  at.addGrant({ roomJoin: true, room: params.livekitRoom, ...buildPublishGrant(params.permissions, params.role) });
   const token = await at.toJwt();
   return { token, url: env.LIVEKIT_PUBLIC_URL };
 }
@@ -71,9 +77,10 @@ export async function updateLivePermissions(
   livekitRoom: string,
   userId: string,
   permissions: ParticipantPermissions,
+  role: Role,
 ): Promise<void> {
   try {
-    await roomService.updateParticipant(livekitRoom, userId, { permission: buildPublishGrant(permissions) });
+    await roomService.updateParticipant(livekitRoom, userId, { permission: buildPublishGrant(permissions, role) });
   } catch (err) {
     if (!isNotFoundError(err)) throw err;
     // участник ещё не подключался к LiveKit (только presence) — при подключении
