@@ -25,6 +25,7 @@ export interface ConvertJobData {
   sourceMimeType: DeckSourceMimeType;
 }
 
+/** Слово текстового слоя слайда (Э4.8). x/y/w/h — доли ширины/высоты слайда (0..1), не пиксели. */
 export interface SlideTextBox {
   text: string;
   x: number;

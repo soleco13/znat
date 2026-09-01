@@ -22,6 +22,20 @@ export const deckSourceMimeTypeSchema = z.enum([
 ]);
 export type DeckSourceMimeType = z.infer<typeof deckSourceMimeTypeSchema>;
 
+/**
+ * Слово текстового слоя слайда (Э4.8, `pdftotext -bbox` на сервере) — для
+ * полнотекстового поиска по презентации. `x/y/w/h` — доли ширины/высоты
+ * слайда (0..1), не пиксели: не зависят от DPI рендера PNG.
+ */
+export const slideTextBoxSchema = z.object({
+  text: z.string(),
+  x: z.number(),
+  y: z.number(),
+  w: z.number(),
+  h: z.number(),
+});
+export type SlideTextBox = z.infer<typeof slideTextBoxSchema>;
+
 /** Один слайд готовой презентации. */
 export const deckSlideSchema = z.object({
   index: z.number().int().nonnegative(),
@@ -29,6 +43,8 @@ export const deckSlideSchema = z.object({
   thumbUrl: z.string(),
   width: z.number().int().positive(),
   height: z.number().int().positive(),
+  /** Текстовый слой для поиска (Э4.8). `null` — слайд без распознанного текста. */
+  textLayer: z.array(slideTextBoxSchema).nullable(),
 });
 export type DeckSlide = z.infer<typeof deckSlideSchema>;
 
@@ -94,18 +110,8 @@ export const convertedSlideSchema = z.object({
   thumbStorageKey: z.string().min(1),
   width: z.number().int().positive(),
   height: z.number().int().positive(),
-  /** Текстовый слой из `pdftotext -bbox` (Э4.8). Пусто, пока Э4.8 не сделан. */
-  textLayer: z
-    .array(
-      z.object({
-        text: z.string(),
-        x: z.number(),
-        y: z.number(),
-        w: z.number(),
-        h: z.number(),
-      }),
-    )
-    .nullable(),
+  /** Текстовый слой из `pdftotext -bbox` (Э4.8) — для поиска по презентации. */
+  textLayer: z.array(slideTextBoxSchema).nullable(),
 });
 export type ConvertedSlide = z.infer<typeof convertedSlideSchema>;
 

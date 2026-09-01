@@ -70,6 +70,24 @@ export async function getPdfPageSizes(url: string): Promise<PdfPageSize[]> {
 }
 
 /**
+ * Э4.8: весь текст каждой страницы (без bbox — просто для полнотекстового
+ * поиска по презентации). Только для `renderMode: "pdf"` (Э4.7): у этих
+ * презентаций нет серверного текстового слоя (`pdftotext -bbox` там не
+ * гоняется — см. `services/converter/src/convert.ts`), а pdf.js и так парсит
+ * страницу целиком для рендера, так что второй раз лезть на сервер незачем.
+ */
+export async function getPdfPageTexts(url: string): Promise<string[]> {
+  const pdf = await loadPdf(url);
+  const texts: string[] = [];
+  for (let n = 1; n <= pdf.numPages; n++) {
+    const page = await pdf.getPage(n);
+    const content = await page.getTextContent();
+    texts.push(content.items.map((item) => ("str" in item ? item.str : "")).join(" "));
+  }
+  return texts;
+}
+
+/**
  * Рендерит одну страницу (0-based) в PNG data-URL шириной `targetWidthPx`.
  * Дальше эту картинку позиционирует/масштабирует тот же слой фона, что и
  * серверный PNG-слайд (`PageBackground`), — CSS-масштаб как у PNG@2x.

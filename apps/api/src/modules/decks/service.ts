@@ -240,6 +240,8 @@ function toSlideDto(s: SlideRow): DeckSlide {
     thumbUrl: storageService.getSignedFileUrl(s.thumbStorageKey, SLIDE_URL_TTL_SECONDS),
     width: s.width,
     height: s.height,
+    // Наш же JSON, записанный из ConvertedSlide при конвертации (Э4.8) — не any.
+    textLayer: (s.textLayer as ConvertedSlide["textLayer"]) ?? null,
   };
 }
 

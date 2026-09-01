@@ -17,6 +17,7 @@ import {
   type SlidePageRef,
 } from "./PageBackground.js";
 import { getPdfPageSizes } from "./pdf.js";
+import { SlideSearch } from "./SlideSearch.js";
 import "@excalidraw/excalidraw/index.css";
 import "./Board.css";
 
@@ -779,6 +780,21 @@ export function Board({
             </span>
           )}
         </div>
+      )}
+      {ydoc && isTeacher && slidePages.length > 0 && (
+        <SlideSearch
+          slides={slidePages.map(([pageId, meta], i) => ({
+            pageId,
+            slideNumber: i + 1,
+            ref: {
+              deckId: meta.slide!.deckId,
+              index: meta.slide!.index,
+              pdfUrl: meta.slide!.pdfUrl,
+            },
+          }))}
+          decks={decks}
+          onJump={switchPage}
+        />
       )}
       {ydoc && slidePages.length > 0 && (
         <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1">

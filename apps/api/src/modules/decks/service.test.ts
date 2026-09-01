@@ -43,6 +43,7 @@ vi.mock("../rooms/service.js", () => roomsServiceMock);
 
 const {
   createDeckFromUpload,
+  listDecks,
   deleteDeck,
   buildConvertJobHandlers,
   reconcileStuckDecks,
@@ -267,6 +268,64 @@ describe("createDeckFromUpload — дедуп по sha256 (Э4.5)", () => {
       mimeType: PPTX,
     });
     expect(repoMock.findReadyDeckBySha).toHaveBeenCalledWith(SCHOOL, sha);
+  });
+});
+
+describe("listDecks (Э4.8)", () => {
+  it("прокидывает текстовый слой слайда из pdftotext -bbox в ответ API", async () => {
+    repoMock.listDecksByLesson.mockResolvedValue([
+      {
+        id: DECK,
+        lessonId: LESSON,
+        title: "Т",
+        status: "ready",
+        renderMode: "images",
+        slideCount: 1,
+        progress: 1,
+        error: null,
+        createdAt: new Date(0),
+        sourceStorageKey: "src-key",
+      },
+    ]);
+    repoMock.listSlidesForDecks.mockResolvedValue([
+      {
+        deckId: DECK,
+        index: 0,
+        imageStorageKey: "img-0",
+        thumbStorageKey: "thumb-0",
+        width: 1920,
+        height: 1080,
+        textLayer: [{ text: "Привет", x: 0.1, y: 0.2, w: 0.3, h: 0.05 }],
+      },
+    ]);
+
+    const [deck] = await listDecks(teacher, LESSON);
+
+    expect(deck?.slides[0]?.textLayer).toEqual([{ text: "Привет", x: 0.1, y: 0.2, w: 0.3, h: 0.05 }]);
+  });
+
+  it("слайд без распознанного текста отдаёт textLayer: null", async () => {
+    repoMock.listDecksByLesson.mockResolvedValue([
+      {
+        id: DECK,
+        lessonId: LESSON,
+        title: "Т",
+        status: "ready",
+        renderMode: "images",
+        slideCount: 1,
+        progress: 1,
+        error: null,
+        createdAt: new Date(0),
+        sourceStorageKey: "src-key",
+      },
+    ]);
+    repoMock.listSlidesForDecks.mockResolvedValue([
+      { deckId: DECK, index: 0, imageStorageKey: "img-0", thumbStorageKey: "thumb-0", width: 1920, height: 1080, textLayer: null },
+    ]);
+
+    const [deck] = await listDecks(teacher, LESSON);
+
+    expect(deck?.slides[0]?.textLayer).toBeNull();
   });
 });
 

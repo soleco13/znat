@@ -8,6 +8,16 @@
  * рендерит pdf.js в браузере из подписанного URL исходника. Экономит CPU
  * LibreOffice/Poppler во время уроков — прямой предмет гейта Э4.
  *
+ * Э4.8: для растрового пайплайна (не PDF-passthrough) параллельно с рендером
+ * PNG строится текстовый слой — один вызов `pdftotext -bbox` на весь
+ * промежуточный PDF, результат режется по страницам. Слайды остаются
+ * картинками (PNG, не выделяемый/копируемый текст на холсте — сознательно,
+ * стоп-лист Э4 про PowerPoint-переходы тут ни при чём, просто у нас нет
+ * text-layer поверх canvas), но текст слоя уходит в БД и используется
+ * фронтом для полнотекстового поиска по презентации. Для PDF-passthrough
+ * своего текстового слоя нет — pdf.js и так парсит текст PDF в браузере,
+ * второй раз на сервере это делать незачем.
+ *
  * Всё промежуточное — в изолированном каталоге под /tmp (tmpfs, единственная
  * writable точка read_only-контейнера). Внешние бинарники вызываются через
  * execFile с массивом аргументов (без shell) и таймаутами.
@@ -21,7 +31,7 @@ import { mkdtemp, readdir, rm, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import type { ConvertJobData, ConvertJobResult, ConvertedSlide } from "./contract.js";
+import type { ConvertJobData, ConvertJobResult, ConvertedSlide, SlideTextBox } from "./contract.js";
 import * as storage from "./storage.js";
 
 const execFileAsync = promisify(execFile);
@@ -29,6 +39,7 @@ const execFileAsync = promisify(execFile);
 const SOFFICE_TIMEOUT_MS = 120_000;
 const PDFTOPPM_TIMEOUT_MS = 30_000;
 const CLAMSCAN_TIMEOUT_MS = 120_000;
+const PDFTOTEXT_TIMEOUT_MS = 20_000;
 
 /** DPI рендера. 144 = 2× относительно базовых 72 dpi PDF («PNG@2x», §3.5 ТЗ). */
 const RENDER_DPI = 144;
@@ -102,6 +113,83 @@ async function pdfPageCount(pdfPath: string): Promise<number> {
   return Number(m[1]);
 }
 
+function decodeXmlEntities(s: string): string {
+  return s
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+/**
+ * Текстовый слой всех страниц одним вызовом `pdftotext -bbox` (Э4.8, §3.5
+ * ТЗ: «поиск по презентации»). Один процесс на весь документ, а не по одному
+ * на страницу, — дешевле по CPU (гейт Э4 следит за нагрузкой конвертера).
+ * `x/y/w/h` — ДОЛИ ширины/высоты страницы (0..1), не пиксели: не зависят от
+ * DPI рендера PNG, поэтому фронт может позиционировать боксы над слайдом
+ * любого масштаба (мировой прямоугольник слайда на холсте, Э4.6) без
+ * пересчёта под конкретный DPI.
+ *
+ * Не бинарники PDF в командной строке — `pdfPath` уже наш временный файл, а
+ * не пользовательский ввод, но всё равно вызывается через `execFile` с
+ * массивом аргументов (без shell), как и остальной пайплайн.
+ *
+ * Ошибка `pdftotext` (например, PDF без текстового слоя вообще — скан) не
+ * валит конвертацию: слайды без текста просто не участвуют в поиске.
+ */
+async function extractTextLayers(pdfPath: string, totalPages: number): Promise<SlideTextBox[][]> {
+  const layers: SlideTextBox[][] = Array.from({ length: totalPages }, () => []);
+  let stdout: string;
+  try {
+    ({ stdout } = await execFileAsync("pdftotext", ["-bbox", pdfPath, "-"], {
+      timeout: PDFTOTEXT_TIMEOUT_MS,
+      maxBuffer: 20 * 1024 * 1024,
+    }));
+  } catch (err) {
+    log("warn", "pdftotext -bbox не сработал — слайды без текстового слоя для поиска", {
+      pdfPath,
+      err: String(err),
+    });
+    return layers;
+  }
+
+  const pageRe = /<page[^>]*\bwidth="([\d.]+)"[^>]*\bheight="([\d.]+)"[^>]*>([\s\S]*?)<\/page>/g;
+  const wordRe =
+    /<word[^>]*\bxMin="([\d.-]+)"[^>]*\byMin="([\d.-]+)"[^>]*\bxMax="([\d.-]+)"[^>]*\byMax="([\d.-]+)"[^>]*>([^<]*)<\/word>/g;
+
+  let pageIndex = 0;
+  let pm: RegExpExecArray | null;
+  while ((pm = pageRe.exec(stdout)) && pageIndex < totalPages) {
+    const pageWidth = Number(pm[1]);
+    const pageHeight = Number(pm[2]);
+    const body = pm[3]!;
+    const boxes: SlideTextBox[] = [];
+    if (pageWidth > 0 && pageHeight > 0) {
+      wordRe.lastIndex = 0;
+      let wm: RegExpExecArray | null;
+      while ((wm = wordRe.exec(body))) {
+        const text = decodeXmlEntities(wm[5]!).trim();
+        if (!text) continue;
+        const xMin = Number(wm[1]);
+        const yMin = Number(wm[2]);
+        const xMax = Number(wm[3]);
+        const yMax = Number(wm[4]);
+        boxes.push({
+          text,
+          x: xMin / pageWidth,
+          y: yMin / pageHeight,
+          w: (xMax - xMin) / pageWidth,
+          h: (yMax - yMin) / pageHeight,
+        });
+      }
+    }
+    layers[pageIndex] = boxes;
+    pageIndex++;
+  }
+  return layers;
+}
+
 /** Рендерит одну страницу PDF в PNG (или JPEG для превью). Возвращает путь к файлу. */
 async function renderPage(
   pdfPath: string,
@@ -169,6 +257,8 @@ export async function runConversion(
       throw new Error(`Слишком много слайдов: ${total} (максимум ${MAX_SLIDES})`);
     }
 
+    const textLayers = await extractTextLayers(pdfPath, total);
+
     const slides: ConvertedSlide[] = [];
     for (let page = 1; page <= total; page++) {
       const fullPath = await renderPage(
@@ -190,13 +280,14 @@ export async function runConversion(
       const image = await storage.putPath({ schoolId: data.schoolId, ext: ".png", filePath: fullPath });
       const thumb = await storage.putPath({ schoolId: data.schoolId, ext: ".jpg", filePath: thumbPath });
 
+      const textLayer = textLayers[page - 1] ?? [];
       slides.push({
         index: page - 1,
         imageStorageKey: image.storageKey,
         thumbStorageKey: thumb.storageKey,
         width,
         height,
-        textLayer: null, // Э4.8
+        textLayer: textLayer.length > 0 ? textLayer : null,
       });
 
       await rm(fullPath, { force: true });
