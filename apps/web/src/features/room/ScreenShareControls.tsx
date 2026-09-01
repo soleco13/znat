@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useLocalParticipant } from "@livekit/components-react";
-import { ScreenSharePresets, VideoPreset } from "livekit-client";
+import { useLocalParticipant, useTracks } from "@livekit/components-react";
+import { ScreenSharePresets, Track, VideoPreset } from "livekit-client";
 
 type ScreenShareContentType = "document" | "video";
 
@@ -35,10 +35,25 @@ const CONTENT_PRESETS: Record<ScreenShareContentType, VideoPreset> = {
  * `presence.ts#defaultPermissions`) и ученика по разрешению (Э7.4) — кнопка
  * одна и та же для обеих ролей, видимость решает вызывающая сторона
  * (`RoomPage.tsx`).
+ *
+ * Максимум 1 демонстрация одновременно и приоритет учителю (Э7.2) решает
+ * СЕРВЕР по вебхуку `track_published` уже ПОСЛЕ публикации
+ * (`rooms/service.ts#handleScreenShareStartedWebhook`) — раньше отменить
+ * WebRTC-негоциацию с сервера нельзя, только погасить трек сразу после.
+ * `disabled` здесь — не защита, а подсказка: не-учителю, пока кто-то уже
+ * делится, кнопка недоступна, чтобы не заставлять его увидеть свою
+ * демонстрацию и тут же потерять её. `priority` (учитель — эта проверка
+ * его не касается, сервер и так пропустит его демонстрацию вперёд) решает
+ * вызывающая сторона (`RoomPage.tsx`, знает `isTeacher`), как и
+ * `maxResolution` у `SelfCameraButton`.
  */
-export function SelfScreenShareButton() {
+export function SelfScreenShareButton({ priority = false }: { priority?: boolean }) {
   const { localParticipant, isScreenShareEnabled } = useLocalParticipant();
   const [contentType, setContentType] = useState<ScreenShareContentType>("document");
+  const othersSharing = useTracks([Track.Source.ScreenShare], { onlySubscribed: false }).some(
+    (t) => t.participant.identity !== localParticipant.identity,
+  );
+  const blocked = !isScreenShareEnabled && othersSharing && !priority;
 
   async function toggle() {
     if (isScreenShareEnabled) {
@@ -67,7 +82,9 @@ export function SelfScreenShareButton() {
       )}
       <button
         onClick={toggle}
-        className={`rounded border px-3 py-1 text-sm ${isScreenShareEnabled ? "border-red-300 text-red-700" : ""}`}
+        disabled={blocked}
+        title={blocked ? "Кто-то уже демонстрирует экран" : undefined}
+        className={`rounded border px-3 py-1 text-sm disabled:opacity-50 ${isScreenShareEnabled ? "border-red-300 text-red-700" : ""}`}
       >
         {isScreenShareEnabled ? "Остановить демонстрацию" : "Демонстрация экрана"}
       </button>

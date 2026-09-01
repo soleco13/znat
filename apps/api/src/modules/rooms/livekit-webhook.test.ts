@@ -6,6 +6,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const roomsServiceMock = vi.hoisted(() => ({
   handleParticipantLeftWebhook: vi.fn(),
   handleRoomFinishedWebhook: vi.fn(),
+  handleScreenShareStartedWebhook: vi.fn(),
+  handleScreenShareStoppedWebhook: vi.fn(),
 }));
 vi.mock("./service.js", () => roomsServiceMock);
 
@@ -104,6 +106,57 @@ describe("POST /webhooks/livekit (Э2.7)", () => {
 
     expect(res.statusCode).toBe(401);
     expect(roomsServiceMock.handleRoomFinishedWebhook).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it("track_published SCREEN_SHARE вызывает handleScreenShareStartedWebhook (Э7.2/Э7.3)", async () => {
+    const app = await buildApp();
+    const body = JSON.stringify({
+      event: "track_published",
+      room: { name: "lesson-abc" },
+      participant: { identity: "11111111-1111-1111-1111-111111111111" },
+      track: { source: "SCREEN_SHARE" },
+    });
+
+    const res = await post(app, body, await signedAuthHeader(body));
+
+    expect(res.statusCode).toBe(200);
+    expect(roomsServiceMock.handleScreenShareStartedWebhook).toHaveBeenCalledWith(
+      "lesson-abc",
+      "11111111-1111-1111-1111-111111111111",
+    );
+    await app.close();
+  });
+
+  it("track_published камеры НЕ вызывает обработчик демонстрации экрана", async () => {
+    const app = await buildApp();
+    const body = JSON.stringify({
+      event: "track_published",
+      room: { name: "lesson-abc" },
+      participant: { identity: "11111111-1111-1111-1111-111111111111" },
+      track: { source: "CAMERA" },
+    });
+
+    const res = await post(app, body, await signedAuthHeader(body));
+
+    expect(res.statusCode).toBe(200);
+    expect(roomsServiceMock.handleScreenShareStartedWebhook).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it("track_unpublished SCREEN_SHARE вызывает handleScreenShareStoppedWebhook", async () => {
+    const app = await buildApp();
+    const body = JSON.stringify({
+      event: "track_unpublished",
+      room: { name: "lesson-abc" },
+      participant: { identity: "11111111-1111-1111-1111-111111111111" },
+      track: { source: "SCREEN_SHARE" },
+    });
+
+    const res = await post(app, body, await signedAuthHeader(body));
+
+    expect(res.statusCode).toBe(200);
+    expect(roomsServiceMock.handleScreenShareStoppedWebhook).toHaveBeenCalledWith("lesson-abc");
     await app.close();
   });
 

@@ -40,7 +40,9 @@ export function ttlSecondsUntilLessonGraceEnd(lessonStartsAt: Date, lessonDurati
  * демонстрация никогда не была «всегда включена по роли». Максимум 1
  * одновременно и приоритет учителю (§5.2 ТЗ) — НЕ часть гранта (грант лишь
  * разрешает ИСТОЧНИК, не следит за тем, сколько таких треков уже
- * опубликовано в комнате) — отдельная задача Э7.2, ещё не сделана здесь.
+ * опубликовано в комнате) — Э7.2 решает это отдельной вебхук-логикой в
+ * `rooms/service.ts#handleScreenShareStartedWebhook` (`findOtherActiveScreenShares`/
+ * `muteScreenShare` ниже — её инструменты).
  * Общая для выдачи токена (`createParticipantConnection`) и живого
  * обновления прав (`updateLivePermissions`) — грант должен совпадать в
  * обоих местах.
@@ -111,7 +113,13 @@ export async function updateLivePermissions(
   }
 }
 
-async function muteMicrophoneTrack(livekitRoom: string, identity: string, muted: boolean): Promise<void> {
+/** Общий поиск+мьют трека по источнику — используется и микрофоном (Э2.5), и демонстрацией экрана (Э7.2). */
+async function muteTrackBySource(
+  livekitRoom: string,
+  identity: string,
+  source: TrackSource,
+  muted: boolean,
+): Promise<void> {
   let participant;
   try {
     participant = await roomService.getParticipant(livekitRoom, identity);
@@ -119,14 +127,14 @@ async function muteMicrophoneTrack(livekitRoom: string, identity: string, muted:
     if (isNotFoundError(err)) return;
     throw err;
   }
-  const micTrack = participant.tracks.find((t) => t.source === TrackSource.MICROPHONE);
-  if (!micTrack) return;
-  await roomService.mutePublishedTrack(livekitRoom, identity, micTrack.sid, muted);
+  const track = participant.tracks.find((t) => t.source === source);
+  if (!track) return;
+  await roomService.mutePublishedTrack(livekitRoom, identity, track.sid, muted);
 }
 
 /** Учитель принудительно глушит одного участника — трек выключается сразу, но не отзывает право говорить (Э2.5). */
 export async function muteParticipant(livekitRoom: string, userId: string): Promise<void> {
-  await muteMicrophoneTrack(livekitRoom, userId, true);
+  await muteTrackBySource(livekitRoom, userId, TrackSource.MICROPHONE, true);
 }
 
 /**
@@ -136,5 +144,25 @@ export async function muteParticipant(livekitRoom: string, userId: string): Prom
  * ролей в комнате.
  */
 export async function muteMicrophones(livekitRoom: string, userIds: string[]): Promise<void> {
-  await Promise.all(userIds.map((userId) => muteMicrophoneTrack(livekitRoom, userId, true)));
+  await Promise.all(userIds.map((userId) => muteTrackBySource(livekitRoom, userId, TrackSource.MICROPHONE, true)));
+}
+
+/**
+ * Список identity участников с уже АКТИВНОЙ (не замьюченной) демонстрацией
+ * экрана в комнате, кроме `excludeIdentity` (обычно — тот, кто только что
+ * сам начал делиться, Э7.2). LiveKit — источник истины по факту публикации
+ * и mute-состоянию трека, не наш `presence` (который про права, а не про
+ * текущее состояние трека).
+ */
+export async function findOtherActiveScreenShares(livekitRoom: string, excludeIdentity?: string): Promise<string[]> {
+  const participants = await roomService.listParticipants(livekitRoom);
+  return participants
+    .filter((p) => p.identity !== excludeIdentity)
+    .filter((p) => p.tracks.some((t) => t.source === TrackSource.SCREEN_SHARE && !t.muted))
+    .map((p) => p.identity);
+}
+
+/** Гасит демонстрацию экрана участника (Э7.2: приоритет учителю, максимум 1 одновременно) — не отзывает право `canShareScreen`, как и `muteParticipant` не отзывает `canSpeak`. */
+export async function muteScreenShare(livekitRoom: string, identity: string): Promise<void> {
+  await muteTrackBySource(livekitRoom, identity, TrackSource.SCREEN_SHARE, true);
 }

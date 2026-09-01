@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { WebhookReceiver } from "livekit-server-sdk";
+import { TrackSource, WebhookReceiver } from "livekit-server-sdk";
 import { env } from "../../plugins/env.js";
 import * as roomsService from "./service.js";
 
@@ -40,6 +40,11 @@ export default async function livekitWebhookRoutes(app: FastifyInstance) {
         await roomsService.handleParticipantLeftWebhook(roomName, userId);
       } else if (event.event === "room_finished" && roomName) {
         await roomsService.handleRoomFinishedWebhook(roomName);
+      } else if (event.event === "track_published" && roomName && userId && event.track?.source === TrackSource.SCREEN_SHARE) {
+        // Э7.2/Э7.3: приоритет учителю на демонстрацию экрана + автопереход в Лекцию.
+        await roomsService.handleScreenShareStartedWebhook(roomName, userId);
+      } else if (event.event === "track_unpublished" && roomName && event.track?.source === TrackSource.SCREEN_SHARE) {
+        await roomsService.handleScreenShareStoppedWebhook(roomName);
       }
 
       return reply.status(200).send();

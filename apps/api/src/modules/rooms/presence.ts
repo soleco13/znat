@@ -69,6 +69,32 @@ export async function setLessonMode(lessonId: string, mode: LessonMode): Promise
   await redis.set(modeKey(lessonId), mode);
 }
 
+function modeBeforeShareKey(lessonId: string): string {
+  return `room:${lessonId}:modeBeforeShare`;
+}
+
+/**
+ * Режим урока ДО начала демонстрации экрана (Э7.3, §5.3 ТЗ: автопереход в
+ * Лекцию на время демонстрации) — чтобы вернуть его обратно, когда
+ * демонстрация закончится. `null` означает «сейчас не сохранён» (либо
+ * демонстрации нет, либо режим и так уже был `lecture` до неё — сохранять
+ * тогда нечего и не нужно откатывать). Отдельный ключ, не переиспользование
+ * `modeKey`, — оба значения нужны одновременно: текущий (уже `lecture` на
+ * время демонстрации) и тот, к которому нужно будет вернуться.
+ */
+export async function getLessonModeBeforeShare(lessonId: string): Promise<LessonMode | null> {
+  const raw = await redis.get(modeBeforeShareKey(lessonId));
+  return (raw as LessonMode | null) ?? null;
+}
+
+export async function setLessonModeBeforeShare(lessonId: string, mode: LessonMode | null): Promise<void> {
+  if (mode === null) {
+    await redis.del(modeBeforeShareKey(lessonId));
+  } else {
+    await redis.set(modeBeforeShareKey(lessonId), mode);
+  }
+}
+
 /** Отдельная функция без Redis-эффектов — детерминированное правило зачистки, легко тестируется. */
 export function isStaleEntry(entry: PresenceEntry, now: number, graceMs: number, heartbeatTimeoutMs: number): boolean {
   if (!entry.connected) return now - entry.lastSeenAt > graceMs;

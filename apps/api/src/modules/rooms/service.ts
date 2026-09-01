@@ -529,6 +529,86 @@ export async function handleRoomFinishedWebhook(livekitRoom: string): Promise<vo
   activeLessons.delete(lesson.id);
 }
 
+/**
+ * LiveKit-вебхук `track_published` для источника SCREEN_SHARE (Э7.2 + Э7.3).
+ * Читать построчно (§1.2 CLAUDE.md) — область «не делегировать вслепую»
+ * (логика прав + WebRTC): порядок здесь важен, каждый шаг меняет то, что
+ * реально видят участники урока.
+ *
+ * Э7.2, §5.2 ТЗ: «максимум 1 демонстрация одновременно, приоритет
+ * учителю». LiveKit сам это не ограничивает (грант лишь разрешает ИСТОЧНИК
+ * SCREEN_SHARE, не следит, сколько таких треков уже опубликовано в
+ * комнате) — решение принимается здесь, ПОСЛЕ факта публикации, не
+ * заранее: WebRTC-негоциацию на клиенте нельзя отменить с сервера ДО того,
+ * как трек уже пошёл, можно только замьютить его сразу после.
+ *   - Новый публикатор — учитель/админ: гасим ЧУЖИЕ демонстрации (приоритет
+ *     учителю — не важно, кто уже делился).
+ *   - Новый публикатор — ученик, и кто-то уже делится (не важно, кто): гасим
+ *     СВЕЖУЮ демонстрацию сразу — конфликтующие демонстрации учеников не
+ *     разрешаются по принципу «кто первый», а мы верны формулировке задачи
+ *     («максимум 1»), не изобретаем очередь.
+ *
+ * Э7.3, §5.3 ТЗ: «автопереход урока в режим Лекция на время демонстрации» —
+ * только если демонстрация РЕАЛЬНО состоялась (не была тут же погашена
+ * веткой Э7.2 выше). Текущий режим сохраняется в `modeBeforeShare`
+ * (`presence.ts`), ТОЛЬКО если он ещё не был сохранён — повторный старт
+ * демонстрации (например, вторая от того же участника, пока первая ещё не
+ * закончилась) не должен затереть исходный режим значением `lecture`,
+ * которое сам же и выставил.
+ */
+export async function handleScreenShareStartedWebhook(livekitRoom: string, userId: string): Promise<void> {
+  const lesson = await lessonsService.getLessonByLivekitRoom(livekitRoom);
+  if (!lesson) return;
+
+  const publisher = await presence.getParticipant(lesson.id, userId);
+  const isPublisherStaff = publisher?.role === "teacher" || publisher?.role === "admin";
+  const others = await mediaService.findOtherActiveScreenShares(livekitRoom, userId);
+
+  if (others.length > 0) {
+    if (!isPublisherStaff) {
+      // Не учитель, а демонстрация уже идёт — новую гасим, старая продолжается.
+      await mediaService.muteScreenShare(livekitRoom, userId);
+      return;
+    }
+    // Учитель — приоритет, гасим все чужие демонстрации.
+    await Promise.all(others.map((identity) => mediaService.muteScreenShare(livekitRoom, identity)));
+  }
+
+  const currentMode = await presence.getLessonMode(lesson.id);
+  if (currentMode !== "lecture") {
+    const alreadySaved = await presence.getLessonModeBeforeShare(lesson.id);
+    if (alreadySaved === null) {
+      await presence.setLessonModeBeforeShare(lesson.id, currentMode);
+    }
+  }
+  await presence.setLessonMode(lesson.id, "lecture");
+  emitRoomEvent(lesson.id, { type: "lesson_mode", mode: "lecture" });
+}
+
+/**
+ * LiveKit-вебхук `track_unpublished` для источника SCREEN_SHARE (Э7.3) —
+ * возвращает режим урока, сохранённый `handleScreenShareStartedWebhook` до
+ * начала демонстрации. Проверяет через LiveKit (`findOtherActiveScreenShares`
+ * без исключения), что демонстраций в комнате больше не осталось вовсе —
+ * иначе преждевременно вернул бы режим, пока другая демонстрация (или та
+ * же, переподключившаяся) ещё идёт. Если сохранённого режима нет (`null`)
+ * — режим уже был `lecture` до демонстрации, восстанавливать нечего.
+ */
+export async function handleScreenShareStoppedWebhook(livekitRoom: string): Promise<void> {
+  const lesson = await lessonsService.getLessonByLivekitRoom(livekitRoom);
+  if (!lesson) return;
+
+  const stillSharing = await mediaService.findOtherActiveScreenShares(livekitRoom);
+  if (stillSharing.length > 0) return;
+
+  const before = await presence.getLessonModeBeforeShare(lesson.id);
+  if (before === null) return;
+
+  await presence.setLessonMode(lesson.id, before);
+  await presence.setLessonModeBeforeShare(lesson.id, null);
+  emitRoomEvent(lesson.id, { type: "lesson_mode", mode: before });
+}
+
 export async function sendChatMessage(
   schoolId: string,
   lessonId: string,

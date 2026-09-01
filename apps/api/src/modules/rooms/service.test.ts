@@ -31,6 +31,8 @@ const { lessonsServiceMock, usersServiceMock, repoMock, mediaServiceMock, canvas
     updateLivePermissions: vi.fn(),
     muteParticipant: vi.fn(),
     muteMicrophones: vi.fn(),
+    findOtherActiveScreenShares: vi.fn().mockResolvedValue([]),
+    muteScreenShare: vi.fn(),
   },
 }));
 
@@ -46,6 +48,7 @@ vi.mock("./presence.js", async () => {
   const actual = await vi.importActual<typeof import("./presence.js")>("./presence.js");
   const rooms = new Map<string, Map<string, unknown>>();
   const modes = new Map<string, string>();
+  const modesBeforeShare = new Map<string, string>();
   const roomMap = (lessonId: string) => {
     let m = rooms.get(lessonId);
     if (!m) {
@@ -73,9 +76,16 @@ vi.mock("./presence.js", async () => {
     setLessonMode: vi.fn(async (lessonId: string, mode: string) => {
       modes.set(lessonId, mode);
     }),
+    // Э7.3: аналогично — сохранённый режим до начала демонстрации экрана.
+    getLessonModeBeforeShare: vi.fn(async (lessonId: string) => modesBeforeShare.get(lessonId) ?? null),
+    setLessonModeBeforeShare: vi.fn(async (lessonId: string, mode: string | null) => {
+      if (mode === null) modesBeforeShare.delete(lessonId);
+      else modesBeforeShare.set(lessonId, mode);
+    }),
     __clear: () => {
       rooms.clear();
       modes.clear();
+      modesBeforeShare.clear();
     },
   };
 });
@@ -555,5 +565,78 @@ describe("вебхуки LiveKit (Э2.7)", () => {
 
     expect(lessonsServiceMock.endLesson).not.toHaveBeenCalled();
     expect(canvasServiceMock.closeCanvasDocument).not.toHaveBeenCalled();
+  });
+
+  describe("демонстрация экрана: track_published/track_unpublished SCREEN_SHARE (Э7.2 + Э7.3)", () => {
+    beforeEach(() => {
+      lessonsServiceMock.getLessonByLivekitRoom.mockResolvedValue(baseLesson());
+      lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+      usersServiceMock.isGroupMember.mockResolvedValue(true);
+    });
+
+    it("учитель начинает демонстрацию — переводит урок в lecture, никого не гасит (конфликтов нет)", async () => {
+      await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+      await roomsService.setLessonMode(SCHOOL_ID, LESSON_ID, teacherToken(), "discussion");
+
+      await roomsService.handleScreenShareStartedWebhook(LIVEKIT_ROOM, TEACHER_ID);
+
+      expect(mediaServiceMock.muteScreenShare).not.toHaveBeenCalled();
+      const snapshot = await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+      expect(snapshot.lessonMode).toBe("lecture");
+    });
+
+    it("учитель начинает демонстрацию, пока ученик уже делится — гасит демонстрацию ученика (приоритет учителю)", async () => {
+      await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+      mediaServiceMock.findOtherActiveScreenShares.mockResolvedValueOnce([STUDENT_ID]);
+
+      await roomsService.handleScreenShareStartedWebhook(LIVEKIT_ROOM, TEACHER_ID);
+
+      expect(mediaServiceMock.muteScreenShare).toHaveBeenCalledWith(LIVEKIT_ROOM, STUDENT_ID);
+    });
+
+    it("ученик пытается начать демонстрацию, пока кто-то уже делится — гасит СВОЮ новую демонстрацию, режим не трогает", async () => {
+      await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+      await roomsService.setLessonMode(SCHOOL_ID, LESSON_ID, teacherToken(), "discussion");
+      mediaServiceMock.findOtherActiveScreenShares.mockResolvedValueOnce([TEACHER_ID]);
+
+      await roomsService.handleScreenShareStartedWebhook(LIVEKIT_ROOM, STUDENT_ID);
+
+      expect(mediaServiceMock.muteScreenShare).toHaveBeenCalledWith(LIVEKIT_ROOM, STUDENT_ID);
+      const snapshot = await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+      expect(snapshot.lessonMode).toBe("discussion");
+    });
+
+    it("демонстрация окончена и других не осталось — возвращает сохранённый режим", async () => {
+      await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+      await roomsService.setLessonMode(SCHOOL_ID, LESSON_ID, teacherToken(), "discussion");
+      await roomsService.handleScreenShareStartedWebhook(LIVEKIT_ROOM, TEACHER_ID);
+
+      await roomsService.handleScreenShareStoppedWebhook(LIVEKIT_ROOM);
+
+      const snapshot = await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+      expect(snapshot.lessonMode).toBe("discussion");
+    });
+
+    it("демонстрация окончена, но другая ещё идёт — режим пока не возвращает", async () => {
+      await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+      await roomsService.setLessonMode(SCHOOL_ID, LESSON_ID, teacherToken(), "discussion");
+      await roomsService.handleScreenShareStartedWebhook(LIVEKIT_ROOM, TEACHER_ID);
+      mediaServiceMock.findOtherActiveScreenShares.mockResolvedValueOnce([STUDENT_ID]);
+
+      await roomsService.handleScreenShareStoppedWebhook(LIVEKIT_ROOM);
+
+      const snapshot = await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+      expect(snapshot.lessonMode).toBe("lecture");
+    });
+
+    it("режим уже был lecture до демонстрации — после окончания ничего не меняет", async () => {
+      await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+      await roomsService.handleScreenShareStartedWebhook(LIVEKIT_ROOM, TEACHER_ID);
+
+      await roomsService.handleScreenShareStoppedWebhook(LIVEKIT_ROOM);
+
+      const snapshot = await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+      expect(snapshot.lessonMode).toBe("lecture");
+    });
   });
 });

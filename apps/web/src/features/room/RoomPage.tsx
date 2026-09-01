@@ -369,7 +369,7 @@ export function RoomPage() {
           {media && !isTeacher && self?.permissions.canPublishVideo && (
             <SelfCameraButton maxResolution={VideoPresets.h360.resolution} />
           )}
-          {media && (isTeacher || self?.permissions.canShareScreen) && <SelfScreenShareButton />}
+          {media && (isTeacher || self?.permissions.canShareScreen) && <SelfScreenShareButton priority={isTeacher} />}
           {media && isTeacher && (
             <button onClick={muteAll} className="rounded border px-3 py-1 text-sm">
               Заглушить всех

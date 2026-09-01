@@ -2,8 +2,10 @@ import { decodeJwt } from "jose";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createParticipantConnection,
+  findOtherActiveScreenShares,
   muteMicrophones,
   muteParticipant,
+  muteScreenShare,
   ttlSecondsUntilLessonGraceEnd,
   updateLivePermissions,
 } from "./service.js";
@@ -263,6 +265,68 @@ describe("muteParticipant / muteMicrophones: принудительный мью
     const [, muteInit] = fetchMock.mock.calls[1] as [unknown, RequestInit];
     const muteBody = JSON.parse(muteInit.body as string);
     expect(muteBody.trackSid).toBe("TR_1");
+    expect(muteBody.muted).toBe(true);
+  });
+});
+
+describe("findOtherActiveScreenShares / muteScreenShare (Э7.2)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("находит участников с активной (не замьюченной) демонстрацией, кроме исключённого", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse(200, {
+          participants: [
+            { identity: "user-1", tracks: [{ sid: "TR_1", source: "SCREEN_SHARE" }] },
+            { identity: "user-2", tracks: [{ sid: "TR_2", source: "SCREEN_SHARE", muted: true }] },
+            { identity: "user-3", tracks: [{ sid: "TR_3", source: "MICROPHONE" }] },
+          ],
+        }),
+      ),
+    );
+
+    const result = await findOtherActiveScreenShares("lesson-room", "user-1");
+
+    // user-1 исключён явно, user-2 замьючен (не активен), user-3 без демонстрации — остаётся никто.
+    expect(result).toEqual([]);
+  });
+
+  it("возвращает identity с реально активной демонстрацией", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse(200, {
+          participants: [{ identity: "user-2", tracks: [{ sid: "TR_2", source: "SCREEN_SHARE" }] }],
+        }),
+      ),
+    );
+
+    const result = await findOtherActiveScreenShares("lesson-room", "user-1");
+
+    expect(result).toEqual(["user-2"]);
+  });
+
+  it("muteScreenShare гасит именно трек SCREEN_SHARE, не трогая другие источники", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse(200, {
+          identity: "user-2",
+          tracks: [
+            { sid: "TR_MIC", source: "MICROPHONE" },
+            { sid: "TR_SCREEN", source: "SCREEN_SHARE" },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse(200, { sid: "TR_SCREEN", muted: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await muteScreenShare("lesson-room", "user-2");
+
+    const [, muteInit] = fetchMock.mock.calls[1] as [unknown, RequestInit];
+    const muteBody = JSON.parse(muteInit.body as string);
+    expect(muteBody.trackSid).toBe("TR_SCREEN");
     expect(muteBody.muted).toBe(true);
   });
 });
