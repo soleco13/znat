@@ -14,6 +14,7 @@
     "@hocuspocus/provider": "^4.6.0",
     "@livekit/components-react": "^2.9.24",
     "@school/shared": "workspace:*",
+    "dompurify": "^3.2.3",
     "livekit-client": "^2.22.0",
     "pdfjs-dist": "^4.10.38",
     "react": "^19.0.0",
