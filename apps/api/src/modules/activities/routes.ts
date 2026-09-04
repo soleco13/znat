@@ -31,6 +31,18 @@ export default async function activitiesRoutes(app: FastifyInstance) {
     return reply.send({ items });
   });
 
+  // Э8.8: живая панель прогресса класса — учителю (опрос раз в несколько секунд).
+  app.get<{ Params: { id: string } }>(
+    "/activities/:id/progress",
+    { preHandler: app.requireRole("admin", "teacher") },
+    async (request, reply) => {
+      const parsed = uuidParam.safeParse(request.params.id);
+      if (!parsed.success) throw new AppError(400, "bad_activity_id", "Некорректный идентификатор задания");
+      const progress = await activitiesService.getProgress(request.user, parsed.data);
+      return reply.send(progress);
+    },
+  );
+
   app.get<{ Params: { id: string } }>("/activities/:id/my", async (request, reply) => {
     const parsed = uuidParam.safeParse(request.params.id);
     if (!parsed.success) throw new AppError(400, "bad_activity_id", "Некорректный идентификатор задания");

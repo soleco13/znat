@@ -88,6 +88,11 @@ export async function isGroupMember(groupId: string, userId: string) {
   return repo.isGroupMember(groupId, userId);
 }
 
+/** Активные ученики группы с именами — панель прогресса класса (Э8.8). */
+export async function listGroupStudents(groupId: string) {
+  return repo.listGroupStudents(groupId);
+}
+
 export type { Role };
 
 function isUniqueViolation(err: unknown): boolean {

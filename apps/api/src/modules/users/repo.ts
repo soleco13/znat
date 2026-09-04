@@ -95,6 +95,16 @@ export async function addGroupMembers(groupId: string, userIds: string[]) {
     .onConflictDoNothing();
 }
 
+/** Ученики группы (для панели прогресса Э8.8) — только активные, с именами. */
+export async function listGroupStudents(groupId: string): Promise<{ id: string; fullName: string }[]> {
+  return db
+    .select({ id: users.id, fullName: users.fullName })
+    .from(groupMembers)
+    .innerJoin(users, eq(users.id, groupMembers.userId))
+    .where(and(eq(groupMembers.groupId, groupId), eq(users.role, "student"), eq(users.isActive, true)))
+    .orderBy(users.fullName);
+}
+
 export async function isGroupMember(groupId: string, userId: string): Promise<boolean> {
   const rows = await db
     .select({ userId: groupMembers.userId })

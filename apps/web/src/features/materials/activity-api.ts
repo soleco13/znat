@@ -1,5 +1,6 @@
 import type {
   ActivityDto,
+  ActivityProgress,
   CreateActivityRequest,
   MyActivity,
   SaveResponseRequest,
@@ -24,6 +25,11 @@ export function createActivity(lessonId: string, body: CreateActivityRequest): P
 /** Список выдач урока — фолбэк-поллинг, если WS-сигнал `activity_started` пропущен. */
 export function listLessonActivities(lessonId: string): Promise<{ items: ActivityDto[] }> {
   return apiFetch<{ items: ActivityDto[] }>(`/lessons/${lessonId}/activities`);
+}
+
+/** Учитель: живая картина класса по заданию (Э8.8). Опрашивается панелью прогресса раз в несколько секунд. */
+export function getActivityProgress(activityId: string): Promise<ActivityProgress> {
+  return apiFetch<ActivityProgress>(`/activities/${activityId}/progress`);
 }
 
 /** Ученик/учитель: своя копия задания без ключей ответов + ранее сохранённые черновики. */

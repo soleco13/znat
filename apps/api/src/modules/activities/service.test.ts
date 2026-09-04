@@ -10,12 +10,13 @@ const { repoMock, lessonsServiceMock, usersServiceMock, materialsServiceMock, ro
       maxAttemptNumber: vi.fn(),
       findResponsesByAttempt: vi.fn(),
       upsertDraftResponse: vi.fn(),
+      answeredStatsByActivity: vi.fn(),
     },
     lessonsServiceMock: { getLesson: vi.fn() },
-    usersServiceMock: { isGroupMember: vi.fn() },
+    usersServiceMock: { isGroupMember: vi.fn(), listGroupStudents: vi.fn() },
     materialsServiceMock: { getLatestMaterial: vi.fn(), getMaterialVersion: vi.fn() },
     roomsServiceMock: { broadcastToLesson: vi.fn() },
-    redisMock: { set: vi.fn(), get: vi.fn() },
+    redisMock: { set: vi.fn(), get: vi.fn(), mget: vi.fn() },
   }));
 
 vi.mock("./repo.js", () => repoMock);
@@ -25,7 +26,7 @@ vi.mock("../materials/service.js", () => materialsServiceMock);
 vi.mock("../rooms/service.js", () => roomsServiceMock);
 vi.mock("../../db/redis.js", () => ({ redis: redisMock }));
 
-const { createActivity, getMyActivity, listLessonActivities, saveResponse, deriveAttemptId } =
+const { createActivity, getMyActivity, listLessonActivities, saveResponse, getProgress, deriveAttemptId } =
   await import("./service.js");
 
 const SCHOOL = "11111111-1111-1111-1111-111111111111";
@@ -110,8 +111,11 @@ beforeEach(() => {
   repoMock.maxAttemptNumber.mockResolvedValue(0);
   repoMock.findResponsesByAttempt.mockResolvedValue([]);
   repoMock.upsertDraftResponse.mockResolvedValue(new Date("2026-09-04T09:31:00.000Z"));
+  repoMock.answeredStatsByActivity.mockResolvedValue([]);
+  usersServiceMock.listGroupStudents.mockResolvedValue([]);
   redisMock.set.mockResolvedValue("OK");
   redisMock.get.mockResolvedValue("2026-09-04T09:30:00.000Z");
+  redisMock.mget.mockResolvedValue([]);
 });
 
 describe("deriveAttemptId", () => {
@@ -298,6 +302,59 @@ describe("saveResponse (Э8.7) — автосохранение черновик
     await expect(
       saveResponse(studentA, ACTIVITY, { questionId: "q1", response: draft }),
     ).rejects.toMatchObject({ statusCode: 403 });
+  });
+});
+
+describe("getProgress (Э8.8) — панель прогресса класса", () => {
+  const twoQuestionMaterial: Material = {
+    ...material,
+    blocks: [
+      material.blocks[0]!,
+      { ...(material.blocks[0] as Extract<Material["blocks"][number], { type: "question" }>), id: "q2" },
+    ],
+  };
+
+  beforeEach(() => {
+    materialsServiceMock.getMaterialVersion.mockResolvedValue({
+      materialId: MATERIAL,
+      versionId: VERSION,
+      version: 1,
+      material: twoQuestionMaterial,
+    });
+    usersServiceMock.listGroupStudents.mockResolvedValue([
+      { id: STUDENT_A, fullName: "Аня" },
+      { id: STUDENT_B, fullName: "Боря" },
+      { id: "cccccccc-cccc-cccc-cccc-cccccccccccc", fullName: "Витя" },
+    ]);
+  });
+
+  it("классифицирует not_started / in_progress / stuck", async () => {
+    // Аня ответила на оба — in_progress; Боря открыл, ответил 1 и давно молчит — stuck; Витя не открывал.
+    repoMock.answeredStatsByActivity.mockResolvedValue([
+      { userId: STUDENT_A, answered: 2, lastAt: new Date().toISOString() },
+      { userId: STUDENT_B, answered: 1, lastAt: "2020-01-01T00:00:00.000Z" },
+    ]);
+    redisMock.mget.mockResolvedValue(["2026-09-04T09:00:00.000Z", "2026-09-04T09:00:00.000Z", null]);
+
+    const progress = await getProgress(teacher, ACTIVITY);
+
+    expect(progress.total).toBe(2);
+    const byName = Object.fromEntries(progress.students.map((s) => [s.fullName, s]));
+    expect(byName["Аня"]).toMatchObject({ status: "in_progress", answered: 2 });
+    expect(byName["Боря"]).toMatchObject({ status: "stuck", answered: 1 });
+    expect(byName["Витя"]).toMatchObject({ status: "not_started", answered: 0, lastActivityAt: null });
+  });
+
+  it("ученик открыл, но ещё не отвечал — in_progress, не not_started", async () => {
+    repoMock.answeredStatsByActivity.mockResolvedValue([]);
+    redisMock.mget.mockResolvedValue(["2026-09-04T09:00:00.000Z", null, null]);
+    const progress = await getProgress(teacher, ACTIVITY);
+    const anya = progress.students.find((s) => s.fullName === "Аня")!;
+    expect(anya.status).toBe("in_progress");
+  });
+
+  it("чужой учитель не видит прогресс — 403", async () => {
+    await expect(getProgress(otherTeacher, ACTIVITY)).rejects.toMatchObject({ statusCode: 403 });
   });
 });
 

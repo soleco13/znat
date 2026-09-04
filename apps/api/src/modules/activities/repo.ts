@@ -89,6 +89,27 @@ export async function findResponsesByAttempt(attemptId: string): Promise<SavedRe
 }
 
 /**
+ * Сводка ответов по ученикам одной активности (Э8.8) — сколько РАЗНЫХ
+ * вопросов отвечено и когда было последнее сохранение. Попытка у ученика
+ * фактически одна (`attemptId` детерминирован), поэтому группируем просто
+ * по `userId`.
+ */
+export async function answeredStatsByActivity(
+  activityId: string,
+): Promise<{ userId: string; answered: number; lastAt: string }[]> {
+  const rows = await db
+    .select({
+      userId: responses.userId,
+      answered: sql<number>`count(distinct ${responses.questionId})::int`,
+      lastAt: sql<string>`max(${responses.submittedAt})::text`,
+    })
+    .from(responses)
+    .where(eq(responses.activityId, activityId))
+    .groupBy(responses.userId);
+  return rows;
+}
+
+/**
  * Автосохранение черновика одного ответа (Э8.7). Upsert по естественному
  * ключу `(attemptId, questionId)` — уникальный индекс
  * `responses_attempt_question_idx` (Э8.2 завёл его ровно под эту цель):

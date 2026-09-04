@@ -71,6 +71,34 @@ export interface SaveResponseResult {
   savedAt: string;
 }
 
+// ─── Панель прогресса класса (Э8.8, §7.3 ТЗ) ──────────────────────────────
+
+/**
+ * `not_started` — ученик не открывал задание и не отвечал; `in_progress` —
+ * открыл/отвечает; `stuck` — открыл, но давно ничего не сохранял и ответил
+ * не на все вопросы («застрял», §7.3 ТЗ).
+ */
+export type StudentProgressStatus = "not_started" | "in_progress" | "stuck";
+
+export interface StudentProgress {
+  userId: string;
+  fullName: string;
+  status: StudentProgressStatus;
+  /** Сколько разных вопросов уже сохранено. */
+  answered: number;
+  /** Всего вопросов в материале. */
+  total: number;
+  /** ISO-момент последнего сохранения ответа, либо null. */
+  lastActivityAt: string | null;
+}
+
+/** Ответ `GET /activities/:id/progress` — живая картина класса для учителя. */
+export interface ActivityProgress {
+  activityId: string;
+  total: number;
+  students: StudentProgress[];
+}
+
 /**
  * Ответ `GET /activities/:id/my` — индивидуальная копия задания для одного
  * ученика. `material` уже прошёл `stripMaterialAnswerKeys` с сидом

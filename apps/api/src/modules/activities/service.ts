@@ -24,6 +24,8 @@ import {
   type MyActivity,
   type SaveResponseRequest,
   type SaveResponseResult,
+  type ActivityProgress,
+  type StudentProgress,
 } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
 import { redis } from "../../db/redis.js";
@@ -278,11 +280,92 @@ export async function saveResponse(
   return { saved: true, savedAt: savedAt.toISOString() };
 }
 
+function attemptStartKey(attemptId: string): string {
+  return `activity:attempt-start:${attemptId}`;
+}
+
 /** Момент старта попытки — точка отсчёта таймера. Пишется один раз (NX), переживает перезагрузку; потеря Redis = таймер стартует заново (deadline в БД абсолютный, не страдает). */
 async function ensureAttemptStart(attemptId: string): Promise<string> {
-  const key = `activity:attempt-start:${attemptId}`;
+  const key = attemptStartKey(attemptId);
   const now = new Date().toISOString();
   await redis.set(key, now, "EX", ATTEMPT_START_TTL_SECONDS, "NX");
   const stored = await redis.get(key);
   return stored ?? now;
+}
+
+/** «Застрял» — открыл задание, но не сохранял ответ дольше этого срока и ответил не на все вопросы (§7.3 ТЗ). */
+const STUCK_AFTER_MS = 3 * 60 * 1000;
+
+/**
+ * Живая картина класса по заданию (Э8.8, §7.3 ТЗ) — учителю. Не пуш, а
+ * опрос: учитель тянет этот эндпоинт раз в несколько секунд (панель
+ * прогресса), точности «раз в 3-5 сек» для класса достаточно, а пуш на
+ * каждое сохранение каждого ученика — лишний трафик по WS-каналу урока.
+ */
+export async function getProgress(
+  user: AccessTokenPayload,
+  activityId: string,
+): Promise<ActivityProgress> {
+  const activity = await loadActivityForSchool(activityId, user.schoolId);
+  if (!activity.lessonId) {
+    throw new AppError(409, "activity_not_in_lesson", "Задание не привязано к уроку");
+  }
+  const lesson = await assertLessonTeacher(user, activity.lessonId);
+
+  const [roster, stats, loaded] = await Promise.all([
+    usersService.listGroupStudents(lesson.groupId),
+    repo.answeredStatsByActivity(activityId),
+    materialsService.getMaterialVersion(activity.materialVersionId),
+  ]);
+  const total = loaded.material.blocks.filter((b) => b.type === "question").length;
+  const statByUser = new Map(stats.map((s) => [s.userId, s]));
+
+  const opened = await openedUserIds(
+    activityId,
+    roster.map((r) => r.id),
+  );
+
+  const now = Date.now();
+  const students: StudentProgress[] = roster.map((r) => {
+    const s = statByUser.get(r.id);
+    const answered = s?.answered ?? 0;
+    const lastAt = s?.lastAt ?? null;
+    const hasStarted = answered > 0 || opened.has(r.id);
+
+    let status: StudentProgress["status"];
+    if (!hasStarted) {
+      status = "not_started";
+    } else if (
+      answered < total &&
+      lastAt !== null &&
+      now - new Date(lastAt).getTime() > STUCK_AFTER_MS
+    ) {
+      status = "stuck";
+    } else {
+      status = "in_progress";
+    }
+
+    return {
+      userId: r.id,
+      fullName: r.fullName,
+      status,
+      answered,
+      total,
+      lastActivityAt: lastAt ? new Date(lastAt).toISOString() : null,
+    };
+  });
+
+  return { activityId, total, students };
+}
+
+/** Кто из перечисленных учеников уже открывал задание (метка старта попытки в Redis). */
+async function openedUserIds(activityId: string, userIds: string[]): Promise<Set<string>> {
+  if (userIds.length === 0) return new Set();
+  const keys = userIds.map((uid) => attemptStartKey(deriveAttemptId(activityId, uid, 1)));
+  const values = await redis.mget(keys);
+  const opened = new Set<string>();
+  userIds.forEach((uid, i) => {
+    if (values[i] != null) opened.add(uid);
+  });
+  return opened;
 }
