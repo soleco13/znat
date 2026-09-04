@@ -22,6 +22,7 @@ import livekitWebhookRoutes from "./modules/rooms/livekit-webhook.js";
 import canvasWsRoutes from "./modules/canvas/ws.js";
 import canvasRoutes from "./modules/canvas/routes.js";
 import decksRoutes from "./modules/decks/routes.js";
+import activitiesRoutes from "./modules/activities/routes.js";
 import {
   buildConvertJobHandlers,
   startDeckReconcileSweep,
@@ -69,6 +70,7 @@ export function buildServer() {
       api.register(roomsRoutes);
       api.register(canvasRoutes);
       api.register(decksRoutes);
+      api.register(activitiesRoutes);
       api.register(assetsRoutes);
     },
     { prefix: "/api/v1" },

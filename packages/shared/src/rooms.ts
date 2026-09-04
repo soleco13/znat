@@ -101,6 +101,10 @@ export const serverRoomMessageSchema = z.discriminatedUnion("type", [
   // Э4.4: прогресс конвертации презентации — по одному сообщению на каждую
   // смену статуса/шаг рендера. Канал `/ws` уже per-lesson, deckId хватает.
   z.object({ type: z.literal("deck_status"), deck: deckProgressEventSchema }),
+  // Э8.6: учитель запустил задание для класса. Это только СИГНАЛ «открой
+  // задание» — сам материал и ответы идут индивидуально по HTTP
+  // (`GET /activities/:id/my`), НЕ через этот канал и НЕ через Y.Doc урока.
+  z.object({ type: z.literal("activity_started"), activityId: z.string().uuid() }),
   z.object({ type: z.literal("error"), message: z.string() }),
 ]);
 export type ServerRoomMessage = z.infer<typeof serverRoomMessageSchema>;

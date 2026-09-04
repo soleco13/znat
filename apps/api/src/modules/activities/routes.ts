@@ -1,0 +1,40 @@
+import type { FastifyInstance } from "fastify";
+import { z } from "zod";
+import { createActivityRequestSchema } from "@school/shared";
+import { AppError } from "../../plugins/errors.js";
+import * as activitiesService from "./service.js";
+
+const uuidParam = z.string().uuid();
+
+/**
+ * Выдача заданий (Э8.6, §8 ТЗ). Монтируется под /api/v1 (см. server.ts).
+ * `POST /lessons/:id/activities` — учитель; `GET /activities/:id/my` —
+ * ученик получает СВОЮ копию (индивидуальный канал, не Y.Doc).
+ */
+export default async function activitiesRoutes(app: FastifyInstance) {
+  app.addHook("preHandler", app.authenticate);
+
+  app.post<{ Params: { id: string } }>(
+    "/lessons/:id/activities",
+    { preHandler: app.requireRole("admin", "teacher") },
+    async (request, reply) => {
+      const lessonId = uuidParam.parse(request.params.id);
+      const body = createActivityRequestSchema.parse(request.body);
+      const activity = await activitiesService.createActivity(request.user, lessonId, body);
+      return reply.status(201).send(activity);
+    },
+  );
+
+  app.get<{ Params: { id: string } }>("/lessons/:id/activities", async (request, reply) => {
+    const lessonId = uuidParam.parse(request.params.id);
+    const items = await activitiesService.listLessonActivities(request.user, lessonId);
+    return reply.send({ items });
+  });
+
+  app.get<{ Params: { id: string } }>("/activities/:id/my", async (request, reply) => {
+    const parsed = uuidParam.safeParse(request.params.id);
+    if (!parsed.success) throw new AppError(400, "bad_activity_id", "Некорректный идентификатор задания");
+    const my = await activitiesService.getMyActivity(request.user, parsed.data);
+    return reply.send(my);
+  });
+}

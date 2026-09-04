@@ -7,3 +7,4 @@ export * from "./media.js";
 export * from "./canvas.js";
 export * from "./decks.js";
 export * from "./materials.js";
+export * from "./activities.js";
