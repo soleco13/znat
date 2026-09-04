@@ -208,7 +208,8 @@ function BlockView({
   return <ContentBlockView block={block} />;
 }
 
-function ContentBlockView({ block }: { block: Exclude<Block, { type: "question" }> }) {
+/** Экспортируется отдельно — переиспользуется превью редактора (Э9.2, `MaterialEditorPage`). */
+export function ContentBlockView({ block }: { block: Exclude<Block, { type: "question" }> }) {
   switch (block.type) {
     case "rich_text":
       return <div className="prose text-sm" dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.html) }} />;

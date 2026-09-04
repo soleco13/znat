@@ -60,6 +60,27 @@ export async function findMaterialVersionById(
   return rows[0] ?? null;
 }
 
+/** Строка версии вместе с владением/статусом (Э9.2) — `findLatestMaterialVersion` их не отдаёт (нужны только редактору для проверки видимости, activities/service.ts их не спрашивает). */
+export interface MaterialForEditRow extends MaterialVersionRow {
+  status: MaterialStatus;
+  createdBy: string;
+}
+
+/** Последняя версия материала + владение/статус — для `GET /materials/:id` (Э9.2, редактор). */
+export async function findLatestMaterialVersionForEdit(
+  schoolId: string,
+  materialId: string,
+): Promise<MaterialForEditRow | null> {
+  const rows = await db
+    .select({ ...versionSelection, status: materials.status, createdBy: materials.createdBy })
+    .from(materialVersions)
+    .innerJoin(materials, eq(materials.id, materialVersions.materialId))
+    .where(and(eq(materials.id, materialId), eq(materials.schoolId, schoolId)))
+    .orderBy(desc(materialVersions.version))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 /** Одна строка библиотеки (Э9.1) — денормализованный кэш `materials`, без содержимого версии. */
 export interface MaterialSummaryRow {
   id: string;

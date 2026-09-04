@@ -2,7 +2,13 @@
  * Модуль `materials` (Э8) — по правилу CLAUDE.md наружу торчит только этот
  * файл, реализация движка проверки (Э8.3, читать построчно) — в `grading.ts`.
  */
-import { materialSchema, type AccessTokenPayload, type ListMaterialsQuery, type Material } from "@school/shared";
+import {
+  materialSchema,
+  type AccessTokenPayload,
+  type ListMaterialsQuery,
+  type Material,
+  type MaterialStatus,
+} from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
 import * as repo from "./repo.js";
 
@@ -51,6 +57,32 @@ export async function getMaterialVersion(versionId: string): Promise<LoadedMater
   const row = await repo.findMaterialVersionById(versionId);
   if (!row) throw new AppError(404, "material_not_found", "Версия материала не найдена");
   return parseVersion(row);
+}
+
+/** Полное содержимое версии + владение/статус — то, что грузит редактор (Э9.2). */
+export interface EditableMaterial extends LoadedMaterial {
+  status: MaterialStatus;
+  createdBy: string;
+}
+
+/**
+ * Материал для редактора (Э9.2, §7.2 ТЗ «Редактор материала»). Видимость —
+ * ТА ЖЕ «личная папка» учителя, что и в `listMaterials` (Э9.1, §4.2 ТЗ):
+ * учитель открывает свои материалы ЛЮБОГО статуса + чужие только
+ * опубликованные, admin/methodist — без ограничения. Отказ — 404, а не 403
+ * (как и у `getLatestMaterial` выше) — не подтверждаем чужому учителю сам
+ * факт существования материала другого учителя в этой школе.
+ */
+export async function getMaterialForEdit(
+  user: AccessTokenPayload,
+  materialId: string,
+): Promise<EditableMaterial> {
+  const row = await repo.findLatestMaterialVersionForEdit(user.schoolId, materialId);
+  if (!row) throw new AppError(404, "material_not_found", "Материал не найден");
+  if (user.role === "teacher" && row.status !== "published" && row.createdBy !== user.sub) {
+    throw new AppError(404, "material_not_found", "Материал не найден");
+  }
+  return { ...parseVersion(row), status: row.status, createdBy: row.createdBy };
 }
 
 /**

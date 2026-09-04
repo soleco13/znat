@@ -330,6 +330,26 @@ export const listMaterialsQuerySchema = z.object({
 });
 export type ListMaterialsQuery = z.infer<typeof listMaterialsQuerySchema>;
 
+/**
+ * Ответ `GET /materials/:id` (Э9.2, §7.2 ТЗ «Редактор материала») — полное
+ * содержимое версии, С КЛЮЧАМИ ОТВЕТОВ (`material: materialSchema`, не
+ * `PublicMaterial`). Это не нарушает «Ключи ответов… никогда не уходят на
+ * клиент до сабмита» (CLAUDE.md) — тот запрет про УЧЕНИКА; методист/учитель
+ * — автор/владелец контента, им ключ виден по определению (тот же принцип
+ * уже применён в `ActivityReview.material`, Э8.10). Видимость по роли — та
+ * же «личная папка» учителя, что и в `GET /materials` (Э9.1): проверяется
+ * на сервере, эта схема только про форму ответа.
+ */
+export const materialDetailSchema = z.object({
+  materialId: z.string(),
+  versionId: z.string(),
+  version: z.number().int().positive(),
+  status: materialStatusSchema,
+  createdBy: z.string(),
+  material: materialSchema,
+});
+export type MaterialDetail = z.infer<typeof materialDetailSchema>;
+
 // ─── Ответы ученика (§6.5 ТЗ, `responses.response`) ────────────────────────
 // Форма ответа зеркалит соответствующий interaction — тоже дискриминированное
 // объединение по `type`, чтобы движок проверки (Э8.3) мог сузить тип по

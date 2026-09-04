@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import type { ListMaterialsQuery, MaterialStatus, MaterialSummary } from "@school/shared";
 import { useAuthStore } from "../../shared/auth-store.js";
 import { listMaterials } from "./materials-api.js";
 
 /**
  * Библиотека материалов (Э9.1, §7.2 ТЗ) — дерево предмет → класс → тема,
- * фильтры, поиск, статусы. Редактора материалов ещё нет (Э9.2+), поэтому
- * карточка не открывает ничего — только показывает id материала для ручной
- * выдачи, тем же способом «id материала» что уже используют
- * `LessonActivityPanel`/`HomeworkPage` (Э8.6/8.11).
+ * фильтры, поиск, статусы. Карточка ведёт в редактор (Э9.2, `/materials/:id/edit`)
+ * — доступ туда всё равно перепроверяется сервером (`getMaterialForEdit`),
+ * ссылка здесь не решение о правах. id материала по-прежнему показан и
+ * копируется отдельной кнопкой — им пользуются `LessonActivityPanel`/
+ * `HomeworkPage` (Э8.6/8.11), которые пока просят id материала руками.
  */
 const STATUS_LABEL: Record<MaterialStatus, string> = {
   draft: "Черновик",
@@ -122,7 +124,10 @@ function MaterialsLibraryContent() {
       {error && <p className="text-sm text-red-600">{error}</p>}
       {!error && !items && <p className="text-sm text-slate-400">Загрузка…</p>}
       {!error && items && items.length === 0 && (
-        <p className="text-sm text-slate-500">Ничего не найдено. Материалы заводятся seed-скриптом (Э9.2 — редактор).</p>
+        <p className="text-sm text-slate-500">
+          Ничего не найдено. Материалы пока заводятся seed-скриптом — создание материала из редактора появится
+          отдельно (Э9.3+).
+        </p>
       )}
 
       <div className="flex flex-col gap-4">
@@ -166,10 +171,9 @@ function MaterialRow({ material }: { material: MaterialSummary }) {
 
   return (
     <li className="flex items-center justify-between gap-2 rounded border px-2 py-1 text-sm">
-      <span className="truncate">
-        {material.title}{" "}
-        <span className="text-xs text-slate-400">({STATUS_LABEL[material.status]})</span>
-      </span>
+      <Link to={`/materials/${material.id}/edit`} className="truncate hover:underline">
+        {material.title} <span className="text-xs text-slate-400">({STATUS_LABEL[material.status]})</span>
+      </Link>
       <button onClick={copyId} className="shrink-0 text-xs text-slate-500 underline">
         {copied ? "id скопирован" : `id ${material.id.slice(0, 8)}…`}
       </button>

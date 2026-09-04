@@ -1,6 +1,10 @@
 import type { FastifyInstance } from "fastify";
-import { listMaterialsQuerySchema, materialSummarySchema } from "@school/shared";
+import { z } from "zod";
+import { listMaterialsQuerySchema, materialDetailSchema, materialSummarySchema } from "@school/shared";
+import { AppError } from "../../plugins/errors.js";
 import * as materialsService from "./service.js";
+
+const uuidParam = z.string().uuid();
 
 /**
  * Библиотека материалов (Э9.1, §7.2/§8 ТЗ). Только admin/methodist/teacher —
@@ -26,6 +30,26 @@ export default async function materialsRoutes(app: FastifyInstance) {
         }),
       );
       return reply.send({ items });
+    },
+  );
+
+  app.get<{ Params: { id: string } }>(
+    "/materials/:id",
+    { preHandler: app.requireRole("admin", "methodist", "teacher") },
+    async (request, reply) => {
+      const parsed = uuidParam.safeParse(request.params.id);
+      if (!parsed.success) throw new AppError(400, "bad_material_id", "Некорректный идентификатор материала");
+      const loaded = await materialsService.getMaterialForEdit(request.user, parsed.data);
+      return reply.send(
+        materialDetailSchema.parse({
+          materialId: loaded.materialId,
+          versionId: loaded.versionId,
+          version: loaded.version,
+          status: loaded.status,
+          createdBy: loaded.createdBy,
+          material: loaded.material,
+        }),
+      );
     },
   );
 }
