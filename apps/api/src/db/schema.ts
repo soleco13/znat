@@ -36,6 +36,7 @@ export const deckStatusEnum = pgEnum("deck_status", [
   "failed",
 ]);
 export const activityModeEnum = pgEnum("activity_mode", ["lesson", "homework"]);
+export const materialStatusEnum = pgEnum("material_status", ["draft", "review", "published"]);
 
 export const schools = pgTable("schools", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -248,16 +249,43 @@ export const refreshTokens = pgTable(
  * версия — последняя по `version` (см. `material_versions` ниже), без
  * циклической связи между двумя таблицами.
  */
-export const materials = pgTable("materials", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  schoolId: uuid("school_id")
-    .notNull()
-    .references(() => schools.id, { onDelete: "cascade" }),
-  createdBy: uuid("created_by")
-    .notNull()
-    .references(() => users.id, { onDelete: "restrict" }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+/**
+ * Библиотека материалов (Э9.1, §7.2 ТЗ: дерево предмет → класс → тема,
+ * фильтры, поиск, статусы). `title`/`subject`/`grades`/`topic`/`status` —
+ * ДЕНОРМАЛИЗОВАННЫЙ кэш поверх `material_versions.content` (единственный
+ * источник правды, `materialSchema` в `packages/shared`) — иначе экран
+ * библиотеки сканировал бы jsonb каждой версии каждого материала школы при
+ * каждом фильтре/поиске. Синхронизируется при записи версии
+ * (`seed-material.ts` — сейчас единственный путь создания, редактора ещё
+ * нет, Э9.2/9.3); сам workflow черновик→ревью→публикация — Э9.8, здесь
+ * только колонка-атрибут для фильтра статуса.
+ */
+export const materials = pgTable(
+  "materials",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    schoolId: uuid("school_id")
+      .notNull()
+      .references(() => schools.id, { onDelete: "cascade" }),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    title: text("title").notNull(),
+    subject: text("subject").notNull(),
+    /** Массив номеров классов (`materialSchema.grades`), jsonb — не native PG array (нет прецедента в схеме, проще фильтровать через `@>`). */
+    grades: jsonb("grades").notNull().$type<number[]>(),
+    /** `materialSchema.topic` — опционально, `null` = узел «Без темы» в дереве библиотеки. */
+    topic: text("topic"),
+    status: materialStatusEnum("status").notNull().default("draft"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Обновляется при записи каждой новой версии — «последнее изменение» в библиотеке. */
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("materials_school_status_idx").on(t.schoolId, t.status),
+    index("materials_school_subject_idx").on(t.schoolId, t.subject),
+  ],
+);
 
 /**
  * Версия материала (Э8.2, §6.1 ТЗ) — `content` целиком проверяется

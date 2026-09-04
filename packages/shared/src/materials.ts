@@ -272,12 +272,63 @@ export const materialSchema = z.object({
   title: z.string().min(1),
   subject: z.string().min(1),
   grades: z.array(z.number().int().positive()).min(1),
+  /**
+   * Тема — третий уровень дерева библиотеки «предмет → класс → тема» (Э9.1,
+   * §7.2 ТЗ). Опционально (не `.min(1)`-обязательное поле, а optional) —
+   * это НЕ ломает существующие фикстуры материалов Э8 (табличные тесты
+   * движка проверки, `activities/service.test.ts`), у которых темы никогда
+   * не было; в библиотеке такие материалы попадают в узел «Без темы».
+   */
+  topic: z.string().min(1).optional(),
   tags: z.array(z.string()).default([]),
   estimatedMinutes: z.number().int().positive().optional(),
   settings: materialSettingsSchema,
   blocks: z.array(materialBlockSchema),
 });
 export type Material = z.infer<typeof materialSchema>;
+
+// ─── Библиотека материалов (Э9.1, §7.2/§8 ТЗ) ──────────────────────────────
+// `title`/`subject`/`grades`/`topic` живут в `material_versions.content`
+// (единственный источник правды, см. `materialSchema` выше) — таблица
+// `materials` их ДЕНОРМАЛИЗУЕТ на верхний уровень при записи версии, чтобы
+// экран библиотеки мог фильтровать/искать без сканирования jsonb каждой
+// версии каждого материала школы. Эти схемы описывают именно кэш, не
+// содержимое.
+
+/**
+ * draft — черновик, виден только автору (+ admin/methodist); review — отдан
+ * на ревью методисту/админу; published — виден всей школе (§4.2 ТЗ:
+ * «учитель создаёт материалы только в личной папке, без публикации в общую
+ * библиотеку» — публикует только admin/methodist). Переходы между статусами
+ * (сам workflow публикации) — Э9.8, здесь только сам статус как атрибут
+ * фильтрации библиотеки.
+ */
+export const materialStatusSchema = z.enum(["draft", "review", "published"]);
+export type MaterialStatus = z.infer<typeof materialStatusSchema>;
+
+/** Одна строка библиотеки (`GET /materials`) — без содержимого/блоков, только карточка. */
+export const materialSummarySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  subject: z.string(),
+  grades: z.array(z.number().int().positive()),
+  topic: z.string().nullable(),
+  status: materialStatusSchema,
+  createdBy: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type MaterialSummary = z.infer<typeof materialSummarySchema>;
+
+/** Querystring `GET /materials` (§8 ТЗ: `?subject=&grade=&q=&status=`) + `topic` дерева (Э9.1). */
+export const listMaterialsQuerySchema = z.object({
+  subject: z.string().min(1).optional(),
+  grade: z.coerce.number().int().positive().optional(),
+  topic: z.string().min(1).optional(),
+  q: z.string().min(1).optional(),
+  status: materialStatusSchema.optional(),
+});
+export type ListMaterialsQuery = z.infer<typeof listMaterialsQuerySchema>;
 
 // ─── Ответы ученика (§6.5 ТЗ, `responses.response`) ────────────────────────
 // Форма ответа зеркалит соответствующий interaction — тоже дискриминированное

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   clozeDropdownInteractionSchema,
+  listMaterialsQuerySchema,
   materialSchema,
   matchingInteractionSchema,
   multipleChoiceInteractionSchema,
@@ -304,6 +305,31 @@ describe("materialSchema — базовая валидация формата (�
     ).toThrow();
   });
 
+  it("topic опционален — не ломает материалы без темы (Э8-фикстуры)", () => {
+    const material = materialSchema.parse({
+      id: "mat_1",
+      schemaVersion: 1,
+      title: "Заголовок",
+      subject: "math",
+      grades: [8],
+      settings: {},
+      blocks: [],
+    });
+    expect(material.topic).toBeUndefined();
+
+    const withTopic = materialSchema.parse({
+      id: "mat_1",
+      schemaVersion: 1,
+      title: "Заголовок",
+      subject: "math",
+      grades: [8],
+      topic: "Квадратные уравнения",
+      settings: {},
+      blocks: [],
+    });
+    expect(withTopic.topic).toBe("Квадратные уравнения");
+  });
+
   it("отклоняет вопрос с interaction неизвестного типа (защита от опечатки в type)", () => {
     expect(() =>
       materialSchema.parse({
@@ -324,5 +350,19 @@ describe("materialSchema — базовая валидация формата (�
         ],
       }),
     ).toThrow();
+  });
+});
+
+describe("listMaterialsQuerySchema (Э9.1, §8 ТЗ: GET /materials?subject=&grade=&q=&status=)", () => {
+  it("все поля опциональны — пустой запрос валиден", () => {
+    expect(listMaterialsQuerySchema.parse({})).toEqual({});
+  });
+
+  it("grade приходит строкой из querystring — coerce в число", () => {
+    expect(listMaterialsQuerySchema.parse({ grade: "8" }).grade).toBe(8);
+  });
+
+  it("отклоняет неизвестный status", () => {
+    expect(() => listMaterialsQuerySchema.parse({ status: "archived" })).toThrow();
   });
 });

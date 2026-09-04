@@ -1,4 +1,5 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import type { MaterialStatus } from "@school/shared";
 import { db } from "../../db/client.js";
 import { materials, materialVersions } from "../../db/schema.js";
 
@@ -59,32 +60,70 @@ export async function findMaterialVersionById(
   return rows[0] ?? null;
 }
 
-/** Seed-скрипт (Э8, материалы заводятся JSON-ом — стоп-лист Э8). */
-export async function insertMaterialWithVersion(input: {
-  schoolId: string;
+/** Одна строка библиотеки (Э9.1) — денормализованный кэш `materials`, без содержимого версии. */
+export interface MaterialSummaryRow {
+  id: string;
+  title: string;
+  subject: string;
+  grades: number[];
+  topic: string | null;
+  status: MaterialStatus;
   createdBy: string;
-  content: unknown;
-}): Promise<MaterialVersionRow> {
-  return db.transaction(async (tx) => {
-    const [material] = await tx
-      .insert(materials)
-      .values({ schoolId: input.schoolId, createdBy: input.createdBy })
-      .returning();
-    const [version] = await tx
-      .insert(materialVersions)
-      .values({
-        materialId: material!.id,
-        version: 1,
-        content: input.content,
-        createdBy: input.createdBy,
-      })
-      .returning();
-    return {
-      materialId: material!.id,
-      schoolId: material!.schoolId,
-      versionId: version!.id,
-      version: version!.version,
-      content: version!.content,
-    };
-  });
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const summarySelection = {
+  id: materials.id,
+  title: materials.title,
+  subject: materials.subject,
+  grades: materials.grades,
+  topic: materials.topic,
+  status: materials.status,
+  createdBy: materials.createdBy,
+  createdAt: materials.createdAt,
+  updatedAt: materials.updatedAt,
+};
+
+/**
+ * Библиотека материалов (Э9.1, §8 ТЗ: `GET /materials?subject=&grade=&q=&status=`
+ * + `topic` дерева). `restrictToOwnerOrPublished` — «личная папка» учителя
+ * (§4.2 ТЗ): `undefined` для admin/methodist (видят всё), userId учителя —
+ * доп. условие `status='published' OR createdBy=userId`. Решение о том,
+ * КОГДА подставлять ограничение — в `service.ts` (роль), здесь только
+ * сборка SQL из уже разрешённых параметров.
+ */
+export async function listMaterials(
+  schoolId: string,
+  filters: {
+    subject?: string;
+    grade?: number;
+    topic?: string;
+    q?: string;
+    status?: MaterialStatus;
+    restrictToOwnerOrPublished?: string;
+  },
+): Promise<MaterialSummaryRow[]> {
+  const conditions = [eq(materials.schoolId, schoolId)];
+  if (filters.subject) conditions.push(eq(materials.subject, filters.subject));
+  if (filters.topic) conditions.push(eq(materials.topic, filters.topic));
+  if (filters.status) conditions.push(eq(materials.status, filters.status));
+  if (filters.q) conditions.push(ilike(materials.title, `%${filters.q}%`));
+  if (filters.grade !== undefined) {
+    conditions.push(sql`${materials.grades} @> ${JSON.stringify([filters.grade])}::jsonb`);
+  }
+  if (filters.restrictToOwnerOrPublished) {
+    conditions.push(
+      or(
+        eq(materials.status, "published"),
+        eq(materials.createdBy, filters.restrictToOwnerOrPublished),
+      )!,
+    );
+  }
+
+  return db
+    .select(summarySelection)
+    .from(materials)
+    .where(and(...conditions))
+    .orderBy(desc(materials.updatedAt));
 }

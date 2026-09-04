@@ -2,7 +2,7 @@
  * Модуль `materials` (Э8) — по правилу CLAUDE.md наружу торчит только этот
  * файл, реализация движка проверки (Э8.3, читать построчно) — в `grading.ts`.
  */
-import { materialSchema, type Material } from "@school/shared";
+import { materialSchema, type AccessTokenPayload, type ListMaterialsQuery, type Material } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
 import * as repo from "./repo.js";
 
@@ -51,4 +51,27 @@ export async function getMaterialVersion(versionId: string): Promise<LoadedMater
   const row = await repo.findMaterialVersionById(versionId);
   if (!row) throw new AppError(404, "material_not_found", "Версия материала не найдена");
   return parseVersion(row);
+}
+
+/**
+ * Библиотека материалов (Э9.1, §7.2 ТЗ). Видимость по роли — «личная папка»
+ * учителя (§4.2 ТЗ, «учитель создаёт материалы только в личной папке, без
+ * публикации в общую библиотеку»): учитель видит свои материалы ЛЮБОГО
+ * статуса + чужие ТОЛЬКО опубликованные; admin/methodist видят всё —
+ * именно им и достаётся публикация/ревью (Э9.8). Область прав доступа
+ * (CLAUDE.md, «не делегировать вслепую») — решение читано и написано
+ * построчно, а не сгенерировано.
+ */
+export async function listMaterials(
+  user: AccessTokenPayload,
+  query: ListMaterialsQuery,
+): Promise<repo.MaterialSummaryRow[]> {
+  return repo.listMaterials(user.schoolId, {
+    subject: query.subject,
+    grade: query.grade,
+    topic: query.topic,
+    q: query.q,
+    status: query.status,
+    restrictToOwnerOrPublished: user.role === "teacher" ? user.sub : undefined,
+  });
 }

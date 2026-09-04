@@ -8,17 +8,27 @@
  * Без schoolId/userId берёт первую школу и первого её админа/учителя.
  * С `--material <id>` добавляет НОВУЮ версию к существующему материалу
  * (append-only, Э8.2), иначе создаёт новый материал с версией 1.
+ * `--status draft|review|published` (по умолчанию `draft`) — статус в
+ * библиотеке (Э9.1); чтобы материал сразу увидела вся школа, а не только
+ * автор, передайте `--status published`.
  */
 import { readFile } from "node:fs/promises";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { materialSchema } from "@school/shared";
+import { materialSchema, materialStatusSchema } from "@school/shared";
 import { db, pool } from "./client.js";
 import { materials, materialVersions, schools, users } from "./schema.js";
 
 const args = process.argv.slice(2);
 const materialIdFlagIdx = args.indexOf("--material");
 const existingMaterialId = materialIdFlagIdx >= 0 ? args[materialIdFlagIdx + 1] : undefined;
-const positional = args.filter((a, i) => !a.startsWith("--") && args[i - 1] !== "--material");
+// Э9.1: статус для библиотеки (черновик/на ревью/опубликован) — по умолчанию
+// "draft", как и колонка в БД; редактора со своим workflow публикации ещё
+// нет (Э9.8), это ручной способ завести сразу видимый школе материал.
+const statusFlagIdx = args.indexOf("--status");
+const status = materialStatusSchema.parse(statusFlagIdx >= 0 ? args[statusFlagIdx + 1] : "draft");
+const positional = args.filter(
+  (a, i) => !a.startsWith("--") && args[i - 1] !== "--material" && args[i - 1] !== "--status",
+);
 
 const [filePath, schoolArg, userArg] = positional;
 if (!filePath) {
@@ -55,6 +65,16 @@ const result = await db.transaction(async (tx) => {
   let materialId = existingMaterialId;
   let version = 1;
 
+  // Денормализованный кэш `materials` (Э9.1, библиотека) — держим в шаге с
+  // содержимым версии при каждой записи, а не только при создании.
+  const summaryFields = {
+    title: content.title,
+    subject: content.subject,
+    grades: content.grades,
+    topic: content.topic ?? null,
+    updatedAt: new Date(),
+  };
+
   if (materialId) {
     const [owner] = await tx
       .select({ schoolId: materials.schoolId })
@@ -69,10 +89,13 @@ const result = await db.transaction(async (tx) => {
       .orderBy(desc(materialVersions.version))
       .limit(1);
     version = (last?.version ?? 0) + 1;
+    // Статус НЕ трогаем при добавлении версии к существующему материалу —
+    // переопределение статуса правкой опубликованного контента — Э9.8.
+    await tx.update(materials).set(summaryFields).where(eq(materials.id, materialId));
   } else {
     const [created] = await tx
       .insert(materials)
-      .values({ schoolId, createdBy: userId })
+      .values({ schoolId, createdBy: userId, status, ...summaryFields })
       .returning({ id: materials.id });
     materialId = created!.id;
   }

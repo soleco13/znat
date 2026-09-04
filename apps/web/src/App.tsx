@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { LoginPage } from "./features/auth/LoginPage.js";
 import { LessonsListPage } from "./features/lessons/LessonsListPage.js";
 import { HomeworkPage } from "./features/materials/HomeworkPage.js";
+import { MaterialsLibraryPage } from "./features/materials/MaterialsLibraryPage.js";
 import { RoomPage } from "./features/room/RoomPage.js";
 import { Layout } from "./shared/Layout.js";
 import { RequireAuth } from "./shared/RequireAuth.js";
@@ -35,6 +36,16 @@ export function App() {
             <RequireAuth>
               <Layout>
                 <HomeworkPage />
+              </Layout>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/materials"
+          element={
+            <RequireAuth>
+              <Layout>
+                <MaterialsLibraryPage />
               </Layout>
             </RequireAuth>
           }

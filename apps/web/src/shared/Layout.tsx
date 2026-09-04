@@ -29,6 +29,11 @@ export function Layout({ children }: { children: ReactNode }) {
               </Link>
             </>
           )}
+          {user && user.role !== "student" && (
+            <Link to="/materials" className="text-sm text-slate-600">
+              Библиотека
+            </Link>
+          )}
         </nav>
         {user && (
           <div className="flex items-center gap-3 text-sm">
