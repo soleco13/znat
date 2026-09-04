@@ -21,6 +21,11 @@ const {
     answeredStatsByActivity: vi.fn(),
     listResponsesByActivity: vi.fn(),
     markReviewed: vi.fn(),
+    attemptSubmittedAt: vi.fn(),
+    upsertGradedResponse: vi.fn(),
+    listPendingManualGrading: vi.fn(),
+    findResponseForGrading: vi.fn(),
+    persistManualGrade: vi.fn(),
   },
   lessonsServiceMock: { getLesson: vi.fn() },
   usersServiceMock: { isGroupMember: vi.fn(), listGroupStudents: vi.fn(), getGroupOrThrow: vi.fn() },
@@ -52,6 +57,9 @@ const {
   getReviewResponses,
   pushAnswerToBoard,
   deriveAttemptId,
+  submitActivity,
+  getGradingQueue,
+  gradeManualResponse,
 } = await import("./service.js");
 
 const SCHOOL = "11111111-1111-1111-1111-111111111111";
@@ -155,6 +163,11 @@ beforeEach(() => {
   repoMock.answeredStatsByActivity.mockResolvedValue([]);
   repoMock.listResponsesByActivity.mockResolvedValue([]);
   repoMock.markReviewed.mockResolvedValue(new Date("2026-09-04T09:40:00.000Z"));
+  repoMock.attemptSubmittedAt.mockResolvedValue(null);
+  repoMock.upsertGradedResponse.mockResolvedValue(undefined);
+  repoMock.listPendingManualGrading.mockResolvedValue([]);
+  repoMock.findResponseForGrading.mockResolvedValue(null);
+  repoMock.persistManualGrade.mockResolvedValue(new Date("2026-09-04T09:50:00.000Z"));
   canvasServiceMock.postAnswerToBoard.mockResolvedValue(undefined);
   usersServiceMock.listGroupStudents.mockResolvedValue([]);
   redisMock.set.mockResolvedValue("OK");
@@ -346,6 +359,14 @@ describe("saveResponse (Э8.7) — автосохранение черновик
     await expect(
       saveResponse(studentA, ACTIVITY, { questionId: "q1", response: draft }),
     ).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("работа уже сдана (Э8.12) — 409, черновик не пишется", async () => {
+    repoMock.attemptSubmittedAt.mockResolvedValue(new Date("2026-09-04T09:35:00.000Z"));
+    await expect(
+      saveResponse(studentA, ACTIVITY, { questionId: "q1", response: draft }),
+    ).rejects.toMatchObject({ statusCode: 409, code: "already_submitted" });
+    expect(repoMock.upsertDraftResponse).not.toHaveBeenCalled();
   });
 });
 
@@ -632,5 +653,285 @@ describe("Домашняя работа (Э8.11) через общие эндп�
       pushAnswerToBoard(teacher, HOMEWORK_ACTIVITY, { questionId: "q1", userId: STUDENT_A, anonymous: true }),
     ).rejects.toMatchObject({ statusCode: 409, code: "activity_not_in_lesson" });
     expect(canvasServiceMock.postAnswerToBoard).not.toHaveBeenCalled();
+  });
+});
+
+/** Материал с одним автопроверяемым вопросом (q1, single_choice, 1 балл) и одним ручным (q2, open_answer, 2 балла) — под submit/grading queue тесты. */
+const openAnswerBlock = {
+  type: "question" as const,
+  id: "q2",
+  prompt: { html: "Объясните, почему 2 + 2 = 4" },
+  points: 2,
+  interaction: {
+    type: "open_answer" as const,
+    maxLength: 2000,
+    allowAttachments: false,
+    rubric: [
+      { id: "c1", label: "Верно объяснил", points: 1 },
+      { id: "c2", label: "Без ошибок", points: 1 },
+    ],
+  },
+};
+const materialWithOpenAnswer: Material = {
+  ...material,
+  blocks: [material.blocks[0]!, openAnswerBlock],
+};
+
+/** Движок проверки замокан детерминированно: single_choice верен при "o2", open_answer всегда «ждёт проверки». */
+function mockGradeResponseEngine() {
+  materialsServiceMock.gradeResponse.mockImplementation(
+    (interaction: { type: string }, response: { type: string; selectedOptionId?: string | null }, points: number) => {
+      if (interaction.type === "single_choice") {
+        const correct = response.selectedOptionId === "o2";
+        return { score: correct ? points : 0, maxScore: points, correct, autoGraded: true };
+      }
+      if (interaction.type === "open_answer") {
+        return { score: 0, maxScore: points, correct: null, autoGraded: false };
+      }
+      throw new Error(`неожиданный тип в тесте: ${interaction.type}`);
+    },
+  );
+}
+
+describe("submitActivity (Э8.12, §8 ТЗ: POST /activities/:id/submit)", () => {
+  beforeEach(() => {
+    mockGradeResponseEngine();
+    materialsServiceMock.getMaterialVersion.mockResolvedValue({
+      materialId: MATERIAL,
+      versionId: VERSION,
+      version: 1,
+      material: materialWithOpenAnswer,
+    });
+  });
+
+  it("считает score/maxScore только по автопроверяемым, ручной вопрос уходит с score:0/correct:null", async () => {
+    repoMock.findResponsesByAttempt.mockResolvedValue([
+      { questionId: "q1", response: { type: "single_choice", selectedOptionId: "o2" } },
+      { questionId: "q2", response: { type: "open_answer", text: "потому что", attachmentIds: [] } },
+    ]);
+
+    const result = await submitActivity(studentA, ACTIVITY);
+
+    expect(result.score).toBe(1); // только q1 (1 балл), q2 ждёт учителя
+    expect(result.maxScore).toBe(3); // 1 + 2 — оба вопроса учтены в потолке
+    expect(result.feedback).toEqual([
+      { questionId: "q1", score: 1, maxScore: 1, correct: true, autoGraded: true },
+      { questionId: "q2", score: 0, maxScore: 2, correct: null, autoGraded: false },
+    ]);
+  });
+
+  it("неотвеченный вопрос — пустой ответ своего типа, 0 баллов, но НЕ пропуск (тот же движок)", async () => {
+    repoMock.findResponsesByAttempt.mockResolvedValue([]); // ни один вопрос не сохранён черновиком
+
+    const result = await submitActivity(studentA, ACTIVITY);
+
+    expect(result.score).toBe(0);
+    expect(result.maxScore).toBe(3);
+    expect(materialsServiceMock.gradeResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "single_choice" }),
+      { type: "single_choice", selectedOptionId: null },
+      1,
+    );
+  });
+
+  it("пишет каждый вопрос через repo.upsertGradedResponse с attemptId/attemptNumber попытки", async () => {
+    repoMock.findResponsesByAttempt.mockResolvedValue([]);
+    await submitActivity(studentA, ACTIVITY);
+
+    expect(repoMock.upsertGradedResponse).toHaveBeenCalledTimes(2);
+    expect(repoMock.upsertGradedResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attemptId: deriveAttemptId(ACTIVITY, STUDENT_A, 1),
+        attemptNumber: 1,
+        activityId: ACTIVITY,
+        materialId: MATERIAL,
+        questionId: "q1",
+      }),
+    );
+  });
+
+  it("не ученик (учитель) не сдаёт работу — 403", async () => {
+    await expect(submitActivity(teacher, ACTIVITY)).rejects.toMatchObject({ statusCode: 403 });
+    expect(repoMock.upsertGradedResponse).not.toHaveBeenCalled();
+  });
+
+  it("дедлайн прошёл — 409, сабмита не происходит", async () => {
+    repoMock.findActivityById.mockResolvedValue({ ...activityRow, deadline: new Date("2020-01-01T00:00:00.000Z") });
+    await expect(submitActivity(studentA, ACTIVITY)).rejects.toMatchObject({ statusCode: 409 });
+    expect(repoMock.upsertGradedResponse).not.toHaveBeenCalled();
+  });
+
+  it("ученик не из группы — 403", async () => {
+    usersServiceMock.isGroupMember.mockResolvedValue(false);
+    await expect(submitActivity(studentA, ACTIVITY)).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("идемпотентна: повторный вызов пересчитывает те же баллы, не падает", async () => {
+    repoMock.findResponsesByAttempt.mockResolvedValue([
+      { questionId: "q1", response: { type: "single_choice", selectedOptionId: "o2" } },
+    ]);
+    const first = await submitActivity(studentA, ACTIVITY);
+    const second = await submitActivity(studentA, ACTIVITY);
+    expect(second).toEqual(first);
+  });
+});
+
+describe("getGradingQueue (Э8.12, §8 ТЗ: GET /grading/queue)", () => {
+  const pendingRow = {
+    responseId: "resp-1",
+    activityId: ACTIVITY,
+    activityMode: "lesson" as const,
+    materialVersionId: VERSION,
+    questionId: "q2",
+    response: { type: "open_answer" as const, text: "потому что", attachmentIds: [] },
+    studentId: STUDENT_A,
+    studentFullName: "Аня",
+    submittedAt: new Date("2026-09-04T09:36:00.000Z"),
+  };
+
+  beforeEach(() => {
+    materialsServiceMock.getMaterialVersion.mockResolvedValue({
+      materialId: MATERIAL,
+      versionId: VERSION,
+      version: 1,
+      material: materialWithOpenAnswer,
+    });
+  });
+
+  it("учитель — очередь фильтруется по assignedBy (его собственные выдачи)", async () => {
+    repoMock.listPendingManualGrading.mockResolvedValue([pendingRow]);
+    const items = await getGradingQueue(teacher);
+    expect(repoMock.listPendingManualGrading).toHaveBeenCalledWith(SCHOOL, TEACHER);
+    expect(items).toEqual([
+      {
+        responseId: "resp-1",
+        activityId: ACTIVITY,
+        activityMode: "lesson",
+        materialTitle: materialWithOpenAnswer.title,
+        questionId: "q2",
+        promptHtml: "Объясните, почему 2 + 2 = 4",
+        rubric: openAnswerBlock.interaction.rubric,
+        maxScore: 2,
+        studentId: STUDENT_A,
+        studentName: "Аня",
+        response: { text: "потому что", attachmentIds: [] },
+        submittedAt: "2026-09-04T09:36:00.000Z",
+      },
+    ]);
+  });
+
+  it("админ — очередь без фильтра по assignedBy (вся школа)", async () => {
+    repoMock.listPendingManualGrading.mockResolvedValue([]);
+    await getGradingQueue({ sub: "admin-1", schoolId: SCHOOL, role: "admin" });
+    expect(repoMock.listPendingManualGrading).toHaveBeenCalledWith(SCHOOL, null);
+  });
+
+  it("не учитель/админ (ученик) — 403", async () => {
+    await expect(getGradingQueue(studentA)).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("вопрос рассинхронизирован (не open_answer в текущей версии) — молча пропускается", async () => {
+    repoMock.listPendingManualGrading.mockResolvedValue([{ ...pendingRow, questionId: "q1" }]);
+    const items = await getGradingQueue(teacher);
+    expect(items).toEqual([]);
+  });
+});
+
+describe("gradeManualResponse (Э8.12, §8 ТЗ: POST /grading/:responseId)", () => {
+  const target = {
+    id: "resp-1",
+    assignedBy: TEACHER,
+    schoolId: SCHOOL,
+    materialVersionId: VERSION,
+    questionId: "q2",
+    gradedBy: null as string | null,
+    autoGraded: false,
+    submitted: true,
+  };
+
+  beforeEach(() => {
+    repoMock.findResponseForGrading.mockResolvedValue(target);
+    materialsServiceMock.getMaterialVersion.mockResolvedValue({
+      materialId: MATERIAL,
+      versionId: VERSION,
+      version: 1,
+      material: materialWithOpenAnswer,
+    });
+  });
+
+  it("учитель-владелец ставит баллы — repo.persistManualGrade вызван, результат возвращён", async () => {
+    const result = await gradeManualResponse(teacher, "resp-1", {
+      score: 1.5,
+      rubricScores: { c1: true, c2: false },
+      comment: "почти",
+    });
+    expect(repoMock.persistManualGrade).toHaveBeenCalledWith("resp-1", {
+      score: 1.5,
+      rubricScores: { c1: true, c2: false },
+      comment: "почти",
+      gradedBy: TEACHER,
+    });
+    expect(result).toEqual({ responseId: "resp-1", score: 1.5, maxScore: 2, gradedAt: "2026-09-04T09:50:00.000Z" });
+  });
+
+  it("не учитель/админ (ученик) — 403", async () => {
+    await expect(
+      gradeManualResponse(studentA, "resp-1", { score: 1, rubricScores: {} }),
+    ).rejects.toMatchObject({ statusCode: 403 });
+    expect(repoMock.persistManualGrade).not.toHaveBeenCalled();
+  });
+
+  it("ответ не найден / чужая школа — 404", async () => {
+    repoMock.findResponseForGrading.mockResolvedValue(null);
+    await expect(
+      gradeManualResponse(teacher, "resp-1", { score: 1, rubricScores: {} }),
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("учитель, который не выдавал это задание — 403", async () => {
+    await expect(
+      gradeManualResponse(otherTeacher, "resp-1", { score: 1, rubricScores: {} }),
+    ).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("ответ ещё не сдан (черновик) — 409", async () => {
+    repoMock.findResponseForGrading.mockResolvedValue({ ...target, submitted: false });
+    await expect(
+      gradeManualResponse(teacher, "resp-1", { score: 1, rubricScores: {} }),
+    ).rejects.toMatchObject({ statusCode: 409, code: "not_pending_manual_grading" });
+  });
+
+  it("ответ автопроверяемый — 409 (нечего проверять вручную)", async () => {
+    repoMock.findResponseForGrading.mockResolvedValue({ ...target, autoGraded: true });
+    await expect(
+      gradeManualResponse(teacher, "resp-1", { score: 1, rubricScores: {} }),
+    ).rejects.toMatchObject({ statusCode: 409, code: "not_pending_manual_grading" });
+  });
+
+  it("уже проверен (gradedBy заполнен) — 409, не зовёт persistManualGrade", async () => {
+    repoMock.findResponseForGrading.mockResolvedValue({ ...target, gradedBy: "someone" });
+    await expect(
+      gradeManualResponse(teacher, "resp-1", { score: 1, rubricScores: {} }),
+    ).rejects.toMatchObject({ statusCode: 409, code: "already_graded" });
+    expect(repoMock.persistManualGrade).not.toHaveBeenCalled();
+  });
+
+  it("неизвестный критерий рубрики — 400", async () => {
+    await expect(
+      gradeManualResponse(teacher, "resp-1", { score: 1, rubricScores: { unknown: true } }),
+    ).rejects.toMatchObject({ statusCode: 400, code: "unknown_rubric_criterion" });
+  });
+
+  it("балл больше максимального вопроса — 400", async () => {
+    await expect(
+      gradeManualResponse(teacher, "resp-1", { score: 5, rubricScores: {} }),
+    ).rejects.toMatchObject({ statusCode: 400, code: "score_exceeds_max" });
+  });
+
+  it("гонка: persistManualGrade вернул null (уже проверено между чтением и записью) — 409", async () => {
+    repoMock.persistManualGrade.mockResolvedValue(null);
+    await expect(
+      gradeManualResponse(teacher, "resp-1", { score: 1, rubricScores: {} }),
+    ).rejects.toMatchObject({ statusCode: 409, code: "already_graded" });
   });
 });

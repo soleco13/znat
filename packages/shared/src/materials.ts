@@ -153,6 +153,7 @@ export const rubricCriterionSchema = z.object({
   label: z.string(),
   points: z.number().nonnegative(),
 });
+export type RubricCriterion = z.infer<typeof rubricCriterionSchema>;
 
 export const openAnswerInteractionSchema = z.object({
   type: z.literal("open_answer"),

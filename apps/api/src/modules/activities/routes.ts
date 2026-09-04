@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import {
   createActivityRequestSchema,
+  gradeManualResponseRequestSchema,
   pushAnswerToBoardRequestSchema,
   saveResponseRequestSchema,
 } from "@school/shared";
@@ -146,6 +147,34 @@ export default async function activitiesRoutes(app: FastifyInstance) {
       const body = pushAnswerToBoardRequestSchema.parse(request.body);
       await activitiesService.pushAnswerToBoard(request.user, parsed.data, body);
       return reply.status(204).send();
+    },
+  );
+
+  // §8 ТЗ: ученик сдаёт попытку — автопроверяемые вопросы оцениваются сразу,
+  // `open_answer` уходит в очередь ручной проверки (Э8.12). После этого
+  // вызова `POST /activities/:id/responses` (автосохранение) отказывает.
+  app.post<{ Params: { id: string } }>("/activities/:id/submit", async (request, reply) => {
+    const parsed = uuidParam.safeParse(request.params.id);
+    if (!parsed.success) throw new AppError(400, "bad_activity_id", "Некорректный идентификатор задания");
+    const result = await activitiesService.submitActivity(request.user, parsed.data);
+    return reply.send(result);
+  });
+
+  // Э8.12, §8 ТЗ: очередь ручной проверки — учителю/админу.
+  app.get("/grading/queue", { preHandler: app.requireRole("admin", "teacher") }, async (request, reply) => {
+    const items = await activitiesService.getGradingQueue(request.user);
+    return reply.send({ items });
+  });
+
+  // Э8.12, §8 ТЗ: учитель ставит баллы за один ответ ручной проверки.
+  app.post<{ Params: { responseId: string } }>(
+    "/grading/:responseId",
+    { preHandler: app.requireRole("admin", "teacher") },
+    async (request, reply) => {
+      const responseId = uuidParam.parse(request.params.responseId);
+      const body = gradeManualResponseRequestSchema.parse(request.body);
+      const result = await activitiesService.gradeManualResponse(request.user, responseId, body);
+      return reply.send(result);
     },
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from "react";
-import type { MyActivity, QuestionResponse } from "@school/shared";
+import type { MyActivity, QuestionResponse, SubmitActivityResult } from "@school/shared";
 import { QuestionPlayer } from "./QuestionPlayer.js";
+import { submitActivity } from "./activity-api.js";
 import { useActivityAutosave, type AutosaveStatus } from "./useActivityAutosave.js";
 import { sanitizeHtml } from "../../shared/sanitize-html.js";
 
@@ -15,6 +16,15 @@ type Block = MyActivity["material"]["blocks"][number];
  * Автосохранение (Э8.7): если задан `autosaveActivityId`, каждое изменение
  * ставится в очередь `useActivityAutosave` (раз в 5 сек + при потере фокуса).
  * `onResponseChange` — дополнительный хук для вызывающей стороны.
+ *
+ * Сабмит (Э8.12, §8 ТЗ): кнопка «Сдать работу» видна, только пока задан
+ * `autosaveActivityId` (не превью учителя) и попытка ещё не сдана
+ * (`activity.submittedAt === null`). Перед отправкой — `autosave.flush()`,
+ * чтобы последний непойманный дебаунсом черновик не потерялся молча.
+ * После успешного сабмита плеер блокируется целиком (`disabled` изнутри,
+ * независимо от пропа) — сервер всё равно откажет дальнейшим
+ * `saveResponse`, но без локальной блокировки поля выглядели бы
+ * редактируемыми, вводя в заблуждение.
  *
  * Контентные блоки §6.2, требующие KaTeX/пайплайна ассетов (`formula`,
  * `image`, `video`, `audio`, `embed`), пока показываются заглушкой —
@@ -36,6 +46,10 @@ export function MaterialPlayer({
   const [responses, setResponses] = useState<Record<string, QuestionResponse>>(
     () => ({ ...activity.savedResponses }),
   );
+  const [submittedAt, setSubmittedAt] = useState<string | null>(activity.submittedAt);
+  const [submitResult, setSubmitResult] = useState<SubmitActivityResult | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const autosave = useActivityAutosave(autosaveActivityId);
 
   const handleChange = (questionId: string, response: QuestionResponse) => {
@@ -43,6 +57,24 @@ export function MaterialPlayer({
     if (autosaveActivityId) autosave.queue(questionId, response);
     onResponseChange?.(questionId, response);
   };
+
+  async function handleSubmit() {
+    if (!autosaveActivityId) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await autosave.flush();
+      const result = await submitActivity(autosaveActivityId);
+      setSubmitResult(result);
+      setSubmittedAt(new Date().toISOString());
+    } catch {
+      setSubmitError("Не удалось сдать работу — попробуйте ещё раз");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const locked = disabled || submittedAt !== null;
 
   return (
     <div className="space-y-4">
@@ -53,9 +85,58 @@ export function MaterialPlayer({
           block={block}
           response={responses[block.id]}
           onChange={handleChange}
-          disabled={disabled}
+          disabled={locked}
         />
       ))}
+      {autosaveActivityId && (
+        <SubmitBar
+          submittedAt={submittedAt}
+          result={submitResult}
+          submitting={submitting}
+          error={submitError}
+          onSubmit={handleSubmit}
+        />
+      )}
+    </div>
+  );
+}
+
+function SubmitBar({
+  submittedAt,
+  result,
+  submitting,
+  error,
+  onSubmit,
+}: {
+  submittedAt: string | null;
+  result: SubmitActivityResult | null;
+  submitting: boolean;
+  error: string | null;
+  onSubmit: () => void;
+}) {
+  if (submittedAt) {
+    return (
+      <div className="rounded border bg-slate-50 p-3 text-sm">
+        <p className="font-medium">Работа сдана {new Date(submittedAt).toLocaleString()}</p>
+        {result && (
+          <p className="text-xs text-slate-500">
+            {result.score} из {result.maxScore} баллов автопроверкой
+            {result.feedback.some((f) => !f.autoGraded) && " · часть вопросов ждёт проверки учителем"}
+          </p>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-1">
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <button
+        onClick={onSubmit}
+        disabled={submitting}
+        className="rounded border bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-40"
+      >
+        {submitting ? "Отправляем…" : "Сдать работу"}
+      </button>
     </div>
   );
 }

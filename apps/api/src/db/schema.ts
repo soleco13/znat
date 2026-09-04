@@ -367,6 +367,23 @@ export const responses = pgTable(
     autoGraded: boolean("auto_graded").notNull(),
     gradedBy: uuid("graded_by").references(() => users.id, { onDelete: "set null" }),
     gradedAt: timestamp("graded_at", { withTimezone: true }),
+    /**
+     * По каждому критерию рубрики (Э8.12, `openAnswerInteractionSchema.rubric`)
+     * — выполнен он или нет. Заполняется только ручной проверкой
+     * (`POST /grading/:responseId`), `null` — для автопроверяемых типов и
+     * для ещё не проверенного `open_answer`.
+     */
+    rubricScores: jsonb("rubric_scores"),
+    /** Комментарий учителя к ручной проверке (Э8.12), `null` — не оставлен. */
+    comment: text("comment"),
+    /**
+     * Черновик (`false`) vs финальный ответ попытки (`true`, Э8.12) —
+     * выставляется ТОЛЬКО на `POST /activities/:id/submit`. Пока `false`,
+     * автосохранение (Э8.7) продолжает перезаписывать строку; `saveResponse`
+     * отказывает после сабмита. Очередь ручной проверки (`GET /grading/queue`)
+     * читает только `submitted = true` — черновик `open_answer` учителю не виден.
+     */
+    submitted: boolean("submitted").notNull().default(false),
     timeSpentMs: integer("time_spent_ms").notNull().default(0),
     attemptNumber: integer("attempt_number").notNull().default(1),
     submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
@@ -377,5 +394,7 @@ export const responses = pgTable(
     index("responses_activity_user_idx").on(t.activityId, t.userId),
     // Аналитика по вопросу (Э8.9): «17 из 24 выбрали B» — агрегат по материалу+вопросу вне привязки к конкретной выдаче.
     index("responses_material_question_idx").on(t.materialId, t.questionId),
+    // Очередь ручной проверки (Э8.12): `submitted = true AND auto_graded = false AND graded_by IS NULL`.
+    index("responses_manual_queue_idx").on(t.submitted, t.autoGraded, t.gradedBy),
   ],
 );

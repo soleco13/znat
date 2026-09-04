@@ -4,12 +4,16 @@ import type {
   ActivityProgress,
   ActivityReview,
   CreateActivityRequest,
+  GradeManualResponseRequest,
+  GradeManualResponseResult,
+  GradingQueueItem,
   MyActivity,
   PushAnswerToBoardRequest,
   ReviewQuestionResponses,
   SaveResponseRequest,
   SaveResponseResult,
   StartReviewResult,
+  SubmitActivityResult,
 } from "@school/shared";
 import { apiFetch } from "../../shared/api-client.js";
 
@@ -74,6 +78,27 @@ export function saveResponse(
     method: "POST",
     body: JSON.stringify(body),
     keepalive,
+  });
+}
+
+/** Ученик: сдать текущую попытку (Э8.12, §8 ТЗ). После этого черновики (`saveResponse`) больше не принимаются. */
+export function submitActivity(activityId: string): Promise<SubmitActivityResult> {
+  return apiFetch<SubmitActivityResult>(`/activities/${activityId}/submit`, { method: "POST" });
+}
+
+/** Учитель: очередь ручной проверки — сданные, ещё не оценённые ответы `open_answer` (Э8.12). */
+export function getGradingQueue(): Promise<{ items: GradingQueueItem[] }> {
+  return apiFetch<{ items: GradingQueueItem[] }>(`/grading/queue`);
+}
+
+/** Учитель: поставить баллы за один ответ ручной проверки (Э8.12). */
+export function gradeManualResponse(
+  responseId: string,
+  body: GradeManualResponseRequest,
+): Promise<GradeManualResponseResult> {
+  return apiFetch<GradeManualResponseResult>(`/grading/${responseId}`, {
+    method: "POST",
+    body: JSON.stringify(body),
   });
 }
 

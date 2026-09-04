@@ -4,6 +4,7 @@ import {
   type Material,
   type PublicMaterial,
   type QuestionResponse,
+  type RubricCriterion,
 } from "./materials.js";
 
 /**
@@ -194,6 +195,74 @@ export interface MyActivity {
   material: PublicMaterial;
   /** Ранее сохранённые черновики ответов этой попытки, по `questionId`. */
   savedResponses: Record<string, SavedResponse["response"]>;
+  /** ISO-момент сабмита ЭТОЙ попытки (Э8.12), либо `null` — ещё не сдана, черновики можно менять. */
+  submittedAt: string | null;
+}
+
+// ─── Сабмит (§8 ТЗ: `POST /activities/:id/submit`) ─────────────────────────
+
+/** Результат проверки одного вопроса после сабмита. `correct: null`/`autoGraded: false` — ручная проверка (Э8.12), баллы появятся после неё. */
+export interface SubmitFeedbackItem {
+  questionId: string;
+  score: number;
+  maxScore: number;
+  correct: boolean | null;
+  autoGraded: boolean;
+}
+
+/**
+ * Ответ `POST /activities/:id/submit` (§8 ТЗ: `{ score, maxScore, feedback[] }`).
+ * `score`/`maxScore` считают ТОЛЬКО автопроверяемые вопросы — вклад
+ * ручной проверки (`open_answer`) появится в итоге уже после того, как
+ * учитель выставит баллы через `POST /grading/:responseId` (Э8.12); до
+ * этого момента её честный вклад в сумму неизвестен, а не ноль.
+ */
+export interface SubmitActivityResult {
+  attemptId: string;
+  score: number;
+  maxScore: number;
+  feedback: SubmitFeedbackItem[];
+}
+
+// ─── Ручная проверка (Э8.12, §6.4/§8 ТЗ: «попадает в очередь учителя с
+// рубрикой») ─────────────────────────────────────────────────────────────
+
+/** Один элемент очереди `GET /grading/queue` — сданный (не черновик), ещё не оценённый вручную ответ на `open_answer`. */
+export interface GradingQueueItem {
+  responseId: string;
+  activityId: string;
+  activityMode: ActivityMode;
+  materialTitle: string;
+  questionId: string;
+  promptHtml: string;
+  rubric: RubricCriterion[];
+  maxScore: number;
+  studentId: string;
+  studentName: string;
+  response: { text: string; attachmentIds: string[] };
+  /** ISO-момент сдачи попытки (когда именно этот ответ стал финальным). */
+  submittedAt: string;
+}
+
+/**
+ * Тело `POST /grading/:responseId` (§8 ТЗ: `{ score, rubricScores, comment }`).
+ * `rubricScores` — по каждому критерию рубрики, выполнен он или нет; сам
+ * `score` учитель проставляет отдельно (не обязан буквально совпадать с
+ * суммой отмеченных баллов критериев — рубрика подсказка, не жёсткая
+ * формула, финальное слово всегда за учителем, §6.4 ТЗ «ручная проверка»).
+ */
+export const gradeManualResponseRequestSchema = z.object({
+  score: z.number().nonnegative(),
+  rubricScores: z.record(z.string(), z.boolean()).default({}),
+  comment: z.string().max(2000).optional(),
+});
+export type GradeManualResponseRequest = z.infer<typeof gradeManualResponseRequestSchema>;
+
+export interface GradeManualResponseResult {
+  responseId: string;
+  score: number;
+  maxScore: number;
+  gradedAt: string;
 }
 
 // ─── Разбор (Э8.10, §7.3 ТЗ: «показать правильный ответ всем, вынести чей-то

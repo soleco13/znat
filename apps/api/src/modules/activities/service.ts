@@ -43,6 +43,11 @@ import {
   type ReviewQuestionResponses,
   type ReviewStudentResponse,
   type PushAnswerToBoardRequest,
+  type SubmitActivityResult,
+  type SubmitFeedbackItem,
+  type GradingQueueItem,
+  type GradeManualResponseRequest,
+  type GradeManualResponseResult,
 } from "@school/shared";
 import { buildDistribution, formatResponseText } from "./analytics.js";
 import { AppError } from "../../plugins/errors.js";
@@ -320,6 +325,8 @@ export async function getMyActivity(
   const savedResponses: MyActivity["savedResponses"] = {};
   for (const r of saved) savedResponses[r.questionId] = r.response;
 
+  const submittedAt = await repo.attemptSubmittedAt(attemptId);
+
   return {
     activityId,
     attemptId,
@@ -330,6 +337,7 @@ export async function getMyActivity(
     startedAt,
     material: publicMaterial,
     savedResponses,
+    submittedAt: submittedAt ? submittedAt.toISOString() : null,
   };
 }
 
@@ -393,6 +401,9 @@ export async function saveResponse(
   }
 
   const { attemptNumber, attemptId } = await resolveAttempt(activityId, user.sub);
+  if (await repo.attemptSubmittedAt(attemptId)) {
+    throw new AppError(409, "already_submitted", "Работа уже сдана — ответы больше нельзя менять");
+  }
   await ensureAttemptStart(attemptId);
 
   const savedAt = await repo.upsertDraftResponse({
@@ -678,4 +689,215 @@ async function openedUserIds(activityId: string, userIds: string[]): Promise<Set
     if (values[i] != null) opened.add(uid);
   });
   return opened;
+}
+
+// ─── Сабмит (Э8.12, §8 ТЗ: `POST /activities/:id/submit`) ─────────────────
+
+/** Пустой ответ своего типа — вопрос, на который ученик вообще не сохранил черновик, идёт через ТОТ ЖЕ движок проверки, что и отвеченный (см. докстринг `submitActivity`), а не отдельную ветку «нет ответа». */
+function emptyResponseFor(type: QuestionResponse["type"]): QuestionResponse {
+  switch (type) {
+    case "single_choice":
+      return { type, selectedOptionId: null };
+    case "multiple_choice":
+      return { type, selectedOptionIds: [] };
+    case "true_false":
+      return { type, value: null };
+    case "text_input":
+      return { type, value: "" };
+    case "numeric_input":
+      return { type, value: null };
+    case "open_answer":
+      return { type, text: "", attachmentIds: [] };
+    case "cloze_dropdown":
+      return { type, values: {} };
+    case "cloze_text":
+      return { type, values: {} };
+    case "matching":
+      return { type, pairs: [] };
+    case "ordering":
+      return { type, order: [] };
+  }
+}
+
+/**
+ * Сдать текущую попытку (§8 ТЗ: `POST /activities/:id/submit → { score,
+ * maxScore, feedback[] }`). Единственное место, которое реально ЗАПИСЫВАЕТ
+ * результат движка проверки (Э8.3) в БД — `getAnalytics` (Э8.9) тоже зовёт
+ * `gradeResponse`, но только для агрегатов, ничего не сохраняя.
+ *
+ * Идемпотентна: повторный вызов пересчитывает автопроверяемые вопросы
+ * (детерминированно — тот же материал, тот же ответ, тот же результат) и
+ * НЕ трогает уже выставленную учителем ручную оценку (гарантия —
+ * `repo.upsertGradedResponse`, читать её докстринг). После первого успешного
+ * вызова `saveResponse` (Э8.7) отказывает — попытка зафиксирована.
+ *
+ * `score`/`maxScore` в ответе считают ТОЛЬКО автопроверяемые вопросы —
+ * `settings.showFeedback` (когда его когда-либо доделают) здесь не
+ * учитывается: этот пробел уже существовал в `stripQuestionBlockAnswerKey`
+ * (Э8.1) и `MaterialPlayer`/`ReviewPanel` (Э8.6/8.10) до Э8.12, не заводится
+ * заново — вне рамок стоп-листа этого этапа.
+ */
+export async function submitActivity(user: AccessTokenPayload, activityId: string): Promise<SubmitActivityResult> {
+  if (user.role !== "student") {
+    throw new AppError(403, "forbidden", "Сдавать работу может только ученик");
+  }
+  const activity = await loadActivityForSchool(activityId, user.schoolId);
+  await assertActivityMember(user, activity);
+
+  if (activity.deadline && activity.deadline.getTime() < Date.now()) {
+    throw new AppError(409, "deadline_passed", "Дедлайн прошёл — сдать работу больше нельзя");
+  }
+
+  const { attemptNumber, attemptId } = await resolveAttempt(activityId, user.sub);
+  const loaded = await materialsService.getMaterialVersion(activity.materialVersionId);
+
+  const saved = await repo.findResponsesByAttempt(attemptId);
+  const savedByQuestion = new Map(saved.map((r) => [r.questionId, r.response]));
+
+  const feedback: SubmitFeedbackItem[] = [];
+  let score = 0;
+  let maxScore = 0;
+
+  for (const block of loaded.material.blocks) {
+    if (block.type !== "question") continue;
+
+    const existing = savedByQuestion.get(block.id);
+    const response =
+      existing && existing.type === block.interaction.type ? existing : emptyResponseFor(block.interaction.type);
+
+    const result = materialsService.gradeResponse(block.interaction, response, block.points);
+
+    await repo.upsertGradedResponse({
+      attemptId,
+      activityId,
+      materialId: activity.materialId,
+      lessonId: activity.lessonId,
+      userId: user.sub,
+      questionId: block.id,
+      response,
+      attemptNumber,
+      result,
+    });
+
+    feedback.push({
+      questionId: block.id,
+      score: result.autoGraded ? result.score : 0,
+      maxScore: result.maxScore,
+      correct: result.correct,
+      autoGraded: result.autoGraded,
+    });
+    maxScore += result.maxScore;
+    if (result.autoGraded) score += result.score;
+  }
+
+  return { attemptId, score, maxScore, feedback };
+}
+
+// ─── Ручная проверка (Э8.12, §6.4/§8 ТЗ: «попадает в очередь учителя с
+// рубрикой») ─────────────────────────────────────────────────────────────
+
+/**
+ * Очередь ручной проверки — учителю/админу. `submitted = true, autoGraded =
+ * false, gradedBy IS NULL` (`repo.listPendingManualGrading`) после сабмита
+ * однозначно означает `open_answer` (Э8.3: единственный тип, где движок
+ * возвращает `autoGraded: false`) — черновики (`submitted = false`) сюда не
+ * попадают, ученик ещё печатает. Учитель видит только то, что сам выдал
+ * (`assignedBy`, тот же критерий владения, что и у остальных ручек, — см.
+ * `repo.listPendingManualGrading`), админ — всю школу.
+ */
+export async function getGradingQueue(user: AccessTokenPayload): Promise<GradingQueueItem[]> {
+  if (user.role !== "teacher" && user.role !== "admin") {
+    throw new AppError(403, "forbidden", "Очередь ручной проверки доступна только учителю");
+  }
+  const rows = await repo.listPendingManualGrading(user.schoolId, user.role === "teacher" ? user.sub : null);
+
+  const materialCache = new Map<string, Awaited<ReturnType<typeof materialsService.getMaterialVersion>>>();
+  const items: GradingQueueItem[] = [];
+  for (const row of rows) {
+    let loaded = materialCache.get(row.materialVersionId);
+    if (!loaded) {
+      loaded = await materialsService.getMaterialVersion(row.materialVersionId);
+      materialCache.set(row.materialVersionId, loaded);
+    }
+    const question = findQuestion(loaded.material, row.questionId);
+    // Рассинхронизацию (вопрос удалён из версии, чужой тип ответа) молча пропускаем — та же защита, что в getAnalytics.
+    if (!question || question.interaction.type !== "open_answer" || row.response.type !== "open_answer") continue;
+
+    items.push({
+      responseId: row.responseId,
+      activityId: row.activityId,
+      activityMode: row.activityMode,
+      materialTitle: loaded.material.title,
+      questionId: row.questionId,
+      promptHtml: question.prompt.html,
+      rubric: question.interaction.rubric,
+      maxScore: question.points,
+      studentId: row.studentId,
+      studentName: row.studentFullName,
+      response: { text: row.response.text, attachmentIds: row.response.attachmentIds },
+      submittedAt: row.submittedAt.toISOString(),
+    });
+  }
+  return items;
+}
+
+/**
+ * Учитель ставит баллы за `open_answer` (§8 ТЗ: `POST /grading/:responseId
+ * { score, rubricScores, comment }`). `rubricScores` сверяется с реальной
+ * рубрикой вопроса (закреплённая версия материала — та же, что видел
+ * ученик), `score` не обязан буквально совпадать с суммой отмеченных
+ * критериев (§6.4 ТЗ «ручная проверка» — рубрика ориентир, не формула).
+ * Атомарная защита от повторной/гонки-проверки — в `repo.persistManualGrade`
+ * (`WHERE graded_by IS NULL`), эта проверка здесь — только для быстрого и
+ * понятного сообщения об ошибке.
+ */
+export async function gradeManualResponse(
+  user: AccessTokenPayload,
+  responseId: string,
+  input: GradeManualResponseRequest,
+): Promise<GradeManualResponseResult> {
+  if (user.role !== "teacher" && user.role !== "admin") {
+    throw new AppError(403, "forbidden", "Проверять ответы может только учитель");
+  }
+  const target = await repo.findResponseForGrading(responseId);
+  if (!target || target.schoolId !== user.schoolId) {
+    throw new AppError(404, "response_not_found", "Ответ не найден");
+  }
+  if (user.role === "teacher" && target.assignedBy !== user.sub) {
+    throw new AppError(403, "forbidden", "Проверять этот ответ может только тот, кто выдал задание");
+  }
+  if (!target.submitted || target.autoGraded) {
+    throw new AppError(409, "not_pending_manual_grading", "Этот ответ не ждёт ручной проверки");
+  }
+  if (target.gradedBy) {
+    throw new AppError(409, "already_graded", "Этот ответ уже проверен");
+  }
+
+  const loaded = await materialsService.getMaterialVersion(target.materialVersionId);
+  const question = findQuestion(loaded.material, target.questionId);
+  if (!question || question.interaction.type !== "open_answer") {
+    throw new AppError(500, "not_open_answer", "Вопрос не является заданием с ручной проверкой");
+  }
+
+  const criteriaIds = new Set(question.interaction.rubric.map((c) => c.id));
+  for (const id of Object.keys(input.rubricScores)) {
+    if (!criteriaIds.has(id)) {
+      throw new AppError(400, "unknown_rubric_criterion", `Критерий "${id}" не найден в рубрике вопроса`);
+    }
+  }
+  if (input.score > question.points) {
+    throw new AppError(400, "score_exceeds_max", `Балл (${input.score}) больше максимального (${question.points})`);
+  }
+
+  const gradedAt = await repo.persistManualGrade(responseId, {
+    score: input.score,
+    rubricScores: input.rubricScores,
+    comment: input.comment ?? null,
+    gradedBy: user.sub,
+  });
+  if (!gradedAt) {
+    throw new AppError(409, "already_graded", "Этот ответ уже проверен");
+  }
+
+  return { responseId, score: input.score, maxScore: question.points, gradedAt: gradedAt.toISOString() };
 }

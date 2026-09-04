@@ -71,6 +71,13 @@
       "when": 1788527996606,
       "tag": "0009_great_punisher",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788534650780,
+      "tag": "0010_swift_junta",
+      "breakpoints": true
     }
   ]
 }
