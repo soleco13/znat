@@ -11,10 +11,11 @@ const { repoMock, lessonsServiceMock, usersServiceMock, materialsServiceMock, ro
       findResponsesByAttempt: vi.fn(),
       upsertDraftResponse: vi.fn(),
       answeredStatsByActivity: vi.fn(),
+      listResponsesByActivity: vi.fn(),
     },
     lessonsServiceMock: { getLesson: vi.fn() },
     usersServiceMock: { isGroupMember: vi.fn(), listGroupStudents: vi.fn() },
-    materialsServiceMock: { getLatestMaterial: vi.fn(), getMaterialVersion: vi.fn() },
+    materialsServiceMock: { getLatestMaterial: vi.fn(), getMaterialVersion: vi.fn(), gradeResponse: vi.fn() },
     roomsServiceMock: { broadcastToLesson: vi.fn() },
     redisMock: { set: vi.fn(), get: vi.fn(), mget: vi.fn() },
   }));
@@ -26,8 +27,15 @@ vi.mock("../materials/service.js", () => materialsServiceMock);
 vi.mock("../rooms/service.js", () => roomsServiceMock);
 vi.mock("../../db/redis.js", () => ({ redis: redisMock }));
 
-const { createActivity, getMyActivity, listLessonActivities, saveResponse, getProgress, deriveAttemptId } =
-  await import("./service.js");
+const {
+  createActivity,
+  getMyActivity,
+  listLessonActivities,
+  saveResponse,
+  getProgress,
+  getAnalytics,
+  deriveAttemptId,
+} = await import("./service.js");
 
 const SCHOOL = "11111111-1111-1111-1111-111111111111";
 const OTHER_SCHOOL = "aaaaaaaa-1111-1111-1111-111111111111";
@@ -112,6 +120,7 @@ beforeEach(() => {
   repoMock.findResponsesByAttempt.mockResolvedValue([]);
   repoMock.upsertDraftResponse.mockResolvedValue(new Date("2026-09-04T09:31:00.000Z"));
   repoMock.answeredStatsByActivity.mockResolvedValue([]);
+  repoMock.listResponsesByActivity.mockResolvedValue([]);
   usersServiceMock.listGroupStudents.mockResolvedValue([]);
   redisMock.set.mockResolvedValue("OK");
   redisMock.get.mockResolvedValue("2026-09-04T09:30:00.000Z");
@@ -355,6 +364,33 @@ describe("getProgress (Э8.8) — панель прогресса класса",
 
   it("чужой учитель не видит прогресс — 403", async () => {
     await expect(getProgress(otherTeacher, ACTIVITY)).rejects.toMatchObject({ statusCode: 403 });
+  });
+});
+
+describe("getAnalytics (Э8.9) — гистограмма ответов", () => {
+  it("учителю: по одному разбору на вопрос + число ответивших", async () => {
+    repoMock.listResponsesByActivity.mockResolvedValue([
+      { userId: STUDENT_A, questionId: "q1", response: { type: "single_choice", selectedOptionId: "o2" } },
+      { userId: STUDENT_B, questionId: "q1", response: { type: "single_choice", selectedOptionId: "o1" } },
+    ]);
+
+    const analytics = await getAnalytics(teacher, ACTIVITY);
+
+    expect(analytics.respondents).toBe(2);
+    expect(analytics.questions).toHaveLength(1);
+    const q = analytics.questions[0]!;
+    expect(q).toMatchObject({ questionId: "q1", interactionType: "single_choice", totalAnswered: 2 });
+    expect(q.distribution).toEqual({
+      kind: "choice",
+      bars: [
+        { key: "o1", label: "3", count: 1, correct: false },
+        { key: "o2", label: "4", count: 1, correct: true },
+      ],
+    });
+  });
+
+  it("чужой учитель — 403", async () => {
+    await expect(getAnalytics(otherTeacher, ACTIVITY)).rejects.toMatchObject({ statusCode: 403 });
   });
 });
 

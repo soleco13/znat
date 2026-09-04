@@ -1,4 +1,5 @@
 import type {
+  ActivityAnalytics,
   ActivityDto,
   ActivityProgress,
   CreateActivityRequest,
@@ -30,6 +31,11 @@ export function listLessonActivities(lessonId: string): Promise<{ items: Activit
 /** Учитель: живая картина класса по заданию (Э8.8). Опрашивается панелью прогресса раз в несколько секунд. */
 export function getActivityProgress(activityId: string): Promise<ActivityProgress> {
   return apiFetch<ActivityProgress>(`/activities/${activityId}/progress`);
+}
+
+/** Учитель: агрегированная аналитика по вопросам — гистограмма ответов (Э8.9). */
+export function getActivityAnalytics(activityId: string): Promise<ActivityAnalytics> {
+  return apiFetch<ActivityAnalytics>(`/activities/${activityId}/analytics`);
 }
 
 /** Ученик/учитель: своя копия задания без ключей ответов + ранее сохранённые черновики. */

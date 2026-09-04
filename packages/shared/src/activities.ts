@@ -99,6 +99,67 @@ export interface ActivityProgress {
   students: StudentProgress[];
 }
 
+// ─── Аналитика по вопросу (Э8.9, §7.3 ТЗ: «17 из 24 выбрали B») ────────────
+
+/** Один столбец гистограммы: вариант ответа, сколько учеников его выбрало, верный ли он. */
+export interface AnalyticsBar {
+  /** id варианта / значение пропуска / текст ответа. */
+  key: string;
+  label: string;
+  count: number;
+  /** true/false для автопроверяемых, null — если верность к этому столбцу неприменима. */
+  correct: boolean | null;
+}
+
+/** Распределение по вариантам — `single_choice`, `multiple_choice`, `true_false`. */
+export interface ChoiceDistribution {
+  kind: "choice";
+  bars: AnalyticsBar[];
+}
+
+/** Свободный ввод — `text_input`, `numeric_input`, `open_answer`: топ различных ответов. */
+export interface TextDistribution {
+  kind: "text";
+  bars: AnalyticsBar[];
+  /** Сколько различных ответов не поместилось в топ. */
+  otherDistinct: number;
+}
+
+/** По пропускам — `cloze_dropdown`, `cloze_text`. */
+export interface GapsDistribution {
+  kind: "gaps";
+  gaps: { gapId: string; bars: AnalyticsBar[] }[];
+}
+
+/** `matching`, `ordering` — только сводка «верно / неверно», гистограммы вариантов нет. */
+export interface SummaryDistribution {
+  kind: "summary";
+  correctCount: number;
+  partialCount: number;
+  incorrectCount: number;
+}
+
+export type QuestionDistribution =
+  | ChoiceDistribution
+  | TextDistribution
+  | GapsDistribution
+  | SummaryDistribution;
+
+export interface QuestionAnalytics {
+  questionId: string;
+  promptHtml: string;
+  interactionType: string;
+  totalAnswered: number;
+  distribution: QuestionDistribution;
+}
+
+/** Ответ `GET /activities/:id/analytics` — по одному разбору на вопрос материала. */
+export interface ActivityAnalytics {
+  activityId: string;
+  respondents: number;
+  questions: QuestionAnalytics[];
+}
+
 /**
  * Ответ `GET /activities/:id/my` — индивидуальная копия задания для одного
  * ученика. `material` уже прошёл `stripMaterialAnswerKeys` с сидом

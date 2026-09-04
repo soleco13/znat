@@ -26,7 +26,11 @@ import {
   type SaveResponseResult,
   type ActivityProgress,
   type StudentProgress,
+  type ActivityAnalytics,
+  type QuestionAnalytics,
+  type QuestionResponse,
 } from "@school/shared";
+import { buildDistribution } from "./analytics.js";
 import { AppError } from "../../plugins/errors.js";
 import { redis } from "../../db/redis.js";
 import * as lessonsService from "../lessons/service.js";
@@ -356,6 +360,55 @@ export async function getProgress(
   });
 
   return { activityId, total, students };
+}
+
+/**
+ * Агрегированная аналитика по вопросам задания (Э8.9, §7.3 ТЗ) — учителю.
+ * Тоже опрос, не пуш (как Э8.8). `interaction` берётся ПОЛНЫМ (с ключом
+ * ответа): аналитику видит только учитель, подсветка верного варианта —
+ * весь смысл разбора («сразу разобрать ошибку»).
+ */
+export async function getAnalytics(
+  user: AccessTokenPayload,
+  activityId: string,
+): Promise<ActivityAnalytics> {
+  const activity = await loadActivityForSchool(activityId, user.schoolId);
+  if (!activity.lessonId) {
+    throw new AppError(409, "activity_not_in_lesson", "Задание не привязано к уроку");
+  }
+  await assertLessonTeacher(user, activity.lessonId);
+
+  const [loaded, rows] = await Promise.all([
+    materialsService.getMaterialVersion(activity.materialVersionId),
+    repo.listResponsesByActivity(activityId),
+  ]);
+
+  const byQuestion = new Map<string, QuestionResponse[]>();
+  for (const r of rows) {
+    const list = byQuestion.get(r.questionId) ?? [];
+    list.push(r.response);
+    byQuestion.set(r.questionId, list);
+  }
+
+  const respondents = new Set(rows.map((r) => r.userId)).size;
+  const questions: QuestionAnalytics[] = [];
+  for (const block of loaded.material.blocks) {
+    if (block.type !== "question") continue;
+    // Рассинхронизацию type (saveResponse её не пускает, но БД могла быть
+    // заполнена иначе) молча отсекаем — движок проверки на ней бросил бы.
+    const answers = (byQuestion.get(block.id) ?? []).filter(
+      (r) => r.type === block.interaction.type,
+    );
+    questions.push({
+      questionId: block.id,
+      promptHtml: block.prompt.html,
+      interactionType: block.interaction.type,
+      totalAnswered: answers.length,
+      distribution: buildDistribution(block.interaction, answers),
+    });
+  }
+
+  return { activityId, respondents, questions };
 }
 
 /** Кто из перечисленных учеников уже открывал задание (метка старта попытки в Redis). */

@@ -43,6 +43,18 @@ export default async function activitiesRoutes(app: FastifyInstance) {
     },
   );
 
+  // Э8.9: агрегированная аналитика по вопросам — учителю (гистограмма ответов).
+  app.get<{ Params: { id: string } }>(
+    "/activities/:id/analytics",
+    { preHandler: app.requireRole("admin", "teacher") },
+    async (request, reply) => {
+      const parsed = uuidParam.safeParse(request.params.id);
+      if (!parsed.success) throw new AppError(400, "bad_activity_id", "Некорректный идентификатор задания");
+      const analytics = await activitiesService.getAnalytics(request.user, parsed.data);
+      return reply.send(analytics);
+    },
+  );
+
   app.get<{ Params: { id: string } }>("/activities/:id/my", async (request, reply) => {
     const parsed = uuidParam.safeParse(request.params.id);
     if (!parsed.success) throw new AppError(400, "bad_activity_id", "Некорректный идентификатор задания");

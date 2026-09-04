@@ -89,6 +89,21 @@ export async function findResponsesByAttempt(attemptId: string): Promise<SavedRe
 }
 
 /**
+ * Все черновики ответов активности (Э8.9) — для агрегации по вопросам.
+ * Класс-масштаб (≤30 учеников × ≤N вопросов), агрегируется в JS, а не
+ * SQL-разбором JSONB: типов ответа 10, каждый со своей формой.
+ */
+export async function listResponsesByActivity(
+  activityId: string,
+): Promise<{ userId: string; questionId: string; response: QuestionResponse }[]> {
+  const rows = await db
+    .select({ userId: responses.userId, questionId: responses.questionId, response: responses.response })
+    .from(responses)
+    .where(eq(responses.activityId, activityId));
+  return rows.map((r) => ({ userId: r.userId, questionId: r.questionId, response: r.response as QuestionResponse }));
+}
+
+/**
  * Сводка ответов по ученикам одной активности (Э8.8) — сколько РАЗНЫХ
  * вопросов отвечено и когда было последнее сохранение. Попытка у ученика
  * фактически одна (`attemptId` детерминирован), поэтому группируем просто
