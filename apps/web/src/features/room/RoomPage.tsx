@@ -17,6 +17,8 @@ import { apiFetch } from "../../shared/api-client.js";
 import { useAuthStore } from "../../shared/auth-store.js";
 import { Board } from "../canvas/Board.js";
 import { DeckPanel } from "../decks/DeckPanel.js";
+import { listLessonActivities } from "../materials/activity-api.js";
+import { LessonActivityPanel } from "../materials/LessonActivityPanel.js";
 import { SelfCameraButton, VideoDegradeSuggestion } from "./CameraControls.js";
 import { ConnectionQualityDot, PacketLossWarning } from "./ConnectionQuality.js";
 import { DeviceCheckScreen } from "./DeviceCheckScreen.js";
@@ -90,6 +92,12 @@ export function RoomPage() {
   // и для импорта слайдов на холст. Прогресс приходит через WS (deckStatuses),
   // а слайды готовой презентации подтягиваются этим запросом.
   const [decks, setDecks] = useState<Deck[]>([]);
+  // Э8.12: последнее выданное в уроке задание — WS `activity_started` в
+  // реальном времени, фолбэк-поллинг (`listLessonActivities`) ниже — если
+  // зашли в уже идущий урок и WS-сигнал пропущен.
+  const [activeActivityId, setActiveActivityId] = useState<string | null>(null);
+  // Растёт на каждый `activity_reviewed` — форсирует remount `ReviewPanel` (см. LessonActivityPanel).
+  const [reviewSignal, setReviewSignal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   // LiveKit-подключение (Э2, только аудио — см. стоп-лист Э2 в docs/CURRENT_STAGE.md).
   const [media, setMedia] = useState<MediaConnection | null>(null);
@@ -142,6 +150,12 @@ export function RoomPage() {
       case "deck_status":
         setDeckStatuses((prev) => ({ ...prev, [message.deck.deckId]: message.deck }));
         break;
+      case "activity_started":
+        setActiveActivityId(message.activityId);
+        break;
+      case "activity_reviewed":
+        setReviewSignal((n) => n + 1);
+        break;
       case "error":
         setError(message.message);
         break;
@@ -180,6 +194,20 @@ export function RoomPage() {
   useEffect(() => {
     refreshDecks();
   }, [refreshDecks]);
+
+  // Фолбэк-поллинг (Э8.12): вошли в урок, где задание уже было запущено ДО
+  // подключения по WS — берём последнее из списка (сортировка по createdAt
+  // desc, см. `listActivitiesByLesson`). Один раз при входе, WS-сигнал
+  // `activity_started` дальше держит состояние актуальным сам.
+  useEffect(() => {
+    if (!lessonId) return;
+    listLessonActivities(lessonId)
+      .then((data) => {
+        const latest = data.items[0];
+        if (latest) setActiveActivityId((prev) => prev ?? latest.id);
+      })
+      .catch(() => undefined);
+  }, [lessonId]);
 
   // Как только презентация досконвертировалась (WS-событие `ready`), а слайдов
   // (или, для PDF из Э4.7, ссылки `pdfUrl`) для неё ещё нет в `decks` —
@@ -304,6 +332,17 @@ export function RoomPage() {
             decks={decks}
             statuses={deckStatuses}
             onChanged={refreshDecks}
+          />
+        </div>
+      )}
+
+      {lessonId && (
+        <div className="mb-4">
+          <LessonActivityPanel
+            lessonId={lessonId}
+            isTeacher={isTeacher}
+            activeActivityId={activeActivityId}
+            reviewSignal={reviewSignal}
           />
         </div>
       )}
