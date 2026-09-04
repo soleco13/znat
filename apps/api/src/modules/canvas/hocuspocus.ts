@@ -8,6 +8,9 @@ import {
   type onLoadDocumentPayload,
   type onStoreDocumentPayload,
 } from "@hocuspocus/server";
+import { randomInt, randomUUID } from "node:crypto";
+import { generateKeyBetween } from "fractional-indexing";
+import * as Y from "yjs";
 import { encodeStateAsUpdate } from "yjs";
 import { z } from "zod";
 import type { AccessTokenPayload } from "@school/shared";
@@ -309,3 +312,165 @@ export const hocuspocus = new Hocuspocus({
   beforeUnloadDocument: vetoUnloadDuringGracePeriod,
   afterUnloadDocument: clearDrawPermissionOverrides,
 });
+
+// ─── Э8.10, §7.3 ТЗ: «вынести чей-то ответ на доску» ───────────────────────
+
+type CanvasPageMeta = { order: number; backgroundAssetId: string | null; kind: string };
+
+const BOARD_TEXT_FONT_SIZE = 20;
+// Тот же множитель, что дефолт Excalidraw для шрифта Excalifont
+// (FONT_METADATA пакета @excalidraw/excalidraw) — не читается динамически из
+// пакета (это внутренняя таблица метрик шрифта, не публичный экспорт),
+// поэтому зафиксирован числом здесь; расхождение меняет только приблизительную
+// высоту текстового блока, не сам текст.
+const BOARD_TEXT_LINE_HEIGHT = 1.25;
+// Грубая оценка ширины символа для смеси кириллицы/латиницы при этом
+// fontSize — см. докстринг buildAnswerTextElement про то, почему точный
+// canvas measureText() здесь недоступен и не нужен.
+const BOARD_TEXT_CHAR_WIDTH = BOARD_TEXT_FONT_SIZE * 0.55;
+const BOARD_TEXT_MAX_LINE_CHARS = 48;
+
+/**
+ * Перенос строк по границам пробелов, не длиннее `maxChars` — упрощённый
+ * аналог того, что Excalidraw обычно делает сам через `measureText()` в
+ * браузере (недоступно в Node, см. `buildAnswerTextElement`). Слово длиннее
+ * лимита не разбивается — для коротких ответов учеников не критично.
+ */
+function wrapPlainText(text: string, maxChars: number): string[] {
+  const lines: string[] = [];
+  for (const paragraph of text.split("\n")) {
+    let current = "";
+    for (const word of paragraph.split(" ")) {
+      const next = current ? `${current} ${word}` : word;
+      if (next.length > maxChars && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = next;
+      }
+    }
+    lines.push(current);
+  }
+  return lines;
+}
+
+/**
+ * Текстовый элемент Excalidraw для Y.Doc холста (Э8.10). Сервер не может
+ * позвать НАСТОЯЩИЙ Excalidraw `newTextElement` — тот меряет текст через
+ * браузерный canvas `measureText()`, недоступный в Node без тяжёлой
+ * зависимости вроде `node-canvas` (не согласовывалась, § «Железные правила»
+ * CLAUDE.md — без явного разрешения новых зависимостей не добавляем).
+ * Ширина/высота ниже — приближение по числу символов и строк, НЕ точный
+ * рендер-метрикс. `autoResize: true` — при первом редактировании ЛЮБЫМ
+ * клиентом (двойной клик) Excalidraw перемеряет и сам поправит рамку; до
+ * этого момента текст может слегка не совпадать с рамкой выделения — не
+ * влияет на читаемость самого текста.
+ *
+ * Форма объекта — по `ExcalidrawTextElement` (`@excalidraw/excalidraw`,
+ * версия пакета зафиксирована в apps/web/package.json). При апгрейде пакета
+ * читать этот список полей построчно against установленный
+ * `element/types.d.ts` — пропущенное обязательное поле здесь не бросит
+ * ошибку (Excalidraw защищается дефолтами не для всех полей), а тихо даст
+ * невидимый/сломанный элемент — тот же класс бага, что и весь раздел
+ * «работа с Y.Doc» CLAUDE.md.
+ */
+function buildAnswerTextElement(text: string, origin: { x: number; y: number }) {
+  const lines = wrapPlainText(text, BOARD_TEXT_MAX_LINE_CHARS);
+  const longestLine = Math.max(1, ...lines.map((l) => l.length));
+  const width = Math.round(longestLine * BOARD_TEXT_CHAR_WIDTH);
+  const height = Math.round(lines.length * BOARD_TEXT_FONT_SIZE * BOARD_TEXT_LINE_HEIGHT);
+  const joined = lines.join("\n");
+  const now = Date.now();
+  return {
+    id: randomUUID(),
+    type: "text",
+    x: origin.x,
+    y: origin.y,
+    width,
+    height,
+    angle: 0,
+    strokeColor: "#1e1e1e",
+    backgroundColor: "transparent",
+    fillStyle: "solid",
+    strokeWidth: 2,
+    strokeStyle: "solid",
+    roundness: null,
+    roughness: 1,
+    opacity: 100,
+    seed: randomInt(1, 2 ** 31),
+    version: 1,
+    versionNonce: randomInt(1, 2 ** 31),
+    index: null,
+    isDeleted: false,
+    groupIds: [],
+    frameId: null,
+    boundElements: null,
+    updated: now,
+    link: null,
+    locked: false,
+    text: joined,
+    fontSize: BOARD_TEXT_FONT_SIZE,
+    fontFamily: 5, // FONT_FAMILY.Excalifont — дефолт Excalidraw, id зафиксирован у пакета
+    textAlign: "left",
+    verticalAlign: "top",
+    containerId: null,
+    originalText: joined,
+    autoResize: true,
+    lineHeight: BOARD_TEXT_LINE_HEIGHT,
+  };
+}
+
+/**
+ * Учитель «выносит ответ на доску» (Э8.10, §7.3 ТЗ) — дописывает текстовый
+ * элемент в `Y.Array` активной страницы холста урока СЕРВЕРНОЙ транзакцией,
+ * без похода через клиентский `ExcalidrawBinding` (кто жмёт кнопку разбора,
+ * не обязан держать открытой саму доску).
+ *
+ * `openDirectConnection` — официальный API Hocuspocus для записи в документ
+ * вне обычного WS-подключения (проверено чтением исходника пакета:
+ * `DirectConnection`, `packages/server/src/DirectConnection.ts`). Он
+ * переиспользует ТОТ ЖЕ `Document` в памяти, что и у реальных участников
+ * (`Hocuspocus#createDocument` отдаёт уже закэшированный документ по имени,
+ * если он есть) — правки видны им сразу, без перезагрузки; если сейчас
+ * никто не подключён, тот же вызов сам поднимет документ из Postgres
+ * (`loadCanvasDocument`, `onAuthenticate` при этом НЕ вызывается —
+ * `openDirectConnection` идёт в обход хендшейка, `isAuthenticated: true`
+ * зашито в сам вызов создателем документа).
+ *
+ * `disconnect()` без аргументов — `unloadImmediately: true` по умолчанию
+ * (проверено чтением `DirectConnection.ts`) — форсирует немедленный
+ * `onStoreDocument` (сохранение в Postgres), не дожидаясь обычного
+ * 3-секундного дебаунса: пуш ответа на доску — редкое разовое действие
+ * учителя, а не поток правок, задержка сохранения здесь не нужна.
+ */
+export async function postAnswerToBoard(lessonId: string, text: string): Promise<void> {
+  const connection = await hocuspocus.openDirectConnection(lessonId);
+  try {
+    await connection.transact((document) => {
+      const metaMap = document.getMap<unknown>("meta");
+      const pagesMap = document.getMap<CanvasPageMeta>("pages");
+      let pageId = metaMap.get("activePageId") as string | undefined;
+      if (!pageId || !pagesMap.has(pageId)) {
+        // Защитный случай — урок ни разу не открывал доску (Board.tsx сам
+        // заводит первую страницу при первом подключении, Э3.4). Заводим
+        // страницу здесь же, чтобы разбор не падал из-за того, что никто
+        // ещё не смотрел на холст.
+        pageId = randomUUID();
+        pagesMap.set(pageId, { order: 0, backgroundAssetId: null, kind: "blank" });
+        metaMap.set("activePageId", pageId);
+      }
+      const yElements = document.getArray<Y.Map<unknown>>(`elements:${pageId}`);
+      const lastPos =
+        yElements.length > 0 ? (yElements.get(yElements.length - 1).get("pos") as string) : null;
+      const pos = generateKeyBetween(lastPos, null);
+      // Небольшой случайный разброс координат — чтобы несколько ответов,
+      // вынесенных подряд, не легли ровно друг на друга; учитель раздвигает
+      // вручную, автолэйаута здесь нет.
+      const origin = { x: 100 + randomInt(0, 300), y: 100 + randomInt(0, 300) };
+      const element = buildAnswerTextElement(text, origin);
+      yElements.push([new Y.Map(Object.entries({ pos, el: element }))]);
+    });
+  } finally {
+    await connection.disconnect();
+  }
+}

@@ -105,6 +105,10 @@ export const serverRoomMessageSchema = z.discriminatedUnion("type", [
   // задание» — сам материал и ответы идут индивидуально по HTTP
   // (`GET /activities/:id/my`), НЕ через этот канал и НЕ через Y.Doc урока.
   z.object({ type: z.literal("activity_started"), activityId: z.string().uuid() }),
+  // Э8.10: учитель начал разбор задания. Тоже только СИГНАЛ — полный
+  // материал (с правильными ответами) идёт отдельным HTTP-запросом
+  // (`GET /activities/:id/review`), не через этот канал.
+  z.object({ type: z.literal("activity_reviewed"), activityId: z.string().uuid() }),
   z.object({ type: z.literal("error"), message: z.string() }),
 ]);
 export type ServerRoomMessage = z.infer<typeof serverRoomMessageSchema>;

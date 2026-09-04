@@ -18,6 +18,7 @@ export interface ActivityRow {
   deadline: Date | null;
   timerSeconds: number | null;
   createdAt: Date;
+  reviewedAt: Date | null;
 }
 
 const activitySelection = {
@@ -31,6 +32,7 @@ const activitySelection = {
   deadline: activities.deadline,
   timerSeconds: activities.timerSeconds,
   createdAt: activities.createdAt,
+  reviewedAt: activities.reviewedAt,
 };
 
 function withMaterial() {
@@ -63,6 +65,20 @@ export async function listActivitiesByLesson(lessonId: string): Promise<Activity
     .where(eq(activities.lessonId, lessonId))
     .orderBy(desc(activities.createdAt));
   return rows as ActivityRow[];
+}
+
+/**
+ * Начать разбор (Э8.10) — идемпотентно: `COALESCE` не двигает уже
+ * выставленный `reviewedAt` при повторном вызове (учитель мог нажать
+ * «начать разбор» второй раз, например после перезагрузки страницы).
+ */
+export async function markReviewed(id: string): Promise<Date> {
+  const [row] = await db
+    .update(activities)
+    .set({ reviewedAt: sql`coalesce(${activities.reviewedAt}, now())` })
+    .where(eq(activities.id, id))
+    .returning({ reviewedAt: activities.reviewedAt });
+  return row!.reviewedAt!;
 }
 
 /** Наибольший номер попытки этого ученика по этой активности; 0 — попыток ещё не было. */

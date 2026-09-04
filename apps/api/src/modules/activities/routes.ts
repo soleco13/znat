@@ -1,6 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { createActivityRequestSchema, saveResponseRequestSchema } from "@school/shared";
+import {
+  createActivityRequestSchema,
+  pushAnswerToBoardRequestSchema,
+  saveResponseRequestSchema,
+} from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
 import * as activitiesService from "./service.js";
 
@@ -72,4 +76,54 @@ export default async function activitiesRoutes(app: FastifyInstance) {
     const result = await activitiesService.saveResponse(request.user, parsed.data, body);
     return reply.send(result);
   });
+
+  // Э8.10: учитель начинает разбор — с этого момента правильные ответы
+  // доступны всем участникам урока через GET .../review.
+  app.post<{ Params: { id: string } }>(
+    "/activities/:id/review",
+    { preHandler: app.requireRole("admin", "teacher") },
+    async (request, reply) => {
+      const parsed = uuidParam.safeParse(request.params.id);
+      if (!parsed.success) throw new AppError(400, "bad_activity_id", "Некорректный идентификатор задания");
+      const result = await activitiesService.startReview(request.user, parsed.data);
+      return reply.send(result);
+    },
+  );
+
+  // Э8.10: полный материал с правильными ответами — ученику и учителю, только после начала разбора.
+  app.get<{ Params: { id: string } }>("/activities/:id/review", async (request, reply) => {
+    const parsed = uuidParam.safeParse(request.params.id);
+    if (!parsed.success) throw new AppError(400, "bad_activity_id", "Некорректный идентификатор задания");
+    const review = await activitiesService.getReview(request.user, parsed.data);
+    return reply.send(review);
+  });
+
+  // Э8.10: ответы класса на один вопрос, с именами — учителю, чтобы выбрать чей вынести на доску.
+  app.get<{ Params: { id: string; questionId: string } }>(
+    "/activities/:id/review/questions/:questionId/responses",
+    { preHandler: app.requireRole("admin", "teacher") },
+    async (request, reply) => {
+      const parsed = uuidParam.safeParse(request.params.id);
+      if (!parsed.success) throw new AppError(400, "bad_activity_id", "Некорректный идентификатор задания");
+      const responses = await activitiesService.getReviewResponses(
+        request.user,
+        parsed.data,
+        request.params.questionId,
+      );
+      return reply.send(responses);
+    },
+  );
+
+  // Э8.10, §7.3 ТЗ: «вынести чей-то ответ на доску» — анонимно или с именем.
+  app.post<{ Params: { id: string } }>(
+    "/activities/:id/review/board",
+    { preHandler: app.requireRole("admin", "teacher") },
+    async (request, reply) => {
+      const parsed = uuidParam.safeParse(request.params.id);
+      if (!parsed.success) throw new AppError(400, "bad_activity_id", "Некорректный идентификатор задания");
+      const body = pushAnswerToBoardRequestSchema.parse(request.body);
+      await activitiesService.pushAnswerToBoard(request.user, parsed.data, body);
+      return reply.status(204).send();
+    },
+  );
 }

@@ -29,14 +29,20 @@ import {
   type ActivityAnalytics,
   type QuestionAnalytics,
   type QuestionResponse,
+  type ActivityReview,
+  type StartReviewResult,
+  type ReviewQuestionResponses,
+  type ReviewStudentResponse,
+  type PushAnswerToBoardRequest,
 } from "@school/shared";
-import { buildDistribution } from "./analytics.js";
+import { buildDistribution, formatResponseText } from "./analytics.js";
 import { AppError } from "../../plugins/errors.js";
 import { redis } from "../../db/redis.js";
 import * as lessonsService from "../lessons/service.js";
 import * as usersService from "../users/service.js";
 import * as materialsService from "../materials/service.js";
 import * as roomsService from "../rooms/service.js";
+import * as canvasService from "../canvas/service.js";
 import * as repo from "./repo.js";
 import type { ActivityRow } from "./repo.js";
 
@@ -75,6 +81,7 @@ function toDto(row: ActivityRow): ActivityDto {
     deadline: row.deadline ? row.deadline.toISOString() : null,
     timerSeconds: row.timerSeconds,
     createdAt: row.createdAt.toISOString(),
+    reviewedAt: row.reviewedAt ? row.reviewedAt.toISOString() : null,
   };
 }
 
@@ -409,6 +416,144 @@ export async function getAnalytics(
   }
 
   return { activityId, respondents, questions };
+}
+
+// ─── Разбор (Э8.10, §7.3 ТЗ: «показать правильный ответ всем, вынести
+// чей-то ответ на доску») ────────────────────────────────────────────────
+
+/**
+ * Учитель начинает разбор — с этого момента `GET /activities/:id/review`
+ * отдаёт ПОЛНЫЙ материал (с ключами ответов) и ученикам тоже. До этого
+ * вызова тот же эндпоинт отвечает 409 — идемпотентно (`repo.markReviewed`
+ * не двигает уже выставленный `reviewedAt`), поэтому повторный клик
+ * учителя (например, после перезагрузки страницы) безопасен.
+ */
+export async function startReview(user: AccessTokenPayload, activityId: string): Promise<StartReviewResult> {
+  const activity = await loadActivityForSchool(activityId, user.schoolId);
+  if (!activity.lessonId) {
+    throw new AppError(409, "activity_not_in_lesson", "Задание не привязано к уроку");
+  }
+  await assertLessonTeacher(user, activity.lessonId);
+
+  const reviewedAt = await repo.markReviewed(activityId);
+
+  // Сигнал «начался разбор» — по WS-каналу урока, тем же путём, что
+  // activity_started (Э8.6): сам материал ученик заберёт отдельным HTTP-
+  // запросом (см. getReview ниже), это только пуш «обнови экран».
+  roomsService.broadcastToLesson(activity.lessonId, { type: "activity_reviewed", activityId });
+
+  return { activityId, reviewedAt: reviewedAt.toISOString() };
+}
+
+/**
+ * Полный материал (с ключами ответов) — и ученику, и учителю, но только
+ * когда разбор уже начат (`reviewedAt` не `null`). До этого — 409: та же
+ * граница «ключи ответов не текут раньше времени», что и `stripMaterialAnswerKeys`
+ * в `getMyActivity`, просто с другой стороны — здесь как раз момент, когда
+ * их МОЖНО показывать.
+ */
+export async function getReview(user: AccessTokenPayload, activityId: string): Promise<ActivityReview> {
+  const activity = await loadActivityForSchool(activityId, user.schoolId);
+  if (!activity.lessonId) {
+    throw new AppError(409, "activity_not_in_lesson", "Задание не привязано к уроку");
+  }
+  await assertLessonMember(user, activity.lessonId);
+  if (!activity.reviewedAt) {
+    throw new AppError(409, "not_reviewed", "Разбор ещё не начат");
+  }
+
+  const loaded = await materialsService.getMaterialVersion(activity.materialVersionId);
+  return { activityId, reviewedAt: activity.reviewedAt.toISOString(), material: loaded.material };
+}
+
+/**
+ * Ответы класса на один вопрос, с именами — учителю, для выбора «чей ответ
+ * вынести на доску». Тоже гейтится `reviewedAt`: раскрывать чужие ответы
+ * поимённо раньше явного начала разбора не нужно (аналитика Э8.9 уже даёт
+ * агрегат без привязки к ученику до этого момента).
+ */
+export async function getReviewResponses(
+  user: AccessTokenPayload,
+  activityId: string,
+  questionId: string,
+): Promise<ReviewQuestionResponses> {
+  const activity = await loadActivityForSchool(activityId, user.schoolId);
+  if (!activity.lessonId) {
+    throw new AppError(409, "activity_not_in_lesson", "Задание не привязано к уроку");
+  }
+  const lesson = await assertLessonTeacher(user, activity.lessonId);
+  if (!activity.reviewedAt) {
+    throw new AppError(409, "not_reviewed", "Разбор ещё не начат");
+  }
+
+  const loaded = await materialsService.getMaterialVersion(activity.materialVersionId);
+  const question = findQuestion(loaded.material, questionId);
+  if (!question) {
+    throw new AppError(404, "question_not_found", "Вопрос не найден в материале");
+  }
+
+  const [roster, rows] = await Promise.all([
+    usersService.listGroupStudents(lesson.groupId),
+    repo.listResponsesByActivity(activityId),
+  ]);
+  const byUser = new Map(
+    rows.filter((r) => r.questionId === questionId && r.response.type === question.interaction.type).map((r) => [r.userId, r.response]),
+  );
+
+  const responses: ReviewStudentResponse[] = [];
+  for (const student of roster) {
+    const response = byUser.get(student.id);
+    if (response) responses.push({ userId: student.id, fullName: student.fullName, response });
+  }
+
+  return { questionId, responses };
+}
+
+/**
+ * Учитель выносит ответ ОДНОГО ученика на доску урока (§7.3 ТЗ: «анонимно
+ * или с именем») — дописывает текстовый элемент в Y.Doc холста через
+ * `canvasService.postAnswerToBoard` (единственная точка входа модуля
+ * `canvas`, правило модульности CLAUDE.md). Гейтится `reviewedAt` тем же
+ * образом, что `getReviewResponses` — раскрывать чужой ответ на общей доске
+ * можно только начиная с явного разбора.
+ */
+export async function pushAnswerToBoard(
+  user: AccessTokenPayload,
+  activityId: string,
+  input: PushAnswerToBoardRequest,
+): Promise<void> {
+  const activity = await loadActivityForSchool(activityId, user.schoolId);
+  if (!activity.lessonId) {
+    throw new AppError(409, "activity_not_in_lesson", "Задание не привязано к уроку");
+  }
+  const lesson = await assertLessonTeacher(user, activity.lessonId);
+  if (!activity.reviewedAt) {
+    throw new AppError(409, "not_reviewed", "Разбор ещё не начат");
+  }
+
+  const loaded = await materialsService.getMaterialVersion(activity.materialVersionId);
+  const question = findQuestion(loaded.material, input.questionId);
+  if (!question) {
+    throw new AppError(404, "question_not_found", "Вопрос не найден в материале");
+  }
+
+  const rows = await repo.listResponsesByActivity(activityId);
+  const responseRow = rows.find(
+    (r) => r.questionId === input.questionId && r.userId === input.userId && r.response.type === question.interaction.type,
+  );
+  if (!responseRow) {
+    throw new AppError(404, "response_not_found", "У этого ученика нет ответа на этот вопрос");
+  }
+
+  let label = "Ответ ученика";
+  if (!input.anonymous) {
+    const roster = await usersService.listGroupStudents(lesson.groupId);
+    const student = roster.find((s) => s.id === input.userId);
+    label = student ? student.fullName : label;
+  }
+
+  const answerText = formatResponseText(question.interaction, responseRow.response);
+  await canvasService.postAnswerToBoard(activity.lessonId, `${label}:\n${answerText}`);
 }
 
 /** Кто из перечисленных учеников уже открывал задание (метка старта попытки в Redis). */

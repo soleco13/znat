@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { questionResponseSchema, type PublicMaterial } from "./materials.js";
+import {
+  questionResponseSchema,
+  type Material,
+  type PublicMaterial,
+  type QuestionResponse,
+} from "./materials.js";
 
 /**
  * Выдача материала классу/ученику (Э8.6, §6.5/§7.3/§8 ТЗ). «Активность» —
@@ -41,6 +46,8 @@ export interface ActivityDto {
   deadline: string | null;
   timerSeconds: number | null;
   createdAt: string;
+  /** Момент старта разбора (Э8.10), либо `null` — разбор ещё не начат. */
+  reviewedAt: string | null;
 }
 
 /** Один сохранённый ответ ученика в рамках его попытки (черновик до сабмита). */
@@ -178,3 +185,46 @@ export interface MyActivity {
   /** Ранее сохранённые черновики ответов этой попытки, по `questionId`. */
   savedResponses: Record<string, SavedResponse["response"]>;
 }
+
+// ─── Разбор (Э8.10, §7.3 ТЗ: «показать правильный ответ всем, вынести чей-то
+// ответ на доску») ──────────────────────────────────────────────────────────
+
+/** Учитель: начать разбор задания. Идемпотентно — повторный вызов не двигает `reviewedAt`. */
+export interface StartReviewResult {
+  activityId: string;
+  reviewedAt: string;
+}
+
+/**
+ * Ответ `GET /activities/:id/review` — материал ПОЛНОСТЬЮ, с ключами
+ * ответов (в отличие от `MyActivity.material`). Доступен и ученику, и
+ * учителю, но ТОЛЬКО после того, как учитель явно начал разбор
+ * (`activity.reviewedAt` не `null`) — до этого момента сервер отвечает
+ * 409, ключи ответов не текут раньше времени ни по какому пути.
+ */
+export interface ActivityReview {
+  activityId: string;
+  reviewedAt: string;
+  material: Material;
+}
+
+/** Один ответ ученика на конкретный вопрос — для учительского выбора «чей ответ вынести на доску». */
+export interface ReviewStudentResponse {
+  userId: string;
+  fullName: string;
+  response: QuestionResponse;
+}
+
+/** Ответ `GET /activities/:id/review/questions/:questionId/responses` — учителю, только во время/после разбора. */
+export interface ReviewQuestionResponses {
+  questionId: string;
+  responses: ReviewStudentResponse[];
+}
+
+/** Тело `POST /activities/:id/review/board` — учитель выносит чей-то ответ на доску урока (§7.3 ТЗ: «анонимно или с именем»). */
+export const pushAnswerToBoardRequestSchema = z.object({
+  questionId: z.string().min(1),
+  userId: z.string().uuid(),
+  anonymous: z.boolean().default(true),
+});
+export type PushAnswerToBoardRequest = z.infer<typeof pushAnswerToBoardRequestSchema>;

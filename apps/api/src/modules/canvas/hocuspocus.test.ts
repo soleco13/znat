@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Doc, Text as YText, applyUpdate, encodeStateAsUpdate } from "yjs";
+import { Doc, Map as YMap, Text as YText, applyUpdate, encodeStateAsUpdate } from "yjs";
 import type { Document as HocuspocusDocument } from "@hocuspocus/server";
 import type { AccessTokenPayload } from "@school/shared";
 
@@ -36,6 +36,7 @@ const {
   getActiveCanvasDocumentsCount,
   setDrawPermission,
   clearDrawPermissionOverrides,
+  postAnswerToBoard,
   hocuspocus,
 } = await import("./hocuspocus.js");
 
@@ -409,5 +410,92 @@ describe("assertCanDrawForLesson (Э3.10 — право загружать из�
     await expect(
       assertCanDrawForLesson({ sub: STUDENT_ID, role: "student", schoolId: SCHOOL_ID }, LESSON_ID),
     ).rejects.toMatchObject({ statusCode: 403 });
+  });
+});
+
+describe("postAnswerToBoard (Э8.10, §7.3 ТЗ: «вынести чей-то ответ на доску»)", () => {
+  afterEach(() => {
+    hocuspocus.documents.delete(LESSON_ID);
+  });
+
+  it("дописывает текстовый элемент в Y.Array активной страницы и сохраняет документ", async () => {
+    repoMock.loadDoc.mockResolvedValue(null);
+    repoMock.saveDoc.mockResolvedValue(undefined);
+
+    await postAnswerToBoard(LESSON_ID, "Аня:\n4");
+
+    expect(repoMock.saveDoc).toHaveBeenCalledWith(LESSON_ID, expect.any(Buffer));
+
+    const doc = hocuspocus.documents.get(LESSON_ID)!;
+    const pageId = doc.getMap("meta").get("activePageId") as string;
+    expect(pageId).toBeTruthy();
+    const yElements = doc.getArray(`elements:${pageId}`);
+    expect(yElements.length).toBe(1);
+    const el = (yElements.get(0) as InstanceType<typeof YMap>).get("el") as { type: string; text: string };
+    expect(el.type).toBe("text");
+    expect(el.text).toBe("Аня:\n4");
+  });
+
+  it("вызов без единого подключения сам заводит первую страницу холста (защитный случай)", async () => {
+    repoMock.loadDoc.mockResolvedValue(null);
+    await postAnswerToBoard(LESSON_ID, "первый ответ");
+    const doc = hocuspocus.documents.get(LESSON_ID)!;
+    expect(doc.getMap("pages").size).toBe(1);
+  });
+
+  it("повторный вызов дописывает в ТУ ЖЕ активную страницу, не заводит новую", async () => {
+    repoMock.loadDoc.mockResolvedValue(null);
+    await postAnswerToBoard(LESSON_ID, "первый");
+    const doc = hocuspocus.documents.get(LESSON_ID)!;
+    const pageId = doc.getMap("meta").get("activePageId") as string;
+
+    await postAnswerToBoard(LESSON_ID, "второй");
+
+    expect(doc.getMap("meta").get("activePageId")).toBe(pageId);
+    expect(doc.getMap("pages").size).toBe(1);
+    expect(doc.getArray(`elements:${pageId}`).length).toBe(2);
+  });
+
+  it("длинный ответ переносится по строкам не длиннее лимита символов", async () => {
+    repoMock.loadDoc.mockResolvedValue(null);
+    const longText = Array.from({ length: 20 }, () => "слово").join(" ");
+
+    await postAnswerToBoard(LESSON_ID, longText);
+
+    const doc = hocuspocus.documents.get(LESSON_ID)!;
+    const pageId = doc.getMap("meta").get("activePageId") as string;
+    const el = (doc.getArray(`elements:${pageId}`).get(0) as InstanceType<typeof YMap>).get("el") as {
+      text: string;
+    };
+    for (const line of el.text.split("\n")) {
+      expect(line.length).toBeLessThanOrEqual(48);
+    }
+    // Ни одно слово не потерялось при переносе.
+    expect(el.text.replace(/\n/g, " ")).toBe(longText);
+  });
+
+  it("уважает уже открытую страницу с элементами — новый элемент идёт последним по pos", async () => {
+    repoMock.loadDoc.mockResolvedValue(null);
+    // Имитация того, что доска уже открыта с одним нарисованным элементом
+    // (как её создал бы реальный ExcalidrawBinding, Board.tsx).
+    const doc = await hocuspocus.openDirectConnection(LESSON_ID);
+    await doc.transact((document) => {
+      const pageId = "existing-page";
+      document.getMap("pages").set(pageId, { order: 0, backgroundAssetId: null, kind: "blank" });
+      document.getMap("meta").set("activePageId", pageId);
+      const yElements = document.getArray(`elements:${pageId}`);
+      yElements.push([new YMap(Object.entries({ pos: "a0", el: { id: "existing", type: "rectangle" } }))]);
+    });
+    await doc.disconnect();
+
+    await postAnswerToBoard(LESSON_ID, "ответ ученика");
+
+    const stored = hocuspocus.documents.get(LESSON_ID)!;
+    const pageId = stored.getMap("meta").get("activePageId") as string;
+    expect(pageId).toBe("existing-page");
+    const yElements = stored.getArray(`elements:${pageId}`);
+    expect(yElements.length).toBe(2);
+    const ids = yElements.toArray().map((m) => (m as InstanceType<typeof YMap>).get("el") as { id: string }).map((e) => e.id);
+    expect(ids).toEqual(["existing", expect.any(String)]);
   });
 });

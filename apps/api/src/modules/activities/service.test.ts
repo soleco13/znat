@@ -1,30 +1,40 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AccessTokenPayload, Material } from "@school/shared";
 
-const { repoMock, lessonsServiceMock, usersServiceMock, materialsServiceMock, roomsServiceMock, redisMock } =
-  vi.hoisted(() => ({
-    repoMock: {
-      insertActivity: vi.fn(),
-      findActivityById: vi.fn(),
-      listActivitiesByLesson: vi.fn(),
-      maxAttemptNumber: vi.fn(),
-      findResponsesByAttempt: vi.fn(),
-      upsertDraftResponse: vi.fn(),
-      answeredStatsByActivity: vi.fn(),
-      listResponsesByActivity: vi.fn(),
-    },
-    lessonsServiceMock: { getLesson: vi.fn() },
-    usersServiceMock: { isGroupMember: vi.fn(), listGroupStudents: vi.fn() },
-    materialsServiceMock: { getLatestMaterial: vi.fn(), getMaterialVersion: vi.fn(), gradeResponse: vi.fn() },
-    roomsServiceMock: { broadcastToLesson: vi.fn() },
-    redisMock: { set: vi.fn(), get: vi.fn(), mget: vi.fn() },
-  }));
+const {
+  repoMock,
+  lessonsServiceMock,
+  usersServiceMock,
+  materialsServiceMock,
+  roomsServiceMock,
+  canvasServiceMock,
+  redisMock,
+} = vi.hoisted(() => ({
+  repoMock: {
+    insertActivity: vi.fn(),
+    findActivityById: vi.fn(),
+    listActivitiesByLesson: vi.fn(),
+    maxAttemptNumber: vi.fn(),
+    findResponsesByAttempt: vi.fn(),
+    upsertDraftResponse: vi.fn(),
+    answeredStatsByActivity: vi.fn(),
+    listResponsesByActivity: vi.fn(),
+    markReviewed: vi.fn(),
+  },
+  lessonsServiceMock: { getLesson: vi.fn() },
+  usersServiceMock: { isGroupMember: vi.fn(), listGroupStudents: vi.fn() },
+  materialsServiceMock: { getLatestMaterial: vi.fn(), getMaterialVersion: vi.fn(), gradeResponse: vi.fn() },
+  roomsServiceMock: { broadcastToLesson: vi.fn() },
+  canvasServiceMock: { postAnswerToBoard: vi.fn() },
+  redisMock: { set: vi.fn(), get: vi.fn(), mget: vi.fn() },
+}));
 
 vi.mock("./repo.js", () => repoMock);
 vi.mock("../lessons/service.js", () => lessonsServiceMock);
 vi.mock("../users/service.js", () => usersServiceMock);
 vi.mock("../materials/service.js", () => materialsServiceMock);
 vi.mock("../rooms/service.js", () => roomsServiceMock);
+vi.mock("../canvas/service.js", () => canvasServiceMock);
 vi.mock("../../db/redis.js", () => ({ redis: redisMock }));
 
 const {
@@ -34,6 +44,10 @@ const {
   saveResponse,
   getProgress,
   getAnalytics,
+  startReview,
+  getReview,
+  getReviewResponses,
+  pushAnswerToBoard,
   deriveAttemptId,
 } = await import("./service.js");
 
@@ -90,6 +104,7 @@ const activityRow = {
   deadline: new Date("2026-09-05T10:00:00.000Z"),
   timerSeconds: 600,
   createdAt: new Date("2026-09-04T09:00:00.000Z"),
+  reviewedAt: null,
 };
 
 beforeEach(() => {
@@ -121,6 +136,8 @@ beforeEach(() => {
   repoMock.upsertDraftResponse.mockResolvedValue(new Date("2026-09-04T09:31:00.000Z"));
   repoMock.answeredStatsByActivity.mockResolvedValue([]);
   repoMock.listResponsesByActivity.mockResolvedValue([]);
+  repoMock.markReviewed.mockResolvedValue(new Date("2026-09-04T09:40:00.000Z"));
+  canvasServiceMock.postAnswerToBoard.mockResolvedValue(undefined);
   usersServiceMock.listGroupStudents.mockResolvedValue([]);
   redisMock.set.mockResolvedValue("OK");
   redisMock.get.mockResolvedValue("2026-09-04T09:30:00.000Z");
@@ -391,6 +408,92 @@ describe("getAnalytics (Э8.9) — гистограмма ответов", () =>
 
   it("чужой учитель — 403", async () => {
     await expect(getAnalytics(otherTeacher, ACTIVITY)).rejects.toMatchObject({ statusCode: 403 });
+  });
+});
+
+describe("startReview / getReview (Э8.10) — разбор", () => {
+  it("учитель начинает разбор: помечает, шлёт activity_reviewed", async () => {
+    const result = await startReview(teacher, ACTIVITY);
+    expect(repoMock.markReviewed).toHaveBeenCalledWith(ACTIVITY);
+    expect(roomsServiceMock.broadcastToLesson).toHaveBeenCalledWith(LESSON, {
+      type: "activity_reviewed",
+      activityId: ACTIVITY,
+    });
+    expect(result).toEqual({ activityId: ACTIVITY, reviewedAt: "2026-09-04T09:40:00.000Z" });
+  });
+
+  it("чужой учитель не может начать разбор — 403", async () => {
+    await expect(startReview(otherTeacher, ACTIVITY)).rejects.toMatchObject({ statusCode: 403 });
+    expect(repoMock.markReviewed).not.toHaveBeenCalled();
+  });
+
+  it("до начала разбора — 409, ключи ответов не отдаются", async () => {
+    await expect(getReview(studentA, ACTIVITY)).rejects.toMatchObject({ statusCode: 409 });
+  });
+
+  it("после начала разбора — ПОЛНЫЙ материал (с ключом ответа), доступен и ученику", async () => {
+    repoMock.findActivityById.mockResolvedValue({ ...activityRow, reviewedAt: new Date("2026-09-04T09:40:00.000Z") });
+    const review = await getReview(studentA, ACTIVITY);
+    expect(review.reviewedAt).toBe("2026-09-04T09:40:00.000Z");
+    expect(JSON.stringify(review.material)).toContain("correct");
+  });
+});
+
+describe("getReviewResponses / pushAnswerToBoard (Э8.10) — вынести ответ на доску", () => {
+  const reviewedRow = { ...activityRow, reviewedAt: new Date("2026-09-04T09:40:00.000Z") };
+
+  beforeEach(() => {
+    repoMock.findActivityById.mockResolvedValue(reviewedRow);
+    usersServiceMock.listGroupStudents.mockResolvedValue([
+      { id: STUDENT_A, fullName: "Аня" },
+      { id: STUDENT_B, fullName: "Боря" },
+    ]);
+    repoMock.listResponsesByActivity.mockResolvedValue([
+      { userId: STUDENT_A, questionId: "q1", response: { type: "single_choice", selectedOptionId: "o2" } },
+    ]);
+  });
+
+  it("до начала разбора — 409", async () => {
+    repoMock.findActivityById.mockResolvedValue(activityRow);
+    await expect(getReviewResponses(teacher, ACTIVITY, "q1")).rejects.toMatchObject({ statusCode: 409 });
+    await expect(
+      pushAnswerToBoard(teacher, ACTIVITY, { questionId: "q1", userId: STUDENT_A, anonymous: true }),
+    ).rejects.toMatchObject({ statusCode: 409 });
+  });
+
+  it("getReviewResponses: только ответившие, с именами", async () => {
+    const result = await getReviewResponses(teacher, ACTIVITY, "q1");
+    expect(result).toEqual({
+      questionId: "q1",
+      responses: [{ userId: STUDENT_A, fullName: "Аня", response: { type: "single_choice", selectedOptionId: "o2" } }],
+    });
+  });
+
+  it("ученику аналитика по именам недоступна — 403", async () => {
+    await expect(getReviewResponses(studentA, ACTIVITY, "q1")).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("pushAnswerToBoard: анонимно — без имени, текст ответа читаемый", async () => {
+    await pushAnswerToBoard(teacher, ACTIVITY, { questionId: "q1", userId: STUDENT_A, anonymous: true });
+    expect(canvasServiceMock.postAnswerToBoard).toHaveBeenCalledWith(LESSON, "Ответ ученика:\n4");
+  });
+
+  it("pushAnswerToBoard: с именем — подпись ученика", async () => {
+    await pushAnswerToBoard(teacher, ACTIVITY, { questionId: "q1", userId: STUDENT_A, anonymous: false });
+    expect(canvasServiceMock.postAnswerToBoard).toHaveBeenCalledWith(LESSON, "Аня:\n4");
+  });
+
+  it("у ученика нет ответа на вопрос — 404", async () => {
+    await expect(
+      pushAnswerToBoard(teacher, ACTIVITY, { questionId: "q1", userId: STUDENT_B, anonymous: true }),
+    ).rejects.toMatchObject({ statusCode: 404 });
+    expect(canvasServiceMock.postAnswerToBoard).not.toHaveBeenCalled();
+  });
+
+  it("ученик не может выносить ответы на доску — 403", async () => {
+    await expect(
+      pushAnswerToBoard(studentA, ACTIVITY, { questionId: "q1", userId: STUDENT_A, anonymous: true }),
+    ).rejects.toMatchObject({ statusCode: 403 });
   });
 });
 

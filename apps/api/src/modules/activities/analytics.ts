@@ -132,6 +132,77 @@ function topText(values: string[]): TextDistribution {
   return { kind: "text", bars, otherDistinct: Math.max(0, sorted.length - TEXT_TOP) };
 }
 
+/** Убирает разметку из `html`-фрагментов интеракции (варианты/пары) — текст на доске (Э8.10) простой, не HTML. */
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, "").trim();
+}
+
+/**
+ * Человекочитаемый текст одного ответа ученика — для «вынести ответ на
+ * доску» (Э8.10, §7.3 ТЗ). `interaction` ПОЛНЫЙ (с ключом ответа, как и в
+ * `buildDistribution` выше) — нужен для подписи вариантов/пар по их `id`,
+ * само значение верности сюда не подмешивается (на доску идёт то, что
+ * написал ученик, без пометки «верно/неверно» — это решает контекст
+ * разбора, не текст элемента). `response.type` уже сверен с
+ * `interaction.type` вызывающей стороной, как и везде в этом модуле.
+ */
+export function formatResponseText(interaction: QuestionInteraction, response: QuestionResponse): string {
+  switch (interaction.type) {
+    case "single_choice": {
+      const r = response as Extract<QuestionResponse, { type: "single_choice" }>;
+      const opt = interaction.options.find((o) => o.id === r.selectedOptionId);
+      return opt ? stripHtml(opt.html) : "(нет ответа)";
+    }
+    case "multiple_choice": {
+      const r = response as Extract<QuestionResponse, { type: "multiple_choice" }>;
+      const opts = interaction.options.filter((o) => r.selectedOptionIds.includes(o.id));
+      return opts.length > 0 ? opts.map((o) => stripHtml(o.html)).join(", ") : "(нет ответа)";
+    }
+    case "true_false": {
+      const r = response as Extract<QuestionResponse, { type: "true_false" }>;
+      return r.value === null ? "(нет ответа)" : r.value ? "Верно" : "Неверно";
+    }
+    case "text_input": {
+      const r = response as Extract<QuestionResponse, { type: "text_input" }>;
+      return r.value.trim() || "(нет ответа)";
+    }
+    case "numeric_input": {
+      const r = response as Extract<QuestionResponse, { type: "numeric_input" }>;
+      if (r.value === null) return "(нет ответа)";
+      return r.unit ? `${r.value} ${r.unit}` : String(r.value);
+    }
+    case "open_answer": {
+      const r = response as Extract<QuestionResponse, { type: "open_answer" }>;
+      return r.text.trim() || "(нет ответа)";
+    }
+    case "cloze_dropdown": {
+      const r = response as Extract<QuestionResponse, { type: "cloze_dropdown" }>;
+      return Object.entries(r.values)
+        .map(([gapId, value]) => `${gapId}: ${value ?? "—"}`)
+        .join("\n");
+    }
+    case "cloze_text": {
+      const r = response as Extract<QuestionResponse, { type: "cloze_text" }>;
+      return Object.entries(r.values)
+        .map(([gapId, value]) => `${gapId}: ${value || "—"}`)
+        .join("\n");
+    }
+    case "matching": {
+      const r = response as Extract<QuestionResponse, { type: "matching" }>;
+      const leftById = new Map(interaction.left.map((i) => [i.id, stripHtml(i.html)]));
+      const rightById = new Map(interaction.right.map((i) => [i.id, stripHtml(i.html)]));
+      if (r.pairs.length === 0) return "(нет ответа)";
+      return r.pairs.map(([l, right]) => `${leftById.get(l) ?? l} → ${rightById.get(right) ?? right}`).join("\n");
+    }
+    case "ordering": {
+      const r = response as Extract<QuestionResponse, { type: "ordering" }>;
+      const byId = new Map(interaction.items.map((i) => [i.id, stripHtml(i.html)]));
+      if (r.order.length === 0) return "(нет ответа)";
+      return r.order.map((id, i) => `${i + 1}. ${byId.get(id) ?? id}`).join("\n");
+    }
+  }
+}
+
 /** `matching`/`ordering` — гистограммы вариантов нет, только «верно / частично / неверно» через движок проверки (Э8.3). */
 function summarize(interaction: QuestionInteraction, responses: QuestionResponse[]): QuestionDistribution {
   let correctCount = 0;

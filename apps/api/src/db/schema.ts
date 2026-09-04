@@ -308,6 +308,8 @@ export const activities = pgTable(
     deadline: timestamp("deadline", { withTimezone: true }),
     timerSeconds: integer("timer_seconds"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Момент, когда учитель начал разбор (Э8.10, §7.3 ТЗ) — до этого момента полный материал (с ключами ответов) не отдаётся никому, кроме учителя (аналитика, Э8.9). `null` — разбор ещё не начат. */
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   },
   (t) => [index("activities_lesson_idx").on(t.lessonId)],
 );
