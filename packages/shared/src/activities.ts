@@ -51,6 +51,27 @@ export const savedResponseSchema = z.object({
 export type SavedResponse = z.infer<typeof savedResponseSchema>;
 
 /**
+ * Тело `POST /activities/:id/responses` (Э8.7) — автосохранение черновика
+ * одного ответа. Клиент шлёт его раз в ~5 сек после изменения и при потере
+ * фокуса/выгрузке вкладки; сервер делает upsert по `(attemptId, questionId)`.
+ * `response.type` должен совпадать с типом взаимодействия этого вопроса —
+ * сервер проверяет по закреплённой версии материала.
+ */
+export const saveResponseRequestSchema = z.object({
+  questionId: z.string().min(1),
+  response: questionResponseSchema,
+  /** Накопленное время на вопросе, мс (для панели прогресса Э8.8). Сервер берёт максимум со снятым ранее. */
+  timeSpentMs: z.number().int().nonnegative().max(24 * 60 * 60 * 1000).optional(),
+});
+export type SaveResponseRequest = z.infer<typeof saveResponseRequestSchema>;
+
+export interface SaveResponseResult {
+  saved: true;
+  /** ISO-момент сохранения на сервере. */
+  savedAt: string;
+}
+
+/**
  * Ответ `GET /activities/:id/my` — индивидуальная копия задания для одного
  * ученика. `material` уже прошёл `stripMaterialAnswerKeys` с сидом
  * `attemptId` — ключей ответов в нём нет, порядок вариантов свой на попытку.

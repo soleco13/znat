@@ -87,3 +87,51 @@ export async function findResponsesByAttempt(attemptId: string): Promise<SavedRe
     .where(eq(responses.attemptId, attemptId));
   return rows.map((r) => ({ questionId: r.questionId, response: r.response as QuestionResponse }));
 }
+
+/**
+ * Автосохранение черновика одного ответа (Э8.7). Upsert по естественному
+ * ключу `(attemptId, questionId)` — уникальный индекс
+ * `responses_attempt_question_idx` (Э8.2 завёл его ровно под эту цель):
+ * один ответ на вопрос одной попытки, повторное сохранение перезаписывает.
+ * Черновик НЕ оценивается — `score`/`maxScore` остаются NULL, `autoGraded`
+ * = false (движок проверки Э8.3 отработает на сабмите). `submittedAt`
+ * здесь — момент последнего сохранения.
+ */
+export async function upsertDraftResponse(input: {
+  attemptId: string;
+  activityId: string;
+  materialId: string;
+  lessonId: string | null;
+  userId: string;
+  questionId: string;
+  response: QuestionResponse;
+  attemptNumber: number;
+  timeSpentMs: number;
+}): Promise<Date> {
+  const now = new Date();
+  const [row] = await db
+    .insert(responses)
+    .values({
+      attemptId: input.attemptId,
+      activityId: input.activityId,
+      materialId: input.materialId,
+      lessonId: input.lessonId,
+      userId: input.userId,
+      questionId: input.questionId,
+      response: input.response,
+      autoGraded: false,
+      timeSpentMs: input.timeSpentMs,
+      attemptNumber: input.attemptNumber,
+      submittedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: [responses.attemptId, responses.questionId],
+      set: {
+        response: input.response,
+        timeSpentMs: sql`greatest(${responses.timeSpentMs}, ${input.timeSpentMs})`,
+        submittedAt: now,
+      },
+    })
+    .returning({ submittedAt: responses.submittedAt });
+  return row?.submittedAt ?? now;
+}

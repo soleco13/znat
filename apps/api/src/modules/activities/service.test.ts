@@ -9,6 +9,7 @@ const { repoMock, lessonsServiceMock, usersServiceMock, materialsServiceMock, ro
       listActivitiesByLesson: vi.fn(),
       maxAttemptNumber: vi.fn(),
       findResponsesByAttempt: vi.fn(),
+      upsertDraftResponse: vi.fn(),
     },
     lessonsServiceMock: { getLesson: vi.fn() },
     usersServiceMock: { isGroupMember: vi.fn() },
@@ -24,7 +25,8 @@ vi.mock("../materials/service.js", () => materialsServiceMock);
 vi.mock("../rooms/service.js", () => roomsServiceMock);
 vi.mock("../../db/redis.js", () => ({ redis: redisMock }));
 
-const { createActivity, getMyActivity, listLessonActivities, deriveAttemptId } = await import("./service.js");
+const { createActivity, getMyActivity, listLessonActivities, saveResponse, deriveAttemptId } =
+  await import("./service.js");
 
 const SCHOOL = "11111111-1111-1111-1111-111111111111";
 const OTHER_SCHOOL = "aaaaaaaa-1111-1111-1111-111111111111";
@@ -107,6 +109,7 @@ beforeEach(() => {
   repoMock.findActivityById.mockResolvedValue(activityRow);
   repoMock.maxAttemptNumber.mockResolvedValue(0);
   repoMock.findResponsesByAttempt.mockResolvedValue([]);
+  repoMock.upsertDraftResponse.mockResolvedValue(new Date("2026-09-04T09:31:00.000Z"));
   redisMock.set.mockResolvedValue("OK");
   redisMock.get.mockResolvedValue("2026-09-04T09:30:00.000Z");
 });
@@ -222,6 +225,79 @@ describe("getMyActivity (Э8.6) — индивидуальный канал", ()
     expect(my.attemptNumber).toBe(1);
     // maxAttemptNumber=1 → текущая всё ещё 1 (submit создаёт следующую, Э8.7+).
     expect(my.attemptId).toBe(deriveAttemptId(ACTIVITY, STUDENT_A, 1));
+  });
+});
+
+describe("saveResponse (Э8.7) — автосохранение черновика", () => {
+  const draft = { type: "single_choice" as const, selectedOptionId: "o2" };
+
+  it("ученик-участник: upsert по своему attemptId, { saved: true }", async () => {
+    const res = await saveResponse(studentA, ACTIVITY, { questionId: "q1", response: draft });
+
+    expect(res).toEqual({ saved: true, savedAt: "2026-09-04T09:31:00.000Z" });
+    expect(repoMock.upsertDraftResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attemptId: deriveAttemptId(ACTIVITY, STUDENT_A, 1),
+        attemptNumber: 1,
+        activityId: ACTIVITY,
+        materialId: MATERIAL,
+        lessonId: LESSON,
+        userId: STUDENT_A,
+        questionId: "q1",
+        response: draft,
+      }),
+    );
+  });
+
+  it("идемпотентно: повторная отправка того же — снова upsert, не падает", async () => {
+    await saveResponse(studentA, ACTIVITY, { questionId: "q1", response: draft });
+    await saveResponse(studentA, ACTIVITY, { questionId: "q1", response: draft });
+    expect(repoMock.upsertDraftResponse).toHaveBeenCalledTimes(2);
+  });
+
+  it("два ученика пишут в РАЗНЫЕ attemptId (ответы не пересекаются)", async () => {
+    await saveResponse(studentA, ACTIVITY, { questionId: "q1", response: draft });
+    await saveResponse(studentB, ACTIVITY, { questionId: "q1", response: draft });
+    const [a] = repoMock.upsertDraftResponse.mock.calls[0]!;
+    const [b] = repoMock.upsertDraftResponse.mock.calls[1]!;
+    expect(a.attemptId).not.toBe(b.attemptId);
+  });
+
+  it("не ученик (учитель) не сохраняет ответы — 403", async () => {
+    await expect(
+      saveResponse(teacher, ACTIVITY, { questionId: "q1", response: draft }),
+    ).rejects.toMatchObject({ statusCode: 403 });
+    expect(repoMock.upsertDraftResponse).not.toHaveBeenCalled();
+  });
+
+  it("дедлайн прошёл — 409, ответ не пишется", async () => {
+    repoMock.findActivityById.mockResolvedValue({ ...activityRow, deadline: new Date("2020-01-01T00:00:00.000Z") });
+    await expect(
+      saveResponse(studentA, ACTIVITY, { questionId: "q1", response: draft }),
+    ).rejects.toMatchObject({ statusCode: 409 });
+    expect(repoMock.upsertDraftResponse).not.toHaveBeenCalled();
+  });
+
+  it("вопроса нет в материале — 404", async () => {
+    await expect(
+      saveResponse(studentA, ACTIVITY, { questionId: "нет-такого", response: draft }),
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("тип ответа не совпадает с типом вопроса — 400", async () => {
+    await expect(
+      saveResponse(studentA, ACTIVITY, {
+        questionId: "q1",
+        response: { type: "true_false", value: true },
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("ученик не из группы — 403", async () => {
+    usersServiceMock.isGroupMember.mockResolvedValue(false);
+    await expect(
+      saveResponse(studentA, ACTIVITY, { questionId: "q1", response: draft }),
+    ).rejects.toMatchObject({ statusCode: 403 });
   });
 });
 

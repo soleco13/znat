@@ -20,7 +20,10 @@ import {
   type ActivityDto,
   type ActivityMode,
   type CreateActivityRequest,
+  type Material,
   type MyActivity,
+  type SaveResponseRequest,
+  type SaveResponseResult,
 } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
 import { redis } from "../../db/redis.js";
@@ -171,9 +174,7 @@ export async function getMyActivity(
   }
   await assertLessonMember(user, activity.lessonId);
 
-  const previousAttempts = await repo.maxAttemptNumber(activityId, user.sub);
-  const attemptNumber = Math.max(previousAttempts, 1);
-  const attemptId = deriveAttemptId(activityId, user.sub, attemptNumber);
+  const { attemptNumber, attemptId } = await resolveAttempt(activityId, user.sub);
 
   const startedAt = await ensureAttemptStart(attemptId);
 
@@ -195,6 +196,86 @@ export async function getMyActivity(
     material: publicMaterial,
     savedResponses,
   };
+}
+
+/**
+ * Текущая попытка ученика по активности. `attemptNumber` = наибольший
+ * существующий или 1; `submit` (Э8.10+) заведёт следующую при повторных
+ * попытках (`attemptsAllowed`). Один и тот же результат у `getMyActivity`
+ * и `saveResponse` — черновик пишется в ту же попытку, что отдаётся плееру.
+ */
+async function resolveAttempt(
+  activityId: string,
+  userId: string,
+): Promise<{ attemptNumber: number; attemptId: string }> {
+  const attemptNumber = Math.max(await repo.maxAttemptNumber(activityId, userId), 1);
+  return { attemptNumber, attemptId: deriveAttemptId(activityId, userId, attemptNumber) };
+}
+
+function findQuestion(material: Material, questionId: string) {
+  for (const block of material.blocks) {
+    if (block.type === "question" && block.id === questionId) return block;
+  }
+  return null;
+}
+
+/**
+ * Автосохранение черновика одного ответа (Э8.7, §8 ТЗ). DoD: «обрыв связи не
+ * теряет ответы» — идемпотентный upsert по `(attemptId, questionId)`,
+ * клиент шлёт раз в ~5 сек и при потере фокуса/выгрузке вкладки.
+ *
+ * Черновик НЕ оценивается (движок Э8.3 — на сабмите). Тип ответа сверяется
+ * с типом взаимодействия вопроса по ЗАКРЕПЛЁННОЙ версии материала — плеер не
+ * может подсунуть ответ не того типа, а `gradeResponse` (Э8.3) бросил бы на
+ * таком рассогласовании.
+ */
+export async function saveResponse(
+  user: AccessTokenPayload,
+  activityId: string,
+  input: SaveResponseRequest,
+): Promise<SaveResponseResult> {
+  if (user.role !== "student") {
+    throw new AppError(403, "forbidden", "Сохранять ответы может только ученик");
+  }
+  const activity = await loadActivityForSchool(activityId, user.schoolId);
+  if (!activity.lessonId) {
+    throw new AppError(409, "activity_not_in_lesson", "Задание не привязано к уроку");
+  }
+  await assertLessonMember(user, activity.lessonId);
+
+  if (activity.deadline && activity.deadline.getTime() < Date.now()) {
+    throw new AppError(409, "deadline_passed", "Дедлайн прошёл — ответы больше не принимаются");
+  }
+
+  const loaded = await materialsService.getMaterialVersion(activity.materialVersionId);
+  const question = findQuestion(loaded.material, input.questionId);
+  if (!question) {
+    throw new AppError(404, "question_not_found", "Вопрос не найден в материале");
+  }
+  if (question.interaction.type !== input.response.type) {
+    throw new AppError(
+      400,
+      "response_type_mismatch",
+      `Тип ответа (${input.response.type}) не соответствует типу вопроса (${question.interaction.type})`,
+    );
+  }
+
+  const { attemptNumber, attemptId } = await resolveAttempt(activityId, user.sub);
+  await ensureAttemptStart(attemptId);
+
+  const savedAt = await repo.upsertDraftResponse({
+    attemptId,
+    activityId,
+    materialId: activity.materialId,
+    lessonId: activity.lessonId,
+    userId: user.sub,
+    questionId: input.questionId,
+    response: input.response,
+    attemptNumber,
+    timeSpentMs: input.timeSpentMs ?? 0,
+  });
+
+  return { saved: true, savedAt: savedAt.toISOString() };
 }
 
 /** Момент старта попытки — точка отсчёта таймера. Пишется один раз (NX), переживает перезагрузку; потеря Redis = таймер стартует заново (deadline в БД абсолютный, не страдает). */

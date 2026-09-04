@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { createActivityRequestSchema } from "@school/shared";
+import { createActivityRequestSchema, saveResponseRequestSchema } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
 import * as activitiesService from "./service.js";
 
@@ -36,5 +36,16 @@ export default async function activitiesRoutes(app: FastifyInstance) {
     if (!parsed.success) throw new AppError(400, "bad_activity_id", "Некорректный идентификатор задания");
     const my = await activitiesService.getMyActivity(request.user, parsed.data);
     return reply.send(my);
+  });
+
+  // Э8.7: автосохранение черновика одного ответа (раз в ~5 сек + при потере
+  // фокуса). Идемпотентно по (attemptId, questionId) — обрыв связи не теряет
+  // ответы, повторная отправка того же не создаёт дублей.
+  app.post<{ Params: { id: string } }>("/activities/:id/responses", async (request, reply) => {
+    const parsed = uuidParam.safeParse(request.params.id);
+    if (!parsed.success) throw new AppError(400, "bad_activity_id", "Некорректный идентификатор задания");
+    const body = saveResponseRequestSchema.parse(request.body);
+    const result = await activitiesService.saveResponse(request.user, parsed.data, body);
+    return reply.send(result);
   });
 }

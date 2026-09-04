@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { MyActivity, QuestionResponse } from "@school/shared";
 import { QuestionPlayer } from "./QuestionPlayer.js";
+import { useActivityAutosave, type AutosaveStatus } from "./useActivityAutosave.js";
 import { sanitizeHtml } from "../../shared/sanitize-html.js";
 
 type Block = MyActivity["material"]["blocks"][number];
@@ -9,8 +10,11 @@ type Block = MyActivity["material"]["blocks"][number];
  * Плеер материала целиком (Э8.6) — то, что Э8.4/8.5 отложили как «забота
  * будущего плеера материала». Получает `MyActivity` (индивидуальная копия
  * от `GET /activities/:id/my`: без ключей ответов, свой порядок вариантов),
- * держит ответы всех вопросов в одном месте и отдаёт каждое изменение
- * наружу через `onResponseChange` — точка подключения автосохранения (Э8.7).
+ * держит ответы всех вопросов в одном месте.
+ *
+ * Автосохранение (Э8.7): если задан `autosaveActivityId`, каждое изменение
+ * ставится в очередь `useActivityAutosave` (раз в 5 сек + при потере фокуса).
+ * `onResponseChange` — дополнительный хук для вызывающей стороны.
  *
  * Контентные блоки §6.2, требующие KaTeX/пайплайна ассетов (`formula`,
  * `image`, `video`, `audio`, `embed`), пока показываются заглушкой —
@@ -19,25 +23,30 @@ type Block = MyActivity["material"]["blocks"][number];
  */
 export function MaterialPlayer({
   activity,
+  autosaveActivityId = null,
   onResponseChange,
   disabled = false,
 }: {
   activity: MyActivity;
+  /** id активности для автосохранения черновиков; `null` — плеер без сохранения (превью учителя). */
+  autosaveActivityId?: string | null;
   onResponseChange?: (questionId: string, response: QuestionResponse) => void;
   disabled?: boolean;
 }) {
   const [responses, setResponses] = useState<Record<string, QuestionResponse>>(
     () => ({ ...activity.savedResponses }),
   );
+  const autosave = useActivityAutosave(autosaveActivityId);
 
   const handleChange = (questionId: string, response: QuestionResponse) => {
     setResponses((prev) => ({ ...prev, [questionId]: response }));
+    if (autosaveActivityId) autosave.queue(questionId, response);
     onResponseChange?.(questionId, response);
   };
 
   return (
     <div className="space-y-4">
-      <MaterialHeader activity={activity} />
+      <MaterialHeader activity={activity} autosaveStatus={autosaveActivityId ? autosave.status : null} />
       {activity.material.blocks.map((block) => (
         <BlockView
           key={block.id}
@@ -51,7 +60,13 @@ export function MaterialPlayer({
   );
 }
 
-function MaterialHeader({ activity }: { activity: MyActivity }) {
+function MaterialHeader({
+  activity,
+  autosaveStatus,
+}: {
+  activity: MyActivity;
+  autosaveStatus: AutosaveStatus | null;
+}) {
   const { material, deadline, timerSeconds, startedAt } = activity;
   return (
     <header className="border-b pb-2">
@@ -60,9 +75,23 @@ function MaterialHeader({ activity }: { activity: MyActivity }) {
         {material.subject}
         {deadline && ` · дедлайн ${new Date(deadline).toLocaleString()}`}
         {timerSeconds != null && ` · ${formatTimer(startedAt, timerSeconds)}`}
+        {autosaveStatus && ` · ${autosaveLabel(autosaveStatus)}`}
       </p>
     </header>
   );
+}
+
+function autosaveLabel(status: AutosaveStatus): string {
+  switch (status) {
+    case "saving":
+      return "сохранение…";
+    case "saved":
+      return "сохранено";
+    case "error":
+      return "не сохранено — повторим";
+    case "idle":
+      return "черновик";
+  }
 }
 
 /** Оставшееся время попытки, минуты:секунды. Отсчёт от `startedAt` сервера — источник правды по дедлайну всё равно на сервере (Э8.7/8.10). */

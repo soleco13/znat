@@ -1,4 +1,10 @@
-import type { ActivityDto, CreateActivityRequest, MyActivity } from "@school/shared";
+import type {
+  ActivityDto,
+  CreateActivityRequest,
+  MyActivity,
+  SaveResponseRequest,
+  SaveResponseResult,
+} from "@school/shared";
 import { apiFetch } from "../../shared/api-client.js";
 
 /**
@@ -23,4 +29,21 @@ export function listLessonActivities(lessonId: string): Promise<{ items: Activit
 /** Ученик/учитель: своя копия задания без ключей ответов + ранее сохранённые черновики. */
 export function getMyActivity(activityId: string): Promise<MyActivity> {
   return apiFetch<MyActivity>(`/activities/${activityId}/my`);
+}
+
+/**
+ * Ученик: автосохранение черновика одного ответа (Э8.7). Идемпотентно —
+ * повтор той же отправки безопасен. `keepalive` — для отправки при выгрузке
+ * вкладки (`visibilitychange`/`beforeunload`), чтобы браузер не оборвал запрос.
+ */
+export function saveResponse(
+  activityId: string,
+  body: SaveResponseRequest,
+  keepalive = false,
+): Promise<SaveResponseResult> {
+  return apiFetch<SaveResponseResult>(`/activities/${activityId}/responses`, {
+    method: "POST",
+    body: JSON.stringify(body),
+    keepalive,
+  });
 }
