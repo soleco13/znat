@@ -88,6 +88,23 @@ export async function isGroupMember(groupId: string, userId: string) {
   return repo.isGroupMember(groupId, userId);
 }
 
+/**
+ * Группы текущего пользователя (`GET /users/me/groups`) — точка входа для
+ * UI «мои домашние задания» (Э8.11) и формы «задать на дом» (нужно знать,
+ * КАКУЮ группу выбрать, прежде чем звать `GET /groups/:id/activities`).
+ * У групп нет своего учителя-хозяина (решение Э8.11, см. `createHomeworkActivity`
+ * в activities/service.ts — там та же асимметрия): ученик видит только
+ * группы, в которых состоит (`group_members`), учитель/методист/админ —
+ * все группы школы, ровно как они уже могут узнать список её домашних
+ * заданий и назначать новые в любую группу.
+ */
+export async function listMyGroups(schoolId: string, userId: string, role: Role) {
+  if (role === "student") {
+    return repo.listGroupsForUser(schoolId, userId);
+  }
+  return repo.listGroups(schoolId);
+}
+
 /** Активные ученики группы с именами — панель прогресса класса (Э8.8). */
 export async function listGroupStudents(groupId: string) {
   return repo.listGroupStudents(groupId);

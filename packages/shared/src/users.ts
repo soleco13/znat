@@ -48,6 +48,15 @@ export const addGroupMembersRequestSchema = z.object({
 });
 export type AddGroupMembersRequest = z.infer<typeof addGroupMembersRequestSchema>;
 
+/** Ответ `GET /users/me/groups` (Э8.11 UI) — группа без списка участников. */
+export const groupResponseSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  grade: z.number().int(),
+  academicYear: z.string(),
+});
+export type GroupResponse = z.infer<typeof groupResponseSchema>;
+
 export const importUsersRowSchema = z.object({
   email: z.string().email(),
   fullName: z.string().min(1),

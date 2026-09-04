@@ -1,19 +1,7 @@
-import { useEffect, useState } from "react";
-import type { MyActivity } from "@school/shared";
-import { createActivity, getMyActivity } from "./activity-api.js";
-import { ClassProgressPanel } from "./ClassProgressPanel.js";
-import { GradingQueue } from "./GradingQueue.js";
-import { MaterialPlayer } from "./MaterialPlayer.js";
-import { QuestionAnalyticsPanel } from "./QuestionAnalyticsPanel.js";
-import { ReviewPanel } from "./ReviewPanel.js";
-
-type TeacherTab = "progress" | "analytics" | "review" | "grading";
-const TEACHER_TABS: [TeacherTab, string][] = [
-  ["progress", "Прогресс"],
-  ["analytics", "Аналитика"],
-  ["review", "Разбор"],
-  ["grading", "Проверка"],
-];
+import { useState } from "react";
+import { createActivity } from "./activity-api.js";
+import { ActivityPlayer } from "./ActivityPlayer.js";
+import { ActivityTeacherTabs } from "./ActivityTeacherTabs.js";
 
 /**
  * Сборка учебного функционала (Э8) внутри урока — первое место, где
@@ -43,7 +31,6 @@ export function LessonActivityPanel({
   reviewSignal: number;
 }) {
   const [expanded, setExpanded] = useState(true);
-  const [tab, setTab] = useState<TeacherTab>("progress");
   // Пока учитель не перезагрузил страницу, id только что запущенного им
   // задания приходит СВОИМ ответом `createActivity`, а не WS `activity_started`
   // (тому же клиенту, что его запустил, свой WS-сигнал не нужен — он уже
@@ -65,16 +52,13 @@ export function LessonActivityPanel({
           <TeacherActivityView
             lessonId={lessonId}
             activityId={activityId}
-            tab={tab}
-            onTabChange={setTab}
-            onLaunched={(id) => {
-              setJustLaunchedId(id);
-              setTab("progress");
-            }}
+            onLaunched={setJustLaunchedId}
             reviewSignal={reviewSignal}
           />
+        ) : activityId ? (
+          <ActivityPlayer activityId={activityId} />
         ) : (
-          <StudentActivityView activityId={activityId} />
+          <p className="text-xs text-slate-400">Учитель ещё не выдавал задание</p>
         ))}
     </div>
   );
@@ -83,15 +67,11 @@ export function LessonActivityPanel({
 function TeacherActivityView({
   lessonId,
   activityId,
-  tab,
-  onTabChange,
   onLaunched,
   reviewSignal,
 }: {
   lessonId: string;
   activityId: string | null;
-  tab: TeacherTab;
-  onTabChange: (tab: TeacherTab) => void;
   onLaunched: (activityId: string) => void;
   reviewSignal: number;
 }) {
@@ -151,49 +131,7 @@ function TeacherActivityView({
       </form>
       {error && <p className="text-xs text-red-600">{error}</p>}
 
-      {activityId && (
-        <>
-          <nav className="flex gap-2 border-b text-xs">
-            {TEACHER_TABS.map(([key, label]) => (
-              <button
-                key={key}
-                onClick={() => onTabChange(key)}
-                className={`border-b-2 px-2 py-1 ${tab === key ? "border-slate-900 font-medium" : "border-transparent text-slate-400"}`}
-              >
-                {label}
-              </button>
-            ))}
-          </nav>
-          {tab === "progress" && <ClassProgressPanel activityId={activityId} />}
-          {tab === "analytics" && <QuestionAnalyticsPanel activityId={activityId} />}
-          {tab === "review" && <ReviewPanel key={`${activityId}:${reviewSignal}`} activityId={activityId} isTeacher />}
-          {tab === "grading" && <GradingQueue />}
-        </>
-      )}
+      {activityId && <ActivityTeacherTabs key={activityId} activityId={activityId} reviewSignal={reviewSignal} />}
     </div>
   );
-}
-
-function StudentActivityView({ activityId }: { activityId: string | null }) {
-  const [activity, setActivity] = useState<MyActivity | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setActivity(null);
-    setError(null);
-    if (!activityId) return;
-    let cancelled = false;
-    getMyActivity(activityId)
-      .then((data) => !cancelled && setActivity(data))
-      .catch(() => !cancelled && setError("Не удалось загрузить задание"));
-    return () => {
-      cancelled = true;
-    };
-  }, [activityId]);
-
-  if (!activityId) return <p className="text-xs text-slate-400">Учитель ещё не выдавал задание</p>;
-  if (error) return <p className="text-xs text-red-600">{error}</p>;
-  if (!activity) return <p className="text-xs text-slate-400">Загрузка задания…</p>;
-
-  return <MaterialPlayer activity={activity} autosaveActivityId={activityId} />;
 }

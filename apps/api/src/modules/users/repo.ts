@@ -105,6 +105,16 @@ export async function listGroupStudents(groupId: string): Promise<{ id: string; 
     .orderBy(users.fullName);
 }
 
+/** Группы, в которых состоит пользователь (Э8.11 UI: «мои домашние задания»). */
+export async function listGroupsForUser(schoolId: string, userId: string) {
+  return db
+    .select({ id: groups.id, schoolId: groups.schoolId, name: groups.name, grade: groups.grade, academicYear: groups.academicYear })
+    .from(groupMembers)
+    .innerJoin(groups, eq(groups.id, groupMembers.groupId))
+    .where(and(eq(groupMembers.userId, userId), eq(groups.schoolId, schoolId)))
+    .orderBy(groups.name);
+}
+
 export async function isGroupMember(groupId: string, userId: string): Promise<boolean> {
   const rows = await db
     .select({ userId: groupMembers.userId })

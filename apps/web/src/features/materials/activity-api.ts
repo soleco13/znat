@@ -7,6 +7,7 @@ import type {
   GradeManualResponseRequest,
   GradeManualResponseResult,
   GradingQueueItem,
+  GroupResponse,
   MyActivity,
   PushAnswerToBoardRequest,
   ReviewQuestionResponses,
@@ -34,6 +35,17 @@ export function createActivity(lessonId: string, body: CreateActivityRequest): P
 /** Список выдач урока — фолбэк-поллинг, если WS-сигнал `activity_started` пропущен. */
 export function listLessonActivities(lessonId: string): Promise<{ items: ActivityDto[] }> {
   return apiFetch<{ items: ActivityDto[] }>(`/lessons/${lessonId}/activities`);
+}
+
+/**
+ * Мои группы (`GET /users/me/groups`) — единственный способ узнать, КАКУЮ
+ * группу спрашивать через `listGroupActivities`/`assignHomework`: ученику —
+ * группы, в которых он состоит; учителю/методисту/админу — все группы
+ * школы (у групп нет своего учителя-хозяина, см. докстринг `listMyGroups`
+ * на бэке).
+ */
+export function listMyGroups(): Promise<{ items: GroupResponse[] }> {
+  return apiFetch<{ items: GroupResponse[] }>(`/users/me/groups`);
 }
 
 /** Учитель: задать домашнюю работу группе напрямую, без урока (Э8.11). */

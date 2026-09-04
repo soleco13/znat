@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "./api-client.js";
 import { useAuthStore } from "./auth-store.js";
 
@@ -17,7 +17,19 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div>
       <header className="flex items-center justify-between border-b px-4 py-2">
-        <span className="font-semibold">Школа онлайн</span>
+        <nav className="flex items-center gap-4">
+          <span className="font-semibold">Школа онлайн</span>
+          {user && user.role !== "methodist" && (
+            <>
+              <Link to="/lessons" className="text-sm text-slate-600">
+                Уроки
+              </Link>
+              <Link to="/homework" className="text-sm text-slate-600">
+                Домашние задания
+              </Link>
+            </>
+          )}
+        </nav>
         {user && (
           <div className="flex items-center gap-3 text-sm">
             <span>
