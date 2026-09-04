@@ -10,11 +10,15 @@ import type { ActivityMode, QuestionResponse } from "@school/shared";
 export interface ActivityRow {
   id: string;
   lessonId: string | null;
+  /** Группа выдачи (Э8.11) — заполнено всегда, для обоих режимов. См. докстринг `activities.groupId` в схеме БД. */
+  groupId: string;
   materialVersionId: string;
   materialId: string;
   materialVersion: number;
   schoolId: string;
   mode: ActivityMode;
+  /** Кто выдал (Э8.11) — владение домашней работой держится на этом (у группы нет отдельного «хозяина»-учителя, в отличие от урока). */
+  assignedBy: string;
   deadline: Date | null;
   timerSeconds: number | null;
   createdAt: Date;
@@ -24,11 +28,13 @@ export interface ActivityRow {
 const activitySelection = {
   id: activities.id,
   lessonId: activities.lessonId,
+  groupId: activities.groupId,
   materialVersionId: activities.materialVersionId,
   materialId: materialVersions.materialId,
   materialVersion: materialVersions.version,
   schoolId: materials.schoolId,
   mode: activities.mode,
+  assignedBy: activities.assignedBy,
   deadline: activities.deadline,
   timerSeconds: activities.timerSeconds,
   createdAt: activities.createdAt,
@@ -46,6 +52,7 @@ function withMaterial() {
 export async function insertActivity(input: {
   materialVersionId: string;
   lessonId: string | null;
+  groupId: string;
   mode: ActivityMode;
   assignedBy: string;
   deadline: Date | null;
@@ -63,6 +70,14 @@ export async function findActivityById(id: string): Promise<ActivityRow | null> 
 export async function listActivitiesByLesson(lessonId: string): Promise<ActivityRow[]> {
   const rows = await withMaterial()
     .where(eq(activities.lessonId, lessonId))
+    .orderBy(desc(activities.createdAt));
+  return rows as ActivityRow[];
+}
+
+/** Домашние задания группы (Э8.11) — `mode = 'homework'`, вне зависимости от того, кто их выдал. */
+export async function listHomeworkActivitiesByGroup(groupId: string): Promise<ActivityRow[]> {
+  const rows = await withMaterial()
+    .where(and(eq(activities.groupId, groupId), eq(activities.mode, "homework")))
     .orderBy(desc(activities.createdAt));
   return rows as ActivityRow[];
 }

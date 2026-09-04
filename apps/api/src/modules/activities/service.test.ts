@@ -14,6 +14,7 @@ const {
     insertActivity: vi.fn(),
     findActivityById: vi.fn(),
     listActivitiesByLesson: vi.fn(),
+    listHomeworkActivitiesByGroup: vi.fn(),
     maxAttemptNumber: vi.fn(),
     findResponsesByAttempt: vi.fn(),
     upsertDraftResponse: vi.fn(),
@@ -22,7 +23,7 @@ const {
     markReviewed: vi.fn(),
   },
   lessonsServiceMock: { getLesson: vi.fn() },
-  usersServiceMock: { isGroupMember: vi.fn(), listGroupStudents: vi.fn() },
+  usersServiceMock: { isGroupMember: vi.fn(), listGroupStudents: vi.fn(), getGroupOrThrow: vi.fn() },
   materialsServiceMock: { getLatestMaterial: vi.fn(), getMaterialVersion: vi.fn(), gradeResponse: vi.fn() },
   roomsServiceMock: { broadcastToLesson: vi.fn() },
   canvasServiceMock: { postAnswerToBoard: vi.fn() },
@@ -41,6 +42,8 @@ const {
   createActivity,
   getMyActivity,
   listLessonActivities,
+  createHomeworkActivity,
+  listGroupActivities,
   saveResponse,
   getProgress,
   getAnalytics,
@@ -60,6 +63,8 @@ const VERSION = "55555555-5555-5555-5555-555555555555";
 const ACTIVITY = "66666666-6666-6666-6666-666666666666";
 const STUDENT_A = "77777777-7777-7777-7777-777777777777";
 const STUDENT_B = "88888888-8888-8888-8888-888888888888";
+const GROUP = "group-1";
+const HOMEWORK_ACTIVITY = "aabbaabb-aabb-aabb-aabb-aabbaabbaabb";
 
 const teacher: AccessTokenPayload = { sub: TEACHER, schoolId: SCHOOL, role: "teacher" };
 const otherTeacher: AccessTokenPayload = { sub: "99999999-9999-9999-9999-999999999999", schoolId: SCHOOL, role: "teacher" };
@@ -96,15 +101,26 @@ const material: Material = {
 const activityRow = {
   id: ACTIVITY,
   lessonId: LESSON,
+  groupId: GROUP,
   materialVersionId: VERSION,
   materialId: MATERIAL,
   materialVersion: 1,
   schoolId: SCHOOL,
   mode: "lesson" as const,
+  assignedBy: TEACHER,
   deadline: new Date("2026-09-05T10:00:00.000Z"),
   timerSeconds: 600,
   createdAt: new Date("2026-09-04T09:00:00.000Z"),
   reviewedAt: null,
+};
+
+/** Домашняя выдача (Э8.11) — `lessonId: null`, вне зависимости от `activityRow` выше. */
+const homeworkRow = {
+  ...activityRow,
+  id: HOMEWORK_ACTIVITY,
+  lessonId: null,
+  mode: "homework" as const,
+  deadline: null,
 };
 
 beforeEach(() => {
@@ -113,10 +129,11 @@ beforeEach(() => {
     id: LESSON,
     schoolId: SCHOOL,
     teacherId: TEACHER,
-    groupId: "group-1",
+    groupId: GROUP,
     status: "live",
   });
   usersServiceMock.isGroupMember.mockResolvedValue(true);
+  usersServiceMock.getGroupOrThrow.mockResolvedValue({ id: GROUP, schoolId: SCHOOL, name: "5А", grade: 5, academicYear: "2026" });
   materialsServiceMock.getLatestMaterial.mockResolvedValue({
     materialId: MATERIAL,
     versionId: VERSION,
@@ -131,6 +148,7 @@ beforeEach(() => {
   });
   repoMock.insertActivity.mockResolvedValue(ACTIVITY);
   repoMock.findActivityById.mockResolvedValue(activityRow);
+  repoMock.listHomeworkActivitiesByGroup.mockResolvedValue([]);
   repoMock.maxAttemptNumber.mockResolvedValue(0);
   repoMock.findResponsesByAttempt.mockResolvedValue([]);
   repoMock.upsertDraftResponse.mockResolvedValue(new Date("2026-09-04T09:31:00.000Z"));
@@ -508,5 +526,111 @@ describe("listLessonActivities (Э8.6)", () => {
   it("не участнику — 403", async () => {
     usersServiceMock.isGroupMember.mockResolvedValue(false);
     await expect(listLessonActivities(studentA, LESSON)).rejects.toMatchObject({ statusCode: 403 });
+  });
+});
+
+describe("createHomeworkActivity / listGroupActivities (Э8.11) — «ученик заходит и делает»", () => {
+  it("учитель задаёт домашнюю работу группе: lessonId null, groupId группы, mode homework", async () => {
+    repoMock.insertActivity.mockResolvedValue(HOMEWORK_ACTIVITY);
+    repoMock.findActivityById.mockResolvedValue(homeworkRow);
+
+    const dto = await createHomeworkActivity(teacher, GROUP, { materialId: MATERIAL, mode: "lesson" });
+
+    expect(usersServiceMock.getGroupOrThrow).toHaveBeenCalledWith(SCHOOL, GROUP);
+    expect(repoMock.insertActivity).toHaveBeenCalledWith(
+      expect.objectContaining({ lessonId: null, groupId: GROUP, mode: "homework", assignedBy: TEACHER }),
+    );
+    // `mode: "lesson"` в теле ИГНОРИРУЕТСЯ — это эндпоинт домашней работы, режим определяет URL.
+    expect(dto).toMatchObject({ id: HOMEWORK_ACTIVITY, lessonId: null, groupId: GROUP, mode: "homework" });
+  });
+
+  it("ученик не может задать домашнюю работу — 403", async () => {
+    await expect(
+      createHomeworkActivity(studentA, GROUP, { materialId: MATERIAL, mode: "lesson" }),
+    ).rejects.toMatchObject({ statusCode: 403 });
+    expect(repoMock.insertActivity).not.toHaveBeenCalled();
+  });
+
+  it("группа другой школы — 404 (getGroupOrThrow сам проверяет школу)", async () => {
+    usersServiceMock.getGroupOrThrow.mockRejectedValue(
+      Object.assign(new Error("not_found"), { statusCode: 404 }),
+    );
+    await expect(
+      createHomeworkActivity(teacher, GROUP, { materialId: MATERIAL, mode: "lesson" }),
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("listGroupActivities: ученик из группы — список её домашних заданий", async () => {
+    repoMock.listHomeworkActivitiesByGroup.mockResolvedValue([homeworkRow]);
+    const items = await listGroupActivities(studentA, GROUP);
+    expect(repoMock.listHomeworkActivitiesByGroup).toHaveBeenCalledWith(GROUP);
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ id: HOMEWORK_ACTIVITY, mode: "homework" });
+  });
+
+  it("listGroupActivities: ученик НЕ из группы — 403", async () => {
+    usersServiceMock.isGroupMember.mockResolvedValue(false);
+    await expect(listGroupActivities(studentA, GROUP)).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("listGroupActivities: любой учитель школы видит список без проверки членства", async () => {
+    repoMock.listHomeworkActivitiesByGroup.mockResolvedValue([homeworkRow]);
+    const items = await listGroupActivities(otherTeacher, GROUP);
+    expect(usersServiceMock.isGroupMember).not.toHaveBeenCalled();
+    expect(items).toHaveLength(1);
+  });
+});
+
+describe("Домашняя работа (Э8.11) через общие эндпоинты — getMyActivity/saveResponse/getProgress/getAnalytics/startReview/getReview", () => {
+  const draft = { type: "single_choice" as const, selectedOptionId: "o2" };
+
+  beforeEach(() => {
+    repoMock.findActivityById.mockResolvedValue(homeworkRow);
+  });
+
+  it("getMyActivity: ученик группы получает свою копию БЕЗ привязки к уроку", async () => {
+    const my = await getMyActivity(studentA, HOMEWORK_ACTIVITY);
+    expect(my.mode).toBe("homework");
+    expect(usersServiceMock.isGroupMember).toHaveBeenCalledWith(GROUP, STUDENT_A);
+  });
+
+  it("getMyActivity: ученик НЕ из группы — 403", async () => {
+    usersServiceMock.isGroupMember.mockResolvedValue(false);
+    await expect(getMyActivity(studentA, HOMEWORK_ACTIVITY)).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("saveResponse: ученик группы сохраняет черновик домашней работы", async () => {
+    const res = await saveResponse(studentA, HOMEWORK_ACTIVITY, { questionId: "q1", response: draft });
+    expect(res).toEqual({ saved: true, savedAt: "2026-09-04T09:31:00.000Z" });
+    expect(repoMock.upsertDraftResponse).toHaveBeenCalledWith(expect.objectContaining({ lessonId: null }));
+  });
+
+  it("getProgress/getAnalytics: тот, кто выдал домашку, видит прогресс и аналитику", async () => {
+    usersServiceMock.listGroupStudents.mockResolvedValue([{ id: STUDENT_A, fullName: "Аня" }]);
+    await expect(getProgress(teacher, HOMEWORK_ACTIVITY)).resolves.toMatchObject({ activityId: HOMEWORK_ACTIVITY });
+    expect(usersServiceMock.listGroupStudents).toHaveBeenCalledWith(GROUP);
+    await expect(getAnalytics(teacher, HOMEWORK_ACTIVITY)).resolves.toMatchObject({ activityId: HOMEWORK_ACTIVITY });
+  });
+
+  it("getProgress: учитель, который НЕ выдавал эту домашку — 403 (у группы нет своего «хозяина», владеет только assignedBy)", async () => {
+    await expect(getProgress(otherTeacher, HOMEWORK_ACTIVITY)).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("startReview/getReview: работают для домашки, WS-сигнал НЕ шлётся (нет урока/канала)", async () => {
+    repoMock.markReviewed.mockResolvedValue(new Date("2026-09-04T09:40:00.000Z"));
+    await startReview(teacher, HOMEWORK_ACTIVITY);
+    expect(roomsServiceMock.broadcastToLesson).not.toHaveBeenCalled();
+
+    repoMock.findActivityById.mockResolvedValue({ ...homeworkRow, reviewedAt: new Date("2026-09-04T09:40:00.000Z") });
+    const review = await getReview(studentA, HOMEWORK_ACTIVITY);
+    expect(review.reviewedAt).toBe("2026-09-04T09:40:00.000Z");
+  });
+
+  it("pushAnswerToBoard: у домашки нет доски — 409, даже для того, кто её выдал", async () => {
+    repoMock.findActivityById.mockResolvedValue({ ...homeworkRow, reviewedAt: new Date("2026-09-04T09:40:00.000Z") });
+    await expect(
+      pushAnswerToBoard(teacher, HOMEWORK_ACTIVITY, { questionId: "q1", userId: STUDENT_A, anonymous: true }),
+    ).rejects.toMatchObject({ statusCode: 409, code: "activity_not_in_lesson" });
+    expect(canvasServiceMock.postAnswerToBoard).not.toHaveBeenCalled();
   });
 });

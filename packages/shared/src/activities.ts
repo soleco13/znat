@@ -25,7 +25,15 @@ import {
 export const activityModeSchema = z.enum(["lesson", "homework"]);
 export type ActivityMode = z.infer<typeof activityModeSchema>;
 
-/** Тело `POST /lessons/:id/activities` — учитель запускает материал для класса. */
+/**
+ * Тело `POST /lessons/:id/activities` (выдача в уроке) и
+ * `POST /groups/:id/activities` (домашняя работа, Э8.11) — оба эндпоинта
+ * принимают одно и то же тело, `mode` в теле ИГНОРИРУЕТСЯ сервисом: сам
+ * режим определяет URL, которым учитель воспользовался (см. докстринги
+ * `createActivity`/`createHomeworkActivity` в activities/service.ts) —
+ * поле оставлено в схеме только ради обратной совместимости формы, не как
+ * реальный переключатель.
+ */
 export const createActivityRequestSchema = z.object({
   materialId: z.string().uuid(),
   mode: activityModeSchema.default("lesson"),
@@ -40,6 +48,8 @@ export type CreateActivityRequest = z.infer<typeof createActivityRequestSchema>;
 export interface ActivityDto {
   id: string;
   lessonId: string | null;
+  /** Группа, которой адресована выдача (Э8.11) — заполнено всегда, для обоих режимов (см. `activities.groupId` в схеме БД). */
+  groupId: string;
   materialId: string;
   materialVersion: number;
   mode: ActivityMode;

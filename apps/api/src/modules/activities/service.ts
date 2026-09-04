@@ -1,5 +1,5 @@
 /**
- * Выдача заданий (Э8.6, §7.3/§8 ТЗ). Единственный экспорт модуля.
+ * Выдача заданий (Э8.6/8.11, §7.3/§8 ТЗ). Единственный экспорт модуля.
  *
  * **Задание уходит каждому ученику индивидуально, не через Y.Doc урока**
  * (DoD Э8.6: «ученик не видит ответы соседа»). `POST /lessons/:id/activities`
@@ -10,15 +10,24 @@
  * порядком перемешанных вариантов. Черновики ответов (Э8.7) пишутся в
  * `responses` по `attemptId` — пересечься с чужими нечем.
  *
+ * **Домашняя работа (Э8.11, `POST /groups/:id/activities`)** — та же самая
+ * механика, БЕЗ урока: `lessonId` в БД `null`, доступ определяется
+ * группой (`activity.groupId`, заполнено для обоих режимов) и тем, кто
+ * выдал (`activity.assignedBy`) — см. `assertActivityMember`/
+ * `assertActivityOwner` ниже, они обобщают `assertLessonMember`/
+ * `assertLessonTeacher` на оба режима везде, кроме доски (Э8.10): у
+ * домашки нет урока — и нет общей доски, `pushAnswerToBoard` ей
+ * недоступен принципиально.
+ *
  * Область «логика прав доступа» (§ «Что не делегировать вслепую» CLAUDE.md)
- * — `assertLessonTeacher`/`assertLessonMember` ниже читать построчно.
+ * — `assertLessonTeacher`/`assertLessonMember`/`assertActivityOwner`/
+ * `assertActivityMember` ниже читать построчно.
  */
 import { createHash } from "node:crypto";
 import {
   stripMaterialAnswerKeys,
   type AccessTokenPayload,
   type ActivityDto,
-  type ActivityMode,
   type CreateActivityRequest,
   type Material,
   type MyActivity,
@@ -75,6 +84,7 @@ function toDto(row: ActivityRow): ActivityDto {
   return {
     id: row.id,
     lessonId: row.lessonId,
+    groupId: row.groupId,
     materialId: row.materialId,
     materialVersion: row.materialVersion,
     mode: row.mode,
@@ -113,6 +123,43 @@ async function assertLessonMember(user: AccessTokenPayload, lessonId: string) {
   throw new AppError(403, "forbidden", "Роль не допускается к участию в уроке");
 }
 
+/**
+ * Управлять УЖЕ СУЩЕСТВУЮЩЕЙ активностью (Э8.11) — обобщение
+ * `assertLessonTeacher` на оба режима. `lesson`-выдача: учитель урока (тот
+ * же критерий, что и раньше). `homework`-выдача (нет `lessonId`): тот, кто
+ * её выдал (`activity.assignedBy`) — у группы нет собственного «хозяина»
+ * (в отличие от урока — `lessons.teacherId`), поэтому единственная точка
+ * владения домашней работой — кто именно её создал. Читать построчно.
+ */
+async function assertActivityOwner(user: AccessTokenPayload, activity: ActivityRow): Promise<void> {
+  if (user.role === "admin") return;
+  if (activity.lessonId) {
+    const lesson = await lessonsService.getLesson(user.schoolId, activity.lessonId);
+    if (user.role === "teacher" && lesson.teacherId === user.sub) return;
+    throw new AppError(403, "forbidden", "Управлять заданием урока может только его учитель");
+  }
+  if (user.role === "teacher" && activity.assignedBy === user.sub) return;
+  throw new AppError(403, "forbidden", "Управлять этой домашней работой может только тот, кто её выдал");
+}
+
+/**
+ * Участвует в этой активности (Э8.11) — обобщение `assertLessonMember` на
+ * оба режима: админ и владелец (`assertActivityOwner`) допускаются всегда,
+ * ученик — если состоит в `activity.groupId` (заполнено для ОБОИХ режимов,
+ * см. докстринг `activities.groupId` в схеме БД — для `lesson`-выдачи это
+ * копия `lessons.groupId`, снятая на момент запуска). Читать построчно.
+ */
+async function assertActivityMember(user: AccessTokenPayload, activity: ActivityRow): Promise<void> {
+  if (user.role === "student") {
+    const isMember = await usersService.isGroupMember(activity.groupId, user.sub);
+    if (!isMember) {
+      throw new AppError(403, "forbidden", "Вы не состоите в группе этого задания");
+    }
+    return;
+  }
+  await assertActivityOwner(user, activity);
+}
+
 export async function createActivity(
   user: AccessTokenPayload,
   lessonId: string,
@@ -128,7 +175,6 @@ export async function createActivity(
   // с тем содержимым, которое реально увидит ученик.
   const loaded = await materialsService.getLatestMaterial(user.schoolId, input.materialId);
 
-  const mode: ActivityMode = input.mode;
   const deadline = input.deadline ? new Date(input.deadline) : null;
   if (deadline && Number.isNaN(deadline.getTime())) {
     throw new AppError(400, "bad_deadline", "Некорректный дедлайн");
@@ -137,7 +183,14 @@ export async function createActivity(
   const id = await repo.insertActivity({
     materialVersionId: loaded.versionId,
     lessonId,
-    mode,
+    // Денормализованная копия — см. докстринг `activities.groupId`
+    // (Э8.11): не FK-переход через lessons на каждое чтение, а снятая на
+    // момент запуска группа урока.
+    groupId: lesson.groupId,
+    // `mode` из тела запроса ИГНОРИРУЕТСЯ — этот роут только для
+    // lesson-выдачи, режим определяет URL (см. докстринг
+    // `createActivityRequestSchema` в packages/shared).
+    mode: "lesson",
     assignedBy: user.sub,
     deadline,
     timerSeconds: input.timerSeconds ?? null,
@@ -162,6 +215,75 @@ export async function listLessonActivities(
   return rows.map(toDto);
 }
 
+/**
+ * Домашняя работа (Э8.11, §7.3/§8 ТЗ, DoD «ученик заходит и делает») —
+ * то же самое задание, что и в уроке, но БЕЗ урока: адресовано группе
+ * напрямую, доступно в любой момент, не только пока урок идёт. Любой
+ * учитель/админ школы может задать домашку любой группе своей школы — у
+ * групп нет собственного «хозяина»-учителя (в отличие от урока), значит и
+ * права на СОЗДАНИЕ здесь по школе, а не по владению группой; кто именно
+ * выдал — фиксируется `assignedBy` и решает дальнейшее владение
+ * (`assertActivityOwner`).
+ *
+ * `mode` из тела запроса ИГНОРИРУЕТСЯ — сюда всегда пишется `"homework"`
+ * (см. докстринг `createActivityRequestSchema`, тот же приём, что и в
+ * `createActivity` выше для `"lesson"`).
+ */
+export async function createHomeworkActivity(
+  user: AccessTokenPayload,
+  groupId: string,
+  input: CreateActivityRequest,
+): Promise<ActivityDto> {
+  if (user.role !== "teacher" && user.role !== "admin") {
+    throw new AppError(403, "forbidden", "Задавать домашнюю работу может только учитель");
+  }
+  await usersService.getGroupOrThrow(user.schoolId, groupId);
+
+  const loaded = await materialsService.getLatestMaterial(user.schoolId, input.materialId);
+
+  const deadline = input.deadline ? new Date(input.deadline) : null;
+  if (deadline && Number.isNaN(deadline.getTime())) {
+    throw new AppError(400, "bad_deadline", "Некорректный дедлайн");
+  }
+
+  const id = await repo.insertActivity({
+    materialVersionId: loaded.versionId,
+    lessonId: null,
+    groupId,
+    mode: "homework",
+    assignedBy: user.sub,
+    deadline,
+    timerSeconds: input.timerSeconds ?? null,
+  });
+
+  const row = await repo.findActivityById(id);
+  if (!row) throw new AppError(500, "activity_lost", "Активность не найдена сразу после создания");
+
+  return toDto(row);
+}
+
+/**
+ * Список домашних заданий группы (Э8.11) — учителю/админу школы (видят все
+ * домашки группы, не только свои — тот же принцип школьного, а не личного
+ * доступа, что и создание) либо ученику из этой группы (видит свои).
+ */
+export async function listGroupActivities(
+  user: AccessTokenPayload,
+  groupId: string,
+): Promise<ActivityDto[]> {
+  await usersService.getGroupOrThrow(user.schoolId, groupId);
+  if (user.role === "student") {
+    const isMember = await usersService.isGroupMember(groupId, user.sub);
+    if (!isMember) {
+      throw new AppError(403, "forbidden", "Вы не состоите в этой группе");
+    }
+  } else if (user.role !== "teacher" && user.role !== "admin") {
+    throw new AppError(403, "forbidden", "Роль не допускается к списку домашних заданий");
+  }
+  const rows = await repo.listHomeworkActivitiesByGroup(groupId);
+  return rows.map(toDto);
+}
+
 async function loadActivityForSchool(activityId: string, schoolId: string): Promise<ActivityRow> {
   const row = await repo.findActivityById(activityId);
   // Чужая школа — отвечаем 404, а не 403: существование активности другой школы наружу не подтверждаем.
@@ -174,18 +296,18 @@ async function loadActivityForSchool(activityId: string, schoolId: string): Prom
 /**
  * Индивидуальная копия задания для ОДНОГО ученика — своя на попытку, без
  * ключей ответов. Возвращает и ранее сохранённые черновики этой же попытки
- * (Э8.7), чтобы перезагрузка страницы не теряла ответы.
+ * (Э8.7), чтобы перезагрузка страницы не теряла ответы. Работает
+ * одинаково для `lesson`- и `homework`-выдачи (Э8.11) — единственное, что
+ * отличало домашку от задания урока, было жёсткое требование `lessonId`
+ * здесь; `assertActivityMember` проверяет членство по `activity.groupId`
+ * без похода к самому уроку.
  */
 export async function getMyActivity(
   user: AccessTokenPayload,
   activityId: string,
 ): Promise<MyActivity> {
   const activity = await loadActivityForSchool(activityId, user.schoolId);
-  if (!activity.lessonId) {
-    // «Домашняя работа» вне урока — Э8.11, ещё не сделана.
-    throw new AppError(409, "activity_not_in_lesson", "Задание не привязано к уроку");
-  }
-  await assertLessonMember(user, activity.lessonId);
+  await assertActivityMember(user, activity);
 
   const { attemptNumber, attemptId } = await resolveAttempt(activityId, user.sub);
 
@@ -251,10 +373,7 @@ export async function saveResponse(
     throw new AppError(403, "forbidden", "Сохранять ответы может только ученик");
   }
   const activity = await loadActivityForSchool(activityId, user.schoolId);
-  if (!activity.lessonId) {
-    throw new AppError(409, "activity_not_in_lesson", "Задание не привязано к уроку");
-  }
-  await assertLessonMember(user, activity.lessonId);
+  await assertActivityMember(user, activity);
 
   if (activity.deadline && activity.deadline.getTime() < Date.now()) {
     throw new AppError(409, "deadline_passed", "Дедлайн прошёл — ответы больше не принимаются");
@@ -318,13 +437,10 @@ export async function getProgress(
   activityId: string,
 ): Promise<ActivityProgress> {
   const activity = await loadActivityForSchool(activityId, user.schoolId);
-  if (!activity.lessonId) {
-    throw new AppError(409, "activity_not_in_lesson", "Задание не привязано к уроку");
-  }
-  const lesson = await assertLessonTeacher(user, activity.lessonId);
+  await assertActivityOwner(user, activity);
 
   const [roster, stats, loaded] = await Promise.all([
-    usersService.listGroupStudents(lesson.groupId),
+    usersService.listGroupStudents(activity.groupId),
     repo.answeredStatsByActivity(activityId),
     materialsService.getMaterialVersion(activity.materialVersionId),
   ]);
@@ -380,10 +496,7 @@ export async function getAnalytics(
   activityId: string,
 ): Promise<ActivityAnalytics> {
   const activity = await loadActivityForSchool(activityId, user.schoolId);
-  if (!activity.lessonId) {
-    throw new AppError(409, "activity_not_in_lesson", "Задание не привязано к уроку");
-  }
-  await assertLessonTeacher(user, activity.lessonId);
+  await assertActivityOwner(user, activity);
 
   const [loaded, rows] = await Promise.all([
     materialsService.getMaterialVersion(activity.materialVersionId),
@@ -426,21 +539,24 @@ export async function getAnalytics(
  * отдаёт ПОЛНЫЙ материал (с ключами ответов) и ученикам тоже. До этого
  * вызова тот же эндпоинт отвечает 409 — идемпотентно (`repo.markReviewed`
  * не двигает уже выставленный `reviewedAt`), поэтому повторный клик
- * учителя (например, после перезагрузки страницы) безопасен.
+ * учителя (например, после перезагрузки страницы) безопасен. Работает и
+ * для домашней работы (Э8.11) — WS-сигнал `activity_reviewed` шлётся,
+ * только если это выдача В УРОКЕ (`activity.lessonId` есть): у домашки нет
+ * живого канала, куда его слать, ученик просто увидит разбор при
+ * следующем заходе на `GET /activities/:id/review`.
  */
 export async function startReview(user: AccessTokenPayload, activityId: string): Promise<StartReviewResult> {
   const activity = await loadActivityForSchool(activityId, user.schoolId);
-  if (!activity.lessonId) {
-    throw new AppError(409, "activity_not_in_lesson", "Задание не привязано к уроку");
-  }
-  await assertLessonTeacher(user, activity.lessonId);
+  await assertActivityOwner(user, activity);
 
   const reviewedAt = await repo.markReviewed(activityId);
 
-  // Сигнал «начался разбор» — по WS-каналу урока, тем же путём, что
-  // activity_started (Э8.6): сам материал ученик заберёт отдельным HTTP-
-  // запросом (см. getReview ниже), это только пуш «обнови экран».
-  roomsService.broadcastToLesson(activity.lessonId, { type: "activity_reviewed", activityId });
+  if (activity.lessonId) {
+    // Сигнал «начался разбор» — по WS-каналу урока, тем же путём, что
+    // activity_started (Э8.6): сам материал ученик заберёт отдельным
+    // HTTP-запросом (см. getReview ниже), это только пуш «обнови экран».
+    roomsService.broadcastToLesson(activity.lessonId, { type: "activity_reviewed", activityId });
+  }
 
   return { activityId, reviewedAt: reviewedAt.toISOString() };
 }
@@ -454,10 +570,7 @@ export async function startReview(user: AccessTokenPayload, activityId: string):
  */
 export async function getReview(user: AccessTokenPayload, activityId: string): Promise<ActivityReview> {
   const activity = await loadActivityForSchool(activityId, user.schoolId);
-  if (!activity.lessonId) {
-    throw new AppError(409, "activity_not_in_lesson", "Задание не привязано к уроку");
-  }
-  await assertLessonMember(user, activity.lessonId);
+  await assertActivityMember(user, activity);
   if (!activity.reviewedAt) {
     throw new AppError(409, "not_reviewed", "Разбор ещё не начат");
   }
@@ -478,10 +591,7 @@ export async function getReviewResponses(
   questionId: string,
 ): Promise<ReviewQuestionResponses> {
   const activity = await loadActivityForSchool(activityId, user.schoolId);
-  if (!activity.lessonId) {
-    throw new AppError(409, "activity_not_in_lesson", "Задание не привязано к уроку");
-  }
-  const lesson = await assertLessonTeacher(user, activity.lessonId);
+  await assertActivityOwner(user, activity);
   if (!activity.reviewedAt) {
     throw new AppError(409, "not_reviewed", "Разбор ещё не начат");
   }
@@ -493,7 +603,7 @@ export async function getReviewResponses(
   }
 
   const [roster, rows] = await Promise.all([
-    usersService.listGroupStudents(lesson.groupId),
+    usersService.listGroupStudents(activity.groupId),
     repo.listResponsesByActivity(activityId),
   ]);
   const byUser = new Map(
@@ -515,7 +625,9 @@ export async function getReviewResponses(
  * `canvasService.postAnswerToBoard` (единственная точка входа модуля
  * `canvas`, правило модульности CLAUDE.md). Гейтится `reviewedAt` тем же
  * образом, что `getReviewResponses` — раскрывать чужой ответ на общей доске
- * можно только начиная с явного разбора.
+ * можно только начиная с явного разбора. У домашней работы (Э8.11) нет
+ * урока и, значит, нет общей доски — это ЕДИНСТВЕННОЕ место во всём
+ * разборе, которое домашке недоступно принципиально, а не по нехватке прав.
  */
 export async function pushAnswerToBoard(
   user: AccessTokenPayload,
@@ -523,10 +635,10 @@ export async function pushAnswerToBoard(
   input: PushAnswerToBoardRequest,
 ): Promise<void> {
   const activity = await loadActivityForSchool(activityId, user.schoolId);
+  await assertActivityOwner(user, activity);
   if (!activity.lessonId) {
-    throw new AppError(409, "activity_not_in_lesson", "Задание не привязано к уроку");
+    throw new AppError(409, "activity_not_in_lesson", "У домашней работы нет общей доски — вынести ответ некуда");
   }
-  const lesson = await assertLessonTeacher(user, activity.lessonId);
   if (!activity.reviewedAt) {
     throw new AppError(409, "not_reviewed", "Разбор ещё не начат");
   }
@@ -547,7 +659,7 @@ export async function pushAnswerToBoard(
 
   let label = "Ответ ученика";
   if (!input.anonymous) {
-    const roster = await usersService.listGroupStudents(lesson.groupId);
+    const roster = await usersService.listGroupStudents(activity.groupId);
     const student = roster.find((s) => s.id === input.userId);
     label = student ? student.fullName : label;
   }

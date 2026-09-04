@@ -292,6 +292,17 @@ export const materialVersions = pgTable(
  * конкретному уроку. Ссылается на `materialVersions`, не `materials`
  * напрямую — какую именно версию видел ученик, должно быть воспроизводимо
  * даже после того, как методист опубликует новую (Э9.8).
+ *
+ * `groupId` (Э8.11) — ДЕНОРМАЛИЗОВАН и заполняется ВСЕГДА, для обоих
+ * режимов: у `lesson`-выдачи это `lessons.groupId` урока на момент запуска
+ * (копия, не FK через `lessons`), у `homework` — группа, которой она
+ * прямо адресована. Без этого поля роль «ученик»/«прогресс класса»
+ * (Э8.8/8.9) для домашней работы не смогла бы понять, чей это ростер — у
+ * homework-активности нет урока, откуда обычно берётся `groupId`.
+ * Nullable в схеме БД (не NOT NULL) — намеренно, чтобы `drizzle-kit
+ * generate` не потребовал интерактивного дефолта для уже существующих
+ * строк; инвариант «всегда заполнено» держит только сервис-слой
+ * (`repo.insertActivity` не вызывается без него ни из одного пути).
  */
 export const activities = pgTable(
   "activities",
@@ -301,6 +312,7 @@ export const activities = pgTable(
       .notNull()
       .references(() => materialVersions.id, { onDelete: "restrict" }),
     lessonId: uuid("lesson_id").references(() => lessons.id, { onDelete: "cascade" }),
+    groupId: uuid("group_id").references(() => groups.id, { onDelete: "restrict" }),
     mode: activityModeEnum("mode").notNull(),
     assignedBy: uuid("assigned_by")
       .notNull()
@@ -311,7 +323,7 @@ export const activities = pgTable(
     /** Момент, когда учитель начал разбор (Э8.10, §7.3 ТЗ) — до этого момента полный материал (с ключами ответов) не отдаётся никому, кроме учителя (аналитика, Э8.9). `null` — разбор ещё не начат. */
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   },
-  (t) => [index("activities_lesson_idx").on(t.lessonId)],
+  (t) => [index("activities_lesson_idx").on(t.lessonId), index("activities_group_idx").on(t.groupId)],
 );
 
 /**

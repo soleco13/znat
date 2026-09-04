@@ -35,6 +35,28 @@ export default async function activitiesRoutes(app: FastifyInstance) {
     return reply.send({ items });
   });
 
+  // Э8.11, §7.3/§8 ТЗ: «домашняя работа вне урока» — учитель задаёт материал
+  // прямо группе, без урока (`lessonId` в БД — `null`). Тело то же, что у
+  // `POST /lessons/:id/activities`; `mode` внутри игнорируется — сюда всегда
+  // пишется "homework" (см. docstring createActivityRequestSchema).
+  app.post<{ Params: { id: string } }>(
+    "/groups/:id/activities",
+    { preHandler: app.requireRole("admin", "teacher") },
+    async (request, reply) => {
+      const groupId = uuidParam.parse(request.params.id);
+      const body = createActivityRequestSchema.parse(request.body);
+      const activity = await activitiesService.createHomeworkActivity(request.user, groupId, body);
+      return reply.status(201).send(activity);
+    },
+  );
+
+  // Э8.11: список домашних заданий группы — ученик видит свои, учитель/админ школы видит все группы.
+  app.get<{ Params: { id: string } }>("/groups/:id/activities", async (request, reply) => {
+    const groupId = uuidParam.parse(request.params.id);
+    const items = await activitiesService.listGroupActivities(request.user, groupId);
+    return reply.send({ items });
+  });
+
   // Э8.8: живая панель прогресса класса — учителю (опрос раз в несколько секунд).
   app.get<{ Params: { id: string } }>(
     "/activities/:id/progress",

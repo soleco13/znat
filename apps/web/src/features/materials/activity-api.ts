@@ -32,6 +32,19 @@ export function listLessonActivities(lessonId: string): Promise<{ items: Activit
   return apiFetch<{ items: ActivityDto[] }>(`/lessons/${lessonId}/activities`);
 }
 
+/** Учитель: задать домашнюю работу группе напрямую, без урока (Э8.11). */
+export function assignHomework(groupId: string, body: CreateActivityRequest): Promise<ActivityDto> {
+  return apiFetch<ActivityDto>(`/groups/${groupId}/activities`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+/** Список домашних заданий группы (Э8.11) — ученик видит свои, учитель/админ школы видит все. */
+export function listGroupActivities(groupId: string): Promise<{ items: ActivityDto[] }> {
+  return apiFetch<{ items: ActivityDto[] }>(`/groups/${groupId}/activities`);
+}
+
 /** Учитель: живая картина класса по заданию (Э8.8). Опрашивается панелью прогресса раз в несколько секунд. */
 export function getActivityProgress(activityId: string): Promise<ActivityProgress> {
   return apiFetch<ActivityProgress>(`/activities/${activityId}/progress`);
