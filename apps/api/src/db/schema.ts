@@ -12,6 +12,7 @@ import {
   unique,
   pgEnum,
   customType,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
 /** Бинарное состояние Y.Doc (§9 ТЗ: `canvas_docs.ydoc BYTEA`). `pg`/node-postgres
@@ -37,6 +38,8 @@ export const deckStatusEnum = pgEnum("deck_status", [
 ]);
 export const activityModeEnum = pgEnum("activity_mode", ["lesson", "homework"]);
 export const materialStatusEnum = pgEnum("material_status", ["draft", "review", "published"]);
+/** Э9.7: `video` сознательно не входит — план ограничивает подзадачу «картинки/аудио», видео в медиатеке — отдельная работа (транскодирование/превью не в этом срезе). */
+export const mediaAssetKindEnum = pgEnum("media_asset_kind", ["image", "audio"]);
 
 export const schools = pgTable("schools", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -277,8 +280,22 @@ export const materials = pgTable(
     /** `materialSchema.topic` — опционально, `null` = узел «Без темы» в дереве библиотеки. */
     topic: text("topic"),
     status: materialStatusEnum("status").notNull().default("draft"),
+    /**
+     * Версия, которую реально видит школа/выдаёт учитель (Э9.8) — НЕ то же,
+     * что «последняя версия» (`material_versions`, `ORDER BY version DESC`):
+     * после первой публикации методист может копить правку в НОВОЙ версии
+     * поверх этой (`updateMaterialDraft` форкает, не мутирует опубликованное),
+     * и пока её не опубликуют повторно — школа продолжает видеть СТАРУЮ,
+     * уже опубликованную версию, на которую ссылается этот указатель.
+     * `null` — материал ещё НИКОГДА не публиковался (черновик/на ревью).
+     * Ссылка на `material_versions` — таблицу, объявленную НИЖЕ в этом же
+     * файле (forward reference через `() => materialVersions.id`, стандартный
+     * приём drizzle для взаимных FK — `material_versions.material_id` уже
+     * ссылается на эту таблицу в обратную сторону).
+     */
+    currentVersionId: uuid("current_version_id").references((): AnyPgColumn => materialVersions.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    /** Обновляется при записи каждой новой версии — «последнее изменение» в библиотеке. */
+    /** Обновляется при публикации новой версии (Э9.8) — «последнее изменение ВИДИМОГО школе содержимого», не любой правки черновика/форка. */
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -311,6 +328,36 @@ export const materialVersions = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique("material_versions_material_version_idx").on(t.materialId, t.version)],
+);
+
+/**
+ * Медиатека (Э9.7, §7.2 ТЗ) — переиспользуемые вложения материалов
+ * (`ContentBlock.assetId` у `image`/`audio` блоков, `materials.ts`
+ * пакета shared). Не привязана к конкретному материалу — один и тот же
+ * файл ссылается из `assetId` у любого числа блоков в любом числе
+ * материалов школы (как `storageKey` у `decks`, но здесь без "владельца"
+ * в виде одного родителя — сам смысл медиатеки в переиспользовании).
+ * Удаление файла (когда понадобится) должно будет проверять отсутствие
+ * ссылок в `material_versions.content` — не часть этого среза.
+ */
+export const mediaAssets = pgTable(
+  "media_assets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    schoolId: uuid("school_id")
+      .notNull()
+      .references(() => schools.id, { onDelete: "cascade" }),
+    uploadedBy: uuid("uploaded_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    kind: mediaAssetKindEnum("kind").notNull(),
+    originalName: text("original_name").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    storageKey: text("storage_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("media_assets_school_kind_idx").on(t.schoolId, t.kind)],
 );
 
 /**

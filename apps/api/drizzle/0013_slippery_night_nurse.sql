@@ -1,0 +1,2 @@
+ALTER TABLE "materials" ADD COLUMN "current_version_id" uuid;--> statement-breakpoint
+ALTER TABLE "materials" ADD CONSTRAINT "materials_current_version_id_material_versions_id_fk" FOREIGN KEY ("current_version_id") REFERENCES "public"."material_versions"("id") ON DELETE no action ON UPDATE no action;

@@ -89,8 +89,11 @@ const result = await db.transaction(async (tx) => {
       .orderBy(desc(materialVersions.version))
       .limit(1);
     version = (last?.version ?? 0) + 1;
-    // Статус НЕ трогаем при добавлении версии к существующему материалу —
-    // переопределение статуса правкой опубликованного контента — Э9.8.
+    // Статус (и currentVersionId) НЕ трогаем при добавлении версии к
+    // существующему материалу — переопределение статуса правкой
+    // опубликованного контента теперь реальный workflow (Э9.8,
+    // `POST /materials/:id/publish`), а не забота этого ручного скрипта:
+    // хотите опубликовать добавленную версию — вызовите его.
     await tx.update(materials).set(summaryFields).where(eq(materials.id, materialId));
   } else {
     const [created] = await tx
@@ -100,12 +103,23 @@ const result = await db.transaction(async (tx) => {
     materialId = created!.id;
   }
 
-  await tx.insert(materialVersions).values({
-    materialId: materialId!,
-    version,
-    content,
-    createdBy: userId,
-  });
+  const [insertedVersion] = await tx
+    .insert(materialVersions)
+    .values({
+      materialId: materialId!,
+      version,
+      content,
+      createdBy: userId,
+    })
+    .returning({ id: materialVersions.id });
+
+  // Новый материал сразу со `--status published` — иначе `currentVersionId`
+  // остался бы NULL, а `getLatestMaterial` (назначение материала уроку/дз,
+  // Э9.8) требует его непусто: без этой строки только что созданный
+  // «опубликованный» материал школа технически не увидела бы никогда.
+  if (!existingMaterialId && status === "published") {
+    await tx.update(materials).set({ currentVersionId: insertedVersion!.id }).where(eq(materials.id, materialId!));
+  }
 
   return { materialId: materialId!, version };
 });

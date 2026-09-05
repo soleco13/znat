@@ -9,7 +9,9 @@ import {
   singleChoiceInteractionSchema,
   stripInteractionAnswerKey,
   stripMaterialAnswerKeys,
+  validateMaterialContent,
   type Material,
+  type MaterialBlock,
 } from "./materials.js";
 
 describe("stripInteractionAnswerKey (§ «Железные правила» CLAUDE.md: ключи ответов не уходят на клиент)", () => {
@@ -350,6 +352,300 @@ describe("materialSchema — базовая валидация формата (�
         ],
       }),
     ).toThrow();
+  });
+});
+
+function materialWithBlocks(blocks: MaterialBlock[]): Material {
+  return materialSchema.parse({
+    id: "mat_1",
+    schemaVersion: 1,
+    title: "Заголовок",
+    subject: "math",
+    grades: [8],
+    settings: {},
+    blocks,
+  });
+}
+
+function questionBlock(overrides: Partial<Extract<MaterialBlock, { type: "question" }>> = {}): MaterialBlock {
+  return {
+    type: "question",
+    id: "q1",
+    prompt: { html: "<p>Сколько будет 2+2?</p>" },
+    points: 1,
+    interaction: { type: "true_false", correct: true },
+    ...overrides,
+  } as MaterialBlock;
+}
+
+describe("validateMaterialContent (Э9.9, §7.2 ТЗ: «Валидация» — вопросы без ответа, пустые блоки, нулевые баллы)", () => {
+  it("пустой материал (нет блоков вообще) — material_empty, дальше не сканирует", () => {
+    const issues = validateMaterialContent(materialWithBlocks([]));
+    expect(issues).toEqual([{ blockId: null, code: "material_empty", message: expect.any(String) }]);
+  });
+
+  it("валидный материал — без единой проблемы", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        { type: "rich_text", id: "b1", html: "<p>Текст</p>" },
+        questionBlock(),
+      ]),
+    );
+    expect(issues).toEqual([]);
+  });
+
+  it.each([
+    ["rich_text", { type: "rich_text", id: "b1", html: "" } as MaterialBlock],
+    ["rich_text с пустым абзацем Tiptap", { type: "rich_text", id: "b1", html: "<p><br></p>" } as MaterialBlock],
+    ["callout", { type: "callout", id: "b1", variant: "note", html: "   " } as MaterialBlock],
+  ])("%s — empty_content", (_label, block) => {
+    const issues = validateMaterialContent(materialWithBlocks([block, questionBlock()]));
+    expect(issues).toContainEqual({ blockId: "b1", code: "empty_content", message: expect.any(String) });
+  });
+
+  it("table без строк — empty_content", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([{ type: "table", id: "b1", rows: [] }, questionBlock()]),
+    );
+    expect(issues).toContainEqual({ blockId: "b1", code: "empty_content", message: expect.any(String) });
+  });
+
+  it("table со строками, но все ячейки пустые — empty_content", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        { type: "table", id: "b1", rows: [["", ""], ["  ", ""]] },
+        questionBlock(),
+      ]),
+    );
+    expect(issues).toContainEqual({ blockId: "b1", code: "empty_content", message: expect.any(String) });
+  });
+
+  it("table хотя бы с одной непустой ячейкой — валидна", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([{ type: "table", id: "b1", rows: [["x", ""]] }, questionBlock()]),
+    );
+    expect(issues.some((i) => i.blockId === "b1")).toBe(false);
+  });
+
+  it("вопрос с пустой формулировкой — empty_content", () => {
+    const issues = validateMaterialContent(materialWithBlocks([questionBlock({ prompt: { html: "<p></p>" } })]));
+    expect(issues).toContainEqual({ blockId: "q1", code: "empty_content", message: expect.any(String) });
+  });
+
+  it("вопрос на 0 баллов — zero_points", () => {
+    const issues = validateMaterialContent(materialWithBlocks([questionBlock({ points: 0 })]));
+    expect(issues).toContainEqual({ blockId: "q1", code: "zero_points", message: expect.any(String) });
+  });
+
+  it("single_choice без единого правильного варианта — no_correct_answer", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        questionBlock({
+          interaction: {
+            type: "single_choice",
+            shuffle: false,
+            options: [
+              { id: "o1", html: "1", correct: false },
+              { id: "o2", html: "2", correct: false },
+            ],
+          },
+        }),
+      ]),
+    );
+    expect(issues).toContainEqual({ blockId: "q1", code: "no_correct_answer", message: expect.any(String) });
+  });
+
+  it("single_choice с правильным вариантом — валиден", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        questionBlock({
+          interaction: {
+            type: "single_choice",
+            shuffle: false,
+            options: [
+              { id: "o1", html: "1", correct: true },
+              { id: "o2", html: "2", correct: false },
+            ],
+          },
+        }),
+      ]),
+    );
+    expect(issues).toEqual([]);
+  });
+
+  it("multiple_choice без единого правильного варианта — no_correct_answer", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        questionBlock({
+          interaction: {
+            type: "multiple_choice",
+            shuffle: false,
+            options: [
+              { id: "o1", html: "1", correct: false },
+              { id: "o2", html: "2", correct: false },
+            ],
+          },
+        }),
+      ]),
+    );
+    expect(issues).toContainEqual({ blockId: "q1", code: "no_correct_answer", message: expect.any(String) });
+  });
+
+  it("text_input со всеми пустыми вариантами ответа — no_correct_answer", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        questionBlock({
+          interaction: {
+            type: "text_input",
+            answers: [{ value: "", match: "exact" }, { value: "  ", match: "exact" }],
+            caseSensitive: false,
+            trimWhitespace: true,
+            typoTolerance: 0,
+          },
+        }),
+      ]),
+    );
+    expect(issues).toContainEqual({ blockId: "q1", code: "no_correct_answer", message: expect.any(String) });
+  });
+
+  it("text_input хотя бы с одним непустым ответом — валиден", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        questionBlock({
+          interaction: {
+            type: "text_input",
+            answers: [{ value: "Москва", match: "exact" }],
+            caseSensitive: false,
+            trimWhitespace: true,
+            typoTolerance: 0,
+          },
+        }),
+      ]),
+    );
+    expect(issues).toEqual([]);
+  });
+
+  it("numeric_input — всегда валиден (0 тоже валидный ответ)", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        questionBlock({
+          interaction: {
+            type: "numeric_input",
+            value: 0,
+            tolerance: { kind: "absolute", value: 0 },
+            unitRequired: false,
+          },
+        }),
+      ]),
+    );
+    expect(issues).toEqual([]);
+  });
+
+  it("open_answer — валиден без вопроса о правильном ответе (ручная проверка)", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        questionBlock({
+          interaction: {
+            type: "open_answer",
+            maxLength: 500,
+            allowAttachments: false,
+            rubric: [{ id: "r1", label: "Полнота", points: 1 }],
+          },
+        }),
+      ]),
+    );
+    expect(issues).toEqual([]);
+  });
+
+  it("cloze_dropdown: correct не входит в options пропуска — no_correct_answer", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        questionBlock({
+          interaction: {
+            type: "cloze_dropdown",
+            template: "{{g1}}",
+            gaps: { g1: { options: ["Париж", "Лион"], correct: "Марсель" } },
+          },
+        }),
+      ]),
+    );
+    expect(issues).toContainEqual({ blockId: "q1", code: "no_correct_answer", message: expect.any(String) });
+  });
+
+  it("cloze_dropdown: correct входит в options — валиден", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        questionBlock({
+          interaction: {
+            type: "cloze_dropdown",
+            template: "{{g1}}",
+            gaps: { g1: { options: ["Париж", "Лион"], correct: "Париж" } },
+          },
+        }),
+      ]),
+    );
+    expect(issues).toEqual([]);
+  });
+
+  it("cloze_text: пропуск без единого непустого ответа — no_correct_answer", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        questionBlock({
+          interaction: {
+            type: "cloze_text",
+            template: "{{g1}}",
+            gaps: { g1: { answers: [{ value: "", match: "exact" }], caseSensitive: false, trimWhitespace: true, typoTolerance: 0 } },
+          },
+        }),
+      ]),
+    );
+    expect(issues).toContainEqual({ blockId: "q1", code: "no_correct_answer", message: expect.any(String) });
+  });
+
+  it("matching — всегда валиден (схема гарантирует хотя бы одну пару)", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        questionBlock({
+          interaction: {
+            type: "matching",
+            left: [{ id: "l1", html: "1" }],
+            right: [{ id: "r1", html: "2" }],
+            pairs: [["l1", "r1"]],
+            scoring: "all_or_nothing",
+            distractors: [],
+          },
+        }),
+      ]),
+    );
+    expect(issues).toEqual([]);
+  });
+
+  it("ordering — всегда валиден (порядок массива и есть ответ)", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        questionBlock({
+          interaction: {
+            type: "ordering",
+            items: [
+              { id: "i1", html: "1" },
+              { id: "i2", html: "2" },
+            ],
+          },
+        }),
+      ]),
+    );
+    expect(issues).toEqual([]);
+  });
+
+  it("копит НЕСКОЛЬКО проблем на один материал, не останавливается на первой", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        { type: "rich_text", id: "b1", html: "" },
+        questionBlock({ id: "q1", points: 0, prompt: { html: "" } }),
+      ]),
+    );
+    expect(issues).toHaveLength(3);
+    expect(issues.map((i) => i.code).sort()).toEqual(["empty_content", "empty_content", "zero_points"]);
   });
 });
 

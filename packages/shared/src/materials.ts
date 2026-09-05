@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { canvasImageMimeTypeSchema } from "./canvas.js";
 
 /**
  * Формат интерактивных материалов (Э8.1, §6 ТЗ). Материал — версионируемый
@@ -320,6 +321,17 @@ export const materialSummarySchema = z.object({
 });
 export type MaterialSummary = z.infer<typeof materialSummarySchema>;
 
+/**
+ * Ответ `POST /materials` (Э9.10, §8 ТЗ — создание материала, до сих пор
+ * заводившегося только seed-скриптом, задел на шаблоны «методист не
+ * начинает с чистого листа», §7.1 ТЗ п.5). Тело запроса — `materialSchema`
+ * целиком (тот же контракт, что и `PUT /materials/:id`): фронт уже строит
+ * валидный `Material` при выборе шаблона/пустого материала, второй урезанной
+ * схемы «только метаданные для создания» не требуется.
+ */
+export const createMaterialResultSchema = z.object({ materialId: z.string() });
+export type CreateMaterialResult = z.infer<typeof createMaterialResultSchema>;
+
 /** Querystring `GET /materials` (§8 ТЗ: `?subject=&grade=&q=&status=`) + `topic` дерева (Э9.1). */
 export const listMaterialsQuerySchema = z.object({
   subject: z.string().min(1).optional(),
@@ -347,8 +359,90 @@ export const materialDetailSchema = z.object({
   status: materialStatusSchema,
   createdBy: z.string(),
   material: materialSchema,
+  /**
+   * Возвращённая версия — та же, что сейчас видит школа (Э9.8,
+   * `materials.currentVersionId`)? `false` — либо материал ещё никогда не
+   * публиковался (`status !== "published"`), либо поверх публикации уже
+   * копится непубличный форк правок (`status === "published"`, но
+   * `version` больше, чем у опубликованной) — редактор использует это,
+   * чтобы решить, показывать ли кнопку «Опубликовать».
+   */
+  isCurrent: z.boolean(),
 });
 export type MaterialDetail = z.infer<typeof materialDetailSchema>;
+
+/**
+ * Ответ `PUT /materials/:id` (Э9.3, §8 ТЗ: «обновление черновика») —
+ * автосохранение перезаписывает содержимое ТЕКУЩЕЙ версии на месте (версии
+ * append-only, Э8.2, но новая версия создаётся только при публикации —
+ * Э9.8), поэтому отвечать нечем, кроме факта и времени сохранения.
+ */
+export const updateMaterialResultSchema = z.object({ savedAt: z.string() });
+export type UpdateMaterialResult = z.infer<typeof updateMaterialResultSchema>;
+
+// ─── Версионирование и публикация (Э9.8, §8 ТЗ) ────────────────────────────
+
+/** Ответ `POST /materials/:id/submit-review` и `POST /materials/:id/return-to-draft` — простой флип статуса, без содержимого версии. */
+export const materialStatusResultSchema = z.object({ status: materialStatusSchema });
+export type MaterialStatusResult = z.infer<typeof materialStatusResultSchema>;
+
+/** Ответ `POST /materials/:id/publish` (§8 ТЗ: «→ новая версия») — версия, которая стала видна школе. */
+export const publishMaterialResultSchema = z.object({ version: z.number().int().positive(), versionId: z.string() });
+export type PublishMaterialResult = z.infer<typeof publishMaterialResultSchema>;
+
+/** Одна строка `GET /materials/:id/versions` — история версий, без содержимого (для содержимого — `GET /materials/:id?version=`, не в этом срезе, задел). */
+export const materialVersionSummarySchema = z.object({
+  versionId: z.string(),
+  version: z.number().int().positive(),
+  createdBy: z.string(),
+  createdAt: z.string(),
+  /** Это ровно та версия, что сейчас видит школа (`materials.currentVersionId`) — не обязательно последняя по номеру: может копиться новый форк поверх. */
+  isCurrent: z.boolean(),
+});
+export type MaterialVersionSummary = z.infer<typeof materialVersionSummarySchema>;
+
+// ─── Медиатека (Э9.7, §7.2 ТЗ) ──────────────────────────────────────────────
+// Переиспользуемые вложения `image`/`audio`-блоков (`ContentBlock.assetId`
+// выше) — план ограничивает подзадачу «картинки/аудио» (`video` в списке ТЗ
+// §7.2 экрана есть, но не в тексте подзадачи Э9.7 ПЛАН.md — транскодирование/
+// превью видео решает отдельная задача, здесь сознательно не делается).
+
+/** PNG/JPEG/WebP — тот же список, что уже принят для изображений доски (Э3.10, `canvas.ts`), не новый отдельный. */
+export const mediaImageMimeTypeSchema = canvasImageMimeTypeSchema;
+
+/** mp3/wav/ogg/m4a/webm — практический набор форматов, которые отдаёт браузерный `<audio>` без транскодирования. */
+export const mediaAudioMimeTypeSchema = z.enum([
+  "audio/mpeg",
+  "audio/wav",
+  "audio/ogg",
+  "audio/mp4",
+  "audio/webm",
+]);
+
+export const mediaAssetKindSchema = z.enum(["image", "audio"]);
+export type MediaAssetKind = z.infer<typeof mediaAssetKindSchema>;
+
+/** Одна запись медиатеки — карточка в пикере (`GET /materials/media`) и ответ загрузки (`POST /materials/media`). */
+export const mediaAssetSchema = z.object({
+  id: z.string(),
+  kind: mediaAssetKindSchema,
+  originalName: z.string(),
+  mimeType: z.string(),
+  sizeBytes: z.number().int().nonnegative(),
+  /** HMAC-подписанная ссылка (`storageService.getSignedFileUrl`, §4.1 ТЗ) — не голый `storageKey`, доступ к файлу не должен требовать отдельного похода за подписью на каждый превью в гриде пикера. */
+  url: z.string(),
+  createdAt: z.string(),
+});
+export type MediaAsset = z.infer<typeof mediaAssetSchema>;
+
+export const listMediaAssetsQuerySchema = z.object({
+  kind: mediaAssetKindSchema.optional(),
+});
+export type ListMediaAssetsQuery = z.infer<typeof listMediaAssetsQuerySchema>;
+
+/** Ответ `GET /assets/:id/url` (§8 ТЗ) — резолв `assetId` из уже сохранённого блока материала (`image.assetId`/`audio.assetId`) в подписанную ссылку, доступен любой роли (в отличие от листинга/загрузки медиатеки выше) — см. `getMediaAssetUrl`, `materials/media-library.ts`. */
+export const assetUrlSchema = z.object({ url: z.string() });
+export type AssetUrl = z.infer<typeof assetUrlSchema>;
 
 // ─── Ответы ученика (§6.5 ТЗ, `responses.response`) ────────────────────────
 // Форма ответа зеркалит соответствующий interaction — тоже дискриминированное
@@ -549,3 +643,103 @@ export function stripMaterialAnswerKeys(material: Material, seed: string) {
   };
 }
 export type PublicMaterial = ReturnType<typeof stripMaterialAnswerKeys>;
+
+// ─── Валидатор перед публикацией (Э9.9, §7.2 ТЗ «Валидация») ───────────────
+
+/**
+ * `blockId: null` — проблема материала ЦЕЛИКОМ, не одного блока (пока
+ * единственный случай — пустой материал, `blocks.length === 0`); везде
+ * иначе — id конкретного блока, чтобы редактор мог подсветить/открыть его
+ * по клику на проблему.
+ */
+export const materialValidationIssueSchema = z.object({
+  blockId: z.string().nullable(),
+  code: z.enum(["material_empty", "empty_content", "no_correct_answer", "zero_points", "broken_asset"]),
+  message: z.string(),
+});
+export type MaterialValidationIssue = z.infer<typeof materialValidationIssueSchema>;
+
+/** `<p></p>`/`<p><br></p>` — то, что Tiptap (Э9.4) оставляет в пустом абзаце; голого `trim() === ""` недостаточно для «содержимого нет». */
+function isEmptyHtml(html: string): boolean {
+  return html.replace(/<[^>]+>/g, "").trim() === "";
+}
+
+function questionHasCorrectAnswer(interaction: QuestionInteraction): boolean {
+  switch (interaction.type) {
+    case "single_choice":
+    case "multiple_choice":
+      return interaction.options.some((o) => o.correct);
+    case "true_false":
+      // `correct` — обязательный boolean, у true/false «нет ответа» структурно невозможно.
+      return true;
+    case "text_input":
+      return interaction.answers.some((a) => a.value.trim() !== "");
+    case "numeric_input":
+      // `value` — обязательное число (в т.ч. 0 — валидный ответ), «нет ответа» структурно невозможно.
+      return true;
+    case "open_answer":
+      // Критерий проверки — не «правильный ответ» (проверяет учитель вручную), а полезность критерия проверяет отдельно zero_points ниже.
+      return true;
+    case "cloze_dropdown":
+      return Object.values(interaction.gaps).every((gap) => gap.options.includes(gap.correct) && gap.correct !== "");
+    case "cloze_text":
+      return Object.values(interaction.gaps).every((gap) => gap.answers.some((a) => a.value.trim() !== ""));
+    case "matching":
+      // `pairs.min(1)` в схеме уже гарантирует хотя бы одну пару.
+      return true;
+    case "ordering":
+      // Порядок массива — сам ответ, «нет ответа» структурно невозможно (см. докстринг `orderingInteractionSchema`).
+      return true;
+  }
+}
+
+/**
+ * Структурные проверки — то, что можно решить по содержимому самого
+ * материала, БЕЗ похода в БД (broken_asset туда не входит намеренно — id
+ * файла медиатеки, ссылающийся на реально удалённый файл, проверяется
+ * отдельно на сервере, `materials/validation.ts`, `checkBrokenAssets`,
+ * там же и комбинируется с этим списком). Чистая функция — используется и
+ * бэком (перед публикацией), и фронтом (живой список проблем в редакторе
+ * без обращения к серверу на каждый keystroke).
+ */
+export function validateMaterialContent(material: Material): MaterialValidationIssue[] {
+  const issues: MaterialValidationIssue[] = [];
+
+  if (material.blocks.length === 0) {
+    issues.push({ blockId: null, code: "material_empty", message: "В материале нет ни одного блока" });
+    return issues;
+  }
+
+  for (const block of material.blocks) {
+    if (block.type === "question") {
+      if (isEmptyHtml(block.prompt.html)) {
+        issues.push({ blockId: block.id, code: "empty_content", message: "Формулировка вопроса пуста" });
+      }
+      if (block.points === 0) {
+        issues.push({ blockId: block.id, code: "zero_points", message: "За вопрос начисляется 0 баллов" });
+      }
+      if (!questionHasCorrectAnswer(block.interaction)) {
+        issues.push({ blockId: block.id, code: "no_correct_answer", message: "Не указан правильный ответ" });
+      }
+      continue;
+    }
+    switch (block.type) {
+      case "rich_text":
+      case "callout":
+        if (isEmptyHtml(block.html)) {
+          issues.push({ blockId: block.id, code: "empty_content", message: "Текстовый блок пуст" });
+        }
+        break;
+      case "table":
+        if (block.rows.length === 0 || block.rows.every((row) => row.every((cell) => cell.trim() === ""))) {
+          issues.push({ blockId: block.id, code: "empty_content", message: "Таблица пуста" });
+        }
+        break;
+      // formula/image/video/audio/embed/page_break — либо структурно не
+      // могут быть пустыми (`.min(1)` в схеме, page_break без содержимого
+      // по смыслу), либо это broken_asset, не empty_content (image/video/audio).
+    }
+  }
+
+  return issues;
+}
