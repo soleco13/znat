@@ -12,5 +12,5 @@ const STATUS_LABEL: Record<ConnectionState, string> = {
 /** Читает состояние из контекста <LiveKitRoom> — должен рендериться внутри него. */
 export function MediaAudioStatus() {
   const state = useConnectionState();
-  return <span className="text-xs text-slate-400">{STATUS_LABEL[state]}</span>;
+  return <span className="text-xs text-muted-foreground">{STATUS_LABEL[state]}</span>;
 }

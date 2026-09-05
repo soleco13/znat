@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTracks, VideoTrack } from "@livekit/components-react";
 import { Track } from "livekit-client";
+import { Camera, Mic, Minus, Move } from "lucide-react";
 
 type Corner = "bottom-right" | "bottom-left" | "top-right" | "top-left";
 
@@ -18,27 +19,10 @@ const NEXT_CORNER: Record<Corner, Corner> = {
 };
 
 /**
- * Плитка камеры учителя (Э5.1, UI-контролы Э5.3) — видна всем участникам
- * урока. До Э6.1 источник CAMERA в LiveKit-гранте выдавался только роли
- * teacher/admin, поэтому ЛЮБОЙ трек камеры в комнате однозначно был
- * учителем. С Э6.1 ученик с правом `canPublishVideo` тоже может публиковать
- * CAMERA (`media/service.ts#buildPublishGrant`) — эта плитка больше не может
- * брать первый попавшийся трек, ищем именно участника с ролью teacher/admin
- * по LiveKit-атрибуту `role` (проставлен сервером в токен, см.
- * `media/service.ts#createParticipantConnection`). Сетка видимых видео
- * учеников — отдельный компонент Э6.2/6.3, ещё не сделан; трек ученика эта
- * плитка сознательно игнорирует, а не показывает вместо учителя. Стоп-лист
- * Э5/Э6: эта плитка — ровно одна, сетки здесь нет.
- *
- * «Учитель прячется одной кнопкой» (результат Э5.3) — это `SelfCameraButton`
- * из Э5.1: выключение камеры останавливает публикацию трека, эта плитка
- * реагирует на исчезновение трека сама (условие `if (!teacherTrack)` ниже) —
- * отдельного «режима «только доска»» как второго переключателя не заводили,
- * чтобы не плодить два разных выключателя одного и того же состояния.
- * Закрепление и сворачивание — состояние КАЖДОГО зрителя отдельно (не
- * синхронизируется по Y.Doc/WS): один ученик может свернуть плитку, не
- * трогая экран остальных. Не сохраняется между презентациями/уроками —
- * localStorage запрещён (§ «Железные правила» CLAUDE.md), обычный React-стейт.
+ * Плитка камеры учителя (Э5.1, UI-контролы Э5.3) — видна всем участникам.
+ * Ищем участника с ролью teacher/admin по LiveKit-атрибуту `role`.
+ * Закрепление и сворачивание — состояние каждого зрителя отдельно, обычный
+ * React-стейт (localStorage запрещён).
  */
 export function TeacherVideoTile() {
   const [collapsed, setCollapsed] = useState(false);
@@ -56,34 +40,34 @@ export function TeacherVideoTile() {
       <button
         onClick={() => setCollapsed(false)}
         title="Развернуть видео учителя"
-        className={`fixed ${CORNER_CLASSES[corner]} z-10 flex h-10 w-10 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-lg shadow-lg`}
+        className={`fixed ${CORNER_CLASSES[corner]} z-20 flex size-11 items-center justify-center rounded-full border border-border bg-foreground text-background shadow-lg`}
       >
-        {micOn ? "🎙️" : "📷"}
+        {micOn ? <Mic className="size-4" aria-hidden /> : <Camera className="size-4" aria-hidden />}
       </button>
     );
   }
 
   return (
     <div
-      className={`fixed ${CORNER_CLASSES[corner]} z-10 w-48 overflow-hidden rounded-lg border border-slate-700 bg-black shadow-lg`}
+      className={`fixed ${CORNER_CLASSES[corner]} z-20 w-52 overflow-hidden rounded-xl border border-border bg-black shadow-lg`}
     >
-      <div className="flex items-center justify-end gap-1 bg-black/60 p-1">
+      <div className="flex items-center justify-end gap-1 bg-black/50 px-1.5 py-1">
         <button
           onClick={() => setCorner((c) => NEXT_CORNER[c])}
           title="Закрепить в другом углу"
-          className="rounded px-1 text-xs text-white/80 hover:bg-white/10"
+          className="rounded p-1 text-white/80 transition-colors hover:bg-white/10"
         >
-          📌
+          <Move className="size-3.5" aria-hidden />
         </button>
         <button
           onClick={() => setCollapsed(true)}
           title="Свернуть видео учителя"
-          className="rounded px-1 text-xs text-white/80 hover:bg-white/10"
+          className="rounded p-1 text-white/80 transition-colors hover:bg-white/10"
         >
-          –
+          <Minus className="size-3.5" aria-hidden />
         </button>
       </div>
-      <VideoTrack trackRef={teacherTrack} className="h-full w-full object-cover" />
+      <VideoTrack trackRef={teacherTrack} className="aspect-video w-full object-cover" />
     </div>
   );
 }

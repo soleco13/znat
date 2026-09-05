@@ -1,6 +1,9 @@
 import { useTracks, VideoTrack } from "@livekit/components-react";
 import { Track } from "livekit-client";
+import { Pin } from "lucide-react";
 import type { LessonMode, ParticipantSnapshot } from "@school/shared";
+
+import { UserAvatar } from "@/shared/ui/avatar";
 import { MicStatusIcon } from "./MicControls.js";
 
 /**
@@ -51,11 +54,11 @@ export function StudentVideoGrid({
           {visible.map((s) => (
             <div
               key={s.userId}
-              className={`relative overflow-hidden rounded border bg-slate-900 ${mode === "spotlight" ? "aspect-video max-w-md" : "aspect-video"}`}
+              className={`relative overflow-hidden rounded-lg border border-border bg-slate-900 ${mode === "spotlight" ? "aspect-video max-w-md" : "aspect-video"}`}
             >
               <VideoTrack trackRef={videoByUserId.get(s.userId)!} className="h-full w-full object-cover" />
-              <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white">
-                {s.pinned && "📌 "}
+              <span className="absolute bottom-1.5 left-1.5 inline-flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-xs font-medium text-white">
+                {s.pinned ? <Pin className="size-3" aria-hidden /> : null}
                 {s.fullName}
               </span>
             </div>
@@ -68,11 +71,9 @@ export function StudentVideoGrid({
             <div
               key={s.userId}
               title={s.fullName}
-              className="flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2 py-1 text-xs"
+              className="flex items-center gap-1.5 rounded-pill border border-border bg-card px-2 py-1 text-xs"
             >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-300 text-[10px] font-medium">
-                {s.fullName.slice(0, 1).toUpperCase()}
-              </span>
+              <UserAvatar name={s.fullName} size={20} />
               <MicStatusIcon userId={s.userId} />
             </div>
           ))}

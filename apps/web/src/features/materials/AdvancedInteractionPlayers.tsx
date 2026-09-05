@@ -18,8 +18,14 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { PublicQuestionInteraction, QuestionResponse } from "@school/shared";
-import { sanitizeHtml } from "../../shared/sanitize-html.js";
+import { ChevronDown, ChevronUp, GripVertical } from "lucide-react";
+import type { QuestionResponse } from "@school/shared";
+
+import { sanitizeHtml } from "@/shared/sanitize-html";
+import { Textarea } from "@/shared/ui/textarea";
+
+const INLINE_FIELD =
+  "mx-1 rounded-md border border-border bg-card px-2 py-0.5 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15";
 
 /**
  * Плеер заданий, типы 6–10 (Э8.5, продолжение `QuestionPlayer.tsx` —
@@ -71,19 +77,24 @@ export function OpenAnswerPlayer({
       <label htmlFor={inputId} className="sr-only">
         Развёрнутый ответ
       </label>
-      <textarea
+      <Textarea
         id={inputId}
-        className="w-full rounded border px-2 py-1 text-sm"
         rows={5}
         maxLength={maxLength}
         value={text}
         disabled={disabled}
-        onChange={(e) => onChange({ type: "open_answer", text: e.target.value, attachmentIds: value?.attachmentIds ?? [] })}
+        onChange={(e) =>
+          onChange({
+            type: "open_answer",
+            text: e.target.value,
+            attachmentIds: value?.attachmentIds ?? [],
+          })
+        }
       />
-      <p className="mt-1 text-right text-xs text-slate-400">
+      <p className="mt-1 text-right text-xs text-muted-foreground">
         {text.length} / {maxLength}
       </p>
-      <p className="text-xs text-slate-500">Проверяется учителем вручную.</p>
+      <p className="text-xs text-muted-foreground">Проверяется учителем вручную.</p>
     </div>
   );
 }
@@ -119,7 +130,7 @@ export function ClozeDropdownPlayer({
           <select
             key={i}
             aria-label={`Пропуск ${part.gapId}`}
-            className="mx-1 rounded border px-1 py-0.5 text-sm"
+            className={INLINE_FIELD}
             value={values[part.gapId] ?? ""}
             disabled={disabled}
             onChange={(e) => setGap(part.gapId, e.target.value)}
@@ -169,7 +180,7 @@ export function ClozeTextPlayer({
             key={i}
             type="text"
             aria-label={`Пропуск ${part.gapId}`}
-            className="mx-1 w-24 rounded border px-1 py-0.5 text-sm"
+            className={`${INLINE_FIELD} w-24`}
             value={values[part.gapId] ?? ""}
             disabled={disabled}
             onChange={(e) => setGap(part.gapId, e.target.value)}
@@ -190,7 +201,7 @@ function DraggableChip({ id, html, disabled }: { id: string; html: string; disab
       {...listeners}
       {...attributes}
       style={{ transform: CSS.Translate.toString(transform) }}
-      className={`cursor-grab rounded border bg-white px-2 py-1 text-sm shadow-sm ${isDragging ? "opacity-50" : ""}`}
+      className={`cursor-grab rounded-md border border-border bg-card px-2 py-1 text-sm shadow-xs ${isDragging ? "opacity-50" : ""}`}
       dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }}
     />
   );
@@ -201,7 +212,7 @@ function DroppableSlot({ id, children }: { id: string; children: React.ReactNode
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[2.25rem] min-w-[8rem] rounded border border-dashed px-2 py-1 ${isOver ? "border-blue-500 bg-blue-50" : "border-slate-300"}`}
+      className={`min-h-[2.25rem] min-w-[8rem] rounded-md border border-dashed px-2 py-1 ${isOver ? "border-primary bg-accent" : "border-border"}`}
     >
       {children}
     </div>
@@ -268,7 +279,7 @@ export function MatchingPlayer({
             );
           })}
         </div>
-        <p className="mb-1 mt-4 text-xs text-slate-500">Перетащите варианты к нужной паре:</p>
+        <p className="mb-1 mt-4 text-xs text-muted-foreground">Перетащите варианты к нужной паре:</p>
         <DroppableSlot id={POOL_ID}>
           <div className="flex flex-wrap gap-2">
             {pool.map((r) => (
@@ -279,14 +290,14 @@ export function MatchingPlayer({
       </DndContext>
 
       {/* Клавиатурная альтернатива drag-and-drop (§16 ТЗ) — тот же результат, гарантированно доступна с Tab/стрелками без допущений о курсоре перетаскивания. */}
-      <fieldset className="mt-4 flex flex-col gap-1">
-        <legend className="text-xs text-slate-500">Или выберите пару списком:</legend>
+      <fieldset className="mt-4 flex flex-col gap-1.5">
+        <legend className="text-xs text-muted-foreground">Или выберите пару списком:</legend>
         {left.map((l) => (
           <label key={l.id} className="flex items-center gap-2 text-sm">
             <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(l.html) }} />
             <select
               aria-label={`Пара для варианта ${l.id}`}
-              className="rounded border px-1 py-0.5 text-sm"
+              className={INLINE_FIELD}
               value={assignmentByLeft.get(l.id) ?? ""}
               disabled={disabled}
               onChange={(e) => (e.target.value ? assign(l.id, e.target.value) : unassignLeft(l.id))}
@@ -325,30 +336,35 @@ function SortableOrderingItem({
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex items-center gap-2 rounded border bg-white px-2 py-1 text-sm ${isDragging ? "opacity-50" : ""}`}
+      className={`flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1.5 text-sm ${isDragging ? "opacity-50 shadow-md" : ""}`}
     >
-      <span {...attributes} {...listeners} className="cursor-grab select-none px-1" aria-hidden="true">
-        ⠿
+      <span
+        {...attributes}
+        {...listeners}
+        className="cursor-grab select-none text-muted-foreground"
+        aria-hidden="true"
+      >
+        <GripVertical className="size-4" />
       </span>
       <span className="flex-1" dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} />
-      {/* Кнопки — та же клавиатурная гарантия, что select у matching: Tab+Enter, без допущений о поведении drag-курсора. */}
+      {/* Кнопки — та же клавиатурная гарантия, что select у matching. */}
       <button
         type="button"
         disabled={disabled || isFirst}
         onClick={() => onMove(-1)}
         aria-label="Переместить выше"
-        className="rounded border px-1 text-xs disabled:opacity-30"
+        className="rounded-md border border-border p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30"
       >
-        ▲
+        <ChevronUp className="size-3.5" />
       </button>
       <button
         type="button"
         disabled={disabled || isLast}
         onClick={() => onMove(1)}
         aria-label="Переместить ниже"
-        className="rounded border px-1 text-xs disabled:opacity-30"
+        className="rounded-md border border-border p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30"
       >
-        ▼
+        <ChevronDown className="size-3.5" />
       </button>
     </li>
   );

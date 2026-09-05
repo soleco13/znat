@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import type { MyActivity } from "@school/shared";
+
+import { Alert, AlertDescription } from "@/shared/ui/alert";
+import { CenteredSpinner } from "@/shared/ui/spinner";
 import { getMyActivity } from "./activity-api.js";
 import { MaterialPlayer } from "./MaterialPlayer.js";
 
@@ -26,7 +29,12 @@ export function ActivityPlayer({ activityId }: { activityId: string }) {
     };
   }, [activityId]);
 
-  if (error) return <p className="text-xs text-red-600">{error}</p>;
-  if (!activity) return <p className="text-xs text-slate-400">Загрузка задания…</p>;
+  if (error)
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    );
+  if (!activity) return <CenteredSpinner label="Загрузка задания…" />;
   return <MaterialPlayer activity={activity} autosaveActivityId={activityId} />;
 }

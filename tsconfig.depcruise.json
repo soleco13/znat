@@ -1,0 +1,10 @@
+{
+  "//": "Только для dependency-cruiser (см. .dependency-cruiser.cjs): tsconfig.base + алиас `@/*` фронта, чтобы резолвить импорты apps/web/src/**.",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["apps/web/src/*"]
+    }
+  }
+}

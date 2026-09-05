@@ -10,11 +10,11 @@ const PACKET_LOSS_WARNING_RATIO = 0.03;
 const POLL_MS = 2000;
 
 const QUALITY_COLOR: Record<ConnectionQuality, string> = {
-  [ConnectionQuality.Excellent]: "bg-green-500",
-  [ConnectionQuality.Good]: "bg-green-500",
-  [ConnectionQuality.Poor]: "bg-amber-500",
-  [ConnectionQuality.Lost]: "bg-red-500",
-  [ConnectionQuality.Unknown]: "bg-slate-300",
+  [ConnectionQuality.Excellent]: "bg-success",
+  [ConnectionQuality.Good]: "bg-success",
+  [ConnectionQuality.Poor]: "bg-warning",
+  [ConnectionQuality.Lost]: "bg-destructive",
+  [ConnectionQuality.Unknown]: "bg-text-3",
 };
 
 const QUALITY_LABEL: Record<ConnectionQuality, string> = {
@@ -44,7 +44,7 @@ export function ConnectionQualityDot({ userId }: { userId: string }) {
   return (
     <span
       title={QUALITY_LABEL[quality]}
-      className={`h-2 w-2 rounded-full ${QUALITY_COLOR[quality]}`}
+      className={`size-2 shrink-0 rounded-full ${QUALITY_COLOR[quality]}`}
     />
   );
 }
@@ -98,7 +98,7 @@ export function PacketLossWarning() {
   if (lossRatio === null || lossRatio <= PACKET_LOSS_WARNING_RATIO) return null;
 
   return (
-    <span className="text-xs text-amber-600">
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-warning">
       ⚠️ плохая связь (потери пакетов {Math.round(lossRatio * 100)}%)
     </span>
   );

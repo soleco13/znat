@@ -1,42 +1,51 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Check, Copy, FileText, Library, Plus, X } from "lucide-react";
 import type { ListMaterialsQuery, MaterialStatus, MaterialSummary } from "@school/shared";
-import { useAuthStore } from "../../shared/auth-store.js";
+
+import { useAuthStore } from "@/shared/auth-store";
+import { Badge } from "@/shared/ui/badge";
+import { Button } from "@/shared/ui/button";
+import { Card } from "@/shared/ui/card";
+import { EmptyState } from "@/shared/ui/empty-state";
+import { ErrorState } from "@/shared/ui/error-state";
+import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
+import { PageHeader } from "@/shared/ui/page-header";
+import { RadioGroup, RadioGroupItem } from "@/shared/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
+import { Skeleton } from "@/shared/ui/skeleton";
+import { toast } from "@/shared/ui/sonner";
 import { listMaterials, createMaterial } from "./materials-api.js";
 import { MATERIAL_TEMPLATES, buildMaterialFromTemplate } from "./material-templates.js";
 
-/**
- * Библиотека материалов (Э9.1, §7.2 ТЗ) — дерево предмет → класс → тема,
- * фильтры, поиск, статусы. Карточка ведёт в редактор (Э9.2, `/materials/:id/edit`)
- * — доступ туда всё равно перепроверяется сервером (`getMaterialForEdit`),
- * ссылка здесь не решение о правах. id материала по-прежнему показан и
- * копируется отдельной кнопкой — им пользуются `LessonActivityPanel`/
- * `HomeworkPage` (Э8.6/8.11), которые пока просят id материала руками.
- *
- * «Создать материал» (Э9.10, §7.1 ТЗ п.5 «методист не начинает с чистого
- * листа») — до этой подзадачи материалы заводились ИСКЛЮЧИТЕЛЬНО
- * `db/seed-material.ts` (ручной скрипт в обход API, стоп-лист Э8), первого
- * настоящего пути создания через продукт не было вовсе. `CreateMaterialForm`
- * ниже закрывает этот пробел: небольшая форма метаданных + выбор шаблона
- * (`material-templates.ts`) собирают валидный `Material` НА КЛИЕНТЕ, тем
- * же кодом, что и кнопка «Добавить блок» в редакторе (`block-factories.ts`)
- * — сервер (`POST /materials`) лишь сохраняет то, что уже прошло ту же
- * форму блоков, что и любая ручная правка.
- */
 const STATUS_LABEL: Record<MaterialStatus, string> = {
   draft: "Черновик",
   review: "На ревью",
   published: "Опубликован",
 };
+const STATUS_VARIANT: Record<MaterialStatus, "gray" | "yellow" | "green"> = {
+  draft: "gray",
+  review: "yellow",
+  published: "green",
+};
 
 const NO_TOPIC = "__no_topic__";
+const ANY_STATUS = "__any__";
 
 export function MaterialsLibraryPage() {
   const user = useAuthStore((s) => s.user);
   if (user && user.role === "student") {
     return (
-      <div className="mx-auto mt-12 max-w-2xl px-4">
-        <p className="text-slate-500">Библиотека материалов недоступна для роли «ученик».</p>
+      <div>
+        <PageHeader title="Библиотека материалов" />
+        <EmptyState icon={Library} title="Недоступно для роли «ученик»" />
       </div>
     );
   }
@@ -66,6 +75,8 @@ function MaterialsLibraryContent() {
 
   useEffect(() => {
     let cancelled = false;
+    setItems(null);
+    setError(null);
     listMaterials(query)
       .then((data) => !cancelled && setItems(data.items))
       .catch(() => !cancelled && setError("Не удалось загрузить библиотеку материалов"));
@@ -75,111 +86,132 @@ function MaterialsLibraryContent() {
   }, [query]);
 
   const tree = useMemo(() => buildTree(items ?? []), [items]);
+  const hasFilters = Boolean(subject || grade || topic || status || q);
 
   return (
-    <div className="mx-auto mt-8 max-w-4xl px-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Библиотека материалов</h1>
-        <button type="button" onClick={() => setShowCreateForm((v) => !v)} className="btn btn-primary btn-sm">
-          {showCreateForm ? "Отмена" : "+ Создать материал"}
-        </button>
-      </div>
-
-      {showCreateForm && <CreateMaterialForm onCancel={() => setShowCreateForm(false)} />}
-
-      <div className="mb-6 flex flex-wrap items-end gap-3">
-        <label className="text-xs text-slate-500">
-          Предмет
-          <input
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            placeholder="математика"
-            className="block rounded border px-2 py-1 text-sm"
-          />
-        </label>
-        <label className="text-xs text-slate-500">
-          Класс
-          <input
-            value={grade}
-            onChange={(e) => setGrade(e.target.value)}
-            placeholder="8"
-            inputMode="numeric"
-            className="block w-16 rounded border px-2 py-1 text-sm"
-          />
-        </label>
-        <label className="text-xs text-slate-500">
-          Тема
-          <input
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            className="block rounded border px-2 py-1 text-sm"
-          />
-        </label>
-        <label className="text-xs text-slate-500">
-          Статус
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as MaterialStatus | "")}
-            className="block rounded border px-2 py-1 text-sm"
+    <div>
+      <PageHeader
+        title="Библиотека материалов"
+        subtitle="Дерево предмет → класс → тема, поиск и статусы"
+        actions={
+          <Button
+            variant={showCreateForm ? "ghost" : "default"}
+            size="sm"
+            onClick={() => setShowCreateForm((v) => !v)}
           >
-            <option value="">Любой</option>
-            {(Object.keys(STATUS_LABEL) as MaterialStatus[]).map((s) => (
-              <option key={s} value={s}>
-                {STATUS_LABEL[s]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex-1 text-xs text-slate-500">
-          Поиск по названию
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="block w-full rounded border px-2 py-1 text-sm"
-          />
-        </label>
-      </div>
+            {showCreateForm ? <X aria-hidden /> : <Plus aria-hidden />}
+            {showCreateForm ? "Отмена" : "Создать материал"}
+          </Button>
+        }
+      />
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {!error && !items && <p className="text-sm text-slate-400">Загрузка…</p>}
-      {!error && items && items.length === 0 && (
-        <p className="text-sm text-slate-500">Ничего не найдено. Попробуйте изменить фильтры или создайте новый материал.</p>
-      )}
+      {showCreateForm ? <CreateMaterialForm onCancel={() => setShowCreateForm(false)} /> : null}
 
-      <div className="flex flex-col gap-4">
-        {[...tree.entries()].map(([subj, grades]) => (
-          <div key={subj}>
-            <h2 className="text-sm font-semibold text-slate-700">{subj}</h2>
-            {[...grades.entries()].map(([gr, topics]) => (
-              <div key={gr} className="ml-3 mt-1">
-                <h3 className="text-xs font-medium text-slate-500">{gr} класс</h3>
-                {[...topics.entries()].map(([tp, materials]) => (
-                  <div key={tp} className="ml-3 mt-1">
-                    <h4 className="text-xs text-slate-400">{tp === NO_TOPIC ? "Без темы" : tp}</h4>
-                    <ul className="ml-3 flex flex-col gap-1">
-                      {materials.map((m) => (
-                        <MaterialRow key={m.id} material={m} />
+      <Card className="mb-6 p-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Field label="Предмет">
+            <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="математика" />
+          </Field>
+          <Field label="Класс">
+            <Input
+              value={grade}
+              onChange={(e) => setGrade(e.target.value)}
+              placeholder="8"
+              inputMode="numeric"
+            />
+          </Field>
+          <Field label="Тема">
+            <Input value={topic} onChange={(e) => setTopic(e.target.value)} />
+          </Field>
+          <Field label="Статус">
+            <Select
+              value={status || ANY_STATUS}
+              onValueChange={(v) => setStatus(v === ANY_STATUS ? "" : (v as MaterialStatus))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ANY_STATUS}>Любой</SelectItem>
+                {(Object.keys(STATUS_LABEL) as MaterialStatus[]).map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {STATUS_LABEL[s]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <div className="sm:col-span-2 lg:col-span-4">
+            <Field label="Поиск по названию">
+              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Название материала" />
+            </Field>
+          </div>
+        </div>
+      </Card>
+
+      {error ? (
+        <ErrorState description={error} />
+      ) : !items ? (
+        <TreeSkeleton />
+      ) : items.length === 0 ? (
+        <EmptyState
+          icon={FileText}
+          title="Ничего не найдено"
+          description={
+            hasFilters
+              ? "Попробуйте изменить фильтры или создайте новый материал."
+              : "В библиотеке пока нет материалов."
+          }
+          action={
+            <Button size="sm" onClick={() => setShowCreateForm(true)}>
+              <Plus aria-hidden />
+              Создать материал
+            </Button>
+          }
+        />
+      ) : (
+        <div className="flex flex-col gap-6">
+          {[...tree.entries()].map(([subj, grades]) => (
+            <section key={subj}>
+              <h2 className="ds-label mb-2">{subj}</h2>
+              <div className="flex flex-col gap-4">
+                {[...grades.entries()].map(([gr, topics]) => (
+                  <div key={gr}>
+                    <h3 className="mb-1.5 text-sm font-semibold text-muted-foreground">{gr} класс</h3>
+                    <div className="flex flex-col gap-3 border-l-2 border-border pl-4">
+                      {[...topics.entries()].map(([tp, materials]) => (
+                        <div key={tp}>
+                          <h4 className="mb-1.5 text-xs font-medium uppercase tracking-wide text-text-3">
+                            {tp === NO_TOPIC ? "Без темы" : tp}
+                          </h4>
+                          <div className="flex flex-col gap-2">
+                            {materials.map((m) => (
+                              <MaterialRow key={m.id} material={m} />
+                            ))}
+                          </div>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </div>
                 ))}
               </div>
-            ))}
-          </div>
-        ))}
-      </div>
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-/**
- * Форма создания материала (Э9.10) — метаданные (заголовок/предмет/классы/
- * тема) + выбор шаблона. `grades` — свободный текст «8» или «8, 9», не
- * мультиселект: у школы нет фиксированного справочника классов в этом
- * приложении (фильтр библиотеки выше тоже свободный текст на один класс),
- * заводить отдельный источник правды под один текстовый инпут формы
- * создания было бы лишним.
- */
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      {children}
+    </label>
+  );
+}
+
 function CreateMaterialForm({ onCancel }: { onCancel: () => void }) {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
@@ -191,7 +223,14 @@ function CreateMaterialForm({ onCancel }: { onCancel: () => void }) {
   const [submitting, setSubmitting] = useState(false);
 
   function parseGrades(text: string): number[] {
-    return [...new Set(text.split(",").map((s) => Number(s.trim())).filter((n) => Number.isInteger(n) && n > 0))];
+    return [
+      ...new Set(
+        text
+          .split(",")
+          .map((s) => Number(s.trim()))
+          .filter((n) => Number.isInteger(n) && n > 0),
+      ),
+    ];
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -202,11 +241,17 @@ function CreateMaterialForm({ onCancel }: { onCancel: () => void }) {
       return;
     }
     const template = MATERIAL_TEMPLATES.find((t) => t.id === templateId) ?? MATERIAL_TEMPLATES[0]!;
-    const content = buildMaterialFromTemplate(template, { title: title.trim(), subject: subject.trim(), grades, topic });
+    const content = buildMaterialFromTemplate(template, {
+      title: title.trim(),
+      subject: subject.trim(),
+      grades,
+      topic,
+    });
     setSubmitting(true);
     setError(null);
     try {
       const result = await createMaterial(content);
+      toast.success("Материал создан");
       navigate(`/materials/${result.materialId}/edit`);
     } catch {
       setError("Не удалось создать материал — попробуйте ещё раз");
@@ -215,73 +260,71 @@ function CreateMaterialForm({ onCancel }: { onCancel: () => void }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mb-6 flex flex-col gap-3 rounded border p-3">
-      <div className="flex flex-wrap gap-3">
-        <label className="flex-1 text-xs text-slate-500">
-          Заголовок
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-          />
-        </label>
-        <label className="text-xs text-slate-500">
-          Предмет
-          <input
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            placeholder="математика"
-            className="mt-1 block rounded border px-2 py-1 text-sm"
-          />
-        </label>
-        <label className="text-xs text-slate-500">
-          Классы
-          <input
-            value={gradesText}
-            onChange={(e) => setGradesText(e.target.value)}
-            placeholder="8 или 8, 9"
-            className="mt-1 block w-24 rounded border px-2 py-1 text-sm"
-          />
-        </label>
-        <label className="text-xs text-slate-500">
-          Тема (необязательно)
-          <input
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            className="mt-1 block rounded border px-2 py-1 text-sm"
-          />
-        </label>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <span className="text-xs text-slate-500">Шаблон</span>
-        <div className="flex flex-col gap-1">
-          {MATERIAL_TEMPLATES.map((t) => (
-            <label key={t.id} className="flex items-start gap-2 text-sm">
-              <input
-                type="radio"
-                name="template"
-                checked={templateId === t.id}
-                onChange={() => setTemplateId(t.id)}
-                className="mt-0.5"
-              />
-              <span>
-                <span className="font-medium">{t.label}</span>
-                <span className="block text-xs text-slate-400">{t.description}</span>
-              </span>
-            </label>
-          ))}
+    <Card className="mb-6 p-5">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <Label htmlFor="cm-title">Заголовок</Label>
+            <Input id="cm-title" value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="cm-subject">Предмет</Label>
+            <Input
+              id="cm-subject"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="математика"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="cm-grades">Классы</Label>
+            <Input
+              id="cm-grades"
+              value={gradesText}
+              onChange={(e) => setGradesText(e.target.value)}
+              placeholder="8 или 8, 9"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <Label htmlFor="cm-topic">Тема (необязательно)</Label>
+            <Input id="cm-topic" value={topic} onChange={(e) => setTopic(e.target.value)} />
+          </div>
         </div>
-      </div>
-      {error && <p className="text-xs text-red-600">{error}</p>}
-      <div className="flex gap-2">
-        <button type="submit" disabled={submitting} className="btn btn-primary btn-sm">
-          {submitting ? "Создание…" : "Создать"}
-        </button>
-        <button type="button" onClick={onCancel} className="btn btn-ghost btn-sm">
-          Отмена
-        </button>
-      </div>
-    </form>
+
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium">Шаблон</span>
+          <RadioGroup value={templateId} onValueChange={setTemplateId} className="gap-2">
+            {MATERIAL_TEMPLATES.map((t) => (
+              <label
+                key={t.id}
+                className="flex cursor-pointer items-start gap-3 rounded-md border border-border p-3 transition-colors hover:bg-secondary has-[:checked]:border-primary has-[:checked]:bg-accent"
+              >
+                <RadioGroupItem value={t.id} className="mt-0.5" />
+                <span>
+                  <span className="text-sm font-semibold text-foreground">{t.label}</span>
+                  <span className="block text-xs text-muted-foreground">{t.description}</span>
+                </span>
+              </label>
+            ))}
+          </RadioGroup>
+        </div>
+
+        {error ? (
+          <p className="text-sm font-medium text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="flex gap-2">
+          <Button type="submit" size="sm" loading={submitting}>
+            {submitting ? "Создание…" : "Создать"}
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+            Отмена
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 }
 
@@ -294,23 +337,47 @@ function MaterialRow({ material }: { material: MaterialSummary }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      // буфер обмена недоступен — не критично, id всё равно показан текстом
+      toast.error("Буфер обмена недоступен");
     }
   }
 
   return (
-    <li className="flex items-center justify-between gap-2 rounded border px-2 py-1 text-sm">
-      <Link to={`/materials/${material.id}/edit`} className="truncate hover:underline">
-        {material.title} <span className="text-xs text-slate-400">({STATUS_LABEL[material.status]})</span>
+    <Card className="flex items-center justify-between gap-3 px-3.5 py-2.5 transition-colors hover:border-primary-muted">
+      <Link
+        to={`/materials/${material.id}/edit`}
+        className="flex min-w-0 items-center gap-2 text-sm font-medium hover:text-primary hover:underline"
+      >
+        <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+        <span className="truncate">{material.title}</span>
+        <Badge variant={STATUS_VARIANT[material.status]} className="shrink-0">
+          {STATUS_LABEL[material.status]}
+        </Badge>
       </Link>
-      <button onClick={copyId} className="shrink-0 text-xs text-slate-500 underline">
-        {copied ? "id скопирован" : `id ${material.id.slice(0, 8)}…`}
-      </button>
-    </li>
+      <Button variant="ghost" size="sm" className="shrink-0" onClick={copyId}>
+        {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+        {copied ? "Скопировано" : `id ${material.id.slice(0, 8)}…`}
+      </Button>
+    </Card>
   );
 }
 
-function buildTree(items: MaterialSummary[]): Map<string, Map<number, Map<string, MaterialSummary[]>>> {
+function TreeSkeleton() {
+  return (
+    <div className="flex flex-col gap-4">
+      {[0, 1].map((s) => (
+        <div key={s} className="flex flex-col gap-2">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-11 w-full rounded-lg" />
+          <Skeleton className="h-11 w-full rounded-lg" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function buildTree(
+  items: MaterialSummary[],
+): Map<string, Map<number, Map<string, MaterialSummary[]>>> {
   const tree = new Map<string, Map<number, Map<string, MaterialSummary[]>>>();
   for (const item of items) {
     const grades = item.grades.length > 0 ? item.grades : [];

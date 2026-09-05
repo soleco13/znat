@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { refreshAccessToken } from "./api-client.js";
 import { useAuthStore } from "./auth-store.js";
+import { FullscreenLoader } from "./ui/fullscreen-loader.js";
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -15,7 +16,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     refreshAccessToken().finally(() => setChecked(true));
   }, [accessToken]);
 
-  if (!checked) return null;
+  if (!checked) return <FullscreenLoader label="Проверяем вход…" />;
   if (!accessToken) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }

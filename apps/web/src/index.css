@@ -4,25 +4,24 @@
 
 /*
   Шрифты — только самохостом, без CDN (§10.10 ТЗ, §15 правило №17).
-  TODO(Э0.7): добавить реальный self-hosted webfont в public/fonts и @font-face здесь.
-  До тех пор используется системный стек — это тоже "своё": рендерится
-  шрифтами, уже установленными в ОС пользователя, без сетевых запросов.
+  Дизайн-система Shkola/AutoCheck своего вебшрифта не поставляет — использует
+  системный стек (Inter как именованный фолбэк). Держим тот же стек: рендер
+  шрифтами ОС, без сетевых запросов.
 */
 :root {
-  font-family:
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    Arial,
-    sans-serif;
+  font-family: var(--font);
 
-  /* ---------------------------------------------------------------
-     Палитра из дизайн-системы Shkola/AutoCheck (claude.ai/design,
-     проект 385aa818-0231-4b1a-bcf1-b73fa54f90bb). Взяты только цвета
-     и токены, нужные формам кнопок (радиусы/переход/тень) — по прямому
-     указанию пользователя, без остального ui-кита дизайн-системы.
-     --------------------------------------------------------------- */
+  /* ============================================================
+     Дизайн-система Shkola/AutoCheck — foundation tokens
+     (claude.ai/design, проект 385aa818-0231-4b1a-bcf1-b73fa54f90bb;
+     colors_and_type.css + components.css, verbatim из продукта).
+     Единый источник правды. Два представления одних цветов:
+       1. --c-*   — исторические hex, ещё используются точечно + классы .btn*
+       2. shadcn  — HSL-тройки для ui-кита src/shared/ui/*
+     Значения синхронизированы.
+     ============================================================ */
+
+  /* ---------- Brand (hex) ---------- */
   --c-primary: #1d4ed8;
   --c-primary-hover: #1e40af;
   --c-primary-light: #eff4ff;
@@ -49,20 +48,153 @@
   --c-success: #16a34a;
   --c-success-light: #f0fdf4;
 
-  /* Только то, что нужно формам кнопок — не весь набор радиусов/теней ДС. */
+  /* ---------- Typography ---------- */
+  --font:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --tracking-tight: -0.025em;
+  --tracking-head: -0.02em;
+  --leading-body: 1.55;
+
+  /* ---------- Radii ---------- */
   --radius-sm: 8px;
   --radius: 10px;
   --radius-lg: 16px;
+  --radius-xl: 20px;
   --radius-pill: 99px;
+
+  /* ---------- Elevation ---------- */
   --shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.06), 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow: 0 4px 12px rgba(16, 24, 40, 0.06), 0 2px 4px rgba(16, 24, 40, 0.04);
+  --shadow-md: 0 8px 24px rgba(16, 24, 40, 0.08), 0 3px 8px rgba(16, 24, 40, 0.05);
+  --shadow-lg: 0 16px 40px rgba(16, 24, 40, 0.12), 0 4px 12px rgba(16, 24, 40, 0.06);
+
+  /* ---------- Layout ---------- */
+  --sidebar-w: 256px;
+  --sidebar-collapsed-w: 72px;
+  --header-h: 68px;
+  --content-max: 1180px;
+
+  /* ---------- Motion ---------- */
   --transition: 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* ============================================================
+     Семантические shadcn-токены (HSL "H S% L%") — src/shared/ui/*
+     ============================================================ */
+  --background: 220 17% 97%;
+  --foreground: 222 44% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 44% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 44% 11%;
+  --primary: 224 71% 48%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 17% 95%;
+  --secondary-foreground: 222 44% 11%;
+  --muted: 220 16% 96%;
+  --muted-foreground: 217 15% 45%;
+  --accent: 214 100% 97%;
+  --accent-foreground: 224 71% 48%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 71% 45%;
+  --success-foreground: 0 0% 100%;
+  --warning: 32 95% 44%;
+  --warning-foreground: 0 0% 100%;
+  --teal: 174 84% 32%;
+  --border: 220 22% 92%;
+  --input: 220 22% 92%;
+  --ring: 224 71% 48%;
 }
 
-/* ---------------------------------------------------------------
-   Формы кнопок из той же дизайн-системы (components.css, только
-   раздел .btn* — карточки/бейджи/таблицы и остальное не переносились).
-   --------------------------------------------------------------- */
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    margin: 0;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-size: 15px;
+    line-height: var(--leading-body);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    margin: 0;
+  }
+  /* Единый видимый фокус для клавиатурной навигации (§16 ТЗ). */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+  /* Уважать prefers-reduced-motion. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
 @layer components {
+  /* ---------- Семантические роли типографики (ds-*) ---------- */
+  .ds-page-title {
+    font-size: 26px;
+    font-weight: 750;
+    letter-spacing: var(--tracking-head);
+    line-height: 1.15;
+    color: hsl(var(--foreground));
+  }
+  .ds-page-subtitle {
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--c-text-2);
+  }
+  .ds-card-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: hsl(var(--foreground));
+  }
+  .ds-stat-number {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: var(--tracking-tight);
+    line-height: 1;
+    color: hsl(var(--foreground));
+  }
+  .ds-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--c-text-3);
+  }
+  .ds-meta {
+    font-size: 12px;
+    color: var(--c-text-3);
+  }
+  .ds-mono {
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+  }
+
+  /* ---------- .btn* (дизайн-система, DEPRECATED) ----------
+     Новый код использует <Button> из src/shared/ui/button.
+     Классы остаются, пока не мигрированы последние места вставки. */
   .btn {
     display: inline-flex;
     align-items: center;
@@ -139,16 +271,9 @@
   }
 
   /*
-    Рендер HTML-фрагментов материалов (rich_text/callout/prompt/hint —
-    Э8.1, §6 ТЗ), санитайзированных `sanitizeHtml` (ALLOWED_TAGS оттуда —
-    ровно то, что здесь стилизуется). Собственный минимальный набор вместо
-    @tailwindcss/typography (не подключали — новая зависимость ради
-    десятка правил на 5 тегов, несогласованно с CLAUDE.md). `:where()` —
-    нулевая специфичность, чтобы не спорить с точечными классами Tailwind
-    на конкретных местах вставки. До Э9.4 список/абзацный отступ никто не
-    видел — Tailwind Preflight (`@tailwind base`) сбрасывает `list-style`,
-    а вручную писать `<ul>` в textarea никто не станет; редактор Tiptap
-    (Э9.4) впервые даёт кнопку списка, значит рендер обязан её показывать.
+    Рендер HTML-фрагментов материалов (rich_text/callout/prompt/hint — §6 ТЗ),
+    санитайзированных `sanitizeHtml`. Минимальный набор вместо
+    @tailwindcss/typography. `:where()` — нулевая специфичность.
   */
   .prose :where(p) {
     margin: 0.25em 0;

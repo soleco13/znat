@@ -1,23 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronDown, Circle, Download, Disc } from "lucide-react";
 import type { RecordingStatus, RecordingWithDownload } from "@school/shared";
-import { ApiError } from "../../shared/api-client.js";
+
+import { cn } from "@/lib/utils";
+import { ApiError } from "@/shared/api-client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/ui/alert-dialog";
+import { Badge } from "@/shared/ui/badge";
+import { Button } from "@/shared/ui/button";
+import { Card } from "@/shared/ui/card";
 import {
   getLessonRecordings,
   startLessonRecording,
   stopLessonRecording,
 } from "./recordings-api.js";
-
-/**
- * Э10.3/10.4 — управление записью урока и список готовых файлов, только
- * для учителя урока/админа. Ученик этот компонент не видит вовсе (не
- * рендерится в `RoomPage`), а о факте записи узнаёт по баннеру согласия
- * `RecordingConsentBanner` ниже, который слушает WS `recording_status`.
- *
- * Свежесть: активную запись ведём от WS (`recordingActive` проп из
- * `RoomPage`) — мгновенно; список готовых файлов подтягиваем опросом раз
- * в 20 с и после каждой смены `recordingActive` (файл финализируется
- * асинхронно после «Стоп»).
- */
 
 const STATUS_LABEL: Record<RecordingStatus, string> = {
   starting: "запускается",
@@ -29,12 +33,24 @@ const STATUS_LABEL: Record<RecordingStatus, string> = {
   deleted: "удалена по сроку хранения",
 };
 
+const STATUS_VARIANT: Record<RecordingStatus, "blue" | "green" | "yellow" | "red" | "gray"> = {
+  starting: "yellow",
+  recording: "red",
+  processing: "yellow",
+  ready: "green",
+  failed: "red",
+  aborted: "gray",
+  deleted: "gray",
+};
+
 function formatDuration(sec: number | null): string {
   if (sec == null) return "—";
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
   const s = sec % 60;
-  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
+  return h > 0
+    ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+    : `${m}:${String(s).padStart(2, "0")}`;
 }
 
 function formatSize(bytes: number | null): string {
@@ -53,9 +69,7 @@ export function RecordingPanel({
   onActiveChange,
 }: {
   lessonId: string;
-  /** Идёт ли запись прямо сейчас — от WS `recording_status` в `RoomPage`. */
   recordingActive: boolean;
-  /** Сообщить `RoomPage` о смене состояния по действию учителя (до прихода WS-сигнала). */
   onActiveChange: (active: boolean) => void;
 }) {
   const [recordings, setRecordings] = useState<RecordingWithDownload[]>([]);
@@ -70,7 +84,7 @@ export function RecordingPanel({
   disabledRef.current = disabled;
 
   const refresh = useCallback(async () => {
-    if (disabledRef.current) return; // 503 — вторая машина не подключена, не долбим эндпоинт
+    if (disabledRef.current) return;
     try {
       const res = await getLessonRecordings(lessonId);
       setRecordings(res.recordings);
@@ -78,7 +92,6 @@ export function RecordingPanel({
       onActiveChange(res.active != null);
     } catch (e) {
       if (e instanceof ApiError && e.status === 503) setDisabled(true);
-      // прочие ошибки не шумят в интерфейсе урока — список просто не обновится
     }
   }, [lessonId, onActiveChange]);
 
@@ -129,102 +142,112 @@ export function RecordingPanel({
   }
 
   return (
-    <div className="rounded border p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-medium text-slate-600">
-          Запись урока
-          {recordingActive && <span className="ml-2 text-red-600">● идёт</span>}
+    <Card className="p-4">
+      <div className="flex items-center justify-between">
+        <h2 className="ds-label flex items-center gap-2">
+          <Disc className="size-3.5" aria-hidden /> Запись урока
+          {recordingActive ? (
+            <Badge variant="red">
+              <Circle className="size-2 animate-pulse fill-current" aria-hidden /> идёт
+            </Badge>
+          ) : null}
         </h2>
-        <button onClick={() => setExpanded((v) => !v)} className="text-xs text-slate-400">
-          {expanded ? "Свернуть" : `Записи (${recordings.length})`}
-        </button>
+        <Button variant="ghost" size="sm" onClick={() => setExpanded((v) => !v)}>
+          Записи ({recordings.length})
+          <ChevronDown className={cn("size-4 transition-transform", expanded && "rotate-180")} aria-hidden />
+        </Button>
       </div>
 
-      {disabled ? (
-        <p className="text-xs text-slate-400">
-          Запись пока недоступна: вторая машина с egress не подключена (§10.4 ТЗ).
-        </p>
-      ) : recordingActive ? (
-        <button
-          onClick={handleStop}
-          disabled={busy}
-          className="rounded border border-red-300 px-3 py-1 text-sm text-red-700 disabled:opacity-40"
-        >
-          {busy ? "Останавливаем…" : "Остановить запись"}
-        </button>
-      ) : confirming ? (
-        <div className="flex flex-col gap-2 rounded border border-amber-300 bg-amber-50 p-2 text-xs">
-          <span>
-            Все участники урока, включая учеников, увидят баннер «Идёт запись урока» (152-ФЗ).
-            Начать запись?
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={handleStart}
-              disabled={busy}
-              className="rounded border border-red-300 px-3 py-1 text-red-700 disabled:opacity-40"
-            >
-              {busy ? "Запускаем…" : "Да, начать запись"}
-            </button>
-            <button onClick={() => setConfirming(false)} className="rounded border px-3 py-1">
-              Отмена
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button onClick={() => setConfirming(true)} className="rounded border px-3 py-1 text-sm">
-          Начать запись
-        </button>
-      )}
+      <div className="mt-3">
+        {disabled ? (
+          <p className="text-sm text-muted-foreground">
+            Запись пока недоступна: вторая машина с egress не подключена (§10.4 ТЗ).
+          </p>
+        ) : recordingActive ? (
+          <Button variant="destructive" size="sm" onClick={handleStop} loading={busy}>
+            {busy ? "Останавливаем…" : "Остановить запись"}
+          </Button>
+        ) : (
+          <Button variant="outline" size="sm" onClick={() => setConfirming(true)}>
+            <Circle className="fill-destructive text-destructive" aria-hidden />
+            Начать запись
+          </Button>
+        )}
+      </div>
 
-      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+      {error ? <p className="mt-2 text-sm font-medium text-destructive">{error}</p> : null}
 
-      {expanded && (
-        <ul className="mt-3 flex flex-col gap-1 text-xs">
-          {recordings.length === 0 && <li className="text-slate-400">Записей ещё нет</li>}
+      {expanded ? (
+        <ul className="mt-3 flex flex-col gap-1.5">
+          {recordings.length === 0 ? (
+            <li className="text-sm text-muted-foreground">Записей ещё нет</li>
+          ) : null}
           {recordings.map((r) => (
-            <li key={r.id} className="flex items-center justify-between rounded border px-2 py-1">
-              <span className="text-slate-600">
-                {formatDate(r.startedAt)} · {STATUS_LABEL[r.status]} · {formatDuration(r.durationSec)} ·{" "}
-                {formatSize(r.sizeBytes)}
-                {r.expiresAt && (
-                  <span className="text-slate-400"> · хранится до {formatDate(r.expiresAt)}</span>
-                )}
+            <li
+              key={r.id}
+              className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm"
+            >
+              <span className="min-w-0 text-muted-foreground">
+                <span className="text-foreground">{formatDate(r.startedAt)}</span>{" "}
+                <Badge variant={STATUS_VARIANT[r.status]}>{STATUS_LABEL[r.status]}</Badge>{" "}
+                · {formatDuration(r.durationSec)} · {formatSize(r.sizeBytes)}
+                {r.expiresAt ? (
+                  <span className="text-text-3"> · хранится до {formatDate(r.expiresAt)}</span>
+                ) : null}
               </span>
               {r.url ? (
-                <a
-                  href={r.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded border px-2 py-0.5 text-slate-700"
-                >
-                  Скачать
-                </a>
+                <Button asChild variant="outline" size="sm" className="shrink-0">
+                  <a href={r.url} target="_blank" rel="noreferrer">
+                    <Download aria-hidden />
+                    Скачать
+                  </a>
+                </Button>
               ) : (
-                <span className="text-slate-300">—</span>
+                <span className="text-text-3">—</span>
               )}
             </li>
           ))}
         </ul>
-      )}
-    </div>
+      ) : null}
+
+      {/* Э10.4: двухшаговое подтверждение старта (152-ФЗ). */}
+      <AlertDialog open={confirming} onOpenChange={setConfirming}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Начать запись урока?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Все участники урока, включая учеников, увидят баннер «Идёт запись урока» (152-ФЗ).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void handleStart();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {busy ? "Запускаем…" : "Да, начать запись"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Card>
   );
 }
 
 /**
- * Баннер согласия на запись (Э10.3, §7.9/§10.10 ТЗ, 152-ФЗ). Видят ВСЕ
- * участники урока — и учитель, и ученики. Управляется WS-сигналом
- * `recording_status` из `RoomPage` (шлётся при старте/остановке и при
- * входе в уже идущий урок).
+ * Баннер согласия на запись (Э10.3, §7.9/§10.10 ТЗ, 152-ФЗ). Видят ВСЕ участники.
  */
 export function RecordingConsentBanner({ active }: { active: boolean }) {
   if (!active) return null;
   return (
     <div
       role="status"
-      className="mb-4 flex items-center gap-2 rounded border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-800"
+      className="mb-4 flex items-center gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2.5 text-sm font-semibold text-destructive"
     >
-      <span className="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-red-600" />
+      <span className="inline-block size-2.5 animate-pulse rounded-full bg-destructive" />
       Идёт запись урока
     </div>
   );

@@ -1,26 +1,27 @@
 import { useLocalParticipant, useParticipants } from "@livekit/components-react";
+import { Mic, MicOff } from "lucide-react";
 
-/** Кнопка «мьют себя» (Э2.5) — свободна для любого участника с правом `canSpeak`, не требует учителя. */
+import { Button } from "@/shared/ui/button";
+
+/** Кнопка «мьют себя» (Э2.5) — для любого участника с правом `canSpeak`. */
 export function SelfMicButton() {
   const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
   return (
-    <button
+    <Button
+      variant={isMicrophoneEnabled ? "outline" : "secondary"}
+      size="sm"
       onClick={() => localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}
-      className={`rounded border px-3 py-1 text-sm ${isMicrophoneEnabled ? "" : "border-red-300 text-red-700"}`}
     >
+      {isMicrophoneEnabled ? <MicOff aria-hidden /> : <Mic aria-hidden />}
       {isMicrophoneEnabled ? "Заглушить микрофон" : "Включить микрофон"}
-    </button>
+    </Button>
   );
 }
 
-/** Значок текущего состояния микрофона участника — читает состояние из LiveKit-комнаты, а не из presence. */
+/** Значок текущего состояния микрофона участника — из LiveKit-комнаты, не из presence. */
 export function MicStatusIcon({ userId }: { userId: string }) {
   const participants = useParticipants();
   const match = participants.find((p) => p.identity === userId);
   if (!match || !match.isMicrophoneEnabled) return null;
-  return (
-    <span title="Микрофон включён" className="text-green-600">
-      🎙️
-    </span>
-  );
+  return <Mic className="size-3.5 text-success" aria-label="Микрофон включён" />;
 }

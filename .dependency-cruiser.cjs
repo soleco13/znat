@@ -33,7 +33,10 @@ module.exports = {
   options: {
     doNotFollow: { path: "node_modules" },
     tsPreCompilationDeps: true,
-    tsConfig: { fileName: "tsconfig.base.json" },
+    // Отдельный tsconfig: base + алиас `@/*` фронта (apps/web/src), чтобы
+    // dependency-cruiser резолвил импорты вида `@/shared/ui/button`. Базовый
+    // tsconfig.base.json общий для api/converter и paths не несёт.
+    tsConfig: { fileName: "tsconfig.depcruise.json" },
     enhancedResolveOptions: {
       exportsFields: ["exports"],
       conditionNames: ["import", "require", "node", "default"],

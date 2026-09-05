@@ -1,16 +1,16 @@
 import { useMemo, useRef, useState } from "react";
+import { Trash2, Upload } from "lucide-react";
 import type { Deck, DeckProgressEvent, DeckUploadResponse } from "@school/shared";
-import { apiFetch, ApiError } from "../../shared/api-client.js";
+
+import { cn } from "@/lib/utils";
+import { apiFetch, ApiError } from "@/shared/api-client";
+import { Alert, AlertDescription } from "@/shared/ui/alert";
+import { Button } from "@/shared/ui/button";
+import { Card } from "@/shared/ui/card";
 
 /**
- * Э4.4/Э4.6, §8.1 ТЗ: загрузка презентации и прогресс её конвертации («7 из
- * 24»). Импорт слайдов как страниц холста и лента миниатюр — в доске
- * (`features/canvas/Board.tsx`), эта панель отвечает только за исходники.
- *
- * Данные приходят сверху из `RoomPage`: `decks` — список презентаций урока
- * (со слайдами, обновляется по `onChanged`), `statuses` — живые события
- * `deck_status` из WS-канала урока. Прогресс из `statuses` перекрывает
- * базовое состояние из `decks`.
+ * Э4.4/Э4.6, §8.1 ТЗ: загрузка презентации и прогресс её конвертации.
+ * `decks` — список презентаций урока, `statuses` — живые события `deck_status`.
  */
 
 const ACCEPT =
@@ -20,7 +20,10 @@ const ACCEPT =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document," +
   "application/pdf";
 
-type DeckView = Pick<DeckProgressEvent, "deckId" | "title" | "status" | "progress" | "slideCount" | "error">;
+type DeckView = Pick<
+  DeckProgressEvent,
+  "deckId" | "title" | "status" | "progress" | "slideCount" | "error"
+>;
 
 function fromDeck(d: Deck): DeckView {
   return {
@@ -74,8 +77,6 @@ export function DeckPanel({
   const ordered = useMemo(() => {
     const byId = new Map<string, DeckView>();
     for (const d of decks) byId.set(d.id, fromDeck(d));
-    // Живые события перекрывают базовое состояние и добавляют только что
-    // загруженные презентации, которых ещё нет в `decks`.
     for (const ev of Object.values(statuses)) byId.set(ev.deckId, ev);
     return [...byId.values()].sort((a, b) => a.title.localeCompare(b.title, "ru"));
   }, [decks, statuses]);
@@ -110,71 +111,82 @@ export function DeckPanel({
   if (!isTeacher && ordered.length === 0) return null;
 
   return (
-    <div className="rounded border p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-medium text-slate-600">Презентации ({ordered.length})</h2>
-        {isTeacher && (
-          <label className="cursor-pointer rounded border px-3 py-1 text-sm">
-            {uploading ? "Загрузка…" : "Загрузить .pptx / .pdf"}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={ACCEPT}
-              className="hidden"
-              disabled={uploading}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                e.target.value = "";
-                if (file) void upload(file);
-              }}
-            />
-          </label>
-        )}
+    <Card className="p-4">
+      <div className="flex items-center justify-between">
+        <h2 className="ds-label">Презентации ({ordered.length})</h2>
+        {isTeacher ? (
+          <Button asChild variant="outline" size="sm" loading={uploading} className="cursor-pointer">
+            <label>
+              <Upload aria-hidden />
+              {uploading ? "Загрузка…" : "Загрузить .pptx / .pdf"}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ACCEPT}
+                className="hidden"
+                disabled={uploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) void upload(file);
+                }}
+              />
+            </label>
+          </Button>
+        ) : null}
       </div>
 
-      {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
-      {isTeacher && ordered.some((d) => d.status === "ready") && (
-        <p className="mb-2 text-xs text-slate-500">
+      {error ? (
+        <Alert variant="destructive" className="mt-3">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+      {isTeacher && ordered.some((d) => d.status === "ready") ? (
+        <p className="mt-2 text-xs text-muted-foreground">
           Импорт слайдов на холст и лента миниатюр — на панели доски выше.
         </p>
-      )}
+      ) : null}
 
-      <ul className="flex flex-col gap-2">
+      <ul className="mt-3 flex flex-col gap-2">
         {ordered.map((d) => (
-          <li key={d.deckId} className="rounded border px-2 py-1.5 text-sm">
+          <li key={d.deckId} className="rounded-md border border-border px-3 py-2 text-sm">
             <div className="flex items-center justify-between gap-2">
-              <span className="font-medium">{d.title}</span>
-              {isTeacher && (
-                <button
+              <span className="font-medium text-foreground">{d.title}</span>
+              {isTeacher ? (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-destructive hover:bg-destructive/10"
                   onClick={() => remove(d.deckId)}
-                  className="rounded border px-2 py-0.5 text-xs text-red-700"
+                  aria-label="Удалить презентацию"
                 >
-                  Удалить
-                </button>
-              )}
+                  <Trash2 />
+                </Button>
+              ) : null}
             </div>
             <div
-              className={
+              className={cn(
+                "text-xs",
                 d.status === "failed"
-                  ? "text-xs text-red-700"
+                  ? "text-destructive"
                   : d.status === "ready"
-                    ? "text-xs text-green-700"
-                    : "text-xs text-slate-500"
-              }
+                    ? "text-success"
+                    : "text-muted-foreground",
+              )}
             >
               {statusLabel(d)}
             </div>
-            {d.status === "converting" && d.slideCount > 0 && (
-              <div className="mt-1 h-1.5 w-full overflow-hidden rounded bg-slate-200">
+            {d.status === "converting" && d.slideCount > 0 ? (
+              <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-pill bg-surface-3">
                 <div
-                  className="h-full bg-blue-500 transition-all"
+                  className="h-full bg-primary transition-all duration-500 ease-ds"
                   style={{ width: `${Math.round((d.progress / d.slideCount) * 100)}%` }}
                 />
               </div>
-            )}
+            ) : null}
           </li>
         ))}
       </ul>
-    </div>
+    </Card>
   );
 }

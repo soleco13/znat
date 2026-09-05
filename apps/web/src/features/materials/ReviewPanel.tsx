@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import type { Material, QuestionInteraction, ReviewStudentResponse } from "@school/shared";
-import { ApiError } from "../../shared/api-client.js";
-import { sanitizeHtml } from "../../shared/sanitize-html.js";
+
+import { ApiError } from "@/shared/api-client";
+import { sanitizeHtml } from "@/shared/sanitize-html";
+import { Button } from "@/shared/ui/button";
+import { Checkbox } from "@/shared/ui/checkbox";
+import { CenteredSpinner } from "@/shared/ui/spinner";
 import {
   getActivityReview,
   getReviewQuestionResponses,
@@ -66,34 +70,32 @@ export function ReviewPanel({ activityId, isTeacher }: { activityId: string; isT
     }
   }
 
-  if (error) return <p className="text-xs text-red-600">{error}</p>;
+  if (error) return <p className="text-sm font-medium text-destructive">{error}</p>;
 
   if (notReviewed) {
     return (
-      <div className="space-y-2">
-        <p className="text-xs text-slate-400">Разбор ещё не начат</p>
+      <div className="space-y-3">
+        <p className="text-sm text-muted-foreground">Разбор ещё не начат</p>
         {isTeacher && (
-          <button
-            onClick={handleStart}
-            disabled={starting}
-            className="rounded border px-3 py-1 text-sm disabled:opacity-40"
-          >
+          <Button variant="outline" size="sm" onClick={handleStart} loading={starting}>
             {starting ? "Начинаем…" : "Начать разбор"}
-          </button>
+          </Button>
         )}
       </div>
     );
   }
 
   if (!material || !reviewedAt) {
-    return <p className="text-xs text-slate-400">Загрузка разбора…</p>;
+    return <CenteredSpinner label="Загрузка разбора…" />;
   }
 
   const questions = material.blocks.filter((b): b is QuestionBlock => b.type === "question");
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-slate-400">Разбор начат {new Date(reviewedAt).toLocaleTimeString()}</p>
+      <p className="text-xs text-muted-foreground">
+        Разбор начат {new Date(reviewedAt).toLocaleTimeString("ru-RU")}
+      </p>
       {questions.map((block) => (
         <QuestionReview key={block.id} activityId={activityId} block={block} isTeacher={isTeacher} />
       ))}
@@ -113,22 +115,26 @@ function QuestionReview({
   const [showResponses, setShowResponses] = useState(false);
 
   return (
-    <section className="rounded border p-3">
-      <div className="prose mb-2 text-sm font-medium" dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.prompt.html) }} />
+    <section className="rounded-lg border border-border bg-card p-4">
+      <div
+        className="prose mb-2 text-sm font-semibold"
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.prompt.html) }}
+      />
       <p className="mb-2 text-sm">
-        <span className="text-xs text-slate-400">правильный ответ: </span>
+        <span className="text-xs font-medium uppercase tracking-wide text-success">правильный ответ: </span>
         {formatCorrectAnswer(block.interaction)}
       </p>
       {isTeacher && (
         <div className="mt-2">
-          <button
-            onClick={() => setShowResponses((v) => !v)}
-            className="rounded border px-2 py-1 text-xs text-slate-600"
-          >
+          <Button variant="ghost" size="sm" onClick={() => setShowResponses((v) => !v)}>
             {showResponses ? "Скрыть ответы учеников" : "Ответы учеников"}
-          </button>
+          </Button>
           {showResponses && (
-            <StudentResponsesList activityId={activityId} questionId={block.id} interaction={block.interaction} />
+            <StudentResponsesList
+              activityId={activityId}
+              questionId={block.id}
+              interaction={block.interaction}
+            />
           )}
         </div>
       )}
@@ -172,27 +178,35 @@ function StudentResponsesList({
   }
 
   return (
-    <div className="mt-2 space-y-2">
-      <label className="flex items-center gap-1 text-xs text-slate-500">
-        <input type="checkbox" checked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} />
+    <div className="mt-3 space-y-2">
+      <label className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Checkbox checked={anonymous} onCheckedChange={(v) => setAnonymous(v === true)} />
         анонимно
       </label>
-      {error && <p className="text-xs text-red-600">Не удалось загрузить/вынести ответ</p>}
-      {!responses && !error && <p className="text-xs text-slate-400">Загрузка…</p>}
-      {responses && responses.length === 0 && <p className="text-xs text-slate-400">Никто ещё не ответил</p>}
-      <ul className="space-y-1">
+      {error && <p className="text-xs font-medium text-destructive">Не удалось загрузить/вынести ответ</p>}
+      {!responses && !error && <p className="text-xs text-muted-foreground">Загрузка…</p>}
+      {responses && responses.length === 0 && (
+        <p className="text-xs text-muted-foreground">Никто ещё не ответил</p>
+      )}
+      <ul className="space-y-1.5">
         {responses?.map((r) => (
-          <li key={r.userId} className="flex items-center justify-between gap-2 text-sm">
+          <li
+            key={r.userId}
+            className="flex items-center justify-between gap-2 rounded-md border border-border px-2.5 py-1.5 text-sm"
+          >
             <span>
-              <span className="font-medium">{r.fullName}:</span> {formatResponse(interaction, r.response)}
+              <span className="font-semibold">{r.fullName}:</span>{" "}
+              {formatResponse(interaction, r.response)}
             </span>
-            <button
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0"
               onClick={() => handlePush(r.userId)}
-              disabled={pushing === r.userId}
-              className="shrink-0 rounded border px-2 py-0.5 text-xs disabled:opacity-40"
+              loading={pushing === r.userId}
             >
-              {pushing === r.userId ? "…" : "На доску"}
-            </button>
+              На доску
+            </Button>
           </li>
         ))}
       </ul>

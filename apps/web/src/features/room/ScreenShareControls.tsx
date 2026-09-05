@@ -1,6 +1,16 @@
 import { useState } from "react";
 import { useLocalParticipant, useTracks } from "@livekit/components-react";
 import { ScreenSharePresets, Track, VideoPreset } from "livekit-client";
+import { MonitorUp, MonitorX } from "lucide-react";
+
+import { Button } from "@/shared/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
 
 type ScreenShareContentType = "document" | "video";
 
@@ -71,23 +81,29 @@ export function SelfScreenShareButton({ priority = false }: { priority?: boolean
   return (
     <div className="flex items-center gap-2">
       {!isScreenShareEnabled && (
-        <select
+        <Select
           value={contentType}
-          onChange={(e) => setContentType(e.target.value as ScreenShareContentType)}
-          className="rounded border px-1 py-0.5 text-xs"
+          onValueChange={(v) => setContentType(v as ScreenShareContentType)}
         >
-          <option value="document">Документ (1080p, 5 fps)</option>
-          <option value="video">Видео (720p, 15 fps)</option>
-        </select>
+          <SelectTrigger className="h-8 w-[190px] text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="document">Документ (1080p, 5 fps)</SelectItem>
+            <SelectItem value="video">Видео (720p, 15 fps)</SelectItem>
+          </SelectContent>
+        </Select>
       )}
-      <button
+      <Button
+        variant={isScreenShareEnabled ? "outline" : "secondary"}
+        size="sm"
         onClick={toggle}
         disabled={blocked}
         title={blocked ? "Кто-то уже демонстрирует экран" : undefined}
-        className={`rounded border px-3 py-1 text-sm disabled:opacity-50 ${isScreenShareEnabled ? "border-red-300 text-red-700" : ""}`}
       >
+        {isScreenShareEnabled ? <MonitorX aria-hidden /> : <MonitorUp aria-hidden />}
         {isScreenShareEnabled ? "Остановить демонстрацию" : "Демонстрация экрана"}
-      </button>
+      </Button>
     </div>
   );
 }

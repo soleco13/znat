@@ -2,40 +2,21 @@ import { useEffect, useState } from "react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import type { MyActivity, QuestionResponse, SubmitActivityResult } from "@school/shared";
+
+import { sanitizeHtml } from "@/shared/sanitize-html";
+import { Alert, AlertDescription } from "@/shared/ui/alert";
+import { Button } from "@/shared/ui/button";
 import { QuestionPlayer } from "./QuestionPlayer.js";
 import { submitActivity } from "./activity-api.js";
 import { getAssetUrl } from "./materials-api.js";
 import { useActivityAutosave, type AutosaveStatus } from "./useActivityAutosave.js";
-import { sanitizeHtml } from "../../shared/sanitize-html.js";
 
 type Block = MyActivity["material"]["blocks"][number];
 
 /**
- * Плеер материала целиком (Э8.6) — то, что Э8.4/8.5 отложили как «забота
- * будущего плеера материала». Получает `MyActivity` (индивидуальная копия
- * от `GET /activities/:id/my`: без ключей ответов, свой порядок вариантов),
- * держит ответы всех вопросов в одном месте.
- *
- * Автосохранение (Э8.7): если задан `autosaveActivityId`, каждое изменение
- * ставится в очередь `useActivityAutosave` (раз в 5 сек + при потере фокуса).
- * `onResponseChange` — дополнительный хук для вызывающей стороны.
- *
- * Сабмит (Э8.12, §8 ТЗ): кнопка «Сдать работу» видна, только пока задан
- * `autosaveActivityId` (не превью учителя) и попытка ещё не сдана
- * (`activity.submittedAt === null`). Перед отправкой — `autosave.flush()`,
- * чтобы последний непойманный дебаунсом черновик не потерялся молча.
- * После успешного сабмита плеер блокируется целиком (`disabled` изнутри,
- * независимо от пропа) — сервер всё равно откажет дальнейшим
- * `saveResponse`, но без локальной блокировки поля выглядели бы
- * редактируемыми, вводя в заблуждение.
- *
- * Контентные блоки §6.2: `formula` рендерится через KaTeX (Э9.4, в бандле —
- * `import "katex/dist/katex.min.css"` тянет собственные шрифты как ассеты
- * Vite, ни один запрос не уходит на чужой домен, CLAUDE.md). `image`/`audio`
- * рендерятся через реальный файл медиатеки (Э9.7, `GET /assets/:id/url` —
- * доступен и ученику, не только автору материала). `video`/`embed`
- * по-прежнему заглушка — видео в медиатеке вне плана Э9.7, встраивание
- * (GeoGebra/Desmos/JSXGraph) не в этом срезе вообще.
+ * Плеер материала целиком (Э8.6). Держит ответы всех вопросов в одном месте,
+ * автосохранение через `useActivityAutosave`, сабмит с `flush()` перед
+ * отправкой; после сабмита плеер блокируется целиком.
  */
 export function MaterialPlayer({
   activity,
@@ -44,7 +25,6 @@ export function MaterialPlayer({
   disabled = false,
 }: {
   activity: MyActivity;
-  /** id активности для автосохранения черновиков; `null` — плеер без сохранения (превью учителя). */
   autosaveActivityId?: string | null;
   onResponseChange?: (questionId: string, response: QuestionResponse) => void;
   disabled?: boolean;
@@ -83,8 +63,11 @@ export function MaterialPlayer({
   const locked = disabled || submittedAt !== null;
 
   return (
-    <div className="space-y-4">
-      <MaterialHeader activity={activity} autosaveStatus={autosaveActivityId ? autosave.status : null} />
+    <div className="space-y-5">
+      <MaterialHeader
+        activity={activity}
+        autosaveStatus={autosaveActivityId ? autosave.status : null}
+      />
       {activity.material.blocks.map((block) => (
         <BlockView
           key={block.id}
@@ -122,27 +105,30 @@ function SubmitBar({
 }) {
   if (submittedAt) {
     return (
-      <div className="rounded border bg-slate-50 p-3 text-sm">
-        <p className="font-medium">Работа сдана {new Date(submittedAt).toLocaleString()}</p>
+      <div className="rounded-lg border border-success/25 bg-success/5 p-4 text-sm">
+        <p className="font-semibold text-foreground">
+          Работа сдана {new Date(submittedAt).toLocaleString("ru-RU")}
+        </p>
         {result && (
-          <p className="text-xs text-slate-500">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {result.score} из {result.maxScore} баллов автопроверкой
-            {result.feedback.some((f) => !f.autoGraded) && " · часть вопросов ждёт проверки учителем"}
+            {result.feedback.some((f) => !f.autoGraded) &&
+              " · часть вопросов ждёт проверки учителем"}
           </p>
         )}
       </div>
     );
   }
   return (
-    <div className="space-y-1">
-      {error && <p className="text-xs text-red-600">{error}</p>}
-      <button
-        onClick={onSubmit}
-        disabled={submitting}
-        className="rounded border bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-40"
-      >
+    <div className="space-y-2">
+      {error ? (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+      <Button size="lg" onClick={onSubmit} loading={submitting}>
         {submitting ? "Отправляем…" : "Сдать работу"}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -156,11 +142,11 @@ function MaterialHeader({
 }) {
   const { material, deadline, timerSeconds, startedAt } = activity;
   return (
-    <header className="border-b pb-2">
-      <h2 className="text-lg font-semibold">{material.title}</h2>
-      <p className="text-xs text-slate-400">
+    <header className="border-b border-border pb-3">
+      <h2 className="text-lg font-bold tracking-tight">{material.title}</h2>
+      <p className="mt-0.5 text-xs text-muted-foreground">
         {material.subject}
-        {deadline && ` · дедлайн ${new Date(deadline).toLocaleString()}`}
+        {deadline && ` · дедлайн ${new Date(deadline).toLocaleString("ru-RU")}`}
         {timerSeconds != null && ` · ${formatTimer(startedAt, timerSeconds)}`}
         {autosaveStatus && ` · ${autosaveLabel(autosaveStatus)}`}
       </p>
@@ -181,7 +167,7 @@ function autosaveLabel(status: AutosaveStatus): string {
   }
 }
 
-/** Оставшееся время попытки, минуты:секунды. Отсчёт от `startedAt` сервера — источник правды по дедлайну всё равно на сервере (Э8.7/8.10). */
+/** Оставшееся время попытки, минуты:секунды. Отсчёт от `startedAt` сервера. */
 function formatTimer(startedAt: string, timerSeconds: number): string {
   const elapsedMs = Date.now() - new Date(startedAt).getTime();
   const leftSec = Math.max(0, Math.round(timerSeconds - elapsedMs / 1000));
@@ -214,14 +200,19 @@ function BlockView({
   return <ContentBlockView block={block} />;
 }
 
-/** Экспортируется отдельно — переиспользуется превью редактора (Э9.2, `MaterialEditorPage`). */
+/** Экспортируется отдельно — переиспользуется превью редактора (Э9.2). */
 export function ContentBlockView({ block }: { block: Exclude<Block, { type: "question" }> }) {
   switch (block.type) {
     case "rich_text":
-      return <div className="prose text-sm" dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.html) }} />;
+      return (
+        <div
+          className="prose text-sm"
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.html) }}
+        />
+      );
     case "callout":
       return (
-        <div className="rounded border-l-4 border-slate-300 bg-slate-50 p-3 text-sm">
+        <div className="rounded-lg border-l-4 border-primary/40 bg-primary/5 p-3 text-sm">
           <div className="prose" dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.html) }} />
         </div>
       );
@@ -233,7 +224,7 @@ export function ContentBlockView({ block }: { block: Exclude<Block, { type: "que
               {block.rows.map((row, ri) => (
                 <tr key={ri}>
                   {row.map((cell, ci) => (
-                    <td key={ci} className="border px-2 py-1">
+                    <td key={ci} className="border border-border px-2 py-1">
                       {cell}
                     </td>
                   ))}
@@ -244,7 +235,7 @@ export function ContentBlockView({ block }: { block: Exclude<Block, { type: "que
         </div>
       );
     case "page_break":
-      return <hr className="border-dashed" />;
+      return <hr className="border-dashed border-border" />;
     case "formula":
       return <FormulaView latex={block.latex} />;
     case "image":
@@ -254,33 +245,28 @@ export function ContentBlockView({ block }: { block: Exclude<Block, { type: "que
     case "video":
     case "embed":
       return (
-        <div className="rounded border border-dashed p-3 text-xs text-slate-400">
+        <div className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
           [{block.type}] — рендер подключается отдельно (ассеты/встраивание)
         </div>
       );
   }
 }
 
-/** `throwOnError: false` уже не бросает на большинстве опечаток в LaTeX (KaTeX сам вписывает место ошибки красным в разметку) — try/catch на крайний случай катастрофического сбоя рендера, `latex` может прийти и не из MathLive (seed-скрипт/Postman, Э8). */
 function FormulaView({ latex }: { latex: string }) {
   let html: string;
   try {
     html = katex.renderToString(latex, { throwOnError: false });
   } catch {
-    html = `<span class="text-red-600">Ошибка в формуле</span>`;
+    html = `<span class="text-destructive">Ошибка в формуле</span>`;
   }
   return <span dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-/**
- * Резолв `assetId → подписанная ссылка` (Э9.7, `GET /assets/:id/url`) — ОДИН
- * и тот же для editor-превью и для настоящего плеера ученика (оба через
- * `ContentBlockView`), никакого спецпути для методиста: у него нет заранее
- * загруженного списка медиатеки под рукой в этой панели, только `assetId`
- * из содержимого блока, как и у ученика.
- */
 function useAssetUrl(assetId: string): { url: string | null; error: boolean } {
-  const [state, setState] = useState<{ url: string | null; error: boolean }>({ url: null, error: false });
+  const [state, setState] = useState<{ url: string | null; error: boolean }>({
+    url: null,
+    error: false,
+  });
   useEffect(() => {
     let cancelled = false;
     setState({ url: null, error: false });
@@ -296,25 +282,27 @@ function useAssetUrl(assetId: string): { url: string | null; error: boolean } {
 
 function ImageAssetView({ block }: { block: Extract<Block, { type: "image" }> }) {
   const { url, error } = useAssetUrl(block.assetId);
-  if (error) return <p className="text-xs text-red-600">Не удалось загрузить изображение</p>;
-  if (!url) return <p className="text-xs text-slate-400">Загрузка изображения…</p>;
+  if (error) return <p className="text-xs text-destructive">Не удалось загрузить изображение</p>;
+  if (!url) return <p className="text-xs text-muted-foreground">Загрузка изображения…</p>;
   return (
     <figure>
-      <img src={url} alt={block.caption ?? ""} className="max-w-full rounded" />
-      {block.caption && <figcaption className="mt-1 text-xs text-slate-500">{block.caption}</figcaption>}
+      <img src={url} alt={block.caption ?? ""} className="max-w-full rounded-lg border border-border" />
+      {block.caption && (
+        <figcaption className="mt-1 text-xs text-muted-foreground">{block.caption}</figcaption>
+      )}
     </figure>
   );
 }
 
 function AudioAssetView({ block }: { block: Extract<Block, { type: "audio" }> }) {
   const { url, error } = useAssetUrl(block.assetId);
-  if (error) return <p className="text-xs text-red-600">Не удалось загрузить аудио</p>;
-  if (!url) return <p className="text-xs text-slate-400">Загрузка аудио…</p>;
+  if (error) return <p className="text-xs text-destructive">Не удалось загрузить аудио</p>;
+  if (!url) return <p className="text-xs text-muted-foreground">Загрузка аудио…</p>;
   return (
     <div>
       <audio src={url} controls className="w-full" />
       {block.transcript && (
-        <details className="mt-1 text-xs text-slate-500">
+        <details className="mt-1 text-xs text-muted-foreground">
           <summary className="cursor-pointer">Транскрипт</summary>
           <p className="mt-1 whitespace-pre-wrap">{block.transcript}</p>
         </details>

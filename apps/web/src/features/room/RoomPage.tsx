@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import { VideoPresets, type RoomOptions } from "livekit-client";
+import { Hand, LogOut, Send, Users } from "lucide-react";
 import type {
   ChatMessage,
   Deck,
@@ -13,8 +14,26 @@ import type {
   ParticipantSnapshot,
   ServerRoomMessage,
 } from "@school/shared";
-import { apiFetch } from "../../shared/api-client.js";
-import { useAuthStore } from "../../shared/auth-store.js";
+
+import { cn } from "@/lib/utils";
+import { apiFetch } from "@/shared/api-client";
+import { useAuthStore } from "@/shared/auth-store";
+import { Alert, AlertDescription } from "@/shared/ui/alert";
+import { Badge } from "@/shared/ui/badge";
+import { Button } from "@/shared/ui/button";
+import { Checkbox } from "@/shared/ui/checkbox";
+import { Input } from "@/shared/ui/input";
+import { ScrollArea } from "@/shared/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+import { UserAvatar } from "@/shared/ui/avatar";
+import { TooltipProvider } from "@/shared/ui/tooltip";
 import { Board } from "../canvas/Board.js";
 import { DeckPanel } from "../decks/DeckPanel.js";
 import { listLessonActivities } from "../materials/activity-api.js";
@@ -34,22 +53,8 @@ import { TeacherVideoTile } from "./TeacherVideoTile.js";
 import { useRoomSocket } from "./useRoomSocket.js";
 import { VideoSubscriptionManager } from "./VideoSubscriptions.js";
 
-// Э5.1: 720p с автослоями simulcast h360/h180 (§5.2 ТЗ) — вынесено из JSX,
-// один и тот же объект на все рендеры (LiveKitRoom реагирует на identity
-// пропа options, пересоздание на каждый рендер лишний раз пересобирало бы
-// комнату). `videoSimulcastLayers` не пишем: то же самое даёт дефолт
-// livekit-client при пустом поле (проверено чтением options.d.ts установленного
-// livekit-client@2.22.0) — оставлено явным комментарием, а не полем, чтобы
-// не разойтись с версией пакета при апгрейде.
-//
-// Э5.2 (§5.2 ТЗ): `adaptiveStream`/`dynacast` ОБА выключены по умолчанию в
-// самом livekit-client (проверено чтением `roomOptionDefaults` в
-// установленном dist/livekit-client.esm.mjs@2.22.0 — `adaptiveStream: false,
-// dynacast: false`), поэтому без явного включения здесь требование ТЗ «не
-// публиковать слои, на которые никто не подписан» и «понижать слой для
-// маленькой плитки» тихо не выполнялось бы. При одной плитке учителя (Э5)
-// эффект пока минимален — раскроется на сетке из 9 в Э6, но должен быть
-// включён с самого начала, а не довинчен потом.
+// Э5.1/Э5.2 — см. подробные комментарии ниже у <LiveKitRoom>. 720p + simulcast,
+// adaptiveStream/dynacast включены явно (в livekit-client по умолчанию off).
 const ROOM_OPTIONS: RoomOptions = {
   videoCaptureDefaults: { resolution: VideoPresets.h720.resolution },
   publishDefaults: { simulcast: true },
@@ -72,6 +77,13 @@ const LESSON_MODE_LABEL: Record<LessonMode, string> = {
   spotlight: "У доски",
 };
 
+const LESSON_STATUS_LABEL: Record<LessonStatus, string> = {
+  scheduled: "Запланирован",
+  live: "Идёт",
+  ended: "Завершён",
+  cancelled: "Отменён",
+};
+
 type SocketStatusLike = "connecting" | "connected" | "reconnecting" | "closed";
 
 export function RoomPage() {
@@ -81,37 +93,18 @@ export function RoomPage() {
 
   const [participants, setParticipants] = useState<ParticipantSnapshot[]>([]);
   const [lessonStatus, setLessonStatus] = useState<LessonStatus | null>(null);
-  // Э6.4, §5.3 ТЗ: режим урока — управляет медиапрофилем видео (VideoSubscriptionManager),
-  // не правами участников. "lecture" — тот же дефолт, что и на сервере до первого ответа join.
   const [lessonMode, setLessonMode] = useState<LessonMode>("lecture");
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [chatDraft, setChatDraft] = useState("");
-  // Э4.4: статусы конвертации презентаций урока, по deckId. Копим все —
-  // одновременно могут конвертироваться несколько, а событие несёт одну.
   const [deckStatuses, setDeckStatuses] = useState<Record<string, DeckProgressEvent>>({});
-  // Э4.6: полный список презентаций урока (со слайдами) — источник для панели
-  // и для импорта слайдов на холст. Прогресс приходит через WS (deckStatuses),
-  // а слайды готовой презентации подтягиваются этим запросом.
   const [decks, setDecks] = useState<Deck[]>([]);
-  // Э8.12: последнее выданное в уроке задание — WS `activity_started` в
-  // реальном времени, фолбэк-поллинг (`listLessonActivities`) ниже — если
-  // зашли в уже идущий урок и WS-сигнал пропущен.
   const [activeActivityId, setActiveActivityId] = useState<string | null>(null);
-  // Растёт на каждый `activity_reviewed` — форсирует remount `ReviewPanel` (см. LessonActivityPanel).
   const [reviewSignal, setReviewSignal] = useState(0);
-  // Э10.3: идёт ли запись урока — приходит WS-сигналом `recording_status`
-  // (при старте/остановке и при входе в уже идущий урок). Управляет баннером
-  // согласия, который видят ВСЕ участники, включая учеников.
   const [recordingActive, setRecordingActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // LiveKit-подключение (Э2, только аудио — см. стоп-лист Э2 в docs/CURRENT_STAGE.md).
   const [media, setMedia] = useState<MediaConnection | null>(null);
-  // Экран проверки устройств (Э2.4) — пока не пройден, в урок не входим (ни HTTP join, ни WS).
   const [deviceCheckDone, setDeviceCheckDone] = useState(false);
   const [micDeviceId, setMicDeviceId] = useState<string | null>(null);
-  // Э5.4: камера, выбранная на экране проверки устройств — используется
-  // только учителем/админом (`video` проп `<LiveKitRoom>` ниже), у ученика
-  // просто лежит невостребованным до Э6.
   const [camDeviceId, setCamDeviceId] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -123,14 +116,19 @@ export function RoomPage() {
         setParticipants(message.participants);
         break;
       case "participant_joined":
-        setParticipants((prev) => [...prev.filter((p) => p.userId !== message.participant.userId), message.participant]);
+        setParticipants((prev) => [
+          ...prev.filter((p) => p.userId !== message.participant.userId),
+          message.participant,
+        ]);
         break;
       case "participant_left":
         setParticipants((prev) => prev.filter((p) => p.userId !== message.userId));
         break;
       case "permissions_updated":
         setParticipants((prev) =>
-          prev.map((p) => (p.userId === message.userId ? { ...p, permissions: message.permissions } : p)),
+          prev.map((p) =>
+            p.userId === message.userId ? { ...p, permissions: message.permissions } : p,
+          ),
         );
         break;
       case "hand_raised":
@@ -203,10 +201,6 @@ export function RoomPage() {
     refreshDecks();
   }, [refreshDecks]);
 
-  // Фолбэк-поллинг (Э8.12): вошли в урок, где задание уже было запущено ДО
-  // подключения по WS — берём последнее из списка (сортировка по createdAt
-  // desc, см. `listActivitiesByLesson`). Один раз при входе, WS-сигнал
-  // `activity_started` дальше держит состояние актуальным сам.
   useEffect(() => {
     if (!lessonId) return;
     listLessonActivities(lessonId)
@@ -217,10 +211,6 @@ export function RoomPage() {
       .catch(() => undefined);
   }, [lessonId]);
 
-  // Как только презентация досконвертировалась (WS-событие `ready`), а слайдов
-  // (или, для PDF из Э4.7, ссылки `pdfUrl`) для неё ещё нет в `decks` —
-  // подтягиваем список заново. `refetchedDecksRef` не даёт зациклиться, если
-  // сервер почему-то так и не отдаёт слайды по `ready`-презентации.
   const refetchedDecksRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     const pending = Object.values(deckStatuses).filter(
@@ -248,7 +238,9 @@ export function RoomPage() {
 
   async function endLesson() {
     if (!lessonId) return;
-    await apiFetch(`/lessons/${lessonId}/end`, { method: "POST" }).catch(() => setError("Не удалось завершить урок"));
+    await apiFetch(`/lessons/${lessonId}/end`, { method: "POST" }).catch(() =>
+      setError("Не удалось завершить урок"),
+    );
   }
 
   async function toggleHand() {
@@ -285,7 +277,7 @@ export function RoomPage() {
     );
   }
 
-  /** Э6.3, §5.3 ТЗ: учитель закрепляет ученика в видимой сетке видео (приоритет над активным говорящим). */
+  /** Э6.3, §5.3 ТЗ. */
   async function togglePin(userId: string, pinned: boolean) {
     if (!lessonId) return;
     await apiFetch(`/lessons/${lessonId}/participants/${userId}/pin`, {
@@ -294,7 +286,7 @@ export function RoomPage() {
     }).catch(() => setError("Не удалось закрепить участника"));
   }
 
-  /** Э6.4, §5.3 ТЗ: режим урока — меняет медиапрофиль видео для всех, а не только своё отображение. */
+  /** Э6.4, §5.3 ТЗ. */
   async function changeLessonMode(mode: LessonMode) {
     if (!lessonId) return;
     await apiFetch(`/lessons/${lessonId}/mode`, {
@@ -303,7 +295,7 @@ export function RoomPage() {
     }).catch(() => setError("Не удалось изменить режим урока"));
   }
 
-  /** Э3.8: глобальный тумблер «ученики могут рисовать» — массово меняет canDraw у всех учеников урока. */
+  /** Э3.8. */
   async function toggleDrawForAll(canDraw: boolean) {
     if (!lessonId) return;
     await apiFetch(`/lessons/${lessonId}/draw-all`, {
@@ -317,232 +309,299 @@ export function RoomPage() {
     if (!lessonId || !chatDraft.trim()) return;
     const body = chatDraft;
     setChatDraft("");
-    await apiFetch(`/lessons/${lessonId}/chat`, { method: "POST", body: JSON.stringify({ body }) }).catch(() =>
-      setError("Сообщение не отправлено"),
-    );
+    await apiFetch(`/lessons/${lessonId}/chat`, {
+      method: "POST",
+      body: JSON.stringify({ body }),
+    }).catch(() => setError("Сообщение не отправлено"));
   }
 
-  const content = (
-    <div className="mx-auto mt-8 max-w-6xl px-4">
-      <RecordingConsentBanner active={recordingActive} />
+  const connected = status === "connected";
 
-      {media && <ScreenShareTile />}
-
-      {lessonId && (
-        <div className="mb-4">
-          <Board lessonId={lessonId} canDraw={self?.permissions.canDraw ?? false} decks={decks} />
-        </div>
-      )}
-
-      {lessonId && (
-        <div className="mb-4">
-          <DeckPanel
-            lessonId={lessonId}
-            isTeacher={isTeacher}
-            decks={decks}
-            statuses={deckStatuses}
-            onChanged={refreshDecks}
-          />
-        </div>
-      )}
-
-      {lessonId && (
-        <div className="mb-4">
-          <LessonActivityPanel
-            lessonId={lessonId}
-            isTeacher={isTeacher}
-            activeActivityId={activeActivityId}
-            reviewSignal={reviewSignal}
-          />
-        </div>
-      )}
-
-      {lessonId && isTeacher && (
-        <div className="mb-4">
-          <RecordingPanel
-            lessonId={lessonId}
-            recordingActive={recordingActive}
-            onActiveChange={setRecordingActive}
-          />
-        </div>
-      )}
-
-      <div className="grid grid-cols-[2fr_1fr] gap-4">
-      <div>
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold">Урок</h1>
-            <p className="text-sm text-slate-500">
-              Статус: {lessonStatus ?? "…"} · <span className={status === "connected" ? "text-green-600" : "text-amber-600"}>{STATUS_LABEL[status]}</span>
-              {media && (
-                <>
-                  {" "}
-                  · <MediaAudioStatus />
-                </>
-              )}
-              {" "}
-              · Режим: {isTeacher ? (
-                <select
-                  value={lessonMode}
-                  onChange={(e) => changeLessonMode(e.target.value as LessonMode)}
-                  className="rounded border px-1 py-0.5 text-xs"
-                >
-                  {Object.entries(LESSON_MODE_LABEL).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                LESSON_MODE_LABEL[lessonMode]
-              )}
-            </p>
-            {media && self?.permissions.canSpeak && <PacketLossWarning />}
-            {media && (isTeacher || self?.permissions.canPublishVideo) && <VideoDegradeSuggestion />}
-          </div>
-          <div className="flex gap-2">
-            {isTeacher && lessonStatus === "live" && (
-              <button onClick={endLesson} className="rounded border border-red-300 px-3 py-1 text-sm text-red-700">
-                Завершить урок
-              </button>
-            )}
-            <button onClick={leaveRoom} className="rounded border px-3 py-1 text-sm">
-              Выйти
-            </button>
-          </div>
-        </div>
-
-        {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
-
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          {!isTeacher && (
-            <button
-              onClick={toggleHand}
-              className={`rounded border px-3 py-1 text-sm ${self?.handRaised ? "bg-amber-100 border-amber-400" : ""}`}
-            >
-              {self?.handRaised ? "Опустить руку" : "Поднять руку"}
-            </button>
-          )}
-          {media && self?.permissions.canSpeak && <SelfMicButton />}
-          {media && isTeacher && <SelfCameraButton />}
-          {media && !isTeacher && self?.permissions.canPublishVideo && (
-            <SelfCameraButton maxResolution={VideoPresets.h360.resolution} />
-          )}
-          {media && (isTeacher || self?.permissions.canShareScreen) && <SelfScreenShareButton priority={isTeacher} />}
-          {media && isTeacher && (
-            <button onClick={muteAll} className="rounded border px-3 py-1 text-sm">
-              Заглушить всех
-            </button>
-          )}
-          {isTeacher && (
-            <>
-              <button onClick={() => toggleDrawForAll(true)} className="rounded border px-3 py-1 text-sm">
-                Разрешить рисовать всем
-              </button>
-              <button onClick={() => toggleDrawForAll(false)} className="rounded border px-3 py-1 text-sm">
-                Запретить рисовать всем
-              </button>
-            </>
-          )}
-        </div>
-
-        {media && <StudentVideoGrid participants={participants} mode={lessonMode} />}
-
-        <h2 className="mb-2 text-sm font-medium text-slate-600">Участники ({participants.length})</h2>
-        <ul className="flex flex-col gap-1">
-          {participants.map((p) => (
-            <li key={p.userId} className="flex items-center justify-between rounded border px-2 py-1 text-sm">
-              <span className="flex items-center gap-2">
-                {media ? (
-                  <ParticipantPresenceDot userId={p.userId} connected={p.connected} />
-                ) : (
-                  <span className={`h-2 w-2 rounded-full ${p.connected ? "bg-green-500" : "bg-slate-300"}`} />
+  const participantsPanel = (
+    <div className="flex flex-col gap-1.5">
+      {participants.map((p) => (
+        <div
+          key={p.userId}
+          className="rounded-md border border-border bg-card px-2.5 py-2 text-sm"
+        >
+          <div className="flex items-center gap-2">
+            {media ? (
+              <ParticipantPresenceDot userId={p.userId} connected={p.connected} />
+            ) : (
+              <span
+                className={cn(
+                  "size-2 shrink-0 rounded-full",
+                  p.connected ? "bg-success" : "bg-text-3",
                 )}
-                {p.fullName}
-                <span className="text-xs text-slate-400">({p.role})</span>
-                {p.handRaised && <span title="Поднята рука">✋</span>}
-                {p.pinned && <span title="Закреплён в сетке видео">📌</span>}
-                {media && <MicStatusIcon userId={p.userId} />}
-                {media && <ConnectionQualityDot userId={p.userId} />}
-              </span>
-              {isTeacher && p.userId !== me?.id && (
-                <span className="flex items-center gap-2 text-xs">
-                  <label className="flex items-center gap-1">
-                    <input
-                      type="checkbox"
-                      checked={p.permissions.canDraw}
-                      onChange={(e) => togglePermission(p.userId, "canDraw", e.target.checked)}
-                    />
-                    рисовать
-                  </label>
-                  <label className="flex items-center gap-1">
-                    <input
-                      type="checkbox"
-                      checked={p.permissions.canSpeak}
-                      onChange={(e) => togglePermission(p.userId, "canSpeak", e.target.checked)}
-                    />
-                    говорить
-                  </label>
-                  <label className="flex items-center gap-1">
-                    <input
-                      type="checkbox"
-                      checked={p.permissions.canPublishVideo}
-                      onChange={(e) => togglePermission(p.userId, "canPublishVideo", e.target.checked)}
-                    />
-                    видео
-                  </label>
-                  <label className="flex items-center gap-1">
-                    <input
-                      type="checkbox"
-                      checked={p.permissions.canShareScreen}
-                      onChange={(e) => togglePermission(p.userId, "canShareScreen", e.target.checked)}
-                    />
-                    экран
-                  </label>
-                  {media && p.permissions.canSpeak && (
-                    <button onClick={() => muteParticipant(p.userId)} className="rounded border px-2 py-0.5">
-                      Заглушить
-                    </button>
-                  )}
-                  {media && p.role === "student" && (
-                    <button
-                      onClick={() => togglePin(p.userId, !p.pinned)}
-                      title="Закрепить в сетке видео"
-                      className={`rounded border px-2 py-0.5 ${p.pinned ? "border-amber-400 bg-amber-100" : ""}`}
-                    >
-                      📌
-                    </button>
-                  )}
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      </div>
+              />
+            )}
+            <UserAvatar name={p.fullName} size={26} />
+            <span className="min-w-0 truncate font-medium text-foreground">{p.fullName}</span>
+            <span className="text-xs text-muted-foreground">({p.role})</span>
+            {p.handRaised ? (
+              <Hand className="size-3.5 text-warning" aria-label="Поднята рука" />
+            ) : null}
+            {p.pinned ? <Badge variant="yellow">📌</Badge> : null}
+            {media ? <MicStatusIcon userId={p.userId} /> : null}
+            {media ? <ConnectionQualityDot userId={p.userId} /> : null}
+          </div>
 
-      <div className="flex flex-col rounded border">
-        <div className="flex-1 overflow-y-auto p-2" style={{ maxHeight: "60vh" }}>
-          {chat.map((m) => (
-            <div key={m.id} className="mb-2 text-sm">
-              <span className="font-medium">{m.authorName}: </span>
-              <span>{m.body}</span>
+          {isTeacher && p.userId !== me?.id ? (
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-border pt-2 text-xs">
+              {(
+                [
+                  ["canDraw", "рисовать"],
+                  ["canSpeak", "говорить"],
+                  ["canPublishVideo", "видео"],
+                  ["canShareScreen", "экран"],
+                ] as const
+              ).map(([key, label]) => (
+                <label key={key} className="flex items-center gap-1.5">
+                  <Checkbox
+                    checked={p.permissions[key]}
+                    onCheckedChange={(v) => togglePermission(p.userId, key, v === true)}
+                  />
+                  {label}
+                </label>
+              ))}
+              {media && p.permissions.canSpeak ? (
+                <Button variant="outline" size="sm" onClick={() => muteParticipant(p.userId)}>
+                  Заглушить
+                </Button>
+              ) : null}
+              {media && p.role === "student" ? (
+                <Button
+                  variant={p.pinned ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={() => togglePin(p.userId, !p.pinned)}
+                  title="Закрепить в сетке видео"
+                >
+                  📌
+                </Button>
+              ) : null}
             </div>
-          ))}
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+
+  const chatPanel = (
+    <div className="flex h-full min-h-0 flex-col">
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="flex flex-col gap-2 p-3">
+          {chat.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">Сообщений пока нет</p>
+          ) : (
+            chat.map((m) => (
+              <div key={m.id} className="text-sm">
+                <span className="font-semibold text-foreground">{m.authorName}: </span>
+                <span className="text-foreground">{m.body}</span>
+              </div>
+            ))
+          )}
           <div ref={chatEndRef} />
         </div>
-        <form onSubmit={sendChat} className="flex gap-2 border-t p-2">
-          <input
-            className="flex-1 rounded border px-2 py-1 text-sm"
-            value={chatDraft}
-            onChange={(e) => setChatDraft(e.target.value)}
-            placeholder="Сообщение…"
-            maxLength={2000}
-          />
-          <button type="submit" className="rounded border px-3 py-1 text-sm">
-            Отправить
-          </button>
-        </form>
-      </div>
+      </ScrollArea>
+      <form onSubmit={sendChat} className="flex gap-2 border-t border-border p-2.5">
+        <Input
+          value={chatDraft}
+          onChange={(e) => setChatDraft(e.target.value)}
+          placeholder="Сообщение…"
+          maxLength={2000}
+          className="h-9"
+        />
+        <Button type="submit" size="icon" className="size-9 shrink-0" aria-label="Отправить">
+          <Send />
+        </Button>
+      </form>
+    </div>
+  );
+
+  const content = (
+    <div className="min-h-dvh bg-background">
+      {/* Топ-бар урока */}
+      <header className="sticky top-0 z-30 flex flex-wrap items-center gap-3 border-b border-border bg-card/85 px-4 py-2.5 backdrop-blur-md sm:px-6">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <h1 className="text-base font-heavy tracking-tight">Урок</h1>
+            {lessonStatus ? (
+              <Badge variant={lessonStatus === "live" ? "green" : "gray"}>
+                {LESSON_STATUS_LABEL[lessonStatus]}
+              </Badge>
+            ) : null}
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 text-xs font-medium",
+                connected ? "text-success" : "text-warning",
+              )}
+            >
+              <span
+                className={cn(
+                  "size-1.5 rounded-full",
+                  connected ? "bg-success" : "bg-warning animate-pulse",
+                )}
+              />
+              {STATUS_LABEL[status]}
+            </span>
+            {media ? <MediaAudioStatus /> : null}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Режим</span>
+          {isTeacher ? (
+            <Select value={lessonMode} onValueChange={(v) => changeLessonMode(v as LessonMode)}>
+              <SelectTrigger className="h-8 w-[180px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(LESSON_MODE_LABEL).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Badge variant="blue">{LESSON_MODE_LABEL[lessonMode]}</Badge>
+          )}
+        </div>
+
+        <div className="ml-auto flex items-center gap-2">
+          {isTeacher && lessonStatus === "live" ? (
+            <Button variant="destructive" size="sm" onClick={endLesson}>
+              Завершить урок
+            </Button>
+          ) : null}
+          <Button variant="secondary" size="sm" onClick={leaveRoom}>
+            <LogOut aria-hidden />
+            Выйти
+          </Button>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-content px-4 py-5 sm:px-6">
+        <RecordingConsentBanner active={recordingActive} />
+
+        {media ? <ScreenShareTile /> : null}
+
+        {error ? (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        {media && self?.permissions.canSpeak ? <PacketLossWarning /> : null}
+        {media && (isTeacher || self?.permissions.canPublishVideo) ? <VideoDegradeSuggestion /> : null}
+
+        {lessonId ? (
+          <div className="mb-4">
+            <Board lessonId={lessonId} canDraw={self?.permissions.canDraw ?? false} decks={decks} />
+          </div>
+        ) : null}
+
+        {lessonId ? (
+          <div className="mb-4">
+            <DeckPanel
+              lessonId={lessonId}
+              isTeacher={isTeacher}
+              decks={decks}
+              statuses={deckStatuses}
+              onChanged={refreshDecks}
+            />
+          </div>
+        ) : null}
+
+        {lessonId ? (
+          <div className="mb-4">
+            <LessonActivityPanel
+              lessonId={lessonId}
+              isTeacher={isTeacher}
+              activeActivityId={activeActivityId}
+              reviewSignal={reviewSignal}
+            />
+          </div>
+        ) : null}
+
+        {lessonId && isTeacher ? (
+          <div className="mb-4">
+            <RecordingPanel
+              lessonId={lessonId}
+              recordingActive={recordingActive}
+              onActiveChange={setRecordingActive}
+            />
+          </div>
+        ) : null}
+
+        {/* Панель управления медиа/правами */}
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {!isTeacher ? (
+            <Button
+              variant={self?.handRaised ? "secondary" : "outline"}
+              size="sm"
+              onClick={toggleHand}
+            >
+              <Hand aria-hidden />
+              {self?.handRaised ? "Опустить руку" : "Поднять руку"}
+            </Button>
+          ) : null}
+          {media && self?.permissions.canSpeak ? <SelfMicButton /> : null}
+          {media && isTeacher ? <SelfCameraButton /> : null}
+          {media && !isTeacher && self?.permissions.canPublishVideo ? (
+            <SelfCameraButton maxResolution={VideoPresets.h360.resolution} />
+          ) : null}
+          {media && (isTeacher || self?.permissions.canShareScreen) ? (
+            <SelfScreenShareButton priority={isTeacher} />
+          ) : null}
+          {media && isTeacher ? (
+            <Button variant="outline" size="sm" onClick={muteAll}>
+              Заглушить всех
+            </Button>
+          ) : null}
+          {isTeacher ? (
+            <>
+              <Button variant="outline" size="sm" onClick={() => toggleDrawForAll(true)}>
+                Разрешить рисовать всем
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => toggleDrawForAll(false)}>
+                Запретить рисовать всем
+              </Button>
+            </>
+          ) : null}
+        </div>
+
+        {media ? <StudentVideoGrid participants={participants} mode={lessonMode} /> : null}
+
+        {/* Участники + чат */}
+        <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+          <div>
+            <h2 className="ds-label mb-2 flex items-center gap-1.5">
+              <Users className="size-3.5" aria-hidden /> Участники ({participants.length})
+            </h2>
+            {participantsPanel}
+          </div>
+
+          <Tabs defaultValue="chat" className="flex min-h-0 flex-col">
+            <TabsList className="w-full">
+              <TabsTrigger value="chat" className="flex-1">
+                Чат
+              </TabsTrigger>
+              <TabsTrigger value="people" className="flex-1 lg:hidden">
+                Люди
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent
+              value="chat"
+              className="mt-2 h-[60vh] overflow-hidden rounded-lg border border-border bg-card"
+            >
+              {chatPanel}
+            </TabsContent>
+            <TabsContent value="people" className="mt-2 lg:hidden">
+              {participantsPanel}
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </div>
   );
@@ -559,40 +618,33 @@ export function RoomPage() {
     );
   }
 
-  if (!media) return content;
+  if (!media) return <TooltipProvider>{content}</TooltipProvider>;
 
   return (
-    <LiveKitRoom
-      serverUrl={media.url}
-      token={media.token}
-      connect
-      options={ROOM_OPTIONS}
-      // Э6.2, §5.2 ТЗ: автоподписка LiveKit выключена намеренно — без неё
-      // каждый участник подписался бы на КАЖДЫЙ опубликованный трек в
-      // комнате (при 30 учениках с камерой — арифметика §5.1 ТЗ, сотни
-      // видеопотоков). Подпиской управляет `VideoSubscriptionManager`
-      // ниже — единственное место, которое решает, кого подписывать.
-      connectOptions={{ autoSubscribe: false }}
-      audio={self?.permissions.canSpeak ? { deviceId: micDeviceId ?? undefined } : false}
-      // Э5.1: камера учителя — 720p, автозапуск при входе, как и микрофон;
-      // ручной тумблер — `SelfCameraButton`. Э5.4: deviceId — то, что выбрано
-      // (и проверено превью) на `DeviceCheckScreen`.
-      //
-      // Э6.1: ученик с granted правом canPublishVideo camera НЕ автозапускает
-      // здесь (в отличие от учителя) — право может быть выдано учителем
-      // посреди урока, когда `<LiveKitRoom video>` уже не перечитывается.
-      // Публикует сам кнопкой `SelfCameraButton maxResolution={h360}` (§5.2
-      // ТЗ: максимум 360p, сервер резолюцию не ограничивает —
-      // `media/service.ts#buildPublishGrant`), тем же образом, каким
-      // канал микрофона включает `canSpeak` через `SelfMicButton`.
-      video={isTeacher ? { resolution: VideoPresets.h720.resolution, deviceId: camDeviceId ?? undefined } : false}
-      onDisconnected={() => setError("Аудио отключено")}
-    >
-      <MicSync enabled={self?.permissions.canSpeak ?? false} />
-      <VideoSubscriptionManager participants={participants} mode={lessonMode} />
-      <TeacherVideoTile />
-      {content}
-      <RoomAudioRenderer />
-    </LiveKitRoom>
+    <TooltipProvider>
+      <LiveKitRoom
+        serverUrl={media.url}
+        token={media.token}
+        connect
+        options={ROOM_OPTIONS}
+        // Э6.2, §5.2 ТЗ: автоподписка LiveKit выключена намеренно — подпиской
+        // управляет `VideoSubscriptionManager` ниже, единственное место.
+        connectOptions={{ autoSubscribe: false }}
+        audio={self?.permissions.canSpeak ? { deviceId: micDeviceId ?? undefined } : false}
+        // Э5.1/Э5.4/Э6.1 — см. историю в git; логика неизменна.
+        video={
+          isTeacher
+            ? { resolution: VideoPresets.h720.resolution, deviceId: camDeviceId ?? undefined }
+            : false
+        }
+        onDisconnected={() => setError("Аудио отключено")}
+      >
+        <MicSync enabled={self?.permissions.canSpeak ?? false} />
+        <VideoSubscriptionManager participants={participants} mode={lessonMode} />
+        <TeacherVideoTile />
+        {content}
+        <RoomAudioRenderer />
+      </LiveKitRoom>
+    </TooltipProvider>
   );
 }

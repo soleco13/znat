@@ -1,4 +1,12 @@
-import type { PublicQuestionBlock, PublicQuestionInteraction, QuestionResponse } from "@school/shared";
+import type {
+  PublicQuestionBlock,
+  PublicQuestionInteraction,
+  QuestionResponse,
+} from "@school/shared";
+
+import { sanitizeHtml } from "@/shared/sanitize-html";
+import { Badge } from "@/shared/ui/badge";
+import { Input } from "@/shared/ui/input";
 import {
   ClozeDropdownPlayer,
   ClozeTextPlayer,
@@ -6,33 +14,13 @@ import {
   OpenAnswerPlayer,
   OrderingPlayer,
 } from "./AdvancedInteractionPlayers.js";
-import { sanitizeHtml } from "../../shared/sanitize-html.js";
 
 /**
- * Плеер заданий (Э8.4/8.5, §16 ТЗ: «клавиатурная навигация во всех типах
- * заданий»). Типы 1–5 (`single_choice`, `multiple_choice`, `true_false`,
- * `text_input`, `numeric_input`) — здесь; 6–10 (`open_answer`,
- * `cloze_dropdown`, `cloze_text`, `matching`, `ordering`, Э8.5) —
- * `AdvancedInteractionPlayers.tsx` (drag-and-drop через `dnd-kit`),
- * подключены в тот же диспетчер ниже.
- *
- * Принципиально — НАТИВНЫЕ элементы формы (`input[type=radio/checkbox/
- * text/number]` в `<label>`), а не кастомные `<div onClick>`: радио/чекбоксы
- * получают клавиатурную навигацию (Tab, стрелки внутри группы, Space) от
- * браузера бесплатно и корректно для скринридеров — переизобретать это
- * вручную было бы источником багов доступности на пустом месте, которые
- * `Playwright MCP` (accessibility-снимки, не скриншоты, см. ПЛАН.md Э8)
- * либо не поймает, либо поймает поздно.
- *
- * `interaction` — уже ОЧИЩЕННЫЙ от ключа ответа (`PublicQuestionInteraction`,
- * `stripInteractionAnswerKey`, Э8.1) — этот компонент физически не может
- * получить правильный ответ, даже по ошибке: секретных полей в типе просто
- * нет. Сервер (Э8.6, ещё не сделан) отдаёт материал только в этом виде.
- *
- * Компонент — контролируемый (`value`/`onChange`), без собственного
- * состояния ответа: хранение (автосохранение, Э8.7) и синхронизация
- * между вопросами материала — забота вызывающей стороны (плеер материала
- * целиком, ещё не сделан).
+ * Плеер заданий (Э8.4/8.5, §16 ТЗ: клавиатурная навигация во всех типах).
+ * Принципиально — НАТИВНЫЕ элементы формы (radio/checkbox/text/number):
+ * клавиатурная навигация и семантика для скринридеров бесплатно и корректно.
+ * `interaction` уже очищен от ключа ответа (`PublicQuestionInteraction`).
+ * Компонент контролируемый (`value`/`onChange`), без собственного состояния.
  */
 export function QuestionPlayer({
   block,
@@ -46,13 +34,15 @@ export function QuestionPlayer({
   disabled?: boolean;
 }) {
   return (
-    <div className="rounded border p-4">
-      <div className="mb-2 flex items-start justify-between gap-2">
-        {/* HTML из материала (§6 ТЗ) — санитайзируется (`sanitize-html.ts`), не рендерится сырым: до Э9 материалы заводятся JSON-ом через seed-скрипт/Postman, без гарантии происхождения. */}
-        <div className="prose text-sm" dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.prompt.html) }} />
-        <span className="shrink-0 text-xs text-slate-400">
+    <div className="rounded-lg border border-border bg-card p-4">
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <div
+          className="prose text-sm"
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.prompt.html) }}
+        />
+        <Badge variant="muted" className="shrink-0">
           {block.points} {pointsLabel(block.points)}
-        </span>
+        </Badge>
       </div>
       {block.hint && <HintDisclosure html={block.hint.html} />}
       <div className="mt-3">
@@ -69,21 +59,24 @@ export function QuestionPlayer({
 }
 
 function pointsLabel(points: number): string {
-  // Достаточно грубо для 1..4 (типичные баллы задания) — не полноценная плюрализация рус. числительных.
   if (points === 1) return "балл";
   if (points >= 2 && points <= 4) return "балла";
   return "баллов";
 }
 
-/** `<details>` — раскрытие подсказки нативно доступно с клавиатуры (Enter/Space на `<summary>`), без своего JS-обработчика. */
 function HintDisclosure({ html }: { html: string }) {
   return (
-    <details className="mb-2 text-xs text-slate-500">
-      <summary className="cursor-pointer">Подсказка</summary>
+    <details className="mb-2 text-xs text-muted-foreground">
+      <summary className="cursor-pointer font-medium">Подсказка</summary>
       <div className="prose mt-1" dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} />
     </details>
   );
 }
+
+/** Общий класс для строки-варианта с нативным input внутри. */
+const OPTION_ROW =
+  "flex cursor-pointer items-center gap-2.5 rounded-md border border-transparent px-2 py-1.5 text-sm transition-colors hover:bg-secondary has-[:checked]:border-primary/40 has-[:checked]:bg-accent has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60";
+const NATIVE_CONTROL = "size-4 shrink-0 accent-[hsl(var(--primary))]";
 
 function InteractionPlayer({
   questionId,
@@ -215,14 +208,15 @@ function SingleChoicePlayer({
   disabled: boolean;
 }) {
   return (
-    <fieldset className="flex flex-col gap-1">
+    <fieldset className="flex flex-col gap-0.5">
       <legend className="sr-only">Выберите один вариант ответа</legend>
       {options.map((option) => (
-        <label key={option.id} className="flex items-center gap-2 text-sm">
+        <label key={option.id} className={OPTION_ROW}>
           <input
             type="radio"
             name={`q-${questionId}`}
             value={option.id}
+            className={NATIVE_CONTROL}
             checked={value?.selectedOptionId === option.id}
             disabled={disabled}
             onChange={() => onChange({ type: "single_choice", selectedOptionId: option.id })}
@@ -257,13 +251,14 @@ function MultipleChoicePlayer({
   }
 
   return (
-    <fieldset className="flex flex-col gap-1">
+    <fieldset className="flex flex-col gap-0.5">
       <legend className="sr-only">Выберите один или несколько вариантов ответа</legend>
       {options.map((option) => (
-        <label key={option.id} className="flex items-center gap-2 text-sm">
+        <label key={option.id} className={OPTION_ROW}>
           <input
             type="checkbox"
             id={`q-${questionId}-${option.id}`}
+            className={`${NATIVE_CONTROL} rounded`}
             checked={selected.has(option.id)}
             disabled={disabled}
             onChange={(e) => toggle(option.id, e.target.checked)}
@@ -287,22 +282,24 @@ function TrueFalsePlayer({
   disabled: boolean;
 }) {
   return (
-    <fieldset className="flex gap-4">
+    <fieldset className="flex gap-2">
       <legend className="sr-only">Верно или неверно</legend>
-      <label className="flex items-center gap-2 text-sm">
+      <label className={OPTION_ROW}>
         <input
           type="radio"
           name={`q-${questionId}`}
+          className={NATIVE_CONTROL}
           checked={value?.value === true}
           disabled={disabled}
           onChange={() => onChange({ type: "true_false", value: true })}
         />
         Верно
       </label>
-      <label className="flex items-center gap-2 text-sm">
+      <label className={OPTION_ROW}>
         <input
           type="radio"
           name={`q-${questionId}`}
+          className={NATIVE_CONTROL}
           checked={value?.value === false}
           disabled={disabled}
           onChange={() => onChange({ type: "true_false", value: false })}
@@ -330,10 +327,9 @@ function TextInputPlayer({
       <label htmlFor={inputId} className="sr-only">
         Ваш ответ
       </label>
-      <input
+      <Input
         id={inputId}
         type="text"
-        className="w-full rounded border px-2 py-1 text-sm"
         value={value?.value ?? ""}
         disabled={disabled}
         onChange={(e) => onChange({ type: "text_input", value: e.target.value })}
@@ -374,28 +370,28 @@ function NumericInputPlayer({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <label htmlFor={valueInputId} className="sr-only">
         Числовой ответ
       </label>
-      <input
+      <Input
         id={valueInputId}
         type="number"
         step="any"
-        className="w-32 rounded border px-2 py-1 text-sm"
+        className="w-32"
         value={value?.value ?? ""}
         disabled={disabled}
         onChange={(e) => setValue(e.target.value)}
       />
       {unitRequired && (
         <>
-          <label htmlFor={unitInputId} className="text-xs text-slate-500">
+          <label htmlFor={unitInputId} className="text-xs text-muted-foreground">
             Единица измерения{unit ? ` (например, ${unit})` : ""}
           </label>
-          <input
+          <Input
             id={unitInputId}
             type="text"
-            className="w-24 rounded border px-2 py-1 text-sm"
+            className="w-24"
             value={value?.unit ?? ""}
             disabled={disabled}
             onChange={(e) => setUnit(e.target.value)}

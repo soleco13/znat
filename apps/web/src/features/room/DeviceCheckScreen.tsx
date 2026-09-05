@@ -1,4 +1,17 @@
 import { useEffect, useRef, useState } from "react";
+import { Camera, Mic, Play, Square } from "lucide-react";
+
+import { Alert, AlertDescription } from "@/shared/ui/alert";
+import { Button } from "@/shared/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
+import { Label } from "@/shared/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
 
 type PermissionState = "idle" | "requesting" | "granted" | "denied" | "unavailable";
 type EchoState = "idle" | "recording" | "ready" | "playing";
@@ -216,112 +229,152 @@ export function DeviceCheckScreen({
   }
 
   return (
-    <div className="mx-auto mt-16 max-w-md rounded border px-6 py-8">
-      <h1 className="mb-1 text-lg font-semibold">Проверка микрофона</h1>
-      <p className="mb-4 text-sm text-slate-500">Убедитесь, что микрофон работает, прежде чем войти в урок.</p>
+    <div className="flex min-h-dvh items-center justify-center bg-background px-4 py-10">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mic className="size-5 text-primary" aria-hidden />
+            Проверка устройств
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Убедитесь, что микрофон работает, прежде чем войти в урок.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {permission === "requesting" ? (
+            <p className="text-sm text-muted-foreground">Запрашиваем доступ к микрофону…</p>
+          ) : null}
 
-      {permission === "requesting" && <p className="text-sm text-slate-500">Запрашиваем доступ к микрофону…</p>}
+          {permission === "denied" || permission === "unavailable" ? (
+            <Alert variant="warning">
+              <AlertDescription className="space-y-2">
+                <p>{errorMessage}</p>
+                <Button variant="outline" size="sm" onClick={() => openStream(null)}>
+                  Попробовать снова
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
-      {(permission === "denied" || permission === "unavailable") && (
-        <div className="mb-4 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
-          <p className="mb-2">{errorMessage}</p>
-          <button onClick={() => openStream(null)} className="rounded border border-amber-400 px-2 py-1 text-xs">
-            Попробовать снова
-          </button>
-        </div>
-      )}
+          {permission === "granted" ? (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>Микрофон</Label>
+                <Select value={selectedDeviceId} onValueChange={handleDeviceChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Микрофон" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {devices.map((d) => (
+                      <SelectItem key={d.deviceId} value={d.deviceId}>
+                        {d.label || "Микрофон"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-      {permission === "granted" && (
-        <>
-          <label className="mb-1 block text-xs font-medium text-slate-600">Микрофон</label>
-          <select
-            className="mb-4 w-full rounded border px-2 py-1 text-sm"
-            value={selectedDeviceId}
-            onChange={(e) => handleDeviceChange(e.target.value)}
-          >
-            {devices.map((d) => (
-              <option key={d.deviceId} value={d.deviceId}>
-                {d.label || "Микрофон"}
-              </option>
-            ))}
-          </select>
+              <div className="space-y-1.5">
+                <Label>Уровень сигнала</Label>
+                <div className="h-3 w-full overflow-hidden rounded-pill bg-surface-3">
+                  <div
+                    ref={levelBarRef}
+                    className="h-full bg-success transition-[width] duration-75"
+                    style={{ width: "0%" }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Скажите что-нибудь — полоска должна двигаться.
+                </p>
+              </div>
 
-          <label className="mb-1 block text-xs font-medium text-slate-600">Уровень сигнала</label>
-          <div className="mb-4 h-3 w-full overflow-hidden rounded bg-slate-100">
-            <div ref={levelBarRef} className="h-full bg-green-500 transition-[width] duration-75" style={{ width: "0%" }} />
-          </div>
-          <p className="mb-4 text-xs text-slate-400">Скажите что-нибудь — полоска должна двигаться.</p>
-
-          <div className="mb-6">
-            <label className="mb-1 block text-xs font-medium text-slate-600">Тест эха</label>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={startEchoTest}
-                disabled={echoState === "recording"}
-                className="rounded border px-3 py-1 text-sm disabled:opacity-50"
-              >
-                {echoState === "recording" ? "Запись… (3 с)" : "Записать голос"}
-              </button>
-              <button
-                onClick={playEcho}
-                disabled={echoState !== "ready" && echoState !== "playing"}
-                className="rounded border px-3 py-1 text-sm disabled:opacity-50"
-              >
-                Прослушать
-              </button>
+              <div className="space-y-1.5">
+                <Label>Тест эха</Label>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={startEchoTest}
+                    disabled={echoState === "recording"}
+                  >
+                    {echoState === "recording" ? (
+                      <Square aria-hidden />
+                    ) : (
+                      <Mic aria-hidden />
+                    )}
+                    {echoState === "recording" ? "Запись… (3 с)" : "Записать голос"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={playEcho}
+                    disabled={echoState !== "ready" && echoState !== "playing"}
+                  >
+                    <Play aria-hidden />
+                    Прослушать
+                  </Button>
+                </div>
+                <audio ref={audioElRef} onEnded={() => setEchoState("ready")} className="hidden" />
+              </div>
             </div>
-            <audio ref={audioElRef} onEnded={() => setEchoState("ready")} className="hidden" />
+          ) : null}
+
+          <div className="space-y-2 border-t border-border pt-4">
+            <Label className="flex items-center gap-1.5">
+              <Camera className="size-4" aria-hidden /> Камера (необязательно)
+            </Label>
+
+            {camPermission === "idle" ? (
+              <Button variant="outline" size="sm" onClick={() => openCamStream(null)}>
+                Проверить камеру
+              </Button>
+            ) : null}
+
+            {camPermission === "requesting" ? (
+              <p className="text-sm text-muted-foreground">Запрашиваем доступ к камере…</p>
+            ) : null}
+
+            {camPermission === "denied" || camPermission === "unavailable" ? (
+              <Alert variant="warning">
+                <AlertDescription className="space-y-2">
+                  <p>{camErrorMessage}</p>
+                  <Button variant="outline" size="sm" onClick={() => openCamStream(null)}>
+                    Попробовать снова
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
+            {camPermission === "granted" ? (
+              <div className="space-y-2">
+                <Select value={selectedCamId} onValueChange={handleCamDeviceChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Камера" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {camDevices.map((d) => (
+                      <SelectItem key={d.deviceId} value={d.deviceId}>
+                        {d.label || "Камера"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <video
+                  ref={camVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="aspect-video w-full scale-x-[-1] rounded-lg bg-slate-900 object-cover"
+                />
+              </div>
+            ) : null}
           </div>
-        </>
-      )}
 
-      <div className="mb-6 border-t pt-4">
-        <label className="mb-1 block text-xs font-medium text-slate-600">Камера (необязательно)</label>
-
-        {camPermission === "idle" && (
-          <button onClick={() => openCamStream(null)} className="rounded border px-3 py-1 text-sm">
-            Проверить камеру
-          </button>
-        )}
-
-        {camPermission === "requesting" && <p className="text-sm text-slate-500">Запрашиваем доступ к камере…</p>}
-
-        {(camPermission === "denied" || camPermission === "unavailable") && (
-          <div className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
-            <p className="mb-2">{camErrorMessage}</p>
-            <button onClick={() => openCamStream(null)} className="rounded border border-amber-400 px-2 py-1 text-xs">
-              Попробовать снова
-            </button>
-          </div>
-        )}
-
-        {camPermission === "granted" && (
-          <>
-            <select
-              className="mb-2 w-full rounded border px-2 py-1 text-sm"
-              value={selectedCamId}
-              onChange={(e) => handleCamDeviceChange(e.target.value)}
-            >
-              {camDevices.map((d) => (
-                <option key={d.deviceId} value={d.deviceId}>
-                  {d.label || "Камера"}
-                </option>
-              ))}
-            </select>
-            <video
-              ref={camVideoRef}
-              autoPlay
-              playsInline
-              muted
-              className="aspect-video w-full scale-x-[-1] rounded bg-slate-900 object-cover"
-            />
-          </>
-        )}
-      </div>
-
-      <button onClick={handleContinue} className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-white">
-        Войти в урок
-      </button>
+          <Button className="w-full" size="lg" onClick={handleContinue}>
+            Войти в урок
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

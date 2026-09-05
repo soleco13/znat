@@ -19,8 +19,8 @@ export function ParticipantPresenceDot({ userId, connected }: { userId: string; 
   const speaking = match?.isSpeaking ?? false;
   return (
     <span
-      className={`h-2 w-2 rounded-full ${connected ? "bg-green-500" : "bg-slate-300"} ${
-        speaking ? "ring-2 ring-green-400 ring-offset-1" : ""
+      className={`size-2 shrink-0 rounded-full ${connected ? "bg-success" : "bg-text-3"} ${
+        speaking ? "ring-2 ring-success/60 ring-offset-1" : ""
       }`}
     />
   );
