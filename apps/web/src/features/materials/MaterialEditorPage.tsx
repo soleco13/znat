@@ -17,6 +17,15 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronUp,
+  FileUp,
+  GripVertical,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import type {
   ContentBlock,
   Material,
@@ -29,6 +38,25 @@ import type {
   QuestionResponse,
 } from "@school/shared";
 import { IMPORT_MAX_QUESTIONS, stripMaterialAnswerKeys } from "@school/shared";
+
+import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/shared/auth-store";
+import { Badge } from "@/shared/ui/badge";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
+import { CenteredSpinner } from "@/shared/ui/spinner";
+import { Textarea } from "@/shared/ui/textarea";
+import { toast } from "@/shared/ui/sonner";
 import { ContentBlockView } from "./MaterialPlayer.js";
 import { QuestionPlayer } from "./QuestionPlayer.js";
 import { RichTextEditor } from "./RichTextEditor.js";
@@ -46,49 +74,17 @@ import {
   validateMaterial,
 } from "./materials-api.js";
 import { type AutosaveStatus, useMaterialAutosave } from "./useMaterialAutosave.js";
-import { useAuthStore } from "../../shared/auth-store.js";
+
+const STATUS_META: Record<MaterialStatus, { label: string; variant: "gray" | "yellow" | "green" }> = {
+  draft: { label: "Черновик", variant: "gray" },
+  review: { label: "На ревью", variant: "yellow" },
+  published: { label: "Опубликован", variant: "green" },
+};
 
 /**
- * Редактор материала (Э9.2 — каркас трёх панелей; Э9.3 — drag&drop
- * переупорядочивания блоков и автосохранение черновика; Э9.4 — Tiptap для
- * формулировок и MathLive для формул; Э9.5/9.6 — редакторы вариантов
- * ответа/ключа для всех 10 типов, `InteractionEditor` в
- * `QuestionInteractionEditors.tsx`; Э9.7 — медиатека, `MediaAssetPicker`
- * для `image`/`audio` блоков — `video` сознательно не переведён, план
- * ограничивает подзадачу картинками/аудио). `points`/`prompt`/`hint`
- * редактируются для всех 10 типов одинаково прямо здесь — это общие поля
- * `questionBlockSchema`, не часть интеракции.
- *
- * Автосохранение (Э9.3, §8 ТЗ `PUT /materials/:id`) пишет на сервер в
- * ЛЮБОМ статусе (Э9.8): пока материал никогда не публиковался — правит
- * версию на месте, если уже опубликован — форкает (или продолжает форк)
- * новую поверх, видимую школе публикацию не трогая. `canEdit` — зеркало
- * серверной проверки ВЛАДЕНИЯ (учитель пишет только в свой материал,
- * admin/methodist — в любой), без проверки статуса — она больше не
- * блокирует запись ни при каком статусе; экономит лишние запросы, сама
- * проверка прав — на сервере.
- *
- * Переходы статуса (Э9.8, §8 ТЗ) — три кнопки в заголовке, видимость
- * зависит от роли/статуса/`isCurrent` (см. `StatusActions` ниже):
- * «Отправить на ревью» (draft→review, тот, кто может редактировать),
- * «Вернуть в черновик» (review→draft, решение ревьюера — только admin/
- * methodist), «Опубликовать» (единая кнопка и для первой публикации, и
- * для повторной публикации форка — видна admin/methodist, когда
- * `!isCurrent`, т.е. есть что публиковать).
- *
- * Валидатор (Э9.9, §7.2 ТЗ «Валидация») — отдельная секция
- * (`ValidationPanel`, свёрнута по умолчанию, как `VersionHistory`) и
- * ОДИН И ТОТ ЖЕ вызов `GET /materials/:id/validate`, которым пользуется
- * кнопка «Опубликовать»: перед реальной публикацией `StatusActions`
- * сначала гоняет проверку и, если нашлись проблемы, публикацию НЕ
- * отправляет вовсе (список проблем информативнее общего текста 409,
- * который на этот случай тоже есть на сервере — `publish`, defense in
- * depth, а не единственная защита).
- *
- * Стоп-лист Э9 («НЕ показывать методисту JSON. Никогда. Ни в каком виде»)
- * — соблюдён буквально: ни один контрол в этом файле не показывает и не
- * принимает сырой JSON (в частности `embed.config` — единственное поле
- * материала типа `Record<string, unknown>` — здесь НЕредактируемо).
+ * Редактор материала (Э9.2–9.11). Три панели: список блоков / редактирование /
+ * живое превью глазами ученика. Автосохранение, переходы статуса, валидатор,
+ * импорт из Word/PDF. Стоп-лист Э9: методисту нигде не показывается сырой JSON.
  */
 export function MaterialEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -138,33 +134,24 @@ export function MaterialEditorPage() {
       return;
     }
     autosave.queue(material);
-    // autosave.queue меняется только при смене id/canEdit, добавлять его в зависимости не нужно — иначе лишние срабатывания при пересоздании функции.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [material]);
 
   if (error) {
     return (
-      <div className="mx-auto mt-12 max-w-2xl px-4">
-        <p className="text-sm text-red-600">{error}</p>
-        <Link to="/materials" className="text-sm text-slate-500 underline">
+      <div className="mx-auto max-w-2xl">
+        <p className="mb-2 text-sm font-medium text-destructive">{error}</p>
+        <Link to="/materials" className="text-sm text-muted-foreground hover:underline">
           ← Назад в библиотеку
         </Link>
       </div>
     );
   }
-  if (!material) {
-    return (
-      <div className="mx-auto mt-12 max-w-2xl px-4">
-        <p className="text-sm text-slate-400">Загрузка…</p>
-      </div>
-    );
-  }
+  if (!material) return <CenteredSpinner label="Загрузка материала…" />;
 
   function updateBlock(blockId: string, updater: (block: MaterialBlock) => MaterialBlock) {
     setMaterial((prev) =>
-      prev
-        ? { ...prev, blocks: prev.blocks.map((b) => (b.id === blockId ? updater(b) : b)) }
-        : prev,
+      prev ? { ...prev, blocks: prev.blocks.map((b) => (b.id === blockId ? updater(b) : b)) } : prev,
     );
   }
 
@@ -174,7 +161,6 @@ export function MaterialEditorPage() {
     setSelectedBlockId(block.id);
   }
 
-  /** Массовое добавление (Э9.11, импорт из Word/PDF) — та же логика, что `addBlock`, но сразу N блоков одним обновлением состояния, не циклом из N вызовов `addBlock` (лишние промежуточные рендеры и промежуточные записи в очередь автосохранения). */
   function addBlocks(newBlocks: MaterialBlock[]) {
     if (newBlocks.length === 0) return;
     setMaterial((prev) => (prev ? { ...prev, blocks: [...prev.blocks, ...newBlocks] } : prev));
@@ -182,28 +168,45 @@ export function MaterialEditorPage() {
   }
 
   function removeBlock(blockId: string) {
-    setMaterial((prev) => (prev ? { ...prev, blocks: prev.blocks.filter((b) => b.id !== blockId) } : prev));
+    setMaterial((prev) =>
+      prev ? { ...prev, blocks: prev.blocks.filter((b) => b.id !== blockId) } : prev,
+    );
     setSelectedBlockId((prev) => (prev === blockId ? null : prev));
   }
 
   function reorderBlocks(fromIndex: number, toIndex: number) {
-    setMaterial((prev) => (prev ? { ...prev, blocks: arrayMove(prev.blocks, fromIndex, toIndex) } : prev));
+    setMaterial((prev) =>
+      prev ? { ...prev, blocks: arrayMove(prev.blocks, fromIndex, toIndex) } : prev,
+    );
   }
 
   const selectedBlock = material.blocks.find((b) => b.id === selectedBlockId) ?? null;
 
   return (
-    <div className="mx-auto mt-4 max-w-7xl px-4">
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <Link to="/materials" className="text-xs text-slate-500 underline">
-            ← Библиотека
+    <div>
+      <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <Link
+            to="/materials"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:underline"
+          >
+            <ChevronLeft className="size-3.5" aria-hidden /> Библиотека
           </Link>
-          <h1 className="text-lg font-semibold">{material.title}</h1>
+          <div className="mt-1 flex items-center gap-2">
+            <h1 className="ds-page-title truncate">{material.title}</h1>
+            {status ? <Badge variant={STATUS_META[status].variant}>{STATUS_META[status].label}</Badge> : null}
+          </div>
         </div>
         <div className="flex items-center gap-3">
-          <p className={`text-xs ${canEdit ? "text-slate-500" : "text-amber-600"}`}>
-            {canEdit ? autosaveLabel(autosave.status) : "Материал не ваш — доступен только для просмотра"}
+          <p
+            className={cn(
+              "text-xs",
+              canEdit ? "text-muted-foreground" : "font-medium text-warning",
+            )}
+          >
+            {canEdit
+              ? autosaveLabel(autosave.status)
+              : "Материал не ваш — только просмотр"}
           </p>
           {id && status && (
             <StatusActions
@@ -223,10 +226,14 @@ export function MaterialEditorPage() {
 
       {canEdit && id && <VersionHistory materialId={id} />}
       {canEdit && (
-        <ValidationPanel issues={validationIssues} onRefresh={runValidation} onSelectBlock={setSelectedBlockId} />
+        <ValidationPanel
+          issues={validationIssues}
+          onRefresh={runValidation}
+          onSelectBlock={setSelectedBlockId}
+        />
       )}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[260px_1fr_1fr]">
         <BlockListPanel
           blocks={material.blocks}
           selectedBlockId={selectedBlockId}
@@ -243,22 +250,6 @@ export function MaterialEditorPage() {
   );
 }
 
-/**
- * Кнопки перехода статуса (Э9.8, §8 ТЗ). Видимость:
- * - «Отправить на ревью» — `status === "draft"`, тот, кто может
- *   редактировать (владелец-учитель или admin/methodist — та же `canEdit`,
- *   что и у автосохранения: право писать в материал включает право
- *   сдвинуть его дальше по своему же workflow).
- * - «Вернуть в черновик» — `status === "review"`, ТОЛЬКО admin/methodist
- *   (решение ревьюера, не самого автора).
- * - «Опубликовать» — ТОЛЬКО admin/methodist, когда `!isCurrent` (есть что
- *   публиковать — неважно, первая публикация черновика или форк поверх
- *   уже опубликованного, кнопка и запрос на сервер одни и те же).
- *
- * Перед любым переходом — `onFlushPending()` (сброс дебаунса
- * автосохранения): иначе только что напечатанное могло уйти на сервер
- * ПОСЛЕ отправки на ревью/публикации, и методист увидел бы старую версию.
- */
 function StatusActions({
   materialId,
   status,
@@ -281,17 +272,15 @@ function StatusActions({
   onValidate: () => Promise<MaterialValidationIssue[]>;
 }) {
   const [pending, setPending] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
   const isStaff = role === "admin" || role === "methodist";
 
   async function run(action: () => Promise<void>) {
     setPending(true);
-    setActionError(null);
     try {
       await onFlushPending();
       await action();
     } catch {
-      setActionError("Не получилось — попробуйте ещё раз");
+      toast.error("Не получилось — попробуйте ещё раз");
     } finally {
       setPending(false);
     }
@@ -299,57 +288,93 @@ function StatusActions({
 
   return (
     <div className="flex items-center gap-1.5">
-      {actionError && <span className="text-xs text-red-600">{actionError}</span>}
       {canEdit && status === "draft" && (
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => run(async () => onStatusChange((await submitMaterialForReview(materialId)).status))}
-          className="rounded border px-2 py-1 text-xs hover:bg-slate-50 disabled:opacity-50"
+        <Button
+          variant="outline"
+          size="sm"
+          loading={pending}
+          onClick={() =>
+            run(async () => onStatusChange((await submitMaterialForReview(materialId)).status))
+          }
         >
           Отправить на ревью
-        </button>
+        </Button>
       )}
       {isStaff && status === "review" && (
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => run(async () => onStatusChange((await returnMaterialToDraft(materialId)).status))}
-          className="rounded border px-2 py-1 text-xs hover:bg-slate-50 disabled:opacity-50"
+        <Button
+          variant="outline"
+          size="sm"
+          loading={pending}
+          onClick={() =>
+            run(async () => onStatusChange((await returnMaterialToDraft(materialId)).status))
+          }
         >
           Вернуть в черновик
-        </button>
+        </Button>
       )}
       {isStaff && !isCurrent && (
-        <button
-          type="button"
-          disabled={pending}
+        <Button
+          size="sm"
+          loading={pending}
           onClick={() =>
             run(async () => {
-              // Клиентская проверка ПЕРЕД попыткой публикации (Э9.9) — сервер
-              // (`publish`) откажет тем же списком проблем через 409, но здесь
-              // список приходит структурированным (можно кликнуть на конкретный
-              // блок), а не одной строкой сообщения об ошибке.
               const issues = await onValidate();
               if (issues.length > 0) {
-                setActionError(`Материал не готов к публикации — проблем: ${issues.length}. Смотрите вкладку «Валидация» ниже.`);
+                toast.error(
+                  `Материал не готов к публикации — проблем: ${issues.length}. Смотрите «Валидация».`,
+                );
                 return;
               }
               await publishMaterial(materialId);
               onStatusChange("published");
               onPublished();
+              toast.success("Материал опубликован");
             })
           }
-          className="btn btn-primary btn-sm"
         >
           Опубликовать
-        </button>
+        </Button>
       )}
     </div>
   );
 }
 
-/** История версий (Э9.8, §8 ТЗ `GET /materials/:id/versions`) — свёрнута по умолчанию, грузится лениво при первом раскрытии. */
+function CollapsibleSection({
+  title,
+  badge,
+  children,
+  onOpen,
+}: {
+  title: string;
+  badge?: React.ReactNode;
+  children: React.ReactNode;
+  onOpen?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mb-3 rounded-lg border border-border bg-card text-sm">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold text-muted-foreground"
+        aria-expanded={open}
+        onClick={() => {
+          setOpen((v) => {
+            if (!v) onOpen?.();
+            return !v;
+          });
+        }}
+      >
+        <span className="flex items-center gap-2">
+          {title}
+          {badge}
+        </span>
+        <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} aria-hidden />
+      </button>
+      {open ? <div className="border-t border-border p-3">{children}</div> : null}
+    </div>
+  );
+}
+
 function VersionHistory({ materialId }: { materialId: string }) {
   const [items, setItems] = useState<MaterialVersionSummary[] | null>(null);
 
@@ -361,24 +386,18 @@ function VersionHistory({ materialId }: { materialId: string }) {
   }
 
   return (
-    <details
-      className="mb-3 text-xs text-slate-500"
-      onToggle={(e) => {
-        if (e.currentTarget.open) load();
-      }}
-    >
-      <summary className="cursor-pointer">История версий</summary>
-      <ul className="mt-1 space-y-0.5 pl-3">
+    <CollapsibleSection title="История версий" onOpen={load}>
+      <ul className="space-y-1 text-xs text-muted-foreground">
         {items === null && <li>Загрузка…</li>}
         {items?.length === 0 && <li>Версий пока нет</li>}
         {items?.map((v) => (
           <li key={v.versionId}>
-            Версия {v.version} — {new Date(v.createdAt).toLocaleString()}
-            {v.isCurrent && <span className="ml-1 text-emerald-600">(опубликована сейчас)</span>}
+            Версия {v.version} — {new Date(v.createdAt).toLocaleString("ru-RU")}
+            {v.isCurrent && <span className="ml-1 font-medium text-success">(опубликована сейчас)</span>}
           </li>
         ))}
       </ul>
-    </details>
+    </CollapsibleSection>
   );
 }
 
@@ -390,15 +409,6 @@ const VALIDATION_ISSUE_LABELS: Record<MaterialValidationIssue["code"], string> =
   broken_asset: "Битый файл",
 };
 
-/**
- * Валидация перед публикацией (Э9.9, §7.2 ТЗ «Валидация» — отдельный
- * экран редактора) — свёрнута по умолчанию, как `VersionHistory`, но
- * содержимое не грузится автоматически при раскрытии: проверка ходит в
- * БД (битые картинки, `checkBrokenAssets`), гонять её на каждый клик по
- * `<summary>` расточительно — только явная кнопка «Проверить». Тот же
- * `issues`/`onRefresh` используются кнопкой «Опубликовать» в
- * `StatusActions` — один источник данных, не два похожих запроса.
- */
 function ValidationPanel({
   issues,
   onRefresh,
@@ -419,47 +429,42 @@ function ValidationPanel({
     }
   }
 
+  const badge =
+    issues === null ? null : issues.length === 0 ? (
+      <Badge variant="green">готов к публикации</Badge>
+    ) : (
+      <Badge variant="yellow">{issues.length}</Badge>
+    );
+
   return (
-    <details className="mb-3 text-xs text-slate-500">
-      <summary className="cursor-pointer">
-        Валидация
-        {issues !== null &&
-          (issues.length === 0 ? (
-            <span className="ml-1 text-emerald-600">(готов к публикации)</span>
-          ) : (
-            <span className="ml-1 text-amber-600">({issues.length})</span>
+    <CollapsibleSection title="Валидация" badge={badge}>
+      <Button variant="outline" size="sm" className="mb-2" onClick={refresh} loading={loading}>
+        {loading ? "Проверка…" : "Проверить"}
+      </Button>
+      {issues === null && <p className="text-xs text-muted-foreground">Ещё не проверялся</p>}
+      {issues?.length === 0 && <p className="text-xs text-success">Проблем не найдено</p>}
+      {issues && issues.length > 0 && (
+        <ul className="space-y-1 text-xs">
+          {issues.map((issue, i) => (
+            <li key={i}>
+              {issue.blockId ? (
+                <button
+                  type="button"
+                  onClick={() => onSelectBlock(issue.blockId!)}
+                  className="text-left text-primary underline"
+                >
+                  [{VALIDATION_ISSUE_LABELS[issue.code]}] {issue.message}
+                </button>
+              ) : (
+                <span>
+                  [{VALIDATION_ISSUE_LABELS[issue.code]}] {issue.message}
+                </span>
+              )}
+            </li>
           ))}
-      </summary>
-      <div className="mt-1 pl-3">
-        <button
-          type="button"
-          onClick={refresh}
-          disabled={loading}
-          className="mb-1 rounded border px-2 py-0.5 text-xs hover:bg-slate-50 disabled:opacity-50"
-        >
-          {loading ? "Проверка…" : "Проверить"}
-        </button>
-        {issues === null && <p>Ещё не проверялся</p>}
-        {issues?.length === 0 && <p className="text-emerald-600">Проблем не найдено</p>}
-        {issues && issues.length > 0 && (
-          <ul className="space-y-0.5">
-            {issues.map((issue, i) => (
-              <li key={i}>
-                {issue.blockId ? (
-                  <button type="button" onClick={() => onSelectBlock(issue.blockId!)} className="text-left underline">
-                    [{VALIDATION_ISSUE_LABELS[issue.code]}] {issue.message}
-                  </button>
-                ) : (
-                  <span>
-                    [{VALIDATION_ISSUE_LABELS[issue.code]}] {issue.message}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </details>
+        </ul>
+      )}
+    </CollapsibleSection>
   );
 }
 
@@ -479,7 +484,9 @@ function autosaveLabel(status: AutosaveStatus): string {
 // ─── Панель 1: список блоков ────────────────────────────────────────────────
 
 function blockLabel(block: MaterialBlock): string {
-  return block.type === "question" ? `Вопрос: ${INTERACTION_LABELS[block.interaction.type]}` : CONTENT_BLOCK_LABELS[block.type];
+  return block.type === "question"
+    ? `Вопрос: ${INTERACTION_LABELS[block.interaction.type]}`
+    : CONTENT_BLOCK_LABELS[block.type];
 }
 
 function blockPreviewText(block: MaterialBlock): string {
@@ -521,13 +528,13 @@ function BlockListPanel({
   }
 
   return (
-    <div className="rounded border">
-      <div className="border-b bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600">
+    <div className="flex flex-col self-start rounded-lg border border-border bg-card">
+      <div className="border-b border-border px-3 py-2 text-xs font-semibold text-muted-foreground">
         Блоки ({blocks.length})
       </div>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-          <ul className="max-h-[60vh] divide-y overflow-y-auto">
+          <ul className="max-h-[60vh] divide-y divide-border overflow-y-auto">
             {blocks.map((block, i) => (
               <SortableBlockItem
                 key={block.id}
@@ -543,14 +550,16 @@ function BlockListPanel({
         </SortableContext>
       </DndContext>
       {blocks.length === 0 && (
-        <p className="px-3 py-4 text-center text-xs text-slate-400">Материал пуст — добавьте первый блок</p>
+        <p className="px-3 py-6 text-center text-xs text-muted-foreground">
+          Материал пуст — добавьте первый блок
+        </p>
       )}
       {selectedBlockId && (
         <button
           onClick={() => onRemove(selectedBlockId)}
-          className="w-full border-t px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50"
+          className="flex w-full items-center gap-2 border-t border-border px-3 py-2 text-left text-xs font-medium text-destructive transition-colors hover:bg-destructive/5"
         >
-          Удалить выбранный блок
+          <Trash2 className="size-3.5" aria-hidden /> Удалить выбранный блок
         </button>
       )}
       <AddBlockMenu onAdd={onAdd} />
@@ -559,13 +568,6 @@ function BlockListPanel({
   );
 }
 
-/**
- * Полуавтоматический импорт из Word/PDF (Э9.11, §7 ТЗ) — «дать поправить
- * руками» в буквальном смысле: распознанные блоки появляются в списке
- * блоков, как будто их добавили по одному через «Добавить блок», методист
- * правит их дальше тем же самым редактором (Э9.2–9.6), ничего специального
- * для импортированных блоков нет — они неотличимы от созданных вручную.
- */
 function ImportFromDocument({ onImported }: { onImported: (blocks: MaterialBlock[]) => void }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -594,17 +596,17 @@ function ImportFromDocument({ onImported }: { onImported: (blocks: MaterialBlock
   }
 
   return (
-    <div className="border-t p-2">
-      <label className="block cursor-pointer text-xs text-slate-500 hover:text-slate-700">
+    <div className="border-t border-border p-2">
+      <label className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground">
+        <FileUp className="size-3.5" aria-hidden />
         {busy ? "Распознавание…" : "Импортировать из Word/PDF"}
         <input type="file" accept=".docx,.pdf" onChange={handleFile} disabled={busy} className="hidden" />
       </label>
-      {message && <p className="mt-1 text-[11px] text-slate-500">{message}</p>}
+      {message && <p className="mt-1 text-[11px] text-muted-foreground">{message}</p>}
     </div>
   );
 }
 
-/** Тот же приём, что `SortableOrderingItem` в `AdvancedInteractionPlayers.tsx` (Э8.5, `ordering`) — drag-хэндл + кнопки ▲▼ как клавиатурная гарантия §16 ТЗ, не только допущение о поведении сенсора. */
 function SortableBlockItem({
   block,
   index,
@@ -620,43 +622,57 @@ function SortableBlockItem({
   onSelect: () => void;
   onMove: (direction: -1 | 1) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: block.id,
+  });
   return (
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex items-center gap-1 ${isDragging ? "opacity-50" : ""} ${selected ? "bg-slate-100" : ""}`}
+      className={cn(
+        "flex items-center gap-1",
+        isDragging && "opacity-50",
+        selected && "bg-accent",
+      )}
     >
-      <span {...attributes} {...listeners} className="cursor-grab select-none px-1 text-slate-400" aria-hidden="true">
-        ⠿
+      <span
+        {...attributes}
+        {...listeners}
+        className="cursor-grab select-none px-1 text-muted-foreground"
+        aria-hidden="true"
+      >
+        <GripVertical className="size-3.5" />
       </span>
       <button
         onClick={onSelect}
-        className={`flex flex-1 flex-col items-start gap-0.5 px-1 py-2 text-left text-sm ${selected ? "" : "hover:bg-slate-50"}`}
+        className={cn(
+          "flex flex-1 flex-col items-start gap-0.5 px-1 py-2 text-left",
+          !selected && "hover:bg-secondary",
+        )}
       >
-        <span className="text-xs text-slate-400">
+        <span className="text-[11px] font-medium text-muted-foreground">
           {index + 1}. {blockLabel(block)}
         </span>
-        <span className="truncate text-sm">{blockPreviewText(block)}</span>
+        <span className="truncate text-sm text-foreground">{blockPreviewText(block)}</span>
       </button>
-      <span className="flex flex-col pr-1">
+      <span className="flex flex-col gap-0.5 pr-1">
         <button
           type="button"
           disabled={index === 0}
           onClick={() => onMove(-1)}
           aria-label="Переместить блок выше"
-          className="rounded border px-1 text-[10px] disabled:opacity-30"
+          className="rounded border border-border p-0.5 text-muted-foreground transition-colors hover:bg-secondary disabled:opacity-30"
         >
-          ▲
+          <ChevronUp className="size-3" />
         </button>
         <button
           type="button"
           disabled={index === total - 1}
           onClick={() => onMove(1)}
           aria-label="Переместить блок ниже"
-          className="rounded border px-1 text-[10px] disabled:opacity-30"
+          className="rounded border border-border p-0.5 text-muted-foreground transition-colors hover:bg-secondary disabled:opacity-30"
         >
-          ▼
+          <ChevronDown className="size-3" />
         </button>
       </span>
     </li>
@@ -665,36 +681,36 @@ function SortableBlockItem({
 
 function AddBlockMenu({ onAdd }: { onAdd: (makeBlock: () => MaterialBlock) => void }) {
   return (
-    <div className="border-t p-2">
-      <label className="block text-xs text-slate-500">
-        Добавить блок
-        <select
-          value=""
-          onChange={(e) => {
-            const key = e.target.value;
-            if (key) onAdd(() => createBlock(key as ContentBlock["type"] | QuestionInteraction["type"]));
-          }}
-          className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-        >
-          <option value="" disabled>
-            Выберите тип…
-          </option>
-          <optgroup label="Контент">
+    <div className="border-t border-border p-2">
+      <Label className="mb-1 block text-xs text-muted-foreground">Добавить блок</Label>
+      <Select
+        value=""
+        onValueChange={(key) => {
+          if (key) onAdd(() => createBlock(key as ContentBlock["type"] | QuestionInteraction["type"]));
+        }}
+      >
+        <SelectTrigger className="h-8">
+          <SelectValue placeholder="Выберите тип…" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectLabel>Контент</SelectLabel>
             {(Object.keys(CONTENT_BLOCK_LABELS) as ContentBlock["type"][]).map((t) => (
-              <option key={t} value={t}>
+              <SelectItem key={t} value={t}>
                 {CONTENT_BLOCK_LABELS[t]}
-              </option>
+              </SelectItem>
             ))}
-          </optgroup>
-          <optgroup label="Вопрос">
+          </SelectGroup>
+          <SelectGroup>
+            <SelectLabel>Вопрос</SelectLabel>
             {(Object.keys(INTERACTION_LABELS) as QuestionInteraction["type"][]).map((t) => (
-              <option key={t} value={t}>
+              <SelectItem key={t} value={t}>
                 {INTERACTION_LABELS[t]}
-              </option>
+              </SelectItem>
             ))}
-          </optgroup>
-        </select>
-      </label>
+          </SelectGroup>
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -710,7 +726,9 @@ function BlockEditorPanel({
 }) {
   if (!block) {
     return (
-      <div className="rounded border p-4 text-sm text-slate-400">Выберите блок слева, чтобы его редактировать</div>
+      <div className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground">
+        Выберите блок слева, чтобы его редактировать
+      </div>
     );
   }
 
@@ -719,8 +737,8 @@ function BlockEditorPanel({
   }
 
   return (
-    <div className="rounded border p-4">
-      <h2 className="mb-3 text-sm font-medium text-slate-600">{blockLabel(block)}</h2>
+    <div className="self-start rounded-lg border border-border bg-card p-4">
+      <h2 className="ds-label mb-3">{blockLabel(block)}</h2>
       {block.type === "question" ? (
         <QuestionBlockFields block={block} onChange={(patch) => set(patch)} />
       ) : (
@@ -728,6 +746,10 @@ function BlockEditorPanel({
       )}
     </div>
   );
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return <span className="text-xs font-medium text-muted-foreground">{children}</span>;
 }
 
 function TextAreaField({
@@ -742,28 +764,27 @@ function TextAreaField({
   hint?: string;
 }) {
   return (
-    <label className="block text-xs text-slate-500">
-      {label}
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        rows={3}
-        className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-      />
-      {hint && <span className="mt-0.5 block text-[11px] text-slate-400">{hint}</span>}
+    <label className="flex flex-col gap-1.5">
+      <FieldLabel>{label}</FieldLabel>
+      <Textarea value={value} onChange={(e) => onChange(e.target.value)} rows={3} />
+      {hint && <span className="text-[11px] text-muted-foreground">{hint}</span>}
     </label>
   );
 }
 
-function TextField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function TextField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
   return (
-    <label className="block text-xs text-slate-500">
-      {label}
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1 block w-full rounded border px-2 py-1 text-sm"
-      />
+    <label className="flex flex-col gap-1.5">
+      <FieldLabel>{label}</FieldLabel>
+      <Input value={value} onChange={(e) => onChange(e.target.value)} />
     </label>
   );
 }
@@ -778,53 +799,63 @@ function ContentBlockFields({
   switch (block.type) {
     case "rich_text":
       return (
-        <label className="block text-xs text-slate-500">
-          Текст
-          <div className="mt-1">
-            <RichTextEditor html={block.html} onChange={(html) => onChange({ html })} />
-          </div>
+        <label className="flex flex-col gap-1.5">
+          <FieldLabel>Текст</FieldLabel>
+          <RichTextEditor html={block.html} onChange={(html) => onChange({ html })} />
         </label>
       );
     case "callout":
       return (
         <div className="flex flex-col gap-3">
-          <label className="block text-xs text-slate-500">
-            Вид врезки
-            <select
+          <label className="flex flex-col gap-1.5">
+            <FieldLabel>Вид врезки</FieldLabel>
+            <Select
               value={block.variant}
-              onChange={(e) => onChange({ variant: e.target.value as typeof block.variant })}
-              className="mt-1 block w-full rounded border px-2 py-1 text-sm"
+              onValueChange={(v) => onChange({ variant: v as typeof block.variant })}
             >
-              <option value="note">Заметка</option>
-              <option value="warning">Внимание</option>
-              <option value="example">Пример</option>
-            </select>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="note">Заметка</SelectItem>
+                <SelectItem value="warning">Внимание</SelectItem>
+                <SelectItem value="example">Пример</SelectItem>
+              </SelectContent>
+            </Select>
           </label>
-          <label className="block text-xs text-slate-500">
-            Текст
-            <div className="mt-1">
-              <RichTextEditor html={block.html} onChange={(html) => onChange({ html })} />
-            </div>
+          <label className="flex flex-col gap-1.5">
+            <FieldLabel>Текст</FieldLabel>
+            <RichTextEditor html={block.html} onChange={(html) => onChange({ html })} />
           </label>
         </div>
       );
     case "image":
       return (
         <div className="flex flex-col gap-3">
-          <label className="block text-xs text-slate-500">
-            Изображение
-            <div className="mt-1">
-              <MediaAssetPicker kind="image" assetId={block.assetId} onChange={(assetId) => onChange({ assetId })} />
-            </div>
+          <label className="flex flex-col gap-1.5">
+            <FieldLabel>Изображение</FieldLabel>
+            <MediaAssetPicker
+              kind="image"
+              assetId={block.assetId}
+              onChange={(assetId) => onChange({ assetId })}
+            />
           </label>
-          <TextField label="Подпись" value={block.caption ?? ""} onChange={(caption) => onChange({ caption })} />
+          <TextField
+            label="Подпись"
+            value={block.caption ?? ""}
+            onChange={(caption) => onChange({ caption })}
+          />
         </div>
       );
     case "video":
       return (
         <div className="flex flex-col gap-3">
-          <TextField label="id файла в медиатеке" value={block.assetId} onChange={(assetId) => onChange({ assetId })} />
-          <p className="text-[11px] text-slate-400">
+          <TextField
+            label="id файла в медиатеке"
+            value={block.assetId}
+            onChange={(assetId) => onChange({ assetId })}
+          />
+          <p className="text-[11px] text-muted-foreground">
             Видео в медиатеке — отдельная задача (транскодирование/превью), вне Э9.7
           </p>
         </div>
@@ -832,11 +863,13 @@ function ContentBlockFields({
     case "audio":
       return (
         <div className="flex flex-col gap-3">
-          <label className="block text-xs text-slate-500">
-            Аудио
-            <div className="mt-1">
-              <MediaAssetPicker kind="audio" assetId={block.assetId} onChange={(assetId) => onChange({ assetId })} />
-            </div>
+          <label className="flex flex-col gap-1.5">
+            <FieldLabel>Аудио</FieldLabel>
+            <MediaAssetPicker
+              kind="audio"
+              assetId={block.assetId}
+              onChange={(assetId) => onChange({ assetId })}
+            />
           </label>
           <TextAreaField
             label="Транскрипт"
@@ -847,11 +880,9 @@ function ContentBlockFields({
       );
     case "formula":
       return (
-        <label className="block text-xs text-slate-500">
-          Формула
-          <div className="mt-1">
-            <FormulaEditor latex={block.latex} onChange={(latex) => onChange({ latex })} />
-          </div>
+        <label className="flex flex-col gap-1.5">
+          <FieldLabel>Формула</FieldLabel>
+          <FormulaEditor latex={block.latex} onChange={(latex) => onChange({ latex })} />
         </label>
       );
     case "table": {
@@ -861,7 +892,9 @@ function ContentBlockFields({
           label="Таблица (строка на строку, ячейки через « | »)"
           value={rowsText}
           onChange={(text) =>
-            onChange({ rows: text.split("\n").map((line) => line.split("|").map((cell) => cell.trim())) })
+            onChange({
+              rows: text.split("\n").map((line) => line.split("|").map((cell) => cell.trim())),
+            })
           }
         />
       );
@@ -869,23 +902,27 @@ function ContentBlockFields({
     case "embed":
       return (
         <div className="flex flex-col gap-3">
-          <label className="block text-xs text-slate-500">
-            Провайдер
-            <select
+          <label className="flex flex-col gap-1.5">
+            <FieldLabel>Провайдер</FieldLabel>
+            <Select
               value={block.provider}
-              onChange={(e) => onChange({ provider: e.target.value as typeof block.provider })}
-              className="mt-1 block w-full rounded border px-2 py-1 text-sm"
+              onValueChange={(v) => onChange({ provider: v as typeof block.provider })}
             >
-              <option value="geogebra">GeoGebra</option>
-              <option value="desmos">Desmos</option>
-              <option value="jsxgraph">JSXGraph</option>
-            </select>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="geogebra">GeoGebra</SelectItem>
+                <SelectItem value="desmos">Desmos</SelectItem>
+                <SelectItem value="jsxgraph">JSXGraph</SelectItem>
+              </SelectContent>
+            </Select>
           </label>
-          <p className="text-[11px] text-slate-400">Настройка встраивания — появится отдельно</p>
+          <p className="text-[11px] text-muted-foreground">Настройка встраивания — появится отдельно</p>
         </div>
       );
     case "page_break":
-      return <p className="text-xs text-slate-400">Разрыв страницы — настраивать нечего</p>;
+      return <p className="text-xs text-muted-foreground">Разрыв страницы — настраивать нечего</p>;
   }
 }
 
@@ -897,35 +934,35 @@ function QuestionBlockFields({
   onChange: (patch: Partial<QuestionBlock>) => void;
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      <label className="block text-xs text-slate-500">
-        Формулировка вопроса
-        <div className="mt-1">
-          <RichTextEditor html={block.prompt.html} onChange={(html) => onChange({ prompt: { html } })} />
-        </div>
+    <div className="flex flex-col gap-4">
+      <label className="flex flex-col gap-1.5">
+        <FieldLabel>Формулировка вопроса</FieldLabel>
+        <RichTextEditor html={block.prompt.html} onChange={(html) => onChange({ prompt: { html } })} />
       </label>
-      <label className="block text-xs text-slate-500">
-        Баллы
-        <input
+      <label className="flex w-24 flex-col gap-1.5">
+        <FieldLabel>Баллы</FieldLabel>
+        <Input
           type="number"
           min={0}
           value={block.points}
           onChange={(e) => onChange({ points: Number(e.target.value) || 0 })}
-          className="mt-1 block w-24 rounded border px-2 py-1 text-sm"
         />
       </label>
-      <label className="block text-xs text-slate-500">
-        Подсказка (необязательно)
-        <div className="mt-1">
-          <RichTextEditor
-            html={block.hint?.html ?? ""}
-            onChange={(html) => onChange({ hint: html ? { html } : undefined })}
-          />
-        </div>
+      <label className="flex flex-col gap-1.5">
+        <FieldLabel>Подсказка (необязательно)</FieldLabel>
+        <RichTextEditor
+          html={block.hint?.html ?? ""}
+          onChange={(html) => onChange({ hint: html ? { html } : undefined })}
+        />
       </label>
-      <div className="rounded border p-2">
-        <p className="mb-2 text-xs font-medium text-slate-600">Тип: {INTERACTION_LABELS[block.interaction.type]}</p>
-        <InteractionEditor interaction={block.interaction} onChange={(interaction) => onChange({ interaction })} />
+      <div className="rounded-lg border border-border p-3">
+        <p className="mb-2 text-xs font-semibold text-muted-foreground">
+          Тип: {INTERACTION_LABELS[block.interaction.type]}
+        </p>
+        <InteractionEditor
+          interaction={block.interaction}
+          onChange={(interaction) => onChange({ interaction })}
+        />
       </div>
     </div>
   );
@@ -938,10 +975,12 @@ function LivePreviewPanel({ material }: { material: Material }) {
   const publicMaterial = stripMaterialAnswerKeys(material, "editor-preview");
 
   return (
-    <div className="rounded border">
-      <div className="border-b bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600">Превью глазами ученика</div>
-      <div className="max-h-[70vh] space-y-3 overflow-y-auto p-3">
-        <h3 className="text-base font-semibold">{material.title}</h3>
+    <div className="self-start overflow-hidden rounded-lg border border-border bg-card">
+      <div className="border-b border-border px-3 py-2 text-xs font-semibold text-muted-foreground">
+        Превью глазами ученика
+      </div>
+      <div className="max-h-[70vh] space-y-3 overflow-y-auto p-4">
+        <h3 className="text-base font-bold">{material.title}</h3>
         {publicMaterial.blocks.map((block) =>
           block.type === "question" ? (
             <QuestionPlayer
@@ -954,7 +993,9 @@ function LivePreviewPanel({ material }: { material: Material }) {
             <ContentBlockView key={block.id} block={block} />
           ),
         )}
-        {publicMaterial.blocks.length === 0 && <p className="text-sm text-slate-400">Материал пуст</p>}
+        {publicMaterial.blocks.length === 0 && (
+          <p className="text-sm text-muted-foreground">Материал пуст</p>
+        )}
       </div>
     </div>
   );

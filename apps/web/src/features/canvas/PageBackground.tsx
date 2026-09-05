@@ -47,7 +47,7 @@ export function SlideThumb({ slide, alt }: { slide: SlidePageRef; alt: string })
     };
   }, [slide.thumbUrl, slide.pdfUrl, slide.index]);
 
-  if (!src) return <div className="h-16 w-24 bg-slate-200" />;
+  if (!src) return <div className="h-16 w-24 bg-surface-3" />;
   return <img src={src} alt={alt} className="h-16 w-auto" draggable={false} />;
 }
 

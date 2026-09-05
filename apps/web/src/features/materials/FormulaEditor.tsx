@@ -42,7 +42,8 @@ export function FormulaEditor({ latex, onChange }: { latex: string; onChange: (l
     const container = containerRef.current;
     if (!container) return;
     const field = document.createElement("math-field") as MathfieldElement;
-    field.className = "block w-full rounded border px-2 py-1.5 text-sm";
+    field.className =
+      "block w-full rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary";
     field.value = latex;
     const handleInput = () => onChangeRef.current(field.value);
     field.addEventListener("input", handleInput);

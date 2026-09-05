@@ -84,10 +84,10 @@ export function SlideSearch({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Поиск по слайдам…"
-        className="rounded border px-2 py-1 text-sm"
+        className="h-9 rounded-md border border-border bg-card px-3 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
       />
       {q.length >= 2 && (
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-muted-foreground">
           {matches.length === 0
             ? "Не найдено"
             : `${matches.length} ${plural(matches.length, "совпадение", "совпадения", "совпадений")}:`}
@@ -97,7 +97,7 @@ export function SlideSearch({
         <button
           key={m.pageId}
           onClick={() => onJump(m.pageId)}
-          className="rounded border px-2 py-0.5 text-xs"
+          className="rounded-md border border-border bg-card px-2 py-1 text-xs font-medium transition-colors hover:bg-secondary"
         >
           Слайд {m.slideNumber}
         </button>

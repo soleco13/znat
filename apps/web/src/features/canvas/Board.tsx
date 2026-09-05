@@ -667,20 +667,20 @@ export function Board({
               key={pageId}
               onClick={() => isTeacher && switchPage(pageId)}
               disabled={!isTeacher}
-              className={`rounded border px-3 py-1 text-sm ${
-                pageId === activePageId ? "border-blue-500 bg-blue-50 font-medium" : ""
+              className={`inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary ${
+                pageId === activePageId ? "border-primary bg-accent font-semibold text-primary" : ""
               } ${isTeacher ? "" : "cursor-default"}`}
             >
               {index + 1}
             </button>
           ))}
           {isTeacher && (
-            <button onClick={addPage} className="rounded border px-3 py-1 text-sm">
+            <button onClick={addPage} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
               + страница
             </button>
           )}
           {isTeacher && activePageId && pages.length > 1 && (
-            <button onClick={() => deletePage(activePageId)} className="rounded border px-3 py-1 text-sm text-red-700">
+            <button onClick={() => deletePage(activePageId)} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">
               Удалить страницу
             </button>
           )}
@@ -688,7 +688,7 @@ export function Board({
             <select
               value={activeMeta?.kind ?? "blank"}
               onChange={(e) => setPageBackgroundKind(activePageId, e.target.value as BackgroundKind)}
-              className="rounded border px-2 py-1 text-sm"
+              className="rounded-md border border-border bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-primary"
             >
               {Object.entries(BACKGROUND_KIND_LABELS).map(([kind, label]) => (
                 <option key={kind} value={kind}>
@@ -705,7 +705,7 @@ export function Board({
                   setImportDeckId(e.target.value);
                   setImportNote(null);
                 }}
-                className="rounded border px-2 py-1 text-sm"
+                className="rounded-md border border-border bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-primary"
               >
                 <option value="">Презентация…</option>
                 {readyDecks.map((d) => (
@@ -721,25 +721,25 @@ export function Board({
                   if (d) void importDeckSlides(d);
                 }}
                 disabled={!importDeckId || importedDeckIds.has(importDeckId)}
-                className="rounded border px-3 py-1 text-sm disabled:opacity-40"
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary disabled:opacity-40"
               >
                 Импортировать слайды
               </button>
               {importDeckId && importedDeckIds.has(importDeckId) && (
                 <button
                   onClick={() => removeDeckSlides(importDeckId)}
-                  className="rounded border px-3 py-1 text-sm text-red-700"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
                 >
                   Убрать слайды
                 </button>
               )}
             </span>
           )}
-          {importNote && <span className="text-sm text-amber-700">{importNote}</span>}
+          {importNote && <span className="text-sm text-warning">{importNote}</span>}
           {!isTeacher && (
             <button
               onClick={() => setFollowTeacher((v) => !v)}
-              className={`rounded border px-3 py-1 text-sm ${followTeacher ? "border-blue-500 bg-blue-50 font-medium" : ""}`}
+              className={`inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary ${followTeacher ? "border-primary bg-accent font-semibold text-primary" : ""}`}
             >
               {followTeacher ? "Не следовать за учителем" : "Следовать за учителем"}
             </button>
@@ -749,7 +749,7 @@ export function Board({
               <button
                 onClick={() => undoState.manager.undo()}
                 disabled={!undoState.canUndo}
-                className="rounded border px-3 py-1 text-sm disabled:opacity-40"
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary disabled:opacity-40"
                 title="Отменить (Ctrl+Z)"
               >
                 ↶ Отменить
@@ -757,7 +757,7 @@ export function Board({
               <button
                 onClick={() => undoState.manager.redo()}
                 disabled={!undoState.canRedo}
-                className="rounded border px-3 py-1 text-sm disabled:opacity-40"
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary disabled:opacity-40"
                 title="Повторить (Ctrl+Shift+Z)"
               >
                 ↷ Повторить
@@ -765,7 +765,7 @@ export function Board({
             </>
           )}
           {canDraw && (
-            <label className="cursor-pointer rounded border px-3 py-1 text-sm">
+            <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
               Фото на доску
               <input
                 type="file"
@@ -780,11 +780,11 @@ export function Board({
               />
             </label>
           )}
-          {uploadError && <span className="text-sm text-red-700">{uploadError}</span>}
+          {uploadError && <span className="text-sm text-destructive">{uploadError}</span>}
           {pageElementCount >= PAGE_ELEMENT_WARN_AT && (
             <span
               className={`text-sm ${
-                pageElementCount >= PAGE_ELEMENT_LIMIT ? "font-medium text-red-700" : "text-amber-700"
+                pageElementCount >= PAGE_ELEMENT_LIMIT ? "font-semibold text-destructive" : "text-warning"
               }`}
             >
               {pageElementCount >= PAGE_ELEMENT_LIMIT
@@ -818,7 +818,7 @@ export function Board({
               disabled={!isTeacher}
               title={`Слайд ${i + 1}`}
               className={`shrink-0 overflow-hidden rounded border ${
-                pageId === activePageId ? "border-blue-500 ring-2 ring-blue-300" : "border-slate-300"
+                pageId === activePageId ? "border-primary ring-2 ring-primary/30" : "border-border"
               } ${isTeacher ? "" : "cursor-default"}`}
             >
               <SlideThumb slide={meta.slide!} alt={`Слайд ${i + 1}`} />
@@ -863,9 +863,9 @@ export function Board({
         </div>
       </div>
       {activeSlideNotes && (
-        <div className="mt-2 rounded border border-amber-200 bg-amber-50 p-2 text-sm">
-          <div className="mb-1 text-xs font-medium text-amber-700">Заметки докладчика (видно только вам)</div>
-          <p className="whitespace-pre-wrap text-slate-700">{activeSlideNotes}</p>
+        <div className="mt-2 rounded-lg border border-warning/25 bg-warning/5 p-3 text-sm">
+          <div className="mb-1 text-xs font-semibold text-warning">Заметки докладчика (видно только вам)</div>
+          <p className="whitespace-pre-wrap text-foreground">{activeSlideNotes}</p>
         </div>
       )}
     </div>

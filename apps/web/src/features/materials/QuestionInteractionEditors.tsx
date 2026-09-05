@@ -103,7 +103,7 @@ function ChoiceOptionsEditor({
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="flex items-center gap-1.5 text-xs text-slate-500">
+      <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <input
           type="checkbox"
           checked={interaction.shuffle}
@@ -127,14 +127,14 @@ function ChoiceOptionsEditor({
                 setOptions(interaction.options.map((o) => (o.id === option.id ? { ...o, html: e.target.value } : o)))
               }
               placeholder="Текст варианта"
-              className="flex-1 rounded border px-2 py-1 text-sm"
+              className="flex-1 rounded-md border border-border bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
             />
             <button
               type="button"
               onClick={() => removeOption(option.id)}
               disabled={interaction.options.length <= 2}
               aria-label="Удалить вариант"
-              className="rounded border px-1.5 py-0.5 text-xs text-red-600 disabled:opacity-30"
+              className="rounded-md border border-border p-1 text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-30"
             >
               ✕
             </button>
@@ -144,7 +144,7 @@ function ChoiceOptionsEditor({
       <button
         type="button"
         onClick={addOption}
-        className="self-start rounded border px-2 py-1 text-xs hover:bg-slate-50"
+        className="self-start inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
       >
         + Добавить вариант
       </button>
@@ -163,7 +163,7 @@ function TrueFalseEditor({
 }) {
   const groupName = useId();
   return (
-    <div className="flex gap-4 text-xs text-slate-500">
+    <div className="flex gap-4 text-xs text-muted-foreground">
       <label className="flex items-center gap-1.5">
         <input
           type="radio"
@@ -247,12 +247,12 @@ function AnswerRulesFields({ rules, onChange }: { rules: AnswerRules; onChange: 
               value={answer.value}
               onChange={(e) => updateAnswer(i, { value: e.target.value })}
               placeholder="Правильный ответ"
-              className="flex-1 rounded border px-2 py-1 text-sm"
+              className="flex-1 rounded-md border border-border bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
             />
             <select
               value={answer.match}
               onChange={(e) => updateAnswer(i, { match: e.target.value as TextMatchRule["match"] })}
-              className="rounded border px-1 py-1 text-xs"
+              className="rounded-md border border-border bg-card px-2 py-1.5 text-xs outline-none focus-visible:border-primary"
             >
               {(Object.keys(TEXT_MATCH_LABELS) as TextMatchRule["match"][]).map((m) => (
                 <option key={m} value={m}>
@@ -265,7 +265,7 @@ function AnswerRulesFields({ rules, onChange }: { rules: AnswerRules; onChange: 
               onClick={() => removeAnswer(i)}
               disabled={rules.answers.length <= 1}
               aria-label="Удалить вариант ответа"
-              className="rounded border px-1.5 py-0.5 text-xs text-red-600 disabled:opacity-30"
+              className="rounded-md border border-border p-1 text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-30"
             >
               ✕
             </button>
@@ -275,11 +275,11 @@ function AnswerRulesFields({ rules, onChange }: { rules: AnswerRules; onChange: 
       <button
         type="button"
         onClick={addAnswer}
-        className="self-start rounded border px-2 py-1 text-xs hover:bg-slate-50"
+        className="self-start inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
       >
         + Добавить вариант ответа
       </button>
-      <label className="flex items-center gap-1.5 text-xs text-slate-500">
+      <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <input
           type="checkbox"
           checked={rules.caseSensitive}
@@ -287,7 +287,7 @@ function AnswerRulesFields({ rules, onChange }: { rules: AnswerRules; onChange: 
         />
         Учитывать регистр
       </label>
-      <label className="flex items-center gap-1.5 text-xs text-slate-500">
+      <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <input
           type="checkbox"
           checked={rules.trimWhitespace}
@@ -295,14 +295,14 @@ function AnswerRulesFields({ rules, onChange }: { rules: AnswerRules; onChange: 
         />
         Игнорировать пробелы по краям
       </label>
-      <label className="flex items-center gap-2 text-xs text-slate-500">
+      <label className="flex items-center gap-2 text-xs text-muted-foreground">
         Допуск опечаток (расстояние Левенштейна)
         <input
           type="number"
           min={0}
           value={rules.typoTolerance}
           onChange={(e) => onChange({ ...rules, typoTolerance: Number(e.target.value) || 0 })}
-          className="w-16 rounded border px-2 py-1 text-sm"
+          className="w-16 rounded-md border border-border bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
         />
       </label>
     </div>
@@ -320,16 +320,16 @@ function NumericInputEditor({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <label className="flex items-center gap-2 text-xs text-slate-500">
+      <label className="flex items-center gap-2 text-xs text-muted-foreground">
         Правильное значение
         <input
           type="number"
           value={interaction.value}
           onChange={(e) => onChange({ ...interaction, value: Number(e.target.value) || 0 })}
-          className="w-28 rounded border px-2 py-1 text-sm"
+          className="w-28 rounded-md border border-border bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
         />
       </label>
-      <div className="flex items-center gap-2 text-xs text-slate-500">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
         Допуск
         <select
           value={interaction.tolerance.kind}
@@ -339,7 +339,7 @@ function NumericInputEditor({
               tolerance: { ...interaction.tolerance, kind: e.target.value as typeof interaction.tolerance.kind },
             })
           }
-          className="rounded border px-1 py-1 text-xs"
+          className="rounded-md border border-border bg-card px-2 py-1.5 text-xs outline-none focus-visible:border-primary"
         >
           <option value="absolute">± абсолютный</option>
           <option value="relative">относительный</option>
@@ -352,18 +352,18 @@ function NumericInputEditor({
           onChange={(e) =>
             onChange({ ...interaction, tolerance: { ...interaction.tolerance, value: Number(e.target.value) || 0 } })
           }
-          className="w-24 rounded border px-2 py-1 text-sm"
+          className="w-24 rounded-md border border-border bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
         />
       </div>
-      <label className="flex items-center gap-2 text-xs text-slate-500">
+      <label className="flex items-center gap-2 text-xs text-muted-foreground">
         Единица измерения (необязательно)
         <input
           value={interaction.unit ?? ""}
           onChange={(e) => onChange({ ...interaction, unit: e.target.value || undefined })}
-          className="w-28 rounded border px-2 py-1 text-sm"
+          className="w-28 rounded-md border border-border bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
         />
       </label>
-      <label className="flex items-center gap-1.5 text-xs text-slate-500">
+      <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <input
           type="checkbox"
           checked={interaction.unitRequired}
@@ -403,17 +403,17 @@ function OpenAnswerEditor({
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="flex items-center gap-2 text-xs text-slate-500">
+      <label className="flex items-center gap-2 text-xs text-muted-foreground">
         Максимальная длина ответа (символов)
         <input
           type="number"
           min={1}
           value={interaction.maxLength}
           onChange={(e) => onChange({ ...interaction, maxLength: Math.max(1, Number(e.target.value) || 1) })}
-          className="w-24 rounded border px-2 py-1 text-sm"
+          className="w-24 rounded-md border border-border bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
         />
       </label>
-      <label className="flex items-center gap-1.5 text-xs text-slate-500">
+      <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <input
           type="checkbox"
           checked={interaction.allowAttachments}
@@ -422,7 +422,7 @@ function OpenAnswerEditor({
         Разрешить прикреплять файлы
       </label>
       <div className="flex flex-col gap-1.5">
-        <span className="text-xs text-slate-500">Критерии проверки (учителю при ручной проверке, §6.3 ТЗ)</span>
+        <span className="text-xs text-muted-foreground">Критерии проверки (учителю при ручной проверке, §6.3 ТЗ)</span>
         <ul className="flex flex-col gap-1.5">
           {interaction.rubric.map((c) => (
             <li key={c.id} className="flex items-center gap-2">
@@ -430,21 +430,21 @@ function OpenAnswerEditor({
                 value={c.label}
                 onChange={(e) => updateCriterion(c.id, { label: e.target.value })}
                 placeholder="Критерий"
-                className="flex-1 rounded border px-2 py-1 text-sm"
+                className="flex-1 rounded-md border border-border bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
               />
               <input
                 type="number"
                 min={0}
                 value={c.points}
                 onChange={(e) => updateCriterion(c.id, { points: Number(e.target.value) || 0 })}
-                className="w-16 rounded border px-2 py-1 text-sm"
+                className="w-16 rounded-md border border-border bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
               />
               <button
                 type="button"
                 onClick={() => removeCriterion(c.id)}
                 disabled={interaction.rubric.length <= 1}
                 aria-label="Удалить критерий"
-                className="rounded border px-1.5 py-0.5 text-xs text-red-600 disabled:opacity-30"
+                className="rounded-md border border-border p-1 text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-30"
               >
                 ✕
               </button>
@@ -454,7 +454,7 @@ function OpenAnswerEditor({
         <button
           type="button"
           onClick={addCriterion}
-          className="self-start rounded border px-2 py-1 text-xs hover:bg-slate-50"
+          className="self-start inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
         >
           + Добавить критерий
         </button>
@@ -564,35 +564,35 @@ function ClozeTemplateShell<Gap>({
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="block text-xs text-slate-500">
+      <label className="block text-xs text-muted-foreground">
         Текст с пропусками
         <textarea
           ref={textareaRef}
           value={template}
           onChange={(e) => onChange(e.target.value, gaps)}
           rows={3}
-          className="mt-1 block w-full rounded border px-2 py-1 font-mono text-sm"
+          className="mt-1 block w-full rounded-md border border-border bg-card px-3 py-2 font-mono text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
         />
-        <span className="mt-0.5 block text-[11px] text-slate-400">
+        <span className="mt-0.5 block text-[11px] text-muted-foreground">
           Пропуск в тексте выглядит как {"{{gap1}}"} — вставляется кнопкой ниже, руками писать не нужно
         </span>
       </label>
       <button
         type="button"
         onClick={insertGap}
-        className="self-start rounded border px-2 py-1 text-xs hover:bg-slate-50"
+        className="self-start inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
       >
         + Добавить пропуск
       </button>
-      {usedIds.length === 0 && <p className="text-xs text-slate-400">В тексте пока нет ни одного пропуска.</p>}
+      {usedIds.length === 0 && <p className="text-xs text-muted-foreground">В тексте пока нет ни одного пропуска.</p>}
       {usedIds.map((id) => (
-        <div key={id} className="rounded border p-2">
+        <div key={id} className="rounded-md border border-border p-2">
           <div className="mb-1.5 flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-600">Пропуск {`{{${id}}}`}</span>
+            <span className="text-xs font-semibold text-muted-foreground">Пропуск {`{{${id}}}`}</span>
             <button
               type="button"
               onClick={() => removeGap(id)}
-              className="rounded border px-1.5 py-0.5 text-xs text-red-600 hover:bg-red-50"
+              className="rounded-md border border-border px-1.5 py-0.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
             >
               Удалить пропуск
             </button>
@@ -601,7 +601,7 @@ function ClozeTemplateShell<Gap>({
         </div>
       ))}
       {orphanIds.length > 0 && (
-        <p className="rounded border border-dashed p-2 text-xs text-slate-500">
+        <p className="rounded-md border border-dashed border-border p-2 text-xs text-muted-foreground">
           В тексте больше не упоминаются: {orphanIds.map((id) => `{{${id}}}`).join(", ")}.{" "}
           <button type="button" onClick={() => removeOrphans(orphanIds)} className="underline">
             Удалить неиспользуемые
@@ -662,14 +662,14 @@ function ClozeDropdownGapFields({ gap, onChange }: { gap: ClozeDropdownGap; onCh
               value={option}
               onChange={(e) => updateOption(i, e.target.value)}
               placeholder="Вариант"
-              className="flex-1 rounded border px-2 py-1 text-sm"
+              className="flex-1 rounded-md border border-border bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
             />
             <button
               type="button"
               onClick={() => removeOption(i)}
               disabled={gap.options.length <= 2}
               aria-label="Удалить вариант"
-              className="rounded border px-1.5 py-0.5 text-xs text-red-600 disabled:opacity-30"
+              className="rounded-md border border-border p-1 text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-30"
             >
               ✕
             </button>
@@ -679,16 +679,16 @@ function ClozeDropdownGapFields({ gap, onChange }: { gap: ClozeDropdownGap; onCh
       <button
         type="button"
         onClick={addOption}
-        className="self-start rounded border px-2 py-1 text-xs hover:bg-slate-50"
+        className="self-start inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
       >
         + Добавить вариант
       </button>
-      <label className="flex items-center gap-2 text-xs text-slate-500">
+      <label className="flex items-center gap-2 text-xs text-muted-foreground">
         Правильный вариант
         <select
           value={gap.options.includes(gap.correct) ? gap.correct : ""}
           onChange={(e) => onChange({ ...gap, correct: e.target.value })}
-          className="rounded border px-1 py-1 text-xs"
+          className="rounded-md border border-border bg-card px-2 py-1.5 text-xs outline-none focus-visible:border-primary"
         >
           <option value="" disabled>
             — выберите —
@@ -750,7 +750,7 @@ function ItemListEditor({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-xs text-slate-500">{label}</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
       <ul className="flex flex-col gap-1.5">
         {items.map((item) => (
           <li key={item.id} className="flex items-center gap-1.5">
@@ -758,21 +758,21 @@ function ItemListEditor({
               value={item.html}
               onChange={(e) => updateItem(item.id, e.target.value)}
               placeholder="Текст"
-              className="flex-1 rounded border px-2 py-1 text-sm"
+              className="flex-1 rounded-md border border-border bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
             />
             <button
               type="button"
               onClick={() => removeItem(item.id)}
               disabled={items.length <= minItems}
               aria-label="Удалить"
-              className="rounded border px-1.5 py-0.5 text-xs text-red-600 disabled:opacity-30"
+              className="rounded-md border border-border p-1 text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-30"
             >
               ✕
             </button>
           </li>
         ))}
       </ul>
-      <button type="button" onClick={addItem} className="self-start rounded border px-2 py-1 text-xs hover:bg-slate-50">
+      <button type="button" onClick={addItem} className="self-start inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary">
         + Добавить
       </button>
     </div>
@@ -829,7 +829,7 @@ function MatchingEditor({
         <ItemListEditor label="Правый список" items={interaction.right} onChange={setRight} />
       </div>
       <div className="flex flex-col gap-1.5">
-        <span className="text-xs text-slate-500">Пары</span>
+        <span className="text-xs text-muted-foreground">Пары</span>
         {interaction.left.map((l) => {
           const pair = interaction.pairs.find(([lid]) => lid === l.id);
           return (
@@ -839,7 +839,7 @@ function MatchingEditor({
               <select
                 value={pair?.[1] ?? ""}
                 onChange={(e) => setPair(l.id, e.target.value || null)}
-                className="flex-1 rounded border px-1 py-1"
+                className="flex-1 rounded-md border border-border bg-card px-2 py-1.5 outline-none focus-visible:border-primary"
               >
                 <option value="">— без пары —</option>
                 {interaction.right.map((r) => (
@@ -852,19 +852,19 @@ function MatchingEditor({
           );
         })}
       </div>
-      <label className="flex items-center gap-2 text-xs text-slate-500">
+      <label className="flex items-center gap-2 text-xs text-muted-foreground">
         Начисление баллов
         <select
           value={interaction.scoring}
           onChange={(e) => onChange({ ...interaction, scoring: e.target.value as typeof interaction.scoring })}
-          className="rounded border px-1 py-1 text-xs"
+          className="rounded-md border border-border bg-card px-2 py-1.5 text-xs outline-none focus-visible:border-primary"
         >
           <option value="all_or_nothing">всё или ничего</option>
           <option value="partial">частично за каждую пару</option>
         </select>
       </label>
       {interaction.distractors.length > 0 && (
-        <p className="text-[11px] text-slate-400">
+        <p className="text-[11px] text-muted-foreground">
           Без пары (отвлекающие варианты справа):{" "}
           {interaction.right
             .filter((r) => interaction.distractors.includes(r.id))
@@ -925,7 +925,7 @@ function OrderingEditor({
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-[11px] text-slate-400">Порядок элементов ниже — и есть правильный порядок ответа.</p>
+      <p className="text-[11px] text-muted-foreground">Порядок элементов ниже — и есть правильный порядок ответа.</p>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           <ul className="flex flex-col gap-1.5">
@@ -944,7 +944,7 @@ function OrderingEditor({
           </ul>
         </SortableContext>
       </DndContext>
-      <button type="button" onClick={addItem} className="self-start rounded border px-2 py-1 text-xs hover:bg-slate-50">
+      <button type="button" onClick={addItem} className="self-start inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary">
         + Добавить элемент
       </button>
     </div>
@@ -975,14 +975,14 @@ function SortableOrderingEditorItem({
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`flex items-center gap-1.5 ${isDragging ? "opacity-50" : ""}`}
     >
-      <span {...attributes} {...listeners} className="cursor-grab select-none px-1 text-slate-400" aria-hidden="true">
+      <span {...attributes} {...listeners} className="cursor-grab select-none px-1 text-muted-foreground" aria-hidden="true">
         ⠿
       </span>
       <input
         value={item.html}
         onChange={(e) => onChangeText(e.target.value)}
         placeholder="Текст элемента"
-        className="flex-1 rounded border px-2 py-1 text-sm"
+        className="flex-1 rounded-md border border-border bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
       />
       <span className="flex flex-col">
         <button
@@ -990,7 +990,7 @@ function SortableOrderingEditorItem({
           disabled={index === 0}
           onClick={() => onMove(-1)}
           aria-label="Переместить выше"
-          className="rounded border px-1 text-[10px] disabled:opacity-30"
+          className="rounded border border-border p-0.5 text-muted-foreground transition-colors hover:bg-secondary disabled:opacity-30"
         >
           ▲
         </button>
@@ -999,7 +999,7 @@ function SortableOrderingEditorItem({
           disabled={index === total - 1}
           onClick={() => onMove(1)}
           aria-label="Переместить ниже"
-          className="rounded border px-1 text-[10px] disabled:opacity-30"
+          className="rounded border border-border p-0.5 text-muted-foreground transition-colors hover:bg-secondary disabled:opacity-30"
         >
           ▼
         </button>
@@ -1009,7 +1009,7 @@ function SortableOrderingEditorItem({
         onClick={onRemove}
         disabled={!canRemove}
         aria-label="Удалить элемент"
-        className="rounded border px-1.5 py-0.5 text-xs text-red-600 disabled:opacity-30"
+        className="rounded-md border border-border p-1 text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-30"
       >
         ✕
       </button>

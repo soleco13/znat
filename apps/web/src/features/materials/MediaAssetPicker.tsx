@@ -1,21 +1,15 @@
 import { useEffect, useState, type ChangeEvent } from "react";
+import { Upload } from "lucide-react";
 import type { MediaAsset, MediaAssetKind } from "@school/shared";
+
+import { cn } from "@/lib/utils";
+import { Button } from "@/shared/ui/button";
 import { listMediaAssets, uploadMediaAsset } from "./materials-api.js";
 
 /**
- * Медиатека — пикер файла для `image`/`audio` блоков (Э9.7, §7.2 ТЗ:
- * «загруженные картинки/аудио, с переиспользованием между материалами»).
- * Заменяет собой `TextField` «id файла в медиатеке» (Э9.2/9.3): раньше
- * методист вписывал `assetId` руками (взять его было неоткуда, кроме БД
- * напрямую), теперь — либо выбирает уже загруженный кем-то файл (список
- * общий на школу, не только свои загрузки — смысл в переиспользовании
- * МЕЖДУ авторами), либо грузит новый.
- *
- * Список загружается ОДИН раз при монтировании (не при каждом открытии
- * панели «Выбрать из медиатеки») — тот же файл, скорее всего, понадобится
- * ещё не раз в рамках одной сессии редактирования, а сама медиатека школы
- * не настолько велика, чтобы это было проблемой (типичный объём — Chrome
- * DevTools MCP сможет подтвердить/опровергнуть на живой сессии, задел).
+ * Медиатека — пикер файла для `image`/`audio` блоков (Э9.7). Выбор из уже
+ * загруженного (список общий на школу) или загрузка нового. Список грузится
+ * один раз при монтировании.
  */
 export function MediaAssetPicker({
   kind,
@@ -45,7 +39,7 @@ export function MediaAssetPicker({
 
   async function handleUpload(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    e.target.value = ""; // разрешить выбрать тот же файл повторно
+    e.target.value = "";
     if (!file) return;
     setUploading(true);
     setError(null);
@@ -55,7 +49,9 @@ export function MediaAssetPicker({
       onChange(asset.id);
       setBrowsing(false);
     } catch {
-      setError("Не удалось загрузить файл (поддерживаются PNG/JPEG/WebP для картинок, MP3/WAV/OGG/M4A/WebM для аудио)");
+      setError(
+        "Не удалось загрузить файл (PNG/JPEG/WebP для картинок, MP3/WAV/OGG/M4A/WebM для аудио)",
+      );
     } finally {
       setUploading(false);
     }
@@ -66,34 +62,41 @@ export function MediaAssetPicker({
       {selected ? (
         <AssetPreview asset={selected} />
       ) : assetId ? (
-        <p className="text-[11px] text-amber-600">Файл не найден в медиатеке (id: {assetId})</p>
+        <p className="text-[11px] font-medium text-warning">
+          Файл не найден в медиатеке (id: {assetId})
+        </p>
       ) : (
-        <p className="text-[11px] text-slate-400">Файл не выбран</p>
+        <p className="text-[11px] text-muted-foreground">Файл не выбран</p>
       )}
       <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => setBrowsing((b) => !b)}
-          className="rounded border px-2 py-1 text-xs hover:bg-slate-50"
-        >
+        <Button type="button" variant="outline" size="sm" onClick={() => setBrowsing((b) => !b)}>
           {browsing ? "Скрыть медиатеку" : "Выбрать из медиатеки"}
-        </button>
-        <label className="cursor-pointer rounded border px-2 py-1 text-xs hover:bg-slate-50">
-          {uploading ? "Загрузка…" : "Загрузить новый"}
-          <input
-            type="file"
-            accept={kind === "image" ? "image/png,image/jpeg,image/webp" : "audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/webm"}
-            onChange={handleUpload}
-            disabled={uploading}
-            className="hidden"
-          />
-        </label>
+        </Button>
+        <Button asChild variant="outline" size="sm" className="cursor-pointer">
+          <label>
+            <Upload aria-hidden />
+            {uploading ? "Загрузка…" : "Загрузить новый"}
+            <input
+              type="file"
+              accept={
+                kind === "image"
+                  ? "image/png,image/jpeg,image/webp"
+                  : "audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/webm"
+              }
+              onChange={handleUpload}
+              disabled={uploading}
+              className="hidden"
+            />
+          </label>
+        </Button>
       </div>
-      {error && <p className="text-[11px] text-red-600">{error}</p>}
+      {error && <p className="text-[11px] font-medium text-destructive">{error}</p>}
       {browsing && (
-        <div className="max-h-56 overflow-y-auto rounded border p-2">
-          {items === null && <p className="text-xs text-slate-400">Загрузка…</p>}
-          {items?.length === 0 && <p className="text-xs text-slate-400">В медиатеке пока пусто</p>}
+        <div className="max-h-56 overflow-y-auto rounded-md border border-border p-2">
+          {items === null && <p className="text-xs text-muted-foreground">Загрузка…</p>}
+          {items?.length === 0 && (
+            <p className="text-xs text-muted-foreground">В медиатеке пока пусто</p>
+          )}
           <ul className={kind === "image" ? "grid grid-cols-4 gap-2" : "flex flex-col gap-1.5"}>
             {items?.map((item) => (
               <li key={item.id}>
@@ -103,10 +106,19 @@ export function MediaAssetPicker({
                     onChange(item.id);
                     setBrowsing(false);
                   }}
-                  className={`w-full rounded border p-1 text-left ${item.id === assetId ? "border-blue-500 bg-blue-50" : ""}`}
+                  className={cn(
+                    "w-full rounded-md border p-1 text-left transition-colors",
+                    item.id === assetId
+                      ? "border-primary bg-accent"
+                      : "border-border hover:bg-secondary",
+                  )}
                 >
                   {kind === "image" ? (
-                    <img src={item.url} alt={item.originalName} className="h-16 w-full rounded object-cover" />
+                    <img
+                      src={item.url}
+                      alt={item.originalName}
+                      className="h-16 w-full rounded object-cover"
+                    />
                   ) : (
                     <span className="block truncate text-xs" title={item.originalName}>
                       {item.originalName}
@@ -124,13 +136,19 @@ export function MediaAssetPicker({
 
 function AssetPreview({ asset }: { asset: MediaAsset }) {
   return (
-    <div className="flex items-center gap-2 rounded border p-2">
+    <div className="flex items-center gap-2 rounded-md border border-border p-2">
       {asset.kind === "image" ? (
-        <img src={asset.url} alt={asset.originalName} className="h-12 w-12 rounded object-cover" />
+        <img
+          src={asset.url}
+          alt={asset.originalName}
+          className="size-12 rounded object-cover"
+        />
       ) : (
         <audio src={asset.url} controls className="h-8 flex-1" />
       )}
-      <span className="min-w-0 flex-1 truncate text-xs text-slate-500">{asset.originalName}</span>
+      <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+        {asset.originalName}
+      </span>
     </div>
   );
 }

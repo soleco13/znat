@@ -1,6 +1,19 @@
-import { useEffect, type CSSProperties } from "react";
+import { useEffect } from "react";
 import { EditorContent, type Editor, useEditor, useEditorState } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import {
+  Bold,
+  Italic,
+  List,
+  ListOrdered,
+  Redo2,
+  Strikethrough,
+  Underline,
+  Undo2,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
+import { cn } from "@/lib/utils";
 
 /**
  * Редактор формулировок (Э9.4, §7.2 ТЗ: «Tiptap»). Заменяет `<textarea>` с
@@ -66,11 +79,11 @@ export function RichTextEditor({ html, onChange }: { html: string; onChange: (ht
   if (!editor || !toolbarState) return null;
 
   return (
-    <div className="rounded border">
+    <div className="overflow-hidden rounded-md border border-border bg-card focus-within:border-primary focus-within:ring-[3px] focus-within:ring-primary/15">
       <Toolbar editor={editor} state={toolbarState} />
       <EditorContent
         editor={editor}
-        className="text-sm [&_.ProseMirror]:min-h-[4rem] [&_.ProseMirror]:px-2 [&_.ProseMirror]:py-1.5 [&_.ProseMirror]:outline-none [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:pl-5 [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-5"
+        className="text-sm [&_.ProseMirror]:min-h-[4rem] [&_.ProseMirror]:px-3 [&_.ProseMirror]:py-2 [&_.ProseMirror]:outline-none [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:pl-5 [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-5"
       />
     </div>
   );
@@ -93,67 +106,73 @@ function Toolbar({
   };
 }) {
   return (
-    <div className="flex flex-wrap gap-1 border-b bg-slate-50 p-1">
+    <div className="flex flex-wrap gap-0.5 border-b border-border bg-secondary/50 p-1">
       <ToolbarButton
-        label="Ж"
+        icon={Bold}
         title="Жирный"
-        style={{ fontWeight: 700 }}
         active={state.bold}
         onClick={() => editor.chain().focus().toggleBold().run()}
       />
       <ToolbarButton
-        label="К"
+        icon={Italic}
         title="Курсив"
-        style={{ fontStyle: "italic" }}
         active={state.italic}
         onClick={() => editor.chain().focus().toggleItalic().run()}
       />
       <ToolbarButton
-        label="Ч"
+        icon={Underline}
         title="Подчёркнутый"
-        style={{ textDecoration: "underline" }}
         active={state.underline}
         onClick={() => editor.chain().focus().toggleUnderline().run()}
       />
       <ToolbarButton
-        label="З"
+        icon={Strikethrough}
         title="Зачёркнутый"
-        style={{ textDecoration: "line-through" }}
         active={state.strike}
         onClick={() => editor.chain().focus().toggleStrike().run()}
       />
+      <span className="mx-0.5 w-px self-stretch bg-border" />
       <ToolbarButton
-        label="•"
+        icon={List}
         title="Маркированный список"
         active={state.bulletList}
         onClick={() => editor.chain().focus().toggleBulletList().run()}
       />
       <ToolbarButton
-        label="1."
+        icon={ListOrdered}
         title="Нумерованный список"
         active={state.orderedList}
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
       />
-      <ToolbarButton label="↶" title="Отменить" onClick={() => editor.chain().focus().undo().run()} disabled={!state.canUndo} />
-      <ToolbarButton label="↷" title="Повторить" onClick={() => editor.chain().focus().redo().run()} disabled={!state.canRedo} />
+      <span className="mx-0.5 w-px self-stretch bg-border" />
+      <ToolbarButton
+        icon={Undo2}
+        title="Отменить"
+        onClick={() => editor.chain().focus().undo().run()}
+        disabled={!state.canUndo}
+      />
+      <ToolbarButton
+        icon={Redo2}
+        title="Повторить"
+        onClick={() => editor.chain().focus().redo().run()}
+        disabled={!state.canRedo}
+      />
     </div>
   );
 }
 
 function ToolbarButton({
-  label,
+  icon: Icon,
   title,
   onClick,
   active = false,
   disabled = false,
-  style,
 }: {
-  label: string;
+  icon: LucideIcon;
   title: string;
   onClick: () => void;
   active?: boolean;
   disabled?: boolean;
-  style?: CSSProperties;
 }) {
   return (
     <button
@@ -162,15 +181,15 @@ function ToolbarButton({
       aria-label={title}
       aria-pressed={active}
       disabled={disabled}
-      // preventDefault — клик по кнопке не должен снимать фокус/выделение с редактора до срабатывания команды.
+      // preventDefault — клик по кнопке не должен снимать фокус с редактора до срабатывания команды.
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      style={style}
-      className={`min-w-6 rounded border px-1.5 py-0.5 text-xs disabled:opacity-30 ${
-        active ? "border-slate-400 bg-slate-200" : "hover:bg-slate-100"
-      }`}
+      className={cn(
+        "flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors disabled:opacity-30",
+        active ? "bg-card text-primary shadow-xs" : "hover:bg-card hover:text-foreground",
+      )}
     >
-      {label}
+      <Icon className="size-3.5" aria-hidden />
     </button>
   );
 }
