@@ -116,7 +116,10 @@ const activityRow = {
   schoolId: SCHOOL,
   mode: "lesson" as const,
   assignedBy: TEACHER,
-  deadline: new Date("2026-09-05T10:00:00.000Z"),
+  // Относительный дедлайн (неделя вперёд) — не фиксированная дата: submitActivity
+  // сравнивает его с `Date.now()`, фиксированный «2026-09-05» стал бы time-bomb'ом,
+  // который зеленел утром и падал вечером того же дня.
+  deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
   timerSeconds: 600,
   createdAt: new Date("2026-09-04T09:00:00.000Z"),
   reviewedAt: null,
@@ -206,7 +209,7 @@ describe("createActivity (Э8.6)", () => {
       activityId: ACTIVITY,
     });
     expect(dto).toMatchObject({ id: ACTIVITY, materialId: MATERIAL, materialVersion: 1, mode: "lesson" });
-    expect(dto.deadline).toBe("2026-09-05T10:00:00.000Z");
+    expect(dto.deadline).toBe(activityRow.deadline!.toISOString());
   });
 
   it("чужой учитель не может запустить задание", async () => {
@@ -236,7 +239,7 @@ describe("getMyActivity (Э8.6) — индивидуальный канал", ()
 
     expect(my.attemptId).toBe(deriveAttemptId(ACTIVITY, STUDENT_A, 1));
     expect(my.attemptNumber).toBe(1);
-    expect(my.deadline).toBe("2026-09-05T10:00:00.000Z");
+    expect(my.deadline).toBe(activityRow.deadline!.toISOString());
     expect(my.timerSeconds).toBe(600);
     expect(my.startedAt).toBe("2026-09-04T09:30:00.000Z");
 

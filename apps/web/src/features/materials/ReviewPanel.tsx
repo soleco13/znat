@@ -114,7 +114,7 @@ function QuestionReview({
 
   return (
     <section className="rounded border p-3">
-      <div className="mb-2 text-sm font-medium" dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.prompt.html) }} />
+      <div className="prose mb-2 text-sm font-medium" dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.prompt.html) }} />
       <p className="mb-2 text-sm">
         <span className="text-xs text-slate-400">правильный ответ: </span>
         {formatCorrectAnswer(block.interaction)}

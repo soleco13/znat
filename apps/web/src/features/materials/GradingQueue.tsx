@@ -91,7 +91,7 @@ function GradingCard({ item, onGraded }: { item: GradingQueueItem; onGraded: () 
       <header className="text-xs text-slate-400">
         {item.materialTitle} · {item.studentName} · сдано {new Date(item.submittedAt).toLocaleString()}
       </header>
-      <div className="text-sm font-medium" dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.promptHtml) }} />
+      <div className="prose text-sm font-medium" dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.promptHtml) }} />
       <p className="whitespace-pre-wrap rounded bg-slate-50 p-2 text-sm">{item.response.text || "(нет ответа)"}</p>
 
       <ul className="space-y-1">

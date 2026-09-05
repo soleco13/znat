@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import type { ListMaterialsQuery, MaterialStatus, MaterialSummary } from "@school/shared";
 import { useAuthStore } from "../../shared/auth-store.js";
-import { listMaterials } from "./materials-api.js";
+import { listMaterials, createMaterial } from "./materials-api.js";
+import { MATERIAL_TEMPLATES, buildMaterialFromTemplate } from "./material-templates.js";
 
 /**
  * Библиотека материалов (Э9.1, §7.2 ТЗ) — дерево предмет → класс → тема,
@@ -11,6 +12,16 @@ import { listMaterials } from "./materials-api.js";
  * ссылка здесь не решение о правах. id материала по-прежнему показан и
  * копируется отдельной кнопкой — им пользуются `LessonActivityPanel`/
  * `HomeworkPage` (Э8.6/8.11), которые пока просят id материала руками.
+ *
+ * «Создать материал» (Э9.10, §7.1 ТЗ п.5 «методист не начинает с чистого
+ * листа») — до этой подзадачи материалы заводились ИСКЛЮЧИТЕЛЬНО
+ * `db/seed-material.ts` (ручной скрипт в обход API, стоп-лист Э8), первого
+ * настоящего пути создания через продукт не было вовсе. `CreateMaterialForm`
+ * ниже закрывает этот пробел: небольшая форма метаданных + выбор шаблона
+ * (`material-templates.ts`) собирают валидный `Material` НА КЛИЕНТЕ, тем
+ * же кодом, что и кнопка «Добавить блок» в редакторе (`block-factories.ts`)
+ * — сервер (`POST /materials`) лишь сохраняет то, что уже прошло ту же
+ * форму блоков, что и любая ручная правка.
  */
 const STATUS_LABEL: Record<MaterialStatus, string> = {
   draft: "Черновик",
@@ -40,6 +51,7 @@ function MaterialsLibraryContent() {
   const [q, setQ] = useState("");
   const [items, setItems] = useState<MaterialSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const query = useMemo<ListMaterialsQuery>(
     () => ({
@@ -66,7 +78,14 @@ function MaterialsLibraryContent() {
 
   return (
     <div className="mx-auto mt-8 max-w-4xl px-4">
-      <h1 className="mb-4 text-xl font-semibold">Библиотека материалов</h1>
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Библиотека материалов</h1>
+        <button type="button" onClick={() => setShowCreateForm((v) => !v)} className="btn btn-primary btn-sm">
+          {showCreateForm ? "Отмена" : "+ Создать материал"}
+        </button>
+      </div>
+
+      {showCreateForm && <CreateMaterialForm onCancel={() => setShowCreateForm(false)} />}
 
       <div className="mb-6 flex flex-wrap items-end gap-3">
         <label className="text-xs text-slate-500">
@@ -124,10 +143,7 @@ function MaterialsLibraryContent() {
       {error && <p className="text-sm text-red-600">{error}</p>}
       {!error && !items && <p className="text-sm text-slate-400">Загрузка…</p>}
       {!error && items && items.length === 0 && (
-        <p className="text-sm text-slate-500">
-          Ничего не найдено. Материалы пока заводятся seed-скриптом — создание материала из редактора появится
-          отдельно (Э9.3+).
-        </p>
+        <p className="text-sm text-slate-500">Ничего не найдено. Попробуйте изменить фильтры или создайте новый материал.</p>
       )}
 
       <div className="flex flex-col gap-4">
@@ -153,6 +169,119 @@ function MaterialsLibraryContent() {
         ))}
       </div>
     </div>
+  );
+}
+
+/**
+ * Форма создания материала (Э9.10) — метаданные (заголовок/предмет/классы/
+ * тема) + выбор шаблона. `grades` — свободный текст «8» или «8, 9», не
+ * мультиселект: у школы нет фиксированного справочника классов в этом
+ * приложении (фильтр библиотеки выше тоже свободный текст на один класс),
+ * заводить отдельный источник правды под один текстовый инпут формы
+ * создания было бы лишним.
+ */
+function CreateMaterialForm({ onCancel }: { onCancel: () => void }) {
+  const navigate = useNavigate();
+  const [title, setTitle] = useState("");
+  const [subject, setSubject] = useState("");
+  const [gradesText, setGradesText] = useState("");
+  const [topic, setTopic] = useState("");
+  const [templateId, setTemplateId] = useState(MATERIAL_TEMPLATES[0]!.id);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  function parseGrades(text: string): number[] {
+    return [...new Set(text.split(",").map((s) => Number(s.trim())).filter((n) => Number.isInteger(n) && n > 0))];
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    const grades = parseGrades(gradesText);
+    if (!title.trim() || !subject.trim() || grades.length === 0) {
+      setError("Заполните заголовок, предмет и хотя бы один класс (число)");
+      return;
+    }
+    const template = MATERIAL_TEMPLATES.find((t) => t.id === templateId) ?? MATERIAL_TEMPLATES[0]!;
+    const content = buildMaterialFromTemplate(template, { title: title.trim(), subject: subject.trim(), grades, topic });
+    setSubmitting(true);
+    setError(null);
+    try {
+      const result = await createMaterial(content);
+      navigate(`/materials/${result.materialId}/edit`);
+    } catch {
+      setError("Не удалось создать материал — попробуйте ещё раз");
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mb-6 flex flex-col gap-3 rounded border p-3">
+      <div className="flex flex-wrap gap-3">
+        <label className="flex-1 text-xs text-slate-500">
+          Заголовок
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="mt-1 block w-full rounded border px-2 py-1 text-sm"
+          />
+        </label>
+        <label className="text-xs text-slate-500">
+          Предмет
+          <input
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder="математика"
+            className="mt-1 block rounded border px-2 py-1 text-sm"
+          />
+        </label>
+        <label className="text-xs text-slate-500">
+          Классы
+          <input
+            value={gradesText}
+            onChange={(e) => setGradesText(e.target.value)}
+            placeholder="8 или 8, 9"
+            className="mt-1 block w-24 rounded border px-2 py-1 text-sm"
+          />
+        </label>
+        <label className="text-xs text-slate-500">
+          Тема (необязательно)
+          <input
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            className="mt-1 block rounded border px-2 py-1 text-sm"
+          />
+        </label>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs text-slate-500">Шаблон</span>
+        <div className="flex flex-col gap-1">
+          {MATERIAL_TEMPLATES.map((t) => (
+            <label key={t.id} className="flex items-start gap-2 text-sm">
+              <input
+                type="radio"
+                name="template"
+                checked={templateId === t.id}
+                onChange={() => setTemplateId(t.id)}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="font-medium">{t.label}</span>
+                <span className="block text-xs text-slate-400">{t.description}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <div className="flex gap-2">
+        <button type="submit" disabled={submitting} className="btn btn-primary btn-sm">
+          {submitting ? "Создание…" : "Создать"}
+        </button>
+        <button type="button" onClick={onCancel} className="btn btn-ghost btn-sm">
+          Отмена
+        </button>
+      </div>
+    </form>
   );
 }
 

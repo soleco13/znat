@@ -45,7 +45,7 @@ function QuestionBlock({ question }: { question: QuestionAnalytics }) {
   return (
     <section className="rounded border p-3">
       <div
-        className="mb-2 text-sm font-medium"
+        className="prose mb-2 text-sm font-medium"
         dangerouslySetInnerHTML={{ __html: sanitizeHtml(question.promptHtml) }}
       />
       <p className="mb-2 text-xs text-slate-400">
