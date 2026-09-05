@@ -40,6 +40,20 @@ export const activityModeEnum = pgEnum("activity_mode", ["lesson", "homework"]);
 export const materialStatusEnum = pgEnum("material_status", ["draft", "review", "published"]);
 /** Э9.7: `video` сознательно не входит — план ограничивает подзадачу «картинки/аудио», видео в медиатеке — отдельная работа (транскодирование/превью не в этом срезе). */
 export const mediaAssetKindEnum = pgEnum("media_asset_kind", ["image", "audio"]);
+/**
+ * Э10 (§10.4 ТЗ). Проекция `livekit.EgressStatus` + собственное `deleted`
+ * (удаление файла по ретеншну). Строкой, не числом LiveKit — журнал
+ * читают люди. Совпадает с `recordingStatusSchema` в packages/shared.
+ */
+export const recordingStatusEnum = pgEnum("recording_status", [
+  "starting",
+  "recording",
+  "processing",
+  "ready",
+  "failed",
+  "aborted",
+  "deleted",
+]);
 
 export const schools = pgTable("schools", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -471,5 +485,56 @@ export const responses = pgTable(
     index("responses_material_question_idx").on(t.materialId, t.questionId),
     // Очередь ручной проверки (Э8.12): `submitted = true AND auto_graded = false AND graded_by IS NULL`.
     index("responses_manual_queue_idx").on(t.submitted, t.autoGraded, t.gradedBy),
+  ],
+);
+
+/**
+ * Э10 — записи уроков (§6 ТЗ, §10.4). Одна строка = один запуск egress на
+ * второй машине. В MVP таблица уже была намечена в §6 ТЗ («заводится, но
+ * не наполняется»); Э10 её наполняет.
+ */
+export const recordings = pgTable(
+  "recordings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    schoolId: uuid("school_id")
+      .notNull()
+      .references(() => schools.id, { onDelete: "cascade" }),
+    lessonId: uuid("lesson_id")
+      .notNull()
+      .references(() => lessons.id, { onDelete: "cascade" }),
+    /** Кто нажал «Записать» (§10.10 ТЗ: запись только по явному действию). */
+    startedBy: uuid("started_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    /** ID egress в LiveKit — по нему приходят вебхуки и делается stopEgress. */
+    egressId: text("egress_id").notNull().unique(),
+    status: recordingStatusEnum("status").notNull().default("starting"),
+    /**
+     * Ключ файла в StorageAdapter. Путь выбираем МЫ при старте egress
+     * (`recordings/<school>/<lesson>/<id>.mp4`), не берём из вебхука —
+     * недоверенный `filename` из egress тогда не влияет на то, что мы
+     * потом читаем/удаляем. `null` только у совсем ранних `starting`
+     * строк, если старт упал между insert и записью ключа. Ни одного
+     * прямого пути к ФС в бизнес-логике — доступ через StorageAdapter
+     * (CLAUDE.md).
+     */
+    storageKey: text("storage_key"),
+    durationSec: integer("duration_sec"),
+    sizeBytes: integer("size_bytes"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    /**
+     * Когда файл подлежит удалению по ретеншну (§10.10 ТЗ). Ставится при
+     * переходе в `ready` = endedAt + RECORDING_RETENTION_DAYS. Джоба
+     * автоудаления (Э10.4) выбирает `status = 'ready' AND expires_at < now()`.
+     */
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+  },
+  (t) => [
+    // «Идёт ли запись этого урока» + список записей урока (Э10.3/10.4).
+    index("recordings_lesson_idx").on(t.lessonId),
+    // Джоба ретеншна (Э10.4): `status = 'ready' AND expires_at < now()`.
+    index("recordings_retention_idx").on(t.status, t.expiresAt),
   ],
 );

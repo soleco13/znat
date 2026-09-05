@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { TrackSource, WebhookReceiver } from "livekit-server-sdk";
 import { env } from "../../plugins/env.js";
 import * as roomsService from "./service.js";
+import * as recordingsService from "../recordings/service.js";
 
 /**
  * LiveKit сам зовёт этот эндпоинт (Э2.7, §10.5 ТЗ, https://docs.livekit.io/home/server/webhooks).
@@ -45,6 +46,14 @@ export default async function livekitWebhookRoutes(app: FastifyInstance) {
         await roomsService.handleScreenShareStartedWebhook(roomName, userId);
       } else if (event.event === "track_unpublished" && roomName && event.track?.source === TrackSource.SCREEN_SHARE) {
         await roomsService.handleScreenShareStoppedWebhook(roomName);
+      } else if (
+        (event.event === "egress_started" ||
+          event.event === "egress_updated" ||
+          event.event === "egress_ended") &&
+        event.egressInfo
+      ) {
+        // Э10: статус записи едет от egress ко строке recordings через вебхук.
+        await recordingsService.applyEgressWebhook(event.egressInfo);
       }
 
       return reply.status(200).send();

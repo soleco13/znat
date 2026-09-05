@@ -4,6 +4,7 @@ build/
 .env
 .env.*
 !.env.example
+!.env.egress.example
 *.log
 .DS_Store
 Thumbs.db

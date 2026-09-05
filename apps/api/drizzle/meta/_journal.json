@@ -99,6 +99,13 @@
       "when": 1788553652022,
       "tag": "0013_slippery_night_nurse",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1788620413446,
+      "tag": "0014_wise_ironclad",
+      "breakpoints": true
     }
   ]
 }

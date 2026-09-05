@@ -24,6 +24,11 @@ import canvasRoutes from "./modules/canvas/routes.js";
 import decksRoutes from "./modules/decks/routes.js";
 import activitiesRoutes from "./modules/activities/routes.js";
 import materialsRoutes from "./modules/materials/routes.js";
+import recordingsRoutes from "./modules/recordings/routes.js";
+import {
+  startRecordingRetentionSweep,
+  stopRecordingRetentionSweep,
+} from "./modules/recordings/service.js";
 import {
   buildConvertJobHandlers,
   startDeckReconcileSweep,
@@ -73,6 +78,7 @@ export function buildServer() {
       api.register(decksRoutes);
       api.register(activitiesRoutes);
       api.register(materialsRoutes);
+      api.register(recordingsRoutes);
       api.register(assetsRoutes);
     },
     { prefix: "/api/v1" },
@@ -100,12 +106,14 @@ async function main() {
   startCanvasUnloadSweep();
   startConvertEvents(buildConvertJobHandlers());
   startDeckReconcileSweep();
+  startRecordingRetentionSweep();
 
   const shutdown = async (signal: string) => {
     app.log.info({ signal }, "Shutting down");
     stopPresenceSweep();
     stopCanvasUnloadSweep();
     stopDeckReconcileSweep();
+    stopRecordingRetentionSweep();
     await stopConvertEvents();
     await app.close();
     await pool.end();

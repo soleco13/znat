@@ -1,0 +1,62 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Э10.1 — LiveKit Egress на ВТОРОЙ машине (§10.4 ТЗ).
+#
+# ПОЧЕМУ отдельный compose и отдельная машина, а не сервис в docker-compose.yml:
+# RoomComposite egress запускает внутри headless-Chrome и потребляет 2–6 CPU
+# на одну запись (§10.4 ТЗ, дословно: «одна запись съест половину машины и
+# убьёт качество звука на всех остальных уроках»). На монолит не помещается —
+# это единственная функция проекта, для которой ТЗ прямо предписывает второе
+# железо (€40–60/мес).
+#
+# РАЗВОРАЧИВАЕТСЯ на второй машине так:
+#   scp docker-compose.egress.yml .env.egress egress.yaml  egress-host:/opt/egress/
+#   ssh egress-host 'cd /opt/egress && docker compose -f docker-compose.egress.yml --env-file .env.egress up -d'
+#
+# СВЯЗЬ С ОСНОВНОЙ МАШИНОЙ — только по приватной сети провайдера (Hetzner
+# vSwitch / DO VPC / …), НИКОГДА по публичному IP:
+#   - egress → Redis основной машины (координация заданий, тот же Redis, что
+#     держит BullMQ и LiveKit) — порт 6379 открыт ТОЛЬКО в приватной подсети;
+#   - egress → LiveKit основной машины (ws, подписка на дорожки комнаты) —
+#     порт 7880 там же.
+# Публично со второй машины наружу не торчит ничего (кроме SSH). Проверяется
+# на этапе разворачивания: `ufw` на обеих машинах, `default deny` + разрешения
+# только для CIDR приватной подсети.
+#
+# ФАЙЛЫ ЗАПИСЕЙ: egress пишет .mp4 по пути, который задаёт API
+# (`recordings/<school>/<lesson>/<id>.mp4` внутри STORAGE_ROOT). Каталог
+# STORAGE_ROOT смонтирован в контейнер egress так же, как в `app` на основной
+# машине — через сетевую ФС провайдера или, позже (§10.6 ТЗ), через S3-выход
+# egress на SeaweedFS. StorageAdapter в API от этого не зависит: ключ хранения
+# один и тот же.
+#
+# ЧИТАТЬ ПОСТРОЧНО (CLAUDE.md, «конфиги LiveKit не делегировать вслепую») —
+# ошибка в layout/битрейте/пути тихо испортит все записи, заметят через недели.
+# ─────────────────────────────────────────────────────────────────────────────
+services:
+  egress:
+    image: livekit/egress:latest
+    restart: unless-stopped
+    # SYS_ADMIN нужен Chrome для песочницы рендерера (иначе --no-sandbox, что
+    # хуже с точки зрения изоляции недоверенного веб-контента layout-шаблона).
+    cap_add:
+      - SYS_ADMIN
+    # Chrome активно использует разделяемую память; дефолтные 64 МБ приводят к
+    # падениям рендерера на длинных записях.
+    shm_size: 1gb
+    environment:
+      EGRESS_CONFIG_FILE: /etc/egress.yaml
+    volumes:
+      - ./egress.yaml:/etc/egress.yaml:ro
+      # Тот же каталог ассетов, что STORAGE_ROOT у `app` на основной машине.
+      # На проде — точка монтирования сетевой ФС провайдера.
+      - ${EGRESS_STORAGE_ROOT:-/data/assets}:/data/assets
+    # Egress не слушает публичных портов: все команды приходят через Redis,
+    # а метрики Prometheus снимаются изнутри приватной сети (см. egress.yaml).
+    # network_mode: host — как и у livekit, чтобы Chrome/WebRTC не ходил через
+    # docker-proxy (та же причина, что в docker-compose.yml для livekit).
+    network_mode: host
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
