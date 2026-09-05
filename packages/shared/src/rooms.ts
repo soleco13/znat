@@ -109,6 +109,11 @@ export const serverRoomMessageSchema = z.discriminatedUnion("type", [
   // материал (с правильными ответами) идёт отдельным HTTP-запросом
   // (`GET /activities/:id/review`), не через этот канал.
   z.object({ type: z.literal("activity_reviewed"), activityId: z.string().uuid() }),
+  // Э10.3, §7.9/§10.10 ТЗ (152-ФЗ): идёт ли запись урока прямо сейчас.
+  // Сигнал для баннера согласия — его видят ВСЕ участники, включая
+  // учеников (которым сам список записей недоступен). Шлётся при
+  // старте/остановке записи и при подключении сокета к идущему уроку.
+  z.object({ type: z.literal("recording_status"), active: z.boolean() }),
   z.object({ type: z.literal("error"), message: z.string() }),
 ]);
 export type ServerRoomMessage = z.infer<typeof serverRoomMessageSchema>;

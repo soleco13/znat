@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { ServerRoomMessage } from "@school/shared";
 import { verifyAccessToken } from "../auth/service.js";
+import * as recordingsService from "../recordings/service.js";
 import { roomEvents } from "./events.js";
 import * as roomsService from "./service.js";
 
@@ -41,6 +42,12 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
     };
 
     send({ type: "presence", participants: (await roomsService.listParticipantsSnapshot(lessonId)) });
+
+    // Э10.3, 152-ФЗ: зашли в уже идущий урок, где запись уже стартовала —
+    // сразу показать баннер согласия, не дожидаясь следующего старта/стопа.
+    if (await recordingsService.isLessonRecordingActive(lessonId)) {
+      send({ type: "recording_status", active: true });
+    }
 
     const onEvent = (message: ServerRoomMessage) => send(message);
     roomEvents.on(lessonId, onEvent);

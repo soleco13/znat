@@ -11,6 +11,7 @@ import {
 import { AppError } from "../../plugins/errors.js";
 import { env } from "../../plugins/env.js";
 import * as lessonsService from "../lessons/service.js";
+import * as roomsService from "../rooms/service.js";
 import { getSignedFileUrl, deleteFile } from "../storage/service.js";
 import type { EgressInfo } from "livekit-server-sdk";
 import * as egress from "./egress-client.js";
@@ -125,6 +126,9 @@ export async function startLessonRecording(
     status: started.status,
     storageKey,
   });
+  // Э10.3, 152-ФЗ: как только запись пошла — баннер согласия у ВСЕХ
+  // участников урока, включая учеников (тот же приём, что `activity_started`).
+  roomsService.broadcastToLesson(lessonId, { type: "recording_status", active: true });
   return toSummary(row);
 }
 
@@ -156,7 +160,37 @@ export async function stopLessonRecording(
   const updated = await repo.updateRecording(row.id, {
     status: status === "recording" || status === "starting" ? "processing" : status,
   });
+  // Запись больше не идёт — снимаем баннер согласия у всех участников.
+  roomsService.broadcastToLesson(lessonId, { type: "recording_status", active: false });
   return toSummary(updated ?? row);
+}
+
+/**
+ * Идёт ли запись урока прямо сейчас — для баннера согласия при
+ * подключении сокета к уже идущему уроку (Э10.3, `rooms/ws.ts`). Без
+ * тенант-скоупа: `lessonId` глобально уникален, а сам факт «идёт запись»
+ * не секрет (баннер и так виден всем).
+ */
+export async function isLessonRecordingActive(lessonId: string): Promise<boolean> {
+  return repo.lessonHasActiveRecording(lessonId);
+}
+
+/**
+ * Э10.5 — снимок для метрик записи: по каждой активной записи — идёт ли
+ * в её уроке живой урок (есть подключённые участники). `no publishers`
+ * здесь — прокси «ноль участников на связи», см.
+ * `rooms/service.ts#countConnectedParticipants`.
+ */
+export async function getRecordingLoadSnapshot(): Promise<
+  { lessonId: string; connectedParticipants: number }[]
+> {
+  const active = await repo.listAllActiveRecordings();
+  return Promise.all(
+    active.map(async (r) => ({
+      lessonId: r.lessonId,
+      connectedParticipants: await roomsService.countConnectedParticipants(r.lessonId),
+    })),
+  );
 }
 
 export async function getLessonRecordings(
@@ -209,6 +243,12 @@ export async function applyEgressEvent(input: {
   }
 
   await repo.updateRecording(row.id, patch);
+
+  // Запись перешла из активной в терминальную (egress завершил сам —
+  // комната закрылась, лимит, сбой) — снять баннер согласия у всех.
+  if (ACTIVE_RECORDING_STATUSES.includes(row.status) && isTerminal(input.status)) {
+    roomsService.broadcastToLesson(row.lessonId, { type: "recording_status", active: false });
+  }
 }
 
 /**

@@ -39,10 +39,12 @@ presigned по роли), баннер согласия на запись, ст�
 ## Задачи Э10 (ПЛАН.md §Э10)
 
 - [x] Э10.1 Вторая машина под LiveKit Egress. Связь с LiveKit и Redis по внутренней сети провайдера. *(код записи + инфра-конфиг; реальный запуск на втором железе — за живым окружением)*
-- [ ] Э10.2 Свой layout-шаблон записи: доска/слайд крупно + плитка учителя.
-- [ ] Э10.3 Управление: старт/стоп, баннер согласия на запись перед началом урока.
-- [ ] Э10.4 Хранение записей, ретеншн 30–90 дней, автоудаление, presigned-доступ по роли.
-- [ ] Э10.5 Алерт «egress без публикующих» — иначе рекордер жжёт CPU и хранилище впустую.
+- [x] Э10.2 Свой layout-шаблон записи: демонстрация/доска крупно + плитка учителя. *(веб-страница `/egress`; композитинг в реальном Chrome egress — за живым окружением)*
+- [x] Э10.3 Управление: старт/стоп (учитель/админ), баннер согласия у ВСЕХ участников через WS `recording_status`.
+- [x] Э10.4 Хранение + presigned-доступ по роли: ретеншн/автоудаление сделаны в Э10.1, здесь — фронт (список записей со скачиванием). Двухшаговое подтверждение старта (152-ФЗ).
+- [x] Э10.5 Алерт «egress без публикующих»: метрики `lesson_recording_active` / `lesson_recording_no_publishers` + правило Prometheus `RecordingWithoutPublishers`.
+
+**Э10 закрыт технически (2026-09-05, тот же контекст):** `pnpm -r build` без `any`, `pnpm -r test` зелёный (api 377 — +7 в `recordings/service.test.ts`; shared 54), `pnpm depcheck` (224 модуля, 648 связей, 0 нарушений — цикла `recordings ↔ rooms` нет: `recordings/service` → `rooms/service` линейно, как `activities/service`). Гейт Э10 (запись 60-мин урока не влияет на другие уроки — она на другой машине; Grafana MCP + два железа) — за живым окружением.
 
 ## Гейт Э10
 
@@ -136,11 +138,8 @@ presigned по роли), баннер согласия на запись, ст�
   - `.env.egress.example` — `LIVEKIT_API_KEY/SECRET` (те же, что на
     основной), `MAIN_HOST_PRIVATE_IP`, `EGRESS_STORAGE_ROOT`.
   - `.env.example` — секция записи (флаг выкл. по умолчанию).
-- **НЕ сделано (следующие подзадачи / за живым окружением)**:
-  - Э10.2 (кастомный layout доска+плитка учителя как веб-страница
-    `/egress`), Э10.3 фронт (баннер согласия + кнопка старт/стоп,
-    снять заглушку «скоро»), Э10.4 фронт (список записей со скачиванием),
-    Э10.5 (алерт «egress без публикующих» — метрика + правило Prometheus).
+- **НЕ сделано на момент Э10.1** (Э10.2–10.5 закрыты ниже в отдельной
+  секции; за живым окружением остаётся):
   - Реальный `docker compose -f docker-compose.egress.yml up` на второй
     машине, прогон записи, гейт Э10 (Grafana MCP + два железа).
   - Экспозиция Redis основной машины в приватную подсеть (`docker-compose.
@@ -150,6 +149,65 @@ presigned по роли), баннер согласия на запись, ст�
   `recordings/egress-client.test.ts`), `pnpm depcheck` (221 модуль,
   634 связи, 0 нарушений), YAML обоих compose-файлов валиден (парсером,
   не Docker).
+
+## Что сделано технически (Э10.2–10.5)
+
+- **Э10.2 — layout-шаблон записи (`apps/web/.../recordings/EgressPage.tsx`,
+  роут `/egress` вне `RequireAuth`/`Layout`)**. Страницу открывает
+  headless-Chrome внутри контейнера egress на второй машине; параметры
+  `?url=&token=&layout=` дописывает сам egress (`customBaseUrl` в
+  `startRoomCompositeEgress`). Подключается к комнате recorder-участником
+  (`<LiveKitRoom audio={false} video={false}>`), сигналит контрактными
+  строками `START_RECORDING`/`END_RECORDING` в консоль по
+  `useConnectionState` (их читает egress-сервис). Компоновка: крупный план
+  — трек SCREEN_SHARE (в реальном уроке доска идёт через демонстрацию
+  экрана учителя, Э7), плитка учителя в углу — камера того же участника;
+  нет демонстрации → крупным планом камера учителя. `RoomAudioRenderer`
+  обязателен — Chrome захватывает звук вкладки.
+- **Э10.3 — баннер согласия у всех + управление**. Новое WS-сообщение
+  `recording_status` в `serverRoomMessageSchema` (packages/shared). Шлётся
+  `roomsService.broadcastToLesson` из `recordings/service`: при старте
+  (`active:true`), при стопе и при терминальном egress-вебхуке
+  (`active:false`, только если запись была активной — не шлём лишнего по
+  уже завершённой). `rooms/ws.ts` при подключении сокета к уже идущему
+  уроку сразу шлёт `recording_status:true` (зашедшие в середину видят
+  баннер без задержки). `RoomPage` держит `recordingActive` от WS →
+  `RecordingConsentBanner` видят ВСЕ (учитель и ученики); панель
+  управления `RecordingPanel` — только `isTeacher`. Старт — двухшаговое
+  подтверждение (152-ФЗ: «ученики увидят баннер»). `RECORDING_ENABLED=false`
+  → 503 → панель показывает «вторая машина не подключена».
+- **Э10.4 — фронт списка записей**. `RecordingPanel` (раскрывашка) тянет
+  `GET /lessons/:id/recordings` при монтировании, при смене
+  `recordingActive` и раз в 20 с (файл финализируется асинхронно после
+  «Стоп»). Скачивание — только по `url` из ответа (presigned, TTL 1 час),
+  прямых путей к файлам на клиенте нет. Статус/длительность/размер/срок
+  хранения — человекочитаемо. Ретеншн-свип и `deleteFile` через
+  StorageAdapter уже были в Э10.1.
+- **Э10.5 — алерт «egress без публикующих»**. `recordings/repo.ts`:
+  `listAllActiveRecordings` (все школы) + `lessonHasActiveRecording`
+  (без тенант-скоупа — для баннера). `recordings/service.getRecordingLoadSnapshot`
+  → по каждой активной записи `roomsService.countConnectedParticipants`
+  (тонкая обёртка над `presence.countConnected`). `plugins/metrics.ts`:
+  два вычисляемых Gauge (`collect()` в момент скрейпа, без параллельного
+  счётчика — тот же приём, что `canvas_active_ydocs`/`lesson_traffic_mbit`):
+  `lesson_recording_active` (счётчик нагрузки на вторую машину),
+  `lesson_recording_no_publishers{lesson_id}` (1, если запись идёт при
+  нуле участников — **прокси**, точное «ноль публикуемых дорожек» знает
+  только egress). `monitoring/prometheus/alerts.yml`: правило
+  `RecordingWithoutPublishers` (`== 1 for 10m`, warning).
+  `prometheus.yml`: закомментированный scrape job `egress` (приватный IP
+  второй машины — задел на deploy).
+- **НЕ сделано (за живым окружением)**: реальный композитинг в Chrome
+  egress и проверка сигналов `START/END_RECORDING`; Playwright E2E
+  «учитель жмёт Запись → у ученика баннер → стоп → файл в списке»; гейт
+  Э10 (Grafana MCP: CPU/джиттер основного сервера во время записи не
+  меняются); алерт на родной метрике egress (имя метрики — свериться
+  через Context7 при подключении второй машины).
+- **Проверки Э10.2–10.5**: `pnpm -r build` (без `any`), `pnpm -r test`
+  (api **377** — +7 в `recordings/service.test.ts`: баннер-broadcast ×5,
+  `getRecordingLoadSnapshot` ×2; shared 54), `pnpm depcheck` (**224
+  модуля, 648 связей, 0 нарушений**), YAML `alerts.yml`/`prometheus.yml`
+  — правки в стиле существующих правил.
 
 ---
 

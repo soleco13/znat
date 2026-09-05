@@ -19,6 +19,7 @@ import { Board } from "../canvas/Board.js";
 import { DeckPanel } from "../decks/DeckPanel.js";
 import { listLessonActivities } from "../materials/activity-api.js";
 import { LessonActivityPanel } from "../materials/LessonActivityPanel.js";
+import { RecordingConsentBanner, RecordingPanel } from "../recordings/RecordingPanel.js";
 import { SelfCameraButton, VideoDegradeSuggestion } from "./CameraControls.js";
 import { ConnectionQualityDot, PacketLossWarning } from "./ConnectionQuality.js";
 import { DeviceCheckScreen } from "./DeviceCheckScreen.js";
@@ -98,6 +99,10 @@ export function RoomPage() {
   const [activeActivityId, setActiveActivityId] = useState<string | null>(null);
   // Растёт на каждый `activity_reviewed` — форсирует remount `ReviewPanel` (см. LessonActivityPanel).
   const [reviewSignal, setReviewSignal] = useState(0);
+  // Э10.3: идёт ли запись урока — приходит WS-сигналом `recording_status`
+  // (при старте/остановке и при входе в уже идущий урок). Управляет баннером
+  // согласия, который видят ВСЕ участники, включая учеников.
+  const [recordingActive, setRecordingActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // LiveKit-подключение (Э2, только аудио — см. стоп-лист Э2 в docs/CURRENT_STAGE.md).
   const [media, setMedia] = useState<MediaConnection | null>(null);
@@ -155,6 +160,9 @@ export function RoomPage() {
         break;
       case "activity_reviewed":
         setReviewSignal((n) => n + 1);
+        break;
+      case "recording_status":
+        setRecordingActive(message.active);
         break;
       case "error":
         setError(message.message);
@@ -316,6 +324,8 @@ export function RoomPage() {
 
   const content = (
     <div className="mx-auto mt-8 max-w-6xl px-4">
+      <RecordingConsentBanner active={recordingActive} />
+
       {media && <ScreenShareTile />}
 
       {lessonId && (
@@ -343,6 +353,16 @@ export function RoomPage() {
             isTeacher={isTeacher}
             activeActivityId={activeActivityId}
             reviewSignal={reviewSignal}
+          />
+        </div>
+      )}
+
+      {lessonId && isTeacher && (
+        <div className="mb-4">
+          <RecordingPanel
+            lessonId={lessonId}
+            recordingActive={recordingActive}
+            onActiveChange={setRecordingActive}
           />
         </div>
       )}

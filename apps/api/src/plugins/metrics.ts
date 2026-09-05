@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import client from "prom-client";
 import { getActiveCanvasDocumentsCount } from "../modules/canvas/service.js";
 import { getActiveLessonTrafficSnapshot } from "../modules/rooms/service.js";
+import { getRecordingLoadSnapshot } from "../modules/recordings/service.js";
 
 const register = new client.Registry();
 client.collectDefaultMetrics({ register });
@@ -54,6 +55,46 @@ new client.Gauge({
     const snapshot = await getActiveLessonTrafficSnapshot();
     for (const lesson of snapshot) {
       this.set({ lesson_id: lesson.lessonId, mode: lesson.mode }, lesson.estimatedMbit);
+    }
+  },
+});
+
+/**
+ * Э10.5, §10.4 ТЗ: «алерт „egress без публикующих“ — иначе рекордер жжёт
+ * CPU и хранилище впустую». Две метрики, обе вычисляются в момент скрейпа
+ * из таблицы `recordings` + presence урока (без параллельного счётчика):
+ *
+ * - `lesson_recording_active` — сколько записей egress сейчас реально
+ *   пишет (`starting`/`recording`). Просто счётчик нагрузки на вторую
+ *   машину для дашборда.
+ * - `lesson_recording_no_publishers{lesson_id}` — 1, если запись идёт, а в
+ *   уроке ноль подключённых участников. Это ПРОКСИ (см.
+ *   `rooms/service.ts#countConnectedParticipants`): точное «ноль
+ *   публикуемых дорожек» знает только egress (его собственная метрика
+ *   `livekit_egress_*` на :9090 второй машины — авторитетный источник,
+ *   когда вторая машина поднята и Grafana Agent её скрейпит). Пока
+ *   монолит один — этого прокси достаточно, чтобы поймать забытую запись.
+ */
+new client.Gauge({
+  name: "lesson_recording_active",
+  help: "Записей уроков, которые egress прямо сейчас пишет (starting/recording)",
+  registers: [register],
+  async collect() {
+    const snapshot = await getRecordingLoadSnapshot();
+    this.set(snapshot.length);
+  },
+});
+
+new client.Gauge({
+  name: "lesson_recording_no_publishers",
+  help: "1, если запись урока идёт, а подключённых участников в уроке ноль (egress жжёт CPU впустую — прокси, см. metrics.ts)",
+  labelNames: ["lesson_id"],
+  registers: [register],
+  async collect() {
+    this.reset();
+    const snapshot = await getRecordingLoadSnapshot();
+    for (const rec of snapshot) {
+      this.set({ lesson_id: rec.lessonId }, rec.connectedParticipants === 0 ? 1 : 0);
     }
   },
 });

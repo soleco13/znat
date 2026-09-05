@@ -71,6 +71,38 @@ export async function findActiveRecordingForLesson(
   return row ?? null;
 }
 
+/**
+ * Все записи всех школ, которые egress прямо сейчас пишет
+ * (`starting`/`recording`) — для метрики нагрузки/алерта Э10.5 «egress без
+ * публикующих» и для реконсиляции зависших записей. Схема сама по себе
+ * не тенант-скоупится: метрики платформенные.
+ */
+export async function listAllActiveRecordings(): Promise<RecordingRow[]> {
+  return db
+    .select()
+    .from(recordings)
+    .where(inArray(recordings.status, [...ACTIVE_RECORDING_STATUSES]));
+}
+
+/**
+ * Быстрый ответ «идёт ли запись этого урока» без тенант-скоупа — для
+ * баннера согласия при подключении сокета (Э10.3), где `schoolId` под
+ * рукой нет, а `lessonId` (UUID) и так уникален глобально.
+ */
+export async function lessonHasActiveRecording(lessonId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: recordings.id })
+    .from(recordings)
+    .where(
+      and(
+        eq(recordings.lessonId, lessonId),
+        inArray(recordings.status, [...ACTIVE_RECORDING_STATUSES]),
+      ),
+    )
+    .limit(1);
+  return row != null;
+}
+
 export interface RecordingUpdate {
   status?: RecordingStatus;
   storageKey?: string | null;

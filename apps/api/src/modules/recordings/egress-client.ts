@@ -79,9 +79,11 @@ export interface StartedRecording {
 
 /**
  * RoomComposite (а не Track/Participant egress) — «как выглядел урок»
- * (§10.4 ТЗ, вариант 1). Кастомный layout (доска крупно + плитка учителя)
- * — Э10.2, через `RECORDING_EGRESS_TEMPLATE_URL`; пусто → дефолтный
- * `speaker` layout LiveKit.
+ * (§10.4 ТЗ, вариант 1). Кастомный layout (Э10.2: демонстрация/доска
+ * крупно + плитка учителя) — веб-страница `/egress` фронтенда, задаётся
+ * `RECORDING_EGRESS_TEMPLATE_URL` (обычно `${PUBLIC_ORIGIN}/egress`);
+ * egress сам допишет `?url=&token=&layout=`. Пусто → дефолтный `speaker`
+ * layout LiveKit.
  */
 export async function startRoomRecording(params: StartRecordingParams): Promise<StartedRecording> {
   const output = new EncodedFileOutput({

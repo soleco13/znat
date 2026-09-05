@@ -26,3 +26,13 @@ scrape_configs:
   - job_name: prometheus
     static_configs:
       - targets: ["localhost:9090"]
+
+  # Э10.5 — LiveKit Egress на второй машине. Prometheus основной машины не
+  # ходит в приватную подсеть провайдера напрямую; раскомментировать и
+  # подставить приватный IP второй машины на этапе разворачивания egress
+  # (или скрейпить локальным Grafana Agent'ом на второй машине и слать
+  # remote_write сюда). До этого метрики Э10.5 держатся на прокси
+  # `lesson_recording_no_publishers` из app.
+  # - job_name: egress
+  #   static_configs:
+  #     - targets: ["${EGRESS_HOST_PRIVATE_IP}:9090"]

@@ -188,6 +188,20 @@ async function estimatePlatformTrafficMbit(excludeLessonId?: string): Promise<nu
  * модуля напрямую в момент скрейпа, без параллельного счётчика, который
  * мог бы разойтись с реальностью.
  */
+/**
+ * Сколько участников урока сейчас реально на связи (Э10.5). `recordings`
+ * спрашивает это, чтобы отличить «идёт запись живого урока» от «egress
+ * жжёт CPU на пустой комнате» — метрика `lesson_recording_no_publishers`
+ * и алерт «egress без публикующих». Это ПРОКСИ (кто-то может быть в
+ * комнате, но не публиковать ни звук, ни видео — валидный аудио-урок с
+ * выключёнными камерами тоже сюда попадёт как «есть участники»), а не
+ * прямой подсчёт публикуемых дорожек: точный ответ есть только у самого
+ * LiveKit/egress, дёргать его на каждый скрейп Prometheus — дорого.
+ */
+export async function countConnectedParticipants(lessonId: string): Promise<number> {
+  return presence.countConnected(lessonId);
+}
+
 export async function getActiveLessonTrafficSnapshot(): Promise<
   { lessonId: string; mode: LessonMode; participantCount: number; estimatedMbit: number }[]
 > {

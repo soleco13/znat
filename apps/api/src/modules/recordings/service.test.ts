@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-const { repoMock, egressMock, lessonsMock, storageMock } = vi.hoisted(() => ({
+const { repoMock, egressMock, lessonsMock, roomsMock, storageMock } = vi.hoisted(() => ({
   repoMock: {
     insertRecording: vi.fn(),
     findRecordingById: vi.fn(),
@@ -9,6 +9,12 @@ const { repoMock, egressMock, lessonsMock, storageMock } = vi.hoisted(() => ({
     findActiveRecordingForLesson: vi.fn(),
     updateRecording: vi.fn(),
     listExpiredRecordings: vi.fn(),
+    listAllActiveRecordings: vi.fn(),
+    lessonHasActiveRecording: vi.fn(),
+  },
+  roomsMock: {
+    broadcastToLesson: vi.fn(),
+    countConnectedParticipants: vi.fn(),
   },
   egressMock: {
     startRoomRecording: vi.fn(),
@@ -31,6 +37,7 @@ const { repoMock, egressMock, lessonsMock, storageMock } = vi.hoisted(() => ({
 vi.mock("./repo.js", () => repoMock);
 vi.mock("./egress-client.js", () => egressMock);
 vi.mock("../lessons/service.js", () => lessonsMock);
+vi.mock("../rooms/service.js", () => roomsMock);
 vi.mock("../storage/service.js", () => storageMock);
 vi.mock("../../plugins/env.js", () => ({
   env: {
@@ -224,5 +231,67 @@ describe("runRetentionCleanup (Э10.4, §10.10 ТЗ)", () => {
     storageMock.deleteFile.mockRejectedValueOnce(new Error("EIO"));
     const n = await service.runRetentionCleanup();
     expect(n).toBe(1);
+  });
+});
+
+describe("баннер согласия — recording_status в урок (Э10.3, 152-ФЗ)", () => {
+  it("старт записи шлёт recording_status active:true всем участникам урока", async () => {
+    await service.startLessonRecording(teacherUser, LESSON);
+    expect(roomsMock.broadcastToLesson).toHaveBeenCalledWith(LESSON, {
+      type: "recording_status",
+      active: true,
+    });
+  });
+
+  it("стоп записи шлёт recording_status active:false", async () => {
+    repoMock.findRecordingById.mockResolvedValue(row({ status: "recording" }));
+    await service.stopLessonRecording(teacherUser, LESSON, "rec-1");
+    expect(roomsMock.broadcastToLesson).toHaveBeenCalledWith(LESSON, {
+      type: "recording_status",
+      active: false,
+    });
+  });
+
+  it("egress сам завершил активную запись (комната закрылась) → active:false", async () => {
+    repoMock.findRecordingByEgressId.mockResolvedValue(row({ status: "recording" }));
+    await service.applyEgressEvent({ egressId: "EG_1", status: "aborted" });
+    expect(roomsMock.broadcastToLesson).toHaveBeenCalledWith(LESSON, {
+      type: "recording_status",
+      active: false,
+    });
+  });
+
+  it("вебхук по уже терминальной записи не шлёт лишний active:false", async () => {
+    repoMock.findRecordingByEgressId.mockResolvedValue(row({ status: "ready" }));
+    await service.applyEgressEvent({ egressId: "EG_1", status: "ready" });
+    expect(roomsMock.broadcastToLesson).not.toHaveBeenCalled();
+  });
+
+  it("isLessonRecordingActive проксирует repo без тенант-скоупа", async () => {
+    repoMock.lessonHasActiveRecording.mockResolvedValue(true);
+    await expect(service.isLessonRecordingActive(LESSON)).resolves.toBe(true);
+    expect(repoMock.lessonHasActiveRecording).toHaveBeenCalledWith(LESSON);
+  });
+});
+
+describe("getRecordingLoadSnapshot (Э10.5 — метрика «egress без публикующих»)", () => {
+  it("по каждой активной записи отдаёт число участников на связи в её уроке", async () => {
+    repoMock.listAllActiveRecordings.mockResolvedValue([
+      row({ id: "a", lessonId: "lesson-a" }),
+      row({ id: "b", lessonId: "lesson-b" }),
+    ]);
+    roomsMock.countConnectedParticipants.mockImplementation(async (id: string) =>
+      id === "lesson-a" ? 5 : 0,
+    );
+    const snap = await service.getRecordingLoadSnapshot();
+    expect(snap).toEqual([
+      { lessonId: "lesson-a", connectedParticipants: 5 },
+      { lessonId: "lesson-b", connectedParticipants: 0 },
+    ]);
+  });
+
+  it("нет активных записей — пустой снимок", async () => {
+    repoMock.listAllActiveRecordings.mockResolvedValue([]);
+    await expect(service.getRecordingLoadSnapshot()).resolves.toEqual([]);
   });
 });

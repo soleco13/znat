@@ -4,6 +4,7 @@ import { LessonsListPage } from "./features/lessons/LessonsListPage.js";
 import { HomeworkPage } from "./features/materials/HomeworkPage.js";
 import { MaterialEditorPage } from "./features/materials/MaterialEditorPage.js";
 import { MaterialsLibraryPage } from "./features/materials/MaterialsLibraryPage.js";
+import { EgressPage } from "./features/recordings/EgressPage.js";
 import { RoomPage } from "./features/room/RoomPage.js";
 import { Layout } from "./shared/Layout.js";
 import { RequireAuth } from "./shared/RequireAuth.js";
@@ -61,6 +62,9 @@ export function App() {
             </RequireAuth>
           }
         />
+        {/* Э10.2 — layout-шаблон записи. Открывается headless-Chrome внутри
+            LiveKit Egress на второй машине; без нашей сессии, вне Layout. */}
+        <Route path="/egress" element={<EgressPage />} />
         <Route path="/" element={<Navigate to="/lessons" replace />} />
       </Routes>
     </BrowserRouter>
