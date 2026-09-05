@@ -16,6 +16,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { ChevronDown, ChevronUp, GripVertical, Plus, X } from "lucide-react";
 import type { QuestionInteraction, RubricCriterion, TextMatchRule } from "@school/shared";
 
 /**
@@ -136,7 +137,7 @@ function ChoiceOptionsEditor({
               aria-label="Удалить вариант"
               className="rounded-md border border-border p-1 text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-30"
             >
-              ✕
+              <X className="size-3.5" aria-hidden />
             </button>
           </li>
         ))}
@@ -146,7 +147,7 @@ function ChoiceOptionsEditor({
         onClick={addOption}
         className="self-start inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
       >
-        + Добавить вариант
+        <Plus className="size-3" aria-hidden /> Добавить вариант
       </button>
     </div>
   );
@@ -267,7 +268,7 @@ function AnswerRulesFields({ rules, onChange }: { rules: AnswerRules; onChange: 
               aria-label="Удалить вариант ответа"
               className="rounded-md border border-border p-1 text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-30"
             >
-              ✕
+              <X className="size-3.5" aria-hidden />
             </button>
           </li>
         ))}
@@ -277,7 +278,7 @@ function AnswerRulesFields({ rules, onChange }: { rules: AnswerRules; onChange: 
         onClick={addAnswer}
         className="self-start inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
       >
-        + Добавить вариант ответа
+        <Plus className="size-3" aria-hidden /> Добавить вариант ответа
       </button>
       <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <input
@@ -422,7 +423,7 @@ function OpenAnswerEditor({
         Разрешить прикреплять файлы
       </label>
       <div className="flex flex-col gap-1.5">
-        <span className="text-xs text-muted-foreground">Критерии проверки (учителю при ручной проверке, §6.3 ТЗ)</span>
+        <span className="text-xs text-muted-foreground">Критерии проверки — учитель видит их при ручной проверке</span>
         <ul className="flex flex-col gap-1.5">
           {interaction.rubric.map((c) => (
             <li key={c.id} className="flex items-center gap-2">
@@ -446,7 +447,7 @@ function OpenAnswerEditor({
                 aria-label="Удалить критерий"
                 className="rounded-md border border-border p-1 text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-30"
               >
-                ✕
+                <X className="size-3.5" aria-hidden />
               </button>
             </li>
           ))}
@@ -456,7 +457,7 @@ function OpenAnswerEditor({
           onClick={addCriterion}
           className="self-start inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
         >
-          + Добавить критерий
+          <Plus className="size-3" aria-hidden /> Добавить критерий
         </button>
       </div>
     </div>
@@ -582,7 +583,7 @@ function ClozeTemplateShell<Gap>({
         onClick={insertGap}
         className="self-start inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
       >
-        + Добавить пропуск
+        <Plus className="size-3" aria-hidden /> Добавить пропуск
       </button>
       {usedIds.length === 0 && <p className="text-xs text-muted-foreground">В тексте пока нет ни одного пропуска.</p>}
       {usedIds.map((id) => (
@@ -671,7 +672,7 @@ function ClozeDropdownGapFields({ gap, onChange }: { gap: ClozeDropdownGap; onCh
               aria-label="Удалить вариант"
               className="rounded-md border border-border p-1 text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-30"
             >
-              ✕
+              <X className="size-3.5" aria-hidden />
             </button>
           </li>
         ))}
@@ -681,7 +682,7 @@ function ClozeDropdownGapFields({ gap, onChange }: { gap: ClozeDropdownGap; onCh
         onClick={addOption}
         className="self-start inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
       >
-        + Добавить вариант
+        <Plus className="size-3" aria-hidden /> Добавить вариант
       </button>
       <label className="flex items-center gap-2 text-xs text-muted-foreground">
         Правильный вариант
@@ -767,13 +768,13 @@ function ItemListEditor({
               aria-label="Удалить"
               className="rounded-md border border-border p-1 text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-30"
             >
-              ✕
+              <X className="size-3.5" aria-hidden />
             </button>
           </li>
         ))}
       </ul>
       <button type="button" onClick={addItem} className="self-start inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary">
-        + Добавить
+        <Plus className="size-3" aria-hidden /> Добавить
       </button>
     </div>
   );
@@ -945,7 +946,7 @@ function OrderingEditor({
         </SortableContext>
       </DndContext>
       <button type="button" onClick={addItem} className="self-start inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary">
-        + Добавить элемент
+        <Plus className="size-3" aria-hidden /> Добавить элемент
       </button>
     </div>
   );
@@ -975,8 +976,8 @@ function SortableOrderingEditorItem({
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`flex items-center gap-1.5 ${isDragging ? "opacity-50" : ""}`}
     >
-      <span {...attributes} {...listeners} className="cursor-grab select-none px-1 text-muted-foreground" aria-hidden="true">
-        ⠿
+      <span {...attributes} {...listeners} className="flex cursor-grab select-none items-center px-1 text-muted-foreground" aria-hidden="true">
+        <GripVertical className="size-4" />
       </span>
       <input
         value={item.html}
@@ -992,7 +993,7 @@ function SortableOrderingEditorItem({
           aria-label="Переместить выше"
           className="rounded border border-border p-0.5 text-muted-foreground transition-colors hover:bg-secondary disabled:opacity-30"
         >
-          ▲
+          <ChevronUp className="size-3.5" aria-hidden />
         </button>
         <button
           type="button"
@@ -1001,7 +1002,7 @@ function SortableOrderingEditorItem({
           aria-label="Переместить ниже"
           className="rounded border border-border p-0.5 text-muted-foreground transition-colors hover:bg-secondary disabled:opacity-30"
         >
-          ▼
+          <ChevronDown className="size-3.5" aria-hidden />
         </button>
       </span>
       <button
@@ -1011,7 +1012,7 @@ function SortableOrderingEditorItem({
         aria-label="Удалить элемент"
         className="rounded-md border border-border p-1 text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-30"
       >
-        ✕
+        <X className="size-3.5" aria-hidden />
       </button>
     </li>
   );

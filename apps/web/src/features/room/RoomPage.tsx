@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import { VideoPresets, type RoomOptions } from "livekit-client";
-import { Hand, LogOut, Send, Users } from "lucide-react";
+import { Hand, LogOut, Pin, Send, Users } from "lucide-react";
 import type {
   ChatMessage,
   Deck,
@@ -341,7 +341,9 @@ export function RoomPage() {
             {p.handRaised ? (
               <Hand className="size-3.5 text-warning" aria-label="Поднята рука" />
             ) : null}
-            {p.pinned ? <Badge variant="yellow">📌</Badge> : null}
+            {p.pinned ? (
+              <Pin className="size-3.5 text-primary" aria-label="Закреплён в сетке видео" />
+            ) : null}
             {media ? <MicStatusIcon userId={p.userId} /> : null}
             {media ? <ConnectionQualityDot userId={p.userId} /> : null}
           </div>
@@ -374,9 +376,9 @@ export function RoomPage() {
                   variant={p.pinned ? "secondary" : "outline"}
                   size="sm"
                   onClick={() => togglePin(p.userId, !p.pinned)}
-                  title="Закрепить в сетке видео"
                 >
-                  📌
+                  <Pin aria-hidden />
+                  {p.pinned ? "Открепить" : "Закрепить"}
                 </Button>
               ) : null}
             </div>

@@ -143,7 +143,7 @@ export function DeckPanel({
       ) : null}
       {isTeacher && ordered.some((d) => d.status === "ready") ? (
         <p className="mt-2 text-xs text-muted-foreground">
-          Импорт слайдов на холст и лента миниатюр — на панели доски выше.
+          Готовые презентации можно вынести на доску — кнопкой на панели доски.
         </p>
       ) : null}
 

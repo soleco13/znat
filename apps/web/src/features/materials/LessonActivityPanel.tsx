@@ -7,6 +7,7 @@ import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { MaterialPicker } from "./MaterialPicker.js";
 import { createActivity } from "./activity-api.js";
 import { ActivityPlayer } from "./ActivityPlayer.js";
 import { ActivityTeacherTabs } from "./ActivityTeacherTabs.js";
@@ -84,18 +85,18 @@ function TeacherActivityView({
 
   async function handleLaunch(e: React.FormEvent) {
     e.preventDefault();
-    if (!materialId.trim()) return;
+    if (!materialId) return;
     setLaunching(true);
     setError(null);
     try {
       const dto = await createActivity(lessonId, {
-        materialId: materialId.trim(),
+        materialId,
         mode: "lesson",
         timerSeconds: timerSeconds.trim() ? Number(timerSeconds) : undefined,
       });
       onLaunched(dto.id);
     } catch {
-      setError("Не удалось запустить задание — проверьте id материала");
+      setError("Не удалось запустить задание");
     } finally {
       setLaunching(false);
     }
@@ -105,27 +106,21 @@ function TeacherActivityView({
     <div className="space-y-4">
       <form onSubmit={handleLaunch} className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="la-material" className="text-xs">id материала</Label>
-          <Input
-            id="la-material"
-            value={materialId}
-            onChange={(e) => setMaterialId(e.target.value)}
-            placeholder="uuid материала"
-            className="w-64"
-          />
+          <Label className="text-xs">Материал</Label>
+          <MaterialPicker value={materialId} onChange={setMaterialId} className="w-72" />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="la-timer" className="text-xs">таймер, сек</Label>
+          <Label htmlFor="la-timer" className="text-xs">Ограничение, сек</Label>
           <Input
             id="la-timer"
             inputMode="numeric"
             value={timerSeconds}
             onChange={(e) => setTimerSeconds(e.target.value)}
-            placeholder="600"
-            className="w-28"
+            placeholder="без лимита"
+            className="w-32"
           />
         </div>
-        <Button type="submit" loading={launching}>
+        <Button type="submit" loading={launching} disabled={!materialId}>
           {launching ? "Запускаем…" : "Выдать классу"}
         </Button>
       </form>

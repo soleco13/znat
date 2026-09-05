@@ -243,10 +243,15 @@ export function ContentBlockView({ block }: { block: Exclude<Block, { type: "que
     case "audio":
       return <AudioAssetView block={block} />;
     case "video":
+      return (
+        <div className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+          Видео
+        </div>
+      );
     case "embed":
       return (
-        <div className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-          [{block.type}] — рендер подключается отдельно (ассеты/встраивание)
+        <div className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+          Интерактивный блок ({block.provider})
         </div>
       );
   }

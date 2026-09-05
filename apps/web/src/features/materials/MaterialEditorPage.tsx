@@ -18,11 +18,17 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  AlertTriangle,
+  CheckCircle2,
   ChevronDown,
   ChevronLeft,
   ChevronUp,
+  CircleHelp,
+  Eye,
   FileUp,
   GripVertical,
+  History,
+  Pencil,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -43,14 +49,20 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/shared/auth-store";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/shared/ui/select";
@@ -183,31 +195,41 @@ export function MaterialEditorPage() {
   const selectedBlock = material.blocks.find((b) => b.id === selectedBlockId) ?? null;
 
   return (
-    <div>
-      <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
+    <div className="mx-auto max-w-[1600px]">
+      <Link
+        to="/materials"
+        className="mb-2 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ChevronLeft className="size-3.5" aria-hidden /> Все материалы
+      </Link>
+
+      <header className="mb-4 flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
         <div className="min-w-0">
-          <Link
-            to="/materials"
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:underline"
-          >
-            <ChevronLeft className="size-3.5" aria-hidden /> Библиотека
-          </Link>
-          <div className="mt-1 flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <h1 className="ds-page-title truncate">{material.title}</h1>
-            {status ? <Badge variant={STATUS_META[status].variant}>{STATUS_META[status].label}</Badge> : null}
+            {status ? (
+              <Badge variant={STATUS_META[status].variant}>{STATUS_META[status].label}</Badge>
+            ) : null}
           </div>
-        </div>
-        <div className="flex items-center gap-3">
           <p
             className={cn(
-              "text-xs",
+              "mt-1 text-xs",
               canEdit ? "text-muted-foreground" : "font-medium text-warning",
             )}
           >
-            {canEdit
-              ? autosaveLabel(autosave.status)
-              : "Материал не ваш — только просмотр"}
+            {canEdit ? autosaveLabel(autosave.status) : "Материал создан не вами — только просмотр"}
           </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {canEdit && id ? <VersionHistory materialId={id} /> : null}
+          {canEdit ? (
+            <ValidationButton
+              issues={validationIssues}
+              onRefresh={runValidation}
+              onSelectBlock={setSelectedBlockId}
+            />
+          ) : null}
           {id && status && (
             <StatusActions
               materialId={id}
@@ -224,16 +246,7 @@ export function MaterialEditorPage() {
         </div>
       </header>
 
-      {canEdit && id && <VersionHistory materialId={id} />}
-      {canEdit && (
-        <ValidationPanel
-          issues={validationIssues}
-          onRefresh={runValidation}
-          onSelectBlock={setSelectedBlockId}
-        />
-      )}
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[260px_1fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[300px_minmax(0,1fr)_minmax(0,1fr)]">
         <BlockListPanel
           blocks={material.blocks}
           selectedBlockId={selectedBlockId}
@@ -339,42 +352,6 @@ function StatusActions({
   );
 }
 
-function CollapsibleSection({
-  title,
-  badge,
-  children,
-  onOpen,
-}: {
-  title: string;
-  badge?: React.ReactNode;
-  children: React.ReactNode;
-  onOpen?: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="mb-3 rounded-lg border border-border bg-card text-sm">
-      <button
-        type="button"
-        className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold text-muted-foreground"
-        aria-expanded={open}
-        onClick={() => {
-          setOpen((v) => {
-            if (!v) onOpen?.();
-            return !v;
-          });
-        }}
-      >
-        <span className="flex items-center gap-2">
-          {title}
-          {badge}
-        </span>
-        <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} aria-hidden />
-      </button>
-      {open ? <div className="border-t border-border p-3">{children}</div> : null}
-    </div>
-  );
-}
-
 function VersionHistory({ materialId }: { materialId: string }) {
   const [items, setItems] = useState<MaterialVersionSummary[] | null>(null);
 
@@ -386,18 +363,32 @@ function VersionHistory({ materialId }: { materialId: string }) {
   }
 
   return (
-    <CollapsibleSection title="История версий" onOpen={load}>
-      <ul className="space-y-1 text-xs text-muted-foreground">
-        {items === null && <li>Загрузка…</li>}
-        {items?.length === 0 && <li>Версий пока нет</li>}
-        {items?.map((v) => (
-          <li key={v.versionId}>
-            Версия {v.version} — {new Date(v.createdAt).toLocaleString("ru-RU")}
-            {v.isCurrent && <span className="ml-1 font-medium text-success">(опубликована сейчас)</span>}
-          </li>
-        ))}
-      </ul>
-    </CollapsibleSection>
+    <Popover onOpenChange={(o) => o && load()}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm">
+          <History aria-hidden />
+          Версии
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72">
+        <p className="mb-2 text-xs font-semibold text-muted-foreground">История версий</p>
+        <ul className="space-y-1.5 text-xs text-muted-foreground">
+          {items === null && <li>Загрузка…</li>}
+          {items?.length === 0 && <li>Версий пока нет</li>}
+          {items?.map((v) => (
+            <li key={v.versionId} className="flex items-center justify-between gap-2">
+              <span>Версия {v.version}</span>
+              <span>
+                {new Date(v.createdAt).toLocaleDateString("ru-RU")}
+                {v.isCurrent && (
+                  <span className="ml-1 font-medium text-success">· опубликована</span>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -409,7 +400,7 @@ const VALIDATION_ISSUE_LABELS: Record<MaterialValidationIssue["code"], string> =
   broken_asset: "Битый файл",
 };
 
-function ValidationPanel({
+function ValidationButton({
   issues,
   onRefresh,
   onSelectBlock,
@@ -419,6 +410,7 @@ function ValidationPanel({
   onSelectBlock: (blockId: string) => void;
 }) {
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
 
   async function refresh() {
     setLoading(true);
@@ -429,42 +421,64 @@ function ValidationPanel({
     }
   }
 
-  const badge =
-    issues === null ? null : issues.length === 0 ? (
-      <Badge variant="green">готов к публикации</Badge>
-    ) : (
-      <Badge variant="yellow">{issues.length}</Badge>
-    );
-
   return (
-    <CollapsibleSection title="Валидация" badge={badge}>
-      <Button variant="outline" size="sm" className="mb-2" onClick={refresh} loading={loading}>
-        {loading ? "Проверка…" : "Проверить"}
-      </Button>
-      {issues === null && <p className="text-xs text-muted-foreground">Ещё не проверялся</p>}
-      {issues?.length === 0 && <p className="text-xs text-success">Проблем не найдено</p>}
-      {issues && issues.length > 0 && (
-        <ul className="space-y-1 text-xs">
-          {issues.map((issue, i) => (
-            <li key={i}>
-              {issue.blockId ? (
-                <button
-                  type="button"
-                  onClick={() => onSelectBlock(issue.blockId!)}
-                  className="text-left text-primary underline"
-                >
-                  [{VALIDATION_ISSUE_LABELS[issue.code]}] {issue.message}
-                </button>
-              ) : (
-                <span>
-                  [{VALIDATION_ISSUE_LABELS[issue.code]}] {issue.message}
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </CollapsibleSection>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm">
+          {issues === null ? (
+            <CircleHelp aria-hidden />
+          ) : issues.length === 0 ? (
+            <CheckCircle2 className="text-success" aria-hidden />
+          ) : (
+            <AlertTriangle className="text-warning" aria-hidden />
+          )}
+          Проверка
+          {issues && issues.length > 0 ? (
+            <Badge variant="yellow">{issues.length}</Badge>
+          ) : null}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80">
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-xs font-semibold text-muted-foreground">Проверка перед публикацией</p>
+          <Button variant="outline" size="sm" onClick={refresh} loading={loading}>
+            {loading ? "Проверка…" : "Проверить"}
+          </Button>
+        </div>
+        {issues === null && (
+          <p className="text-xs text-muted-foreground">Материал ещё не проверялся.</p>
+        )}
+        {issues?.length === 0 && (
+          <p className="text-xs font-medium text-success">Проблем не найдено — можно публиковать.</p>
+        )}
+        {issues && issues.length > 0 && (
+          <ul className="space-y-1.5 text-xs">
+            {issues.map((issue, i) => (
+              <li key={i}>
+                {issue.blockId ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectBlock(issue.blockId!);
+                      setOpen(false);
+                    }}
+                    className="text-left text-primary hover:underline"
+                  >
+                    <span className="font-medium">{VALIDATION_ISSUE_LABELS[issue.code]}:</span>{" "}
+                    {issue.message}
+                  </button>
+                ) : (
+                  <span>
+                    <span className="font-medium">{VALIDATION_ISSUE_LABELS[issue.code]}:</span>{" "}
+                    {issue.message}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -528,13 +542,17 @@ function BlockListPanel({
   }
 
   return (
-    <div className="flex flex-col self-start rounded-lg border border-border bg-card">
-      <div className="border-b border-border px-3 py-2 text-xs font-semibold text-muted-foreground">
-        Блоки ({blocks.length})
+    <div className="flex flex-col self-start overflow-hidden rounded-lg border border-border bg-card">
+      <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Содержание · {blocks.length}
+        </span>
+        <AddBlockButton onAdd={onAdd} />
       </div>
+
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-          <ul className="max-h-[60vh] divide-y divide-border overflow-y-auto">
+          <ul className="max-h-[62vh] space-y-0.5 overflow-y-auto p-1.5">
             {blocks.map((block, i) => (
               <SortableBlockItem
                 key={block.id}
@@ -544,25 +562,24 @@ function BlockListPanel({
                 selected={block.id === selectedBlockId}
                 onSelect={() => onSelect(block.id)}
                 onMove={(direction) => onReorder(i, i + direction)}
+                onRemove={() => onRemove(block.id)}
               />
             ))}
           </ul>
         </SortableContext>
       </DndContext>
+
       {blocks.length === 0 && (
-        <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-          Материал пуст — добавьте первый блок
-        </p>
+        <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
+          <div className="flex size-9 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+            <Plus className="size-4" aria-hidden />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Материал пуст. Добавьте первый блок кнопкой сверху или импортируйте из документа.
+          </p>
+        </div>
       )}
-      {selectedBlockId && (
-        <button
-          onClick={() => onRemove(selectedBlockId)}
-          className="flex w-full items-center gap-2 border-t border-border px-3 py-2 text-left text-xs font-medium text-destructive transition-colors hover:bg-destructive/5"
-        >
-          <Trash2 className="size-3.5" aria-hidden /> Удалить выбранный блок
-        </button>
-      )}
-      <AddBlockMenu onAdd={onAdd} />
+
       <ImportFromDocument onImported={onAddMany} />
     </div>
   );
@@ -614,6 +631,7 @@ function SortableBlockItem({
   selected,
   onSelect,
   onMove,
+  onRemove,
 }: {
   block: MaterialBlock;
   index: number;
@@ -621,6 +639,7 @@ function SortableBlockItem({
   selected: boolean;
   onSelect: () => void;
   onMove: (direction: -1 | 1) => void;
+  onRemove: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: block.id,
@@ -630,88 +649,90 @@ function SortableBlockItem({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        "flex items-center gap-1",
+        "group flex items-stretch gap-1 rounded-md",
         isDragging && "opacity-50",
-        selected && "bg-accent",
+        selected ? "bg-accent" : "hover:bg-secondary",
       )}
     >
       <span
         {...attributes}
         {...listeners}
-        className="cursor-grab select-none px-1 text-muted-foreground"
+        className="flex cursor-grab select-none items-center pl-1.5 text-muted-foreground/60"
         aria-hidden="true"
       >
         <GripVertical className="size-3.5" />
       </span>
-      <button
-        onClick={onSelect}
-        className={cn(
-          "flex flex-1 flex-col items-start gap-0.5 px-1 py-2 text-left",
-          !selected && "hover:bg-secondary",
-        )}
-      >
-        <span className="text-[11px] font-medium text-muted-foreground">
+      <button onClick={onSelect} className="flex min-w-0 flex-1 flex-col items-start gap-0.5 py-2 text-left">
+        <span
+          className={cn(
+            "text-[11px] font-medium",
+            selected ? "text-primary" : "text-muted-foreground",
+          )}
+        >
           {index + 1}. {blockLabel(block)}
         </span>
-        <span className="truncate text-sm text-foreground">{blockPreviewText(block)}</span>
+        <span className="w-full truncate text-sm text-foreground">{blockPreviewText(block)}</span>
       </button>
-      <span className="flex flex-col gap-0.5 pr-1">
+      <span className="flex items-center gap-0.5 pr-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
         <button
           type="button"
           disabled={index === 0}
           onClick={() => onMove(-1)}
-          aria-label="Переместить блок выше"
-          className="rounded border border-border p-0.5 text-muted-foreground transition-colors hover:bg-secondary disabled:opacity-30"
+          aria-label="Переместить выше"
+          className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-card disabled:opacity-30"
         >
-          <ChevronUp className="size-3" />
+          <ChevronUp className="size-3.5" />
         </button>
         <button
           type="button"
           disabled={index === total - 1}
           onClick={() => onMove(1)}
-          aria-label="Переместить блок ниже"
-          className="rounded border border-border p-0.5 text-muted-foreground transition-colors hover:bg-secondary disabled:opacity-30"
+          aria-label="Переместить ниже"
+          className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-card disabled:opacity-30"
         >
-          <ChevronDown className="size-3" />
+          <ChevronDown className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label="Удалить блок"
+          className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+        >
+          <Trash2 className="size-3.5" />
         </button>
       </span>
     </li>
   );
 }
 
-function AddBlockMenu({ onAdd }: { onAdd: (makeBlock: () => MaterialBlock) => void }) {
+function AddBlockButton({ onAdd }: { onAdd: (makeBlock: () => MaterialBlock) => void }) {
+  function add(key: string) {
+    onAdd(() => createBlock(key as ContentBlock["type"] | QuestionInteraction["type"]));
+  }
   return (
-    <div className="border-t border-border p-2">
-      <Label className="mb-1 block text-xs text-muted-foreground">Добавить блок</Label>
-      <Select
-        value=""
-        onValueChange={(key) => {
-          if (key) onAdd(() => createBlock(key as ContentBlock["type"] | QuestionInteraction["type"]));
-        }}
-      >
-        <SelectTrigger className="h-8">
-          <SelectValue placeholder="Выберите тип…" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectLabel>Контент</SelectLabel>
-            {(Object.keys(CONTENT_BLOCK_LABELS) as ContentBlock["type"][]).map((t) => (
-              <SelectItem key={t} value={t}>
-                {CONTENT_BLOCK_LABELS[t]}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-          <SelectGroup>
-            <SelectLabel>Вопрос</SelectLabel>
-            {(Object.keys(INTERACTION_LABELS) as QuestionInteraction["type"][]).map((t) => (
-              <SelectItem key={t} value={t}>
-                {INTERACTION_LABELS[t]}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="sm">
+          <Plus aria-hidden />
+          Блок
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="max-h-[70vh] w-56 overflow-y-auto">
+        <DropdownMenuLabel>Вопрос</DropdownMenuLabel>
+        {(Object.keys(INTERACTION_LABELS) as QuestionInteraction["type"][]).map((t) => (
+          <DropdownMenuItem key={t} onSelect={() => add(t)}>
+            {INTERACTION_LABELS[t]}
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel>Контент</DropdownMenuLabel>
+        {(Object.keys(CONTENT_BLOCK_LABELS) as ContentBlock["type"][]).map((t) => (
+          <DropdownMenuItem key={t} onSelect={() => add(t)}>
+            {CONTENT_BLOCK_LABELS[t]}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -726,8 +747,13 @@ function BlockEditorPanel({
 }) {
   if (!block) {
     return (
-      <div className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground">
-        Выберите блок слева, чтобы его редактировать
+      <div className="flex min-h-[240px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-card/40 p-6 text-center">
+        <div className="flex size-10 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+          <Pencil className="size-5" aria-hidden />
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Выберите блок в списке слева, чтобы его редактировать
+        </p>
       </div>
     );
   }
@@ -737,13 +763,17 @@ function BlockEditorPanel({
   }
 
   return (
-    <div className="self-start rounded-lg border border-border bg-card p-4">
-      <h2 className="ds-label mb-3">{blockLabel(block)}</h2>
-      {block.type === "question" ? (
-        <QuestionBlockFields block={block} onChange={(patch) => set(patch)} />
-      ) : (
-        <ContentBlockFields block={block} onChange={(patch) => set(patch)} />
-      )}
+    <div className="self-start overflow-hidden rounded-lg border border-border bg-card">
+      <div className="border-b border-border px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {blockLabel(block)}
+      </div>
+      <div className="p-4">
+        {block.type === "question" ? (
+          <QuestionBlockFields block={block} onChange={(patch) => set(patch)} />
+        ) : (
+          <ContentBlockFields block={block} onChange={(patch) => set(patch)} />
+        )}
+      </div>
     </div>
   );
 }
@@ -851,12 +881,12 @@ function ContentBlockFields({
       return (
         <div className="flex flex-col gap-3">
           <TextField
-            label="id файла в медиатеке"
+            label="Ссылка на видео"
             value={block.assetId}
             onChange={(assetId) => onChange({ assetId })}
           />
           <p className="text-[11px] text-muted-foreground">
-            Видео в медиатеке — отдельная задача (транскодирование/превью), вне Э9.7
+            Загрузка видео в медиатеку появится позже — пока укажите ссылку.
           </p>
         </div>
       );
@@ -918,7 +948,9 @@ function ContentBlockFields({
               </SelectContent>
             </Select>
           </label>
-          <p className="text-[11px] text-muted-foreground">Настройка встраивания — появится отдельно</p>
+          <p className="text-[11px] text-muted-foreground">
+            Параметры встраивания можно будет настроить после сохранения.
+          </p>
         </div>
       );
     case "page_break":
@@ -976,10 +1008,11 @@ function LivePreviewPanel({ material }: { material: Material }) {
 
   return (
     <div className="self-start overflow-hidden rounded-lg border border-border bg-card">
-      <div className="border-b border-border px-3 py-2 text-xs font-semibold text-muted-foreground">
-        Превью глазами ученика
+      <div className="flex items-center gap-2 border-b border-border px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <Eye className="size-3.5" aria-hidden />
+        Как видит ученик
       </div>
-      <div className="max-h-[70vh] space-y-3 overflow-y-auto p-4">
+      <div className="max-h-[72vh] space-y-3 overflow-y-auto p-4">
         <h3 className="text-base font-bold">{material.title}</h3>
         {publicMaterial.blocks.map((block) =>
           block.type === "question" ? (

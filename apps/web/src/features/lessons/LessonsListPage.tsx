@@ -65,7 +65,7 @@ export function LessonsListPage() {
   );
 
   return (
-    <div>
+    <div className="mx-auto max-w-4xl">
       <PageHeader title="Уроки" subtitle="Расписание и вход в комнату урока" />
 
       {loading ? (

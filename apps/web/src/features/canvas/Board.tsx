@@ -6,9 +6,30 @@ import type { FileId, OrderedExcalidrawElement } from "@excalidraw/excalidraw/el
 import { HocuspocusProvider } from "@hocuspocus/provider";
 import { ExcalidrawBinding } from "y-excalidraw";
 import * as Y from "yjs";
+import {
+  ImagePlus,
+  Navigation,
+  Plus,
+  Presentation,
+  Redo2,
+  Trash2,
+  Undo2,
+} from "lucide-react";
 import type { CanvasImageUploadResponse, Deck } from "@school/shared";
-import { useAuthStore } from "../../shared/auth-store.js";
-import { apiFetch } from "../../shared/api-client.js";
+
+import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/shared/auth-store";
+import { apiFetch } from "@/shared/api-client";
+import { Button } from "@/shared/ui/button";
+import { Separator } from "@/shared/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
+import { SimpleTooltip } from "@/shared/ui/tooltip";
 import {
   BACKGROUND_KIND_LABELS,
   PageBackground,
@@ -661,135 +682,194 @@ export function Board({
   return (
     <div>
       {ydoc && (
-        <div className="mb-2 flex flex-wrap items-center gap-2">
-          {nonSlidePages.map(([pageId], index) => (
-            <button
-              key={pageId}
-              onClick={() => isTeacher && switchPage(pageId)}
-              disabled={!isTeacher}
-              className={`inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary ${
-                pageId === activePageId ? "border-primary bg-accent font-semibold text-primary" : ""
-              } ${isTeacher ? "" : "cursor-default"}`}
-            >
-              {index + 1}
-            </button>
-          ))}
-          {isTeacher && (
-            <button onClick={addPage} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
-              + страница
-            </button>
-          )}
-          {isTeacher && activePageId && pages.length > 1 && (
-            <button onClick={() => deletePage(activePageId)} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">
-              Удалить страницу
-            </button>
-          )}
-          {isTeacher && activePageId && activeMeta?.kind !== "image" && (
-            <select
-              value={activeMeta?.kind ?? "blank"}
-              onChange={(e) => setPageBackgroundKind(activePageId, e.target.value as BackgroundKind)}
-              className="rounded-md border border-border bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-primary"
-            >
-              {Object.entries(BACKGROUND_KIND_LABELS).map(([kind, label]) => (
-                <option key={kind} value={kind}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          )}
-          {isTeacher && readyDecks.length > 0 && (
-            <span className="flex items-center gap-1">
-              <select
-                value={importDeckId}
-                onChange={(e) => {
-                  setImportDeckId(e.target.value);
-                  setImportNote(null);
-                }}
-                className="rounded-md border border-border bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-primary"
-              >
-                <option value="">Презентация…</option>
-                {readyDecks.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.title} ({deckPageCount(d)}){d.renderMode === "pdf" ? " · PDF" : ""}
-                    {importedDeckIds.has(d.id) ? " ✓" : ""}
-                  </option>
-                ))}
-              </select>
+        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-card p-2">
+          {/* Страницы */}
+          <div className="flex flex-wrap items-center gap-1">
+            {nonSlidePages.map(([pageId], index) => (
               <button
-                onClick={() => {
-                  const d = readyDecks.find((x) => x.id === importDeckId);
-                  if (d) void importDeckSlides(d);
-                }}
-                disabled={!importDeckId || importedDeckIds.has(importDeckId)}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary disabled:opacity-40"
+                key={pageId}
+                onClick={() => isTeacher && switchPage(pageId)}
+                disabled={!isTeacher}
+                aria-current={pageId === activePageId}
+                className={cn(
+                  "flex size-8 items-center justify-center rounded-md text-sm font-medium transition-colors",
+                  pageId === activePageId
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                  !isTeacher && "cursor-default",
+                )}
               >
-                Импортировать слайды
+                {index + 1}
               </button>
-              {importDeckId && importedDeckIds.has(importDeckId) && (
-                <button
-                  onClick={() => removeDeckSlides(importDeckId)}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+            ))}
+            {isTeacher && (
+              <SimpleTooltip content="Добавить страницу">
+                <Button variant="ghost" size="icon-sm" onClick={addPage} aria-label="Добавить страницу">
+                  <Plus />
+                </Button>
+              </SimpleTooltip>
+            )}
+            {isTeacher && activePageId && pages.length > 1 && (
+              <SimpleTooltip content="Удалить страницу">
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-destructive hover:bg-destructive/10"
+                  onClick={() => deletePage(activePageId)}
+                  aria-label="Удалить страницу"
                 >
-                  Убрать слайды
-                </button>
-              )}
-            </span>
-          )}
-          {importNote && <span className="text-sm text-warning">{importNote}</span>}
-          {!isTeacher && (
-            <button
-              onClick={() => setFollowTeacher((v) => !v)}
-              className={`inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary ${followTeacher ? "border-primary bg-accent font-semibold text-primary" : ""}`}
-            >
-              {followTeacher ? "Не следовать за учителем" : "Следовать за учителем"}
-            </button>
-          )}
-          {canDraw && undoState && (
+                  <Trash2 />
+                </Button>
+              </SimpleTooltip>
+            )}
+          </div>
+
+          {isTeacher && activePageId && activeMeta?.kind !== "image" && (
             <>
-              <button
-                onClick={() => undoState.manager.undo()}
-                disabled={!undoState.canUndo}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary disabled:opacity-40"
-                title="Отменить (Ctrl+Z)"
+              <Separator orientation="vertical" className="h-6" />
+              <Select
+                value={activeMeta?.kind ?? "blank"}
+                onValueChange={(v) => setPageBackgroundKind(activePageId, v as BackgroundKind)}
               >
-                ↶ Отменить
-              </button>
-              <button
-                onClick={() => undoState.manager.redo()}
-                disabled={!undoState.canRedo}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary disabled:opacity-40"
-                title="Повторить (Ctrl+Shift+Z)"
-              >
-                ↷ Повторить
-              </button>
+                <SelectTrigger className="h-8 w-[150px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(BACKGROUND_KIND_LABELS).map(([kind, label]) => (
+                    <SelectItem key={kind} value={kind}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </>
           )}
-          {canDraw && (
-            <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
-              Фото на доску
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                capture="environment"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  e.target.value = "";
-                  if (file) void insertImageFromFile(file);
-                }}
-              />
-            </label>
+
+          {isTeacher && readyDecks.length > 0 && (
+            <>
+              <Separator orientation="vertical" className="h-6" />
+              <div className="flex items-center gap-1.5">
+                <Presentation className="size-4 text-muted-foreground" aria-hidden />
+                <Select
+                  value={importDeckId}
+                  onValueChange={(v) => {
+                    setImportDeckId(v);
+                    setImportNote(null);
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[180px] text-xs">
+                    <SelectValue placeholder="Презентация…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {readyDecks.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.title} · {deckPageCount(d)}
+                        {d.renderMode === "pdf" ? " · PDF" : ""}
+                        {importedDeckIds.has(d.id) ? " · на доске" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {importDeckId && importedDeckIds.has(importDeckId) ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:bg-destructive/10"
+                    onClick={() => removeDeckSlides(importDeckId)}
+                  >
+                    Убрать слайды
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!importDeckId}
+                    onClick={() => {
+                      const d = readyDecks.find((x) => x.id === importDeckId);
+                      if (d) void importDeckSlides(d);
+                    }}
+                  >
+                    Импортировать слайды
+                  </Button>
+                )}
+              </div>
+            </>
           )}
-          {uploadError && <span className="text-sm text-destructive">{uploadError}</span>}
+
+          {!isTeacher && (
+            <Button
+              variant={followTeacher ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setFollowTeacher((v) => !v)}
+            >
+              <Navigation aria-hidden />
+              {followTeacher ? "Не следовать за учителем" : "Следовать за учителем"}
+            </Button>
+          )}
+
+          {(canDraw && undoState) || canDraw ? (
+            <Separator orientation="vertical" className="h-6" />
+          ) : null}
+          {canDraw && undoState && (
+            <div className="flex items-center gap-0.5">
+              <SimpleTooltip content="Отменить (Ctrl+Z)">
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => undoState.manager.undo()}
+                  disabled={!undoState.canUndo}
+                  aria-label="Отменить"
+                >
+                  <Undo2 />
+                </Button>
+              </SimpleTooltip>
+              <SimpleTooltip content="Повторить (Ctrl+Shift+Z)">
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => undoState.manager.redo()}
+                  disabled={!undoState.canRedo}
+                  aria-label="Повторить"
+                >
+                  <Redo2 />
+                </Button>
+              </SimpleTooltip>
+            </div>
+          )}
+          {canDraw && (
+            <Button asChild variant="outline" size="sm" className="cursor-pointer">
+              <label>
+                <ImagePlus aria-hidden />
+                Фото на доску
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (file) void insertImageFromFile(file);
+                  }}
+                />
+              </label>
+            </Button>
+          )}
+
+          {importNote && <span className="text-sm text-muted-foreground">{importNote}</span>}
+          {uploadError && <span className="text-sm font-medium text-destructive">{uploadError}</span>}
           {pageElementCount >= PAGE_ELEMENT_WARN_AT && (
             <span
-              className={`text-sm ${
-                pageElementCount >= PAGE_ELEMENT_LIMIT ? "font-semibold text-destructive" : "text-warning"
-              }`}
+              className={cn(
+                "ml-auto text-xs",
+                pageElementCount >= PAGE_ELEMENT_LIMIT
+                  ? "font-semibold text-destructive"
+                  : "text-warning",
+              )}
             >
               {pageElementCount >= PAGE_ELEMENT_LIMIT
-                ? `Лимит ${PAGE_ELEMENT_LIMIT} элементов на странице достигнут — новые не добавляются, создайте новую страницу`
-                : `Элементов на странице: ${pageElementCount} / ${PAGE_ELEMENT_LIMIT}`}
+                ? `Достигнут предел в ${PAGE_ELEMENT_LIMIT} объектов — добавьте новую страницу`
+                : `Объектов на странице: ${pageElementCount} / ${PAGE_ELEMENT_LIMIT}`}
             </span>
           )}
         </div>

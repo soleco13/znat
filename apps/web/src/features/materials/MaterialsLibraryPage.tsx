@@ -89,7 +89,7 @@ function MaterialsLibraryContent() {
   const hasFilters = Boolean(subject || grade || topic || status || q);
 
   return (
-    <div>
+    <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Библиотека материалов"
         subtitle="Дерево предмет → класс → тема, поиск и статусы"

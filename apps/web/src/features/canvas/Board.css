@@ -1,50 +1,86 @@
 /*
- * Упрощение UI Excalidraw для урока (Э3.4, §3.3 ТЗ): "Убрать/скрыть лишние
- * инструменты (Mermaid, embed, библиотеки фигур) — упростить UI для
- * школьника". Ни один из этих трёх пунктов не управляется публичным
- * пропом Excalidraw (проверено чтением скомпилированного
- * node_modules/@excalidraw/excalidraw/dist/dev/index.js — единственный
- * задокументированный переключатель в UIOptions.tools касается только
- * инструмента "изображение"). Кнопка "ещё инструменты" (рамка,
- * встраивание, лазер, Mermaid, ИИ-рамка) и кнопка библиотеки фигур
- * скрываются через их собственные стабильные CSS-классы
- * (.App-toolbar__extra-tools-trigger, .sidebar-trigger), найденные тем же
- * чтением бандла. Правила скопированы под .canvas-board, чтобы не
- * затронуть другие возможные использования Excalidraw/сайдбаров в
- * будущем (Э9 — редактор материалов может использовать похожие сайдбары).
+ * Оформление доски урока под общую дизайн-систему проекта.
+ * Excalidraw темизируется через собственные CSS-переменные на корневом
+ * `.excalidraw`; здесь они переопределены значениями токенов из
+ * apps/web/src/index.css. Плюс — скрытие лишних для урока инструментов.
  */
+
+/* ---------- Рамка холста ---------- */
+.canvas-board {
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+  background: hsl(var(--background));
+}
+
+/* ---------- Токены Excalidraw ---------- */
+.canvas-board .excalidraw {
+  --color-primary: #1d4ed8;
+  --color-primary-darker: #1a45be;
+  --color-primary-darkest: #1e40af;
+  --color-primary-light: #dbe6ff;
+  --color-primary-hover: #1d4ed8;
+
+  --button-hover-bg: var(--c-surface-2);
+  --button-active-bg: var(--c-primary-light);
+
+  --island-bg-color: #ffffff;
+  --default-bg-color: #ffffff;
+  --sidebar-bg-color: #ffffff;
+  --popup-bg-color: #ffffff;
+
+  --input-bg-color: #ffffff;
+  --input-border-color: var(--c-border-solid);
+  --input-hover-bg-color: var(--c-surface-2);
+  --input-label-color: var(--c-text-2);
+
+  --border-radius-lg: 12px;
+  --border-radius-md: 10px;
+
+  --shadow-island:
+    0 1px 3px rgba(16, 24, 40, 0.06), 0 8px 24px rgba(16, 24, 40, 0.08);
+
+  --ui-font: var(--font);
+}
+
+/* Панель-«остров» инструментов — мягкая рамка в тон карточкам ДС. */
+.canvas-board .excalidraw .Island {
+  border: 1px solid hsl(var(--border));
+}
+
+/* Активный инструмент — фирменный синий, а не дефолтный фиолетовый. */
+.canvas-board .excalidraw .ToolIcon__icon.active,
+.canvas-board .excalidraw .ToolIcon--selected .ToolIcon__icon {
+  background: var(--c-primary-light);
+}
+
+/* ---------- Скрытие лишних для урока инструментов ---------- */
 .canvas-board .App-toolbar__extra-tools-trigger,
 .canvas-board .App-toolbar__divider {
   display: none !important;
 }
 
-/*
- * Библиотека фигур рендерится как <label class="sidebar-trigger__label-element">
- * (сам кликабельный/focusable элемент, оборачивает скрытый <input type=checkbox>)
- * с вложенным <div class="sidebar-trigger default-sidebar-trigger">. Скрывать
- * нужно именно внешний <label> — иначе в DOM остаётся невидимый, но всё ещё
- * focusable/доступный для скринридера элемент (проверено live: спрятанный
- * только внутренний div продолжал попадать в accessibility snapshot как
- * чекбокс "Library"). `:has()` — чтобы задеть только обёртку библиотеки
- * (маркер `.default-sidebar-trigger` уникален для неё), а не любые будущие
- * кастомные сайдбары на том же компоненте `Sidebar.Trigger` (Э9 — редактор
- * материалов может использовать похожий сайдбар).
- */
 .canvas-board label.sidebar-trigger__label-element:has(.default-sidebar-trigger) {
   display: none !important;
 }
 
-/*
- * Э3.11: штатные кнопки Undo/Redo Excalidraw спрятаны, заменены своими в
- * тулбаре Board.tsx. Причина: `y-excalidraw` перехватывает КЛИК по ним на
- * `Y.UndoManager`, но их `disabled` остаётся от родной истории Excalidraw
- * (которую тот же `y-excalidraw` через `stopPropagation` в keydown-хендлере
- * фактически замораживает) — кнопка Redo всегда серая, кнопка Undo может
- * оставаться активной без причины. `display: none` (не удаление) — чтобы
- * `y-excalidraw` при инициализации всё ещё находил их через
- * `querySelector('[aria-label="Undo"]')` и не падал. Клавиши
- * Ctrl+Z / Ctrl+Shift+Z продолжают работать (свой keydown-хендлер пакета).
- */
+/* Штатные Undo/Redo Excalidraw скрыты — заменены своими в тулбаре Board.tsx
+   (y-excalidraw перехватывает клик, но не управляет их disabled). */
 .canvas-board .undo-redo-buttons {
+  display: none !important;
+}
+
+/* Пункты меню Excalidraw, неуместные в уроке: реклама Excalidraw+ («Save to…»),
+   ссылки на соцсети/GitHub проекта, смена темы. Скрываются по стабильным
+   признакам (data-testid / внешние href), а не по позиции. */
+.canvas-board .excalidraw [data-testid="json-export-button"],
+.canvas-board .excalidraw button[aria-label="Excalidraw+"],
+.canvas-board .excalidraw a[href*="plus.excalidraw.com"],
+.canvas-board .excalidraw a[href*="github.com/excalidraw"],
+.canvas-board .excalidraw a[href*="discord"],
+.canvas-board .excalidraw a[href*="twitter.com"],
+.canvas-board .excalidraw a[href*="x.com/excalidraw"],
+.canvas-board .excalidraw a[href*="youtube.com/@excalidraw"] {
   display: none !important;
 }

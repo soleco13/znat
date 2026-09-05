@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocalParticipant } from "@livekit/components-react";
 import { Track, VideoPresets, type VideoResolution } from "livekit-client";
-import { Video, VideoOff } from "lucide-react";
+import { AlertTriangle, Video, VideoOff } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
 
@@ -74,9 +74,9 @@ export function VideoDegradeSuggestion() {
 
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-foreground">
-      <span>
-        ⚠️ Плохой канал (потери видео {Math.round(lossRatio * 100)}%) — видео может мешать звуку
-        урока.
+      <span className="inline-flex items-center gap-1.5">
+        <AlertTriangle className="size-3.5 shrink-0 text-destructive" aria-hidden />
+        Плохой канал (потери видео {Math.round(lossRatio * 100)}%) — видео может мешать звуку урока.
       </span>
       <Button
         variant="destructive"

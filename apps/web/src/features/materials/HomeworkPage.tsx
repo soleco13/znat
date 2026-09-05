@@ -21,6 +21,7 @@ import {
 } from "@/shared/ui/select";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { toast } from "@/shared/ui/sonner";
+import { MaterialPicker } from "./MaterialPicker.js";
 import { assignHomework, listGroupActivities, listMyGroups } from "./activity-api.js";
 import { ActivityPlayer } from "./ActivityPlayer.js";
 import { ActivityTeacherTabs } from "./ActivityTeacherTabs.js";
@@ -38,7 +39,7 @@ export function HomeworkPage() {
   const canManage = user.role === "teacher" || user.role === "admin";
 
   return (
-    <div>
+    <div className="mx-auto max-w-4xl">
       <PageHeader title="Домашние задания" subtitle="Задания вне урока" />
       {canManage ? (
         <TeacherHomework />
@@ -194,11 +195,11 @@ function GroupHomework({ groupId }: { groupId: string }) {
 
   async function handleAssign(e: React.FormEvent) {
     e.preventDefault();
-    if (!materialId.trim()) return;
+    if (!materialId) return;
     setAssigning(true);
     try {
       const dto = await assignHomework(groupId, {
-        materialId: materialId.trim(),
+        materialId,
         mode: "homework",
         timerSeconds: timerSeconds.trim() ? Number(timerSeconds) : undefined,
       });
@@ -208,7 +209,7 @@ function GroupHomework({ groupId }: { groupId: string }) {
       load();
       toast.success("Домашняя работа задана");
     } catch {
-      toast.error("Не удалось задать домашнюю работу — проверьте id материала");
+      toast.error("Не удалось задать домашнюю работу");
     } finally {
       setAssigning(false);
     }
@@ -217,30 +218,23 @@ function GroupHomework({ groupId }: { groupId: string }) {
   return (
     <div className="space-y-4">
       <Card className="p-4">
-        {/* Редактора материалов ещё нет (Э9) — id материала как в LessonActivityPanel. */}
         <form onSubmit={handleAssign} className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="hw-material" className="text-xs">id материала</Label>
-            <Input
-              id="hw-material"
-              value={materialId}
-              onChange={(e) => setMaterialId(e.target.value)}
-              placeholder="uuid материала"
-              className="w-64"
-            />
+            <Label className="text-xs">Материал</Label>
+            <MaterialPicker value={materialId} onChange={setMaterialId} className="w-72" />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="hw-timer" className="text-xs">таймер, сек</Label>
+            <Label htmlFor="hw-timer" className="text-xs">Ограничение, сек</Label>
             <Input
               id="hw-timer"
               inputMode="numeric"
               value={timerSeconds}
               onChange={(e) => setTimerSeconds(e.target.value)}
-              placeholder="600"
-              className="w-28"
+              placeholder="без лимита"
+              className="w-32"
             />
           </div>
-          <Button type="submit" loading={assigning}>
+          <Button type="submit" loading={assigning} disabled={!materialId}>
             {assigning ? "Задаём…" : "Задать на дом"}
           </Button>
         </form>

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useLocalParticipant, useParticipants } from "@livekit/components-react";
 import { ConnectionQuality, Track } from "livekit-client";
+import { AlertTriangle } from "lucide-react";
 
-/** §10.10 ТЗ / docs/ПЛАН.md Э2.8 — тот же порог, что в мониторинге Grafana. */
+/** Тот же порог потери пакетов, что и в мониторинге. */
 const PACKET_LOSS_WARNING_RATIO = 0.03;
 /** Пауза между опросами `getSenderStats()`, произвольная — не завязана на
  * внутренний `monitorFrequency` LiveKit (2000мс), т.к. тот приватный и не
@@ -98,8 +99,9 @@ export function PacketLossWarning() {
   if (lossRatio === null || lossRatio <= PACKET_LOSS_WARNING_RATIO) return null;
 
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium text-warning">
-      ⚠️ плохая связь (потери пакетов {Math.round(lossRatio * 100)}%)
+    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-warning">
+      <AlertTriangle className="size-3.5" aria-hidden />
+      плохая связь (потери пакетов {Math.round(lossRatio * 100)}%)
     </span>
   );
 }

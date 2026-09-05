@@ -161,7 +161,7 @@ export function RecordingPanel({
       <div className="mt-3">
         {disabled ? (
           <p className="text-sm text-muted-foreground">
-            Запись пока недоступна: вторая машина с egress не подключена (§10.4 ТЗ).
+            Запись урока пока недоступна — сервис записи не подключён.
           </p>
         ) : recordingActive ? (
           <Button variant="destructive" size="sm" onClick={handleStop} loading={busy}>

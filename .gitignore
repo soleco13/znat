@@ -18,3 +18,5 @@ coverage/
 dump.rdb
 server_log.txt
 /room*.png
+docs/screenshots/
+.playwright-mcp/
