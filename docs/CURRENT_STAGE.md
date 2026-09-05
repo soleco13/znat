@@ -1,4 +1,85 @@
-# Текущий этап: Э10 — Запись уроков
+# Текущий этап: Э11 — Достройка (оформление фронта)
+
+Начато 2026-09-05, НОВЫЙ контекст (после `/clear`, «продолжай разработку»
+→ Э0–Э10 закрыты технически → пользователь явно выбрал: «начинай оформление
+фронта, всех страниц, всех элементов, редакторы; всё в одном стиле;
+использовать дизайн-систему claudedesign и MCP; отзывчивый интерфейс,
+чтобы пользователь понимал, что происходит»).
+
+## Что сделано (Э11 · оформление)
+
+**Дизайн-система.** Подтянута из claude.ai/design (`DesignSync` MCP,
+проект `385aa818-0231-4b1a-bcf1-b73fa54f90bb`): `colors_and_type.css` +
+`components.css` перенесены в `apps/web/src/index.css` и
+`tailwind.config.js` целиком (было — только палитра + `.btn*`): синий
+primary `#1d4ed8`, mid-weights 550/650/750/800, радиусы (кнопки 10 /
+карточки 16 / модалки 20), тени xs–lg, layout-токены (sidebar 256/72,
+header 68, content 1180), easing `cubic-bezier(.2,.8,.2,1)`, `ds-*`
+типографика. shadcn-токены (HSL) синхронизированы с историческими `--c-*`.
+
+**UI-кит `apps/web/src/shared/ui/*`.** Компоненты вытянуты через shadcn MCP
++ `pnpm dlx shadcn add` и адаптированы под токены ДС: button (variant
+teal/success, `loading`), input/textarea/label, card, badge (6 семантик +
+pill), alert (info/success/warning/destructive), dialog/alert-dialog/sheet
+(оверлей `bg-foreground/40 + blur`, `bg-card`), dropdown-menu, tooltip
+(+`SimpleTooltip`, `TooltipProvider`), tabs (сегмент-стиль), select,
+checkbox/radio/switch (нативная семантика ДС), progress (`tone`),
+skeleton, avatar (+`UserAvatar` градиент+инициалы), popover, scroll-area,
+separator, sonner (`Toaster` без next-themes). Свои: spinner/
+CenteredSpinner, empty-state, error-state, page-header, fullscreen-loader.
+
+**Зависимости (СОГЛАСОВАНО пользователем — «Установить shadcn/ui полностью»):**
+`radix-ui`-пакеты (dialog/dropdown-menu/tooltip/tabs/select/checkbox/
+radio-group/progress/label/separator/scroll-area/avatar/popover/switch/
+slot/alert-dialog), `class-variance-authority`, `clsx`, `tailwind-merge`,
+`tailwindcss-animate`, `lucide-react`, `sonner`. `next-themes` — поставился
+с sonner, удалён (тема фиксированная светлая).
+
+**Инфраструктура.** Алиас `@/` — `vite.config.ts` + `apps/web/tsconfig.json`
+paths + новый `tsconfig.depcruise.json` (base + `@/*` только для
+dependency-cruiser; `.dependency-cruiser.cjs` теперь ссылается на него).
+`components.json`, `src/lib/utils.ts` (`cn`). `src/shared/hooks/use-async.ts`
+(loading/refreshing/reload). `ErrorBoundary`. `AppShell` (sidebar 256/72
++ header с блюром + мобильный Sheet) заменил `Layout` (удалён). `App.tsx`:
+`<Toaster>`, `<Shell>` = RequireAuth+AppShell+ErrorBoundary; `RequireAuth`
+показывает `FullscreenLoader` вместо пустого экрана.
+
+**Отзывчивость (требование пользователя «не выглядело зависшим»):** скелетоны
+на списках, тосты на действиях, спиннеры, `loading` у кнопок, состояния
+«пусто/ошибка» с повтором, `prefers-reduced-motion` в base-слое.
+
+**Переведены на UI-кит (2 тематических коммита):**
+1. `73→…` (Э10.2 архив ниже был последним; новые: см. git) — Login, Уроки,
+   Домашние задания, Библиотека материалов, RoomPage целиком + все контролы
+   (камера/микрофон/экран/качество связи/проверка устройств/сетка видео
+   учеников/плитка учителя/демонстрация экрана), панели заданий
+   (LessonActivityPanel, ActivityTeacherTabs→Tabs, ClassProgressPanel,
+   QuestionAnalyticsPanel, GradingQueue, ReviewPanel), RecordingPanel
+   (+ `AlertDialog` согласия 152-ФЗ), DeckPanel, MaterialPlayer,
+   QuestionPlayer + AdvancedInteractionPlayers (типы 1–10 — нативные
+   form-контролы для §16 a11y СОХРАНЕНЫ, только рестайл).
+2. MaterialEditorPage (3 панели), QuestionInteractionEditors (10 типов —
+   логика ключей ответов не тронута), RichTextEditor (тулбар lucide),
+   FormulaEditor, MediaAssetPicker, Board/SlideSearch/PageBackground
+   (Y.Doc/Excalidraw/awareness НЕ тронуты — только панель-тулбар).
+
+`EgressPage` НЕ тронут — машинный композитинг для egress, инлайн-стили
+намеренно (CLAUDE.md «конфиги LiveKit не делегировать вслепую»).
+
+**Проверки:** `pnpm -r build` без `any`, `pnpm -r test` (api 377/377,
+shared 54), `pnpm depcheck` (0 нарушений, 277 модулей). Визуальная проверка
+в браузере и Playwright E2E — за живым окружением (нет браузера в среде,
+см. project-video-platform-env-gaps).
+
+**НЕ сделано / осталось по Э11 (следующие заходы):** визуальный прогон
+всех экранов в реальном браузере и правки по нему; тёмная тема (не в MVP);
+прочие пункты Э11 из ПЛАН.md (экспорт холста в PDF, оставшиеся 12 типов
+заданий, отчёты, админка настроек школы, breakout, шумоподавление, опросы
+на лету, таймер/очередь рук, PWA) — это уже функционал, не оформление.
+
+---
+
+# Архив: Э10 — Запись уроков (завершён технически 2026-09-05)
 
 Начато 2026-09-05, НОВЫЙ контекст (после `/clear`, «продолжай разработку»
 → уточнение → пользователь явно выбрал «Начать Э10»). Э9 закрыт технически
