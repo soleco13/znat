@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import katex from "katex";
+import "katex/dist/katex.min.css";
 import type { MyActivity, QuestionResponse, SubmitActivityResult } from "@school/shared";
 import { QuestionPlayer } from "./QuestionPlayer.js";
 import { submitActivity } from "./activity-api.js";
+import { getAssetUrl } from "./materials-api.js";
 import { useActivityAutosave, type AutosaveStatus } from "./useActivityAutosave.js";
 import { sanitizeHtml } from "../../shared/sanitize-html.js";
 
@@ -26,10 +29,13 @@ type Block = MyActivity["material"]["blocks"][number];
  * `saveResponse`, но без локальной блокировки поля выглядели бы
  * редактируемыми, вводя в заблуждение.
  *
- * Контентные блоки §6.2, требующие KaTeX/пайплайна ассетов (`formula`,
- * `image`, `video`, `audio`, `embed`), пока показываются заглушкой —
- * KaTeX в бандл и StorageAdapter для вложений подключаются отдельно
- * (новые зависимости — по согласованию, CLAUDE.md).
+ * Контентные блоки §6.2: `formula` рендерится через KaTeX (Э9.4, в бандле —
+ * `import "katex/dist/katex.min.css"` тянет собственные шрифты как ассеты
+ * Vite, ни один запрос не уходит на чужой домен, CLAUDE.md). `image`/`audio`
+ * рендерятся через реальный файл медиатеки (Э9.7, `GET /assets/:id/url` —
+ * доступен и ученику, не только автору материала). `video`/`embed`
+ * по-прежнему заглушка — видео в медиатеке вне плана Э9.7, встраивание
+ * (GeoGebra/Desmos/JSXGraph) не в этом срезе вообще.
  */
 export function MaterialPlayer({
   activity,
@@ -216,7 +222,7 @@ export function ContentBlockView({ block }: { block: Exclude<Block, { type: "que
     case "callout":
       return (
         <div className="rounded border-l-4 border-slate-300 bg-slate-50 p-3 text-sm">
-          <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.html) }} />
+          <div className="prose" dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.html) }} />
         </div>
       );
     case "table":
@@ -240,10 +246,12 @@ export function ContentBlockView({ block }: { block: Exclude<Block, { type: "que
     case "page_break":
       return <hr className="border-dashed" />;
     case "formula":
-      return <code className="block rounded bg-slate-100 px-2 py-1 text-sm">{block.latex}</code>;
+      return <FormulaView latex={block.latex} />;
     case "image":
-    case "video":
+      return <ImageAssetView block={block} />;
     case "audio":
+      return <AudioAssetView block={block} />;
+    case "video":
     case "embed":
       return (
         <div className="rounded border border-dashed p-3 text-xs text-slate-400">
@@ -251,4 +259,66 @@ export function ContentBlockView({ block }: { block: Exclude<Block, { type: "que
         </div>
       );
   }
+}
+
+/** `throwOnError: false` уже не бросает на большинстве опечаток в LaTeX (KaTeX сам вписывает место ошибки красным в разметку) — try/catch на крайний случай катастрофического сбоя рендера, `latex` может прийти и не из MathLive (seed-скрипт/Postman, Э8). */
+function FormulaView({ latex }: { latex: string }) {
+  let html: string;
+  try {
+    html = katex.renderToString(latex, { throwOnError: false });
+  } catch {
+    html = `<span class="text-red-600">Ошибка в формуле</span>`;
+  }
+  return <span dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+/**
+ * Резолв `assetId → подписанная ссылка` (Э9.7, `GET /assets/:id/url`) — ОДИН
+ * и тот же для editor-превью и для настоящего плеера ученика (оба через
+ * `ContentBlockView`), никакого спецпути для методиста: у него нет заранее
+ * загруженного списка медиатеки под рукой в этой панели, только `assetId`
+ * из содержимого блока, как и у ученика.
+ */
+function useAssetUrl(assetId: string): { url: string | null; error: boolean } {
+  const [state, setState] = useState<{ url: string | null; error: boolean }>({ url: null, error: false });
+  useEffect(() => {
+    let cancelled = false;
+    setState({ url: null, error: false });
+    getAssetUrl(assetId)
+      .then((res) => !cancelled && setState({ url: res.url, error: false }))
+      .catch(() => !cancelled && setState({ url: null, error: true }));
+    return () => {
+      cancelled = true;
+    };
+  }, [assetId]);
+  return state;
+}
+
+function ImageAssetView({ block }: { block: Extract<Block, { type: "image" }> }) {
+  const { url, error } = useAssetUrl(block.assetId);
+  if (error) return <p className="text-xs text-red-600">Не удалось загрузить изображение</p>;
+  if (!url) return <p className="text-xs text-slate-400">Загрузка изображения…</p>;
+  return (
+    <figure>
+      <img src={url} alt={block.caption ?? ""} className="max-w-full rounded" />
+      {block.caption && <figcaption className="mt-1 text-xs text-slate-500">{block.caption}</figcaption>}
+    </figure>
+  );
+}
+
+function AudioAssetView({ block }: { block: Extract<Block, { type: "audio" }> }) {
+  const { url, error } = useAssetUrl(block.assetId);
+  if (error) return <p className="text-xs text-red-600">Не удалось загрузить аудио</p>;
+  if (!url) return <p className="text-xs text-slate-400">Загрузка аудио…</p>;
+  return (
+    <div>
+      <audio src={url} controls className="w-full" />
+      {block.transcript && (
+        <details className="mt-1 text-xs text-slate-500">
+          <summary className="cursor-pointer">Транскрипт</summary>
+          <p className="mt-1 whitespace-pre-wrap">{block.transcript}</p>
+        </details>
+      )}
+    </div>
+  );
 }

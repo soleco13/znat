@@ -49,7 +49,7 @@ export function QuestionPlayer({
     <div className="rounded border p-4">
       <div className="mb-2 flex items-start justify-between gap-2">
         {/* HTML из материала (§6 ТЗ) — санитайзируется (`sanitize-html.ts`), не рендерится сырым: до Э9 материалы заводятся JSON-ом через seed-скрипт/Postman, без гарантии происхождения. */}
-        <div className="text-sm" dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.prompt.html) }} />
+        <div className="prose text-sm" dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.prompt.html) }} />
         <span className="shrink-0 text-xs text-slate-400">
           {block.points} {pointsLabel(block.points)}
         </span>
@@ -80,7 +80,7 @@ function HintDisclosure({ html }: { html: string }) {
   return (
     <details className="mb-2 text-xs text-slate-500">
       <summary className="cursor-pointer">Подсказка</summary>
-      <div className="mt-1" dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} />
+      <div className="prose mt-1" dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} />
     </details>
   );
 }
