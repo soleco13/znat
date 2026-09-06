@@ -20,7 +20,6 @@ import {
 } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
 import * as lessonsService from "../lessons/service.js";
-import * as usersService from "../users/service.js";
 import * as storageService from "../storage/service.js";
 import * as jobsService from "../jobs/service.js";
 import type { ConvertJobHandlers } from "../jobs/service.js";
@@ -46,18 +45,16 @@ async function assertCanManageLesson(user: AccessTokenPayload, lessonId: string)
   throw new AppError(403, "forbidden", "Управлять презентациями урока может только его учитель");
 }
 
-/** Любой участник урока — смотреть презентации. */
+/**
+ * Персонал урока — смотреть презентации через HTTP-эндпоинты `decks`.
+ * Э12.5: ветка «ученик из группы урока» убрана — у учеников новой модели
+ * нет аккаунта; презентации на уроке они видят на стейдже (синхронно с
+ * учителем), доступ к слайд-URL для гостя — задача Э12.7.
+ */
 async function assertLessonViewer(user: AccessTokenPayload, lessonId: string) {
   const lesson = await lessonsService.getLesson(user.schoolId, lessonId);
   if (user.role === "admin") return lesson;
   if (user.role === "teacher" && lesson.teacherId === user.sub) return lesson;
-  if (
-    user.role === "student" &&
-    lesson.groupId !== null &&
-    (await usersService.isGroupMember(lesson.groupId, user.sub))
-  ) {
-    return lesson;
-  }
   throw new AppError(403, "forbidden", "Нет доступа к этому уроку");
 }
 

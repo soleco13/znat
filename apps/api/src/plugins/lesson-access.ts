@@ -13,11 +13,39 @@ import { AppError } from "./errors.js";
 declare module "fastify" {
   interface FastifyInstance {
     requireLessonAccess: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    /**
+     * Э12.5 — как `requireLessonAccess`, но без привязки к `:id` в пути:
+     * для эндпоинтов, где урок не в URL (`/activities/:id/*`). Резолвит
+     * actor из Bearer (staff) или гостевой куки; конкретный урок сверяет
+     * уже сервис по загруженной активности.
+     */
+    resolveLessonActor: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
   interface FastifyRequest {
-    /** Нормализованный участник урока — заполняется `requireLessonAccess` (Э12.4). */
+    /** Нормализованный участник урока — заполняется `requireLessonAccess`/`resolveLessonActor` (Э12.4/12.5). */
     lessonActor: LessonActor;
   }
+}
+
+/** Bearer → staff-actor (с подгрузкой имени). Общий кусок обоих guard'ов. */
+async function resolveStaffActor(request: FastifyRequest, lessonId: string): Promise<LessonActor> {
+  const header = request.headers.authorization!;
+  let user;
+  try {
+    user = await verifyAccessToken(header.slice("Bearer ".length));
+  } catch {
+    throw new AppError(401, "invalid_token", "Недействительный или просроченный access-токен");
+  }
+  request.user = user;
+  const profile = await usersService.getUserForAuth(user.schoolId, user.sub);
+  return {
+    kind: "staff",
+    participantId: user.sub,
+    schoolId: user.schoolId,
+    role: user.role as Role,
+    lessonId,
+    displayName: profile?.fullName ?? "Без имени",
+  };
 }
 
 /**
@@ -43,23 +71,7 @@ export default fp(async function lessonAccessPlugin(app: FastifyInstance) {
 
     const header = request.headers.authorization;
     if (header?.startsWith("Bearer ")) {
-      let user;
-      try {
-        user = await verifyAccessToken(header.slice("Bearer ".length));
-      } catch {
-        throw new AppError(401, "invalid_token", "Недействительный или просроченный access-токен");
-      }
-      request.user = user;
-      const profile = await usersService.getUserForAuth(user.schoolId, user.sub);
-      const actor: LessonActor = {
-        kind: "staff",
-        participantId: user.sub,
-        schoolId: user.schoolId,
-        role: user.role as Role,
-        lessonId,
-        displayName: profile?.fullName ?? "Без имени",
-      };
-      request.lessonActor = actor;
+      request.lessonActor = await resolveStaffActor(request, lessonId);
       return;
     }
 
@@ -70,6 +82,26 @@ export default fp(async function lessonAccessPlugin(app: FastifyInstance) {
         throw new AppError(403, "guest_wrong_lesson", "Гостевая сессия относится к другому уроку");
       }
       request.lessonActor = actor;
+      return;
+    }
+
+    throw new AppError(401, "missing_token", "Требуется вход в урок");
+  });
+
+  app.decorate("resolveLessonActor", async (request: FastifyRequest) => {
+    const header = request.headers.authorization;
+    if (header?.startsWith("Bearer ")) {
+      // `lessonId` неизвестен из пути — сервис проставит проверку урока по
+      // загруженной активности; для staff-actor поле здесь не используется.
+      request.lessonActor = await resolveStaffActor(request, "");
+      return;
+    }
+
+    const cookie = request.cookies?.[GUEST_COOKIE_NAME];
+    if (cookie) {
+      // Гостевой actor несёт свой `lessonId` (из подписанного JWT) — сервис
+      // сверит его с `activity.lessonId`.
+      request.lessonActor = await resolveGuestSession(cookie);
       return;
     }
 

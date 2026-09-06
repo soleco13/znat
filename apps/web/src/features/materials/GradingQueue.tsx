@@ -100,7 +100,7 @@ function GradingCard({ item, onGraded }: { item: GradingQueueItem; onGraded: () 
   return (
     <section className="space-y-3 rounded-lg border border-border bg-card p-4">
       <header className="text-xs text-muted-foreground">
-        {item.materialTitle} · {item.studentName} · сдано{" "}
+        {item.materialTitle} · {item.participantName} · сдано{" "}
         {new Date(item.submittedAt).toLocaleString("ru-RU")}
       </header>
       <div

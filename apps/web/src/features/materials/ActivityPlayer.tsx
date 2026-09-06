@@ -8,10 +8,8 @@ import { MaterialPlayer } from "./MaterialPlayer.js";
 
 /**
  * Грузит индивидуальную копию задания (`GET /activities/:id/my`) и рендерит
- * плеер — общая часть для выдачи в уроке (`LessonActivityPanel`) и домашней
- * работы (`HomeworkPage`, Э8.11): фронту плеера различие lesson/homework не
- * видно, `MyActivity` уже одинаков для обоих режимов (см. заметку Э8.11 в
- * `docs/CURRENT_STAGE.md`).
+ * плеер. Э12.5: задание всегда на уроке; ученик — гость по ссылке урока,
+ * `getMyActivity` ходит по гостевой куке сессии.
  */
 export function ActivityPlayer({ activityId }: { activityId: string }) {
   const [activity, setActivity] = useState<MyActivity | null>(null);

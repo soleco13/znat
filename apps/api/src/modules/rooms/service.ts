@@ -57,6 +57,49 @@ export function broadcastToLesson(lessonId: string, message: ServerRoomMessage):
   emitRoomEvent(lessonId, message);
 }
 
+/**
+ * Э12.5 — «каноническая» строка участника урока (`lesson_participants.id`),
+ * к которой привязываются ответы на задания (`responses.participant_id`).
+ * Единственная точка входа для модуля `activities` (правило модульности
+ * CLAUDE.md — чужой `repo.ts` не импортируют). Идемпотентно: если строки
+ * для этой личности в уроке ещё нет (гость открыл задание, не пройдя через
+ * `join` — на практике не бывает, но защищаемся), создаёт её.
+ */
+export async function ensureParticipant(
+  actor: LessonActor,
+  lessonId: string,
+): Promise<{ id: string; displayName: string }> {
+  const isStaff = actor.kind === "staff";
+  const identity = {
+    userId: isStaff ? actor.participantId : null,
+    guestId: isStaff ? null : actor.participantId,
+  };
+  const existing = await repo.findCanonicalParticipant(lessonId, identity);
+  if (existing) return { id: existing.id, displayName: existing.displayName };
+  const row = await repo.insertJoin({
+    lessonId,
+    kind: actor.kind,
+    userId: identity.userId,
+    guestId: identity.guestId,
+    displayName: isStaff ? null : actor.displayName,
+  });
+  return { id: row!.id, displayName: actor.displayName };
+}
+
+/** Ростер участников урока для учительских панелей заданий (Э12.5). */
+export async function listLessonParticipants(
+  lessonId: string,
+): Promise<{ id: string; kind: "staff" | "guest"; displayName: string }[]> {
+  return repo.listCanonicalParticipants(lessonId);
+}
+
+/** Имена участников по id строк `lesson_participants` (Э12.5) — для очереди ручной проверки. */
+export async function getParticipantNames(
+  ids: string[],
+): Promise<Map<string, { displayName: string; kind: "staff" | "guest" }>> {
+  return repo.findParticipantNames(ids);
+}
+
 export async function listParticipantsSnapshot(lessonId: string): Promise<ParticipantSnapshot[]> {
   const participants = await presence.listParticipants(lessonId);
   return [...participants.entries()].map(([id, entry]) => toSnapshot(id, entry));

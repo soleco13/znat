@@ -126,9 +126,71 @@
   `/security-review` по под-этапу не прогонялся в этой среде (нужен запуск
   пользователем) — сделан ручной разбор гостевой токен-плоскости.
 
-**Осталось по Э12:** Э12.5 (задания на participant) →
-Э12.6 (фронт: вход ученика) → Э12.7 (фронт: UI урока) → Э12.8 (админка
-«Уроки») → Э12.9 (миграция, ТЗ, гейт, `/security-review` по всему этапу).
+**Э12.5 — задания: репойнт на участника (SENSITIVE — движок проверки, «не
+делегировать вслепую»). Один коммит. Объём: пользователь выбрал «только
+репойнт + необходимый минимум».**
+
+- `packages/shared/activities.ts`: убраны `activityModeSchema`/`ActivityMode`
+  и `mode` из `createActivityRequestSchema`/`ActivityDto`/`MyActivity`/
+  `GradingQueueItem` (задание всегда на уроке, режим `homework` отменён —
+  «домашка» = `lesson_materials`). `ActivityDto.lessonId` теперь `string`
+  (не nullable), `groupId` убран. Личность в DTO переехала на участника:
+  `StudentProgress` — `userId/fullName` → `participantId/displayName`;
+  `GradingQueueItem` — `studentId/studentName` → `participantId/participantName`;
+  `ReviewStudentResponse` — `userId/fullName` → `participantId/displayName`;
+  `pushAnswerToBoardRequestSchema.userId` → `participantId`.
+- Миграция `0017_e12_5_responses_participant.sql` (+ снапшот): `responses.user_id`
+  → `participant_id` (FK `lesson_participants.id`, `on delete cascade`);
+  `activities` — `drop column group_id`, `drop column mode`, `lesson_id`
+  → NOT NULL; `drop type activity_mode`; индексы
+  `responses_activity_user_idx` → `responses_activity_participant_idx`,
+  `activities_group_idx` убран. Пролог миграции чистит `responses` и
+  `activities` без урока (боевых данных нет, §9 план-ТЗ). На живой БД не
+  прогонялась (нет Docker) — прогон в Э12.9.
+- Идентичность участника: `rooms/service.ts#ensureParticipant(actor, lessonId)`
+  — «каноническая» (самая ранняя по `joined_at`) строка `lesson_participants`
+  для гостевого/пользовательского id, создаётся при отсутствии. Строки
+  журнала никогда не удаляются → id стабилен на весь урок, переживает
+  переподключения (ключ `responses.participant_id`, сид `attemptId`).
+  Единственная точка входа для `activities` (правило модульности) +
+  `listLessonParticipants`/`getParticipantNames`. Новые repo-функции
+  `findCanonicalParticipant`/`listCanonicalParticipants`/`findParticipantNames`
+  в `rooms/repo.ts`.
+- `plugins/lesson-access.ts`: `+resolveLessonActor` — резолв Bearer→staff /
+  кука→guest БЕЗ привязки к `:id` (эндпоинты `/activities/:id/*`, где урока
+  в пути нет); сверку `activity.lessonId === actor.lessonId` для гостя
+  делает сервис.
+- `activities` — actor-рефактор. Проходят задание ТОЛЬКО гости-ученики
+  (`getMyActivity`/`saveResponse`/`submitActivity`/`getReview`/список
+  заданий урока — `LessonActor`, `assertGuest`); персонал запускает/
+  разбирает (`AccessTokenPayload`). `getProgress`/`getReviewResponses`/
+  `pushAnswerToBoard` — ростер из `roomsService.listLessonParticipants`
+  (введённые имена, `kind==='guest'`), а не список группы. `getGradingQueue`
+  — имена через `roomsService.getParticipantNames`. `repo.ts`: `responses`
+  везде по `participantId`, `listPendingManualGrading` без join `users`.
+  `createActivity` — без гейтов статуса/группы. `routes.ts`: два периметра
+  (staff `app.authenticate`+роль / staff∪guest `resolveLessonActor`|
+  `requireLessonAccess`); `/groups/:id/activities` убраны.
+- `decks/service.ts`: мёртвая ветка «ученик из группы урока» в
+  `assertLessonViewer` убрана (у учеников новой модели нет аккаунта;
+  слайд-URL гостю — Э12.7).
+- Фронт: `activity-api.ts` — убраны `assignHomework`/`listGroupActivities`/
+  `listMyGroups`; `HomeworkPage.tsx` удалён, роут `/homework` и пункт
+  меню сняты; `ClassProgressPanel`/`GradingQueue`/`ReviewPanel`/
+  `LessonActivityPanel` — на новый ключ (`participantId`/`displayName`,
+  без `mode`). Гостевой api-client ученика (кука) и student-плеер в
+  комнате — Э12.6.
+- Тесты: `activities/service.test.ts` переписан на гостевых actor'ов +
+  моки `roomsService.ensureParticipant`/`listLessonParticipants`/
+  `getParticipantNames` (homework-тесты убраны); `decks/service.test.ts`
+  — student-тест на 403. `pnpm -r build` без `any` / `pnpm -r test`
+  (shared 54, api 374) / `pnpm depcheck` (287 модулей, 0 нарушений) —
+  зелёные. `/security-review` по под-этапу — за пользователем (нужен
+  запуск); сделан ручной разбор гостевого периметра `/activities/*`.
+
+**Осталось по Э12:** Э12.6 (фронт: вход ученика) → Э12.7 (фронт: UI урока)
+→ Э12.8 (админка «Уроки») → Э12.9 (миграция на dev, ТЗ/ПЛАН/CLAUDE.md,
+гейт, `/security-review` по всему этапу).
 
 ---
 

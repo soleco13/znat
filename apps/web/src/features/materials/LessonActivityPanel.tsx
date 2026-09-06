@@ -91,7 +91,6 @@ function TeacherActivityView({
     try {
       const dto = await createActivity(lessonId, {
         materialId,
-        mode: "lesson",
         timerSeconds: timerSeconds.trim() ? Number(timerSeconds) : undefined,
       });
       onLaunched(dto.id);

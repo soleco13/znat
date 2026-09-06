@@ -166,10 +166,10 @@ function StudentResponsesList({
     };
   }, [activityId, questionId]);
 
-  async function handlePush(userId: string) {
-    setPushing(userId);
+  async function handlePush(participantId: string) {
+    setPushing(participantId);
     try {
-      await pushAnswerToBoard(activityId, { questionId, userId, anonymous });
+      await pushAnswerToBoard(activityId, { questionId, participantId, anonymous });
     } catch {
       setError(true);
     } finally {
@@ -191,19 +191,19 @@ function StudentResponsesList({
       <ul className="space-y-1.5">
         {responses?.map((r) => (
           <li
-            key={r.userId}
+            key={r.participantId}
             className="flex items-center justify-between gap-2 rounded-md border border-border px-2.5 py-1.5 text-sm"
           >
             <span>
-              <span className="font-semibold">{r.fullName}:</span>{" "}
+              <span className="font-semibold">{r.displayName}:</span>{" "}
               {formatResponse(interaction, r.response)}
             </span>
             <Button
               variant="outline"
               size="sm"
               className="shrink-0"
-              onClick={() => handlePush(r.userId)}
-              loading={pushing === r.userId}
+              onClick={() => handlePush(r.participantId)}
+              loading={pushing === r.participantId}
             >
               На доску
             </Button>

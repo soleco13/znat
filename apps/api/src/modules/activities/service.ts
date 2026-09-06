@@ -1,5 +1,6 @@
 /**
- * Выдача заданий (Э8.6/8.11, §7.3/§8 ТЗ). Единственный экспорт модуля.
+ * Выдача заданий на уроке (Э8.6 → Э12.5, §7.3/§8 ТЗ, §1.3 план-ТЗ).
+ * Единственный экспорт модуля.
  *
  * **Задание уходит каждому ученику индивидуально, не через Y.Doc урока**
  * (DoD Э8.6: «ученик не видит ответы соседа»). `POST /lessons/:id/activities`
@@ -7,21 +8,21 @@
  * Yjs) короткий сигнал `activity_started`. Дальше каждый клиент сам зовёт
  * `GET /activities/:id/my` — получает свою копию материала БЕЗ ключей
  * ответов (`stripMaterialAnswerKeys`, Э8.1), со своим `attemptId` и своим
- * порядком перемешанных вариантов. Черновики ответов (Э8.7) пишутся в
- * `responses` по `attemptId` — пересечься с чужими нечем.
+ * порядком перемешанных вариантов.
  *
- * **Домашняя работа (Э8.11, `POST /groups/:id/activities`)** — та же самая
- * механика, БЕЗ урока: `lessonId` в БД `null`, доступ определяется
- * группой (`activity.groupId`, заполнено для обоих режимов) и тем, кто
- * выдал (`activity.assignedBy`) — см. `assertActivityMember`/
- * `assertActivityOwner` ниже, они обобщают `assertLessonMember`/
- * `assertLessonTeacher` на оба режима везде, кроме доски (Э8.10): у
- * домашки нет урока — и нет общей доски, `pushAnswerToBoard` ей
- * недоступен принципиально.
+ * **Э12.5 — личность отвечающего.** У учеников новой модели нет аккаунта:
+ * они входят по ссылке урока с введённым именем (Э12.4). Ответы на задания
+ * привязаны к строке участника урока (`lesson_participants`,
+ * `responses.participant_id`), а не к `users.id`. «Каноническую» строку
+ * участника (стабильную на всё время урока, переживающую переподключения)
+ * выдаёт `roomsService.ensureParticipant` — единственная точка входа
+ * (правило модульности CLAUDE.md). Отвечать может только гость-ученик;
+ * персонал (учитель/админ) задание запускает и разбирает, но не проходит.
  *
- * Область «логика прав доступа» (§ «Что не делегировать вслепую» CLAUDE.md)
- * — `assertLessonTeacher`/`assertLessonMember`/`assertActivityOwner`/
- * `assertActivityMember` ниже читать построчно.
+ * Область «логика прав доступа» + «движок проверки заданий» (§ «Что не
+ * делегировать вслепую» CLAUDE.md) — `assertLessonTeacher`/
+ * `assertActivityOwner`/`assertLessonActorAccess`/`submitActivity` ниже
+ * читать построчно.
  */
 import { createHash } from "node:crypto";
 import {
@@ -52,15 +53,15 @@ import {
 import { buildDistribution, formatResponseText } from "./analytics.js";
 import { AppError } from "../../plugins/errors.js";
 import { redis } from "../../db/redis.js";
+import type { LessonActor } from "../guests/service.js";
 import * as lessonsService from "../lessons/service.js";
-import * as usersService from "../users/service.js";
 import * as materialsService from "../materials/service.js";
 import * as roomsService from "../rooms/service.js";
 import * as canvasService from "../canvas/service.js";
 import * as repo from "./repo.js";
 import type { ActivityRow } from "./repo.js";
 
-/** Namespace для name-based UUID (RFC 4122 §4.3) — привязка `attemptId` к тройке (активность, ученик, номер попытки). */
+/** Namespace для name-based UUID (RFC 4122 §4.3) — привязка `attemptId` к тройке (активность, участник, номер попытки). */
 const ATTEMPT_NAMESPACE = "a1e4d2c7-3b8f-4e6a-9d0c-5f7b1a2e8c34";
 
 /** TTL метки старта попытки в Redis — «кеш, который можно потерять» (§ Железные правила): при потере таймер стартует заново, абсолютный `deadline` в БД от этого не страдает. */
@@ -68,14 +69,20 @@ const ATTEMPT_START_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 /**
  * Детерминированный UUID v5 (SHA-1) — один и тот же `attemptId` для одной
- * тройки (activityId, userId, attemptNumber) без отдельной таблицы `attempts`
- * (Э8.2 сознательно её не завёл). Стабильность важна: `attemptId` — сид
- * перемешивания вариантов (Э8.1), перезагрузка страницы посреди попытки не
- * должна менять порядок ответов под рукой у ученика.
+ * тройки (activityId, participantId, attemptNumber) без отдельной таблицы
+ * `attempts` (Э8.2 сознательно её не завёл). `participantId` — id
+ * «канонической» строки участника урока (`lesson_participants.id`),
+ * стабильной пока жива гостевая сессия. Стабильность важна: `attemptId` —
+ * сид перемешивания вариантов (Э8.1), перезагрузка страницы посреди попытки
+ * не должна менять порядок ответов под рукой у ученика.
  */
-export function deriveAttemptId(activityId: string, userId: string, attemptNumber: number): string {
+export function deriveAttemptId(
+  activityId: string,
+  participantId: string,
+  attemptNumber: number,
+): string {
   const ns = Buffer.from(ATTEMPT_NAMESPACE.replace(/-/g, ""), "hex");
-  const name = `${activityId}:${userId}:${attemptNumber}`;
+  const name = `${activityId}:${participantId}:${attemptNumber}`;
   const h = createHash("sha1").update(ns).update(name, "utf8").digest();
   const b = Buffer.alloc(16);
   h.copy(b, 0, 0, 16);
@@ -89,16 +96,16 @@ function toDto(row: ActivityRow): ActivityDto {
   return {
     id: row.id,
     lessonId: row.lessonId,
-    groupId: row.groupId,
     materialId: row.materialId,
     materialVersion: row.materialVersion,
-    mode: row.mode,
     deadline: row.deadline ? row.deadline.toISOString() : null,
     timerSeconds: row.timerSeconds,
     createdAt: row.createdAt.toISOString(),
     reviewedAt: row.reviewedAt ? row.reviewedAt.toISOString() : null,
   };
 }
+
+// ─── Права доступа (§ «Что не делегировать вслепую» CLAUDE.md) ────────────
 
 /** Управлять заданиями урока может только его учитель или админ. Читать построчно. */
 async function assertLessonTeacher(user: AccessTokenPayload, lessonId: string) {
@@ -108,85 +115,72 @@ async function assertLessonTeacher(user: AccessTokenPayload, lessonId: string) {
   throw new AppError(403, "forbidden", "Запускать задания в уроке может только его учитель");
 }
 
-/** В уроке участвует: админ, учитель-хозяин, ученик из группы урока. Читать построчно. */
-async function assertLessonMember(user: AccessTokenPayload, lessonId: string) {
-  const lesson = await lessonsService.getLesson(user.schoolId, lessonId);
-  if (user.role === "admin") return lesson;
-  if (user.role === "teacher") {
-    if (lesson.teacherId !== user.sub) {
-      throw new AppError(403, "forbidden", "Вы не ведёте этот урок");
-    }
-    return lesson;
-  }
-  if (user.role === "student") {
-    // Э12: у уроков новой модели группы нет (`groupId === null`) — ученик
-    // на них попадает гостевым путём (Э12.4), не через эту проверку.
-    const isMember =
-      lesson.groupId !== null && (await usersService.isGroupMember(lesson.groupId, user.sub));
-    if (!isMember) {
-      throw new AppError(403, "forbidden", "Вы не состоите в группе этого урока");
-    }
-    return lesson;
-  }
-  throw new AppError(403, "forbidden", "Роль не допускается к участию в уроке");
-}
-
 /**
- * Управлять УЖЕ СУЩЕСТВУЮЩЕЙ активностью (Э8.11) — обобщение
- * `assertLessonTeacher` на оба режима. `lesson`-выдача: учитель урока (тот
- * же критерий, что и раньше). `homework`-выдача (нет `lessonId`): тот, кто
- * её выдал (`activity.assignedBy`) — у группы нет собственного «хозяина»
- * (в отличие от урока — `lessons.teacherId`), поэтому единственная точка
- * владения домашней работой — кто именно её создал. Читать построчно.
+ * Управлять УЖЕ СУЩЕСТВУЮЩЕЙ активностью — админ либо учитель урока
+ * (Э12.5: активность всегда на уроке, режима `homework` больше нет).
+ * Читать построчно.
  */
 async function assertActivityOwner(user: AccessTokenPayload, activity: ActivityRow): Promise<void> {
   if (user.role === "admin") return;
-  if (activity.lessonId) {
-    const lesson = await lessonsService.getLesson(user.schoolId, activity.lessonId);
-    if (user.role === "teacher" && lesson.teacherId === user.sub) return;
-    throw new AppError(403, "forbidden", "Управлять заданием урока может только его учитель");
-  }
-  if (user.role === "teacher" && activity.assignedBy === user.sub) return;
-  throw new AppError(403, "forbidden", "Управлять этой домашней работой может только тот, кто её выдал");
+  const lesson = await lessonsService.getLesson(user.schoolId, activity.lessonId);
+  if (user.role === "teacher" && lesson.teacherId === user.sub) return;
+  throw new AppError(403, "forbidden", "Управлять заданием урока может только его учитель");
 }
 
 /**
- * Участвует в этой активности (Э8.11) — обобщение `assertLessonMember` на
- * оба режима: админ и владелец (`assertActivityOwner`) допускаются всегда,
- * ученик — если состоит в `activity.groupId` (заполнено для ОБОИХ режимов,
- * см. докстринг `activities.groupId` в схеме БД — для `lesson`-выдачи это
- * копия `lessons.groupId`, снятая на момент запуска). Читать построчно.
+ * Доступ actor'а (Э12.4) к уроку задания — для эндпоинтов, доступных и
+ * гостю-ученику, и персоналу (`GET /activities/:id/my`, `/responses`,
+ * `/submit`, `GET /review`, список заданий урока). Читать построчно:
+ *  - гость: его сессия жёстко привязана к одному `lessonId` (подписанный
+ *    JWT, проверен `resolveLessonActor`) — сверяем, что это тот же урок;
+ *  - staff/admin: любой урок школы;
+ *  - staff/teacher: только свой урок;
+ *  - staff/methodist: к заданиям урока не допускается.
  */
-async function assertActivityMember(user: AccessTokenPayload, activity: ActivityRow): Promise<void> {
-  if (user.role === "student") {
-    const isMember = await usersService.isGroupMember(activity.groupId, user.sub);
-    if (!isMember) {
-      throw new AppError(403, "forbidden", "Вы не состоите в группе этого задания");
+async function assertLessonActorAccess(actor: LessonActor, lessonId: string): Promise<void> {
+  if (actor.kind === "guest") {
+    if (actor.lessonId !== lessonId) {
+      throw new AppError(403, "forbidden", "Гостевая сессия относится к другому уроку");
     }
     return;
   }
-  await assertActivityOwner(user, activity);
+  const lesson = await lessonsService.getLesson(actor.schoolId, lessonId);
+  if (actor.role === "admin") return;
+  if (actor.role === "teacher" && lesson.teacherId === actor.participantId) return;
+  throw new AppError(403, "forbidden", "Нет доступа к заданиям этого урока");
 }
+
+async function loadActivityForSchool(activityId: string, schoolId: string): Promise<ActivityRow> {
+  const row = await repo.findActivityById(activityId);
+  // Чужая школа — отвечаем 404, а не 403: существование активности другой школы наружу не подтверждаем.
+  if (!row || row.schoolId !== schoolId) {
+    throw new AppError(404, "activity_not_found", "Задание не найдено");
+  }
+  return row;
+}
+
+/** Активность + проверка, что actor вправе её видеть/проходить. */
+async function loadActivityForActor(actor: LessonActor, activityId: string): Promise<ActivityRow> {
+  const activity = await loadActivityForSchool(activityId, actor.schoolId);
+  await assertLessonActorAccess(actor, activity.lessonId);
+  return activity;
+}
+
+/** Только гость-ученик проходит задание (персонал его запускает/разбирает). */
+function assertGuest(actor: LessonActor): asserts actor is Extract<LessonActor, { kind: "guest" }> {
+  if (actor.kind !== "guest") {
+    throw new AppError(403, "forbidden", "Проходить задание может только ученик");
+  }
+}
+
+// ─── Запуск и список ────────────────────────────────────────────────────
 
 export async function createActivity(
   user: AccessTokenPayload,
   lessonId: string,
   input: CreateActivityRequest,
 ): Promise<ActivityDto> {
-  const lesson = await assertLessonTeacher(user, lessonId);
-  if (lesson.status === "ended") {
-    throw new AppError(409, "lesson_ended", "Урок уже завершён — задание не выдать");
-  }
-  if (!lesson.groupId) {
-    // Э12: интерактивные задания на уроках новой модели репойнтятся с
-    // группы на участника (`lesson_participants`) в Э12.5 — до этого
-    // момента их можно запускать только в legacy-уроках с группой.
-    throw new AppError(
-      409,
-      "lesson_activities_pending",
-      "Задания на уроке этого типа появятся после Э12.5",
-    );
-  }
+  await assertLessonTeacher(user, lessonId);
 
   // Закрепляем ИМЕННО ту версию, что учитель видит сейчас (Э8.2): разбор и
   // пересчёт баллов после публикации новой версии (Э9.8) должны сверяться
@@ -201,14 +195,6 @@ export async function createActivity(
   const id = await repo.insertActivity({
     materialVersionId: loaded.versionId,
     lessonId,
-    // Денормализованная копия — см. докстринг `activities.groupId`
-    // (Э8.11): не FK-переход через lessons на каждое чтение, а снятая на
-    // момент запуска группа урока.
-    groupId: lesson.groupId,
-    // `mode` из тела запроса ИГНОРИРУЕТСЯ — этот роут только для
-    // lesson-выдачи, режим определяет URL (см. докстринг
-    // `createActivityRequestSchema` в packages/shared).
-    mode: "lesson",
     assignedBy: user.sub,
     deadline,
     timerSeconds: input.timerSeconds ?? null,
@@ -225,110 +211,25 @@ export async function createActivity(
 }
 
 export async function listLessonActivities(
-  user: AccessTokenPayload,
+  actor: LessonActor,
   lessonId: string,
 ): Promise<ActivityDto[]> {
-  await assertLessonMember(user, lessonId);
+  await assertLessonActorAccess(actor, lessonId);
   const rows = await repo.listActivitiesByLesson(lessonId);
   return rows.map(toDto);
 }
 
 /**
- * Домашняя работа (Э8.11, §7.3/§8 ТЗ, DoD «ученик заходит и делает») —
- * то же самое задание, что и в уроке, но БЕЗ урока: адресовано группе
- * напрямую, доступно в любой момент, не только пока урок идёт. Любой
- * учитель/админ школы может задать домашку любой группе своей школы — у
- * групп нет собственного «хозяина»-учителя (в отличие от урока), значит и
- * права на СОЗДАНИЕ здесь по школе, а не по владению группой; кто именно
- * выдал — фиксируется `assignedBy` и решает дальнейшее владение
- * (`assertActivityOwner`).
- *
- * `mode` из тела запроса ИГНОРИРУЕТСЯ — сюда всегда пишется `"homework"`
- * (см. докстринг `createActivityRequestSchema`, тот же приём, что и в
- * `createActivity` выше для `"lesson"`).
- */
-export async function createHomeworkActivity(
-  user: AccessTokenPayload,
-  groupId: string,
-  input: CreateActivityRequest,
-): Promise<ActivityDto> {
-  if (user.role !== "teacher" && user.role !== "admin") {
-    throw new AppError(403, "forbidden", "Задавать домашнюю работу может только учитель");
-  }
-  await usersService.getGroupOrThrow(user.schoolId, groupId);
-
-  const loaded = await materialsService.getLatestMaterial(user.schoolId, input.materialId);
-
-  const deadline = input.deadline ? new Date(input.deadline) : null;
-  if (deadline && Number.isNaN(deadline.getTime())) {
-    throw new AppError(400, "bad_deadline", "Некорректный дедлайн");
-  }
-
-  const id = await repo.insertActivity({
-    materialVersionId: loaded.versionId,
-    lessonId: null,
-    groupId,
-    mode: "homework",
-    assignedBy: user.sub,
-    deadline,
-    timerSeconds: input.timerSeconds ?? null,
-  });
-
-  const row = await repo.findActivityById(id);
-  if (!row) throw new AppError(500, "activity_lost", "Активность не найдена сразу после создания");
-
-  return toDto(row);
-}
-
-/**
- * Список домашних заданий группы (Э8.11) — учителю/админу школы (видят все
- * домашки группы, не только свои — тот же принцип школьного, а не личного
- * доступа, что и создание) либо ученику из этой группы (видит свои).
- */
-export async function listGroupActivities(
-  user: AccessTokenPayload,
-  groupId: string,
-): Promise<ActivityDto[]> {
-  await usersService.getGroupOrThrow(user.schoolId, groupId);
-  if (user.role === "student") {
-    const isMember = await usersService.isGroupMember(groupId, user.sub);
-    if (!isMember) {
-      throw new AppError(403, "forbidden", "Вы не состоите в этой группе");
-    }
-  } else if (user.role !== "teacher" && user.role !== "admin") {
-    throw new AppError(403, "forbidden", "Роль не допускается к списку домашних заданий");
-  }
-  const rows = await repo.listHomeworkActivitiesByGroup(groupId);
-  return rows.map(toDto);
-}
-
-async function loadActivityForSchool(activityId: string, schoolId: string): Promise<ActivityRow> {
-  const row = await repo.findActivityById(activityId);
-  // Чужая школа — отвечаем 404, а не 403: существование активности другой школы наружу не подтверждаем.
-  if (!row || row.schoolId !== schoolId) {
-    throw new AppError(404, "activity_not_found", "Задание не найдено");
-  }
-  return row;
-}
-
-/**
  * Индивидуальная копия задания для ОДНОГО ученика — своя на попытку, без
  * ключей ответов. Возвращает и ранее сохранённые черновики этой же попытки
- * (Э8.7), чтобы перезагрузка страницы не теряла ответы. Работает
- * одинаково для `lesson`- и `homework`-выдачи (Э8.11) — единственное, что
- * отличало домашку от задания урока, было жёсткое требование `lessonId`
- * здесь; `assertActivityMember` проверяет членство по `activity.groupId`
- * без похода к самому уроку.
+ * (Э8.7), чтобы перезагрузка страницы не теряла ответы.
  */
-export async function getMyActivity(
-  user: AccessTokenPayload,
-  activityId: string,
-): Promise<MyActivity> {
-  const activity = await loadActivityForSchool(activityId, user.schoolId);
-  await assertActivityMember(user, activity);
+export async function getMyActivity(actor: LessonActor, activityId: string): Promise<MyActivity> {
+  assertGuest(actor);
+  const activity = await loadActivityForActor(actor, activityId);
+  const participant = await roomsService.ensureParticipant(actor, activity.lessonId);
 
-  const { attemptNumber, attemptId } = await resolveAttempt(activityId, user.sub);
-
+  const { attemptNumber, attemptId } = await resolveAttempt(activityId, participant.id);
   const startedAt = await ensureAttemptStart(attemptId);
 
   const loaded = await materialsService.getMaterialVersion(activity.materialVersionId);
@@ -344,7 +245,6 @@ export async function getMyActivity(
     activityId,
     attemptId,
     attemptNumber,
-    mode: activity.mode,
     deadline: activity.deadline ? activity.deadline.toISOString() : null,
     timerSeconds: activity.timerSeconds,
     startedAt,
@@ -355,17 +255,16 @@ export async function getMyActivity(
 }
 
 /**
- * Текущая попытка ученика по активности. `attemptNumber` = наибольший
- * существующий или 1; `submit` (Э8.10+) заведёт следующую при повторных
- * попытках (`attemptsAllowed`). Один и тот же результат у `getMyActivity`
- * и `saveResponse` — черновик пишется в ту же попытку, что отдаётся плееру.
+ * Текущая попытка участника по активности. `attemptNumber` = наибольший
+ * существующий или 1. Один и тот же результат у `getMyActivity` и
+ * `saveResponse` — черновик пишется в ту же попытку, что отдаётся плееру.
  */
 async function resolveAttempt(
   activityId: string,
-  userId: string,
+  participantId: string,
 ): Promise<{ attemptNumber: number; attemptId: string }> {
-  const attemptNumber = Math.max(await repo.maxAttemptNumber(activityId, userId), 1);
-  return { attemptNumber, attemptId: deriveAttemptId(activityId, userId, attemptNumber) };
+  const attemptNumber = Math.max(await repo.maxAttemptNumber(activityId, participantId), 1);
+  return { attemptNumber, attemptId: deriveAttemptId(activityId, participantId, attemptNumber) };
 }
 
 function findQuestion(material: Material, questionId: string) {
@@ -386,15 +285,13 @@ function findQuestion(material: Material, questionId: string) {
  * таком рассогласовании.
  */
 export async function saveResponse(
-  user: AccessTokenPayload,
+  actor: LessonActor,
   activityId: string,
   input: SaveResponseRequest,
 ): Promise<SaveResponseResult> {
-  if (user.role !== "student") {
-    throw new AppError(403, "forbidden", "Сохранять ответы может только ученик");
-  }
-  const activity = await loadActivityForSchool(activityId, user.schoolId);
-  await assertActivityMember(user, activity);
+  assertGuest(actor);
+  const activity = await loadActivityForActor(actor, activityId);
+  const participant = await roomsService.ensureParticipant(actor, activity.lessonId);
 
   if (activity.deadline && activity.deadline.getTime() < Date.now()) {
     throw new AppError(409, "deadline_passed", "Дедлайн прошёл — ответы больше не принимаются");
@@ -413,7 +310,7 @@ export async function saveResponse(
     );
   }
 
-  const { attemptNumber, attemptId } = await resolveAttempt(activityId, user.sub);
+  const { attemptNumber, attemptId } = await resolveAttempt(activityId, participant.id);
   if (await repo.attemptSubmittedAt(attemptId)) {
     throw new AppError(409, "already_submitted", "Работа уже сдана — ответы больше нельзя менять");
   }
@@ -424,7 +321,7 @@ export async function saveResponse(
     activityId,
     materialId: activity.materialId,
     lessonId: activity.lessonId,
-    userId: user.sub,
+    participantId: participant.id,
     questionId: input.questionId,
     response: input.response,
     attemptNumber,
@@ -453,8 +350,8 @@ const STUCK_AFTER_MS = 3 * 60 * 1000;
 /**
  * Живая картина класса по заданию (Э8.8, §7.3 ТЗ) — учителю. Не пуш, а
  * опрос: учитель тянет этот эндпоинт раз в несколько секунд (панель
- * прогресса), точности «раз в 3-5 сек» для класса достаточно, а пуш на
- * каждое сохранение каждого ученика — лишний трафик по WS-каналу урока.
+ * прогресса). Э12.5: ростер — участники-ученики урока (`lesson_participants`,
+ * введённые имена), а не список группы.
  */
 export async function getProgress(
   user: AccessTokenPayload,
@@ -464,24 +361,25 @@ export async function getProgress(
   await assertActivityOwner(user, activity);
 
   const [roster, stats, loaded] = await Promise.all([
-    usersService.listGroupStudents(activity.groupId),
+    roomsService.listLessonParticipants(activity.lessonId),
     repo.answeredStatsByActivity(activityId),
     materialsService.getMaterialVersion(activity.materialVersionId),
   ]);
+  const students = roster.filter((p) => p.kind === "guest");
   const total = loaded.material.blocks.filter((b) => b.type === "question").length;
-  const statByUser = new Map(stats.map((s) => [s.userId, s]));
+  const statByParticipant = new Map(stats.map((s) => [s.participantId, s]));
 
-  const opened = await openedUserIds(
+  const opened = await openedParticipantIds(
     activityId,
-    roster.map((r) => r.id),
+    students.map((p) => p.id),
   );
 
   const now = Date.now();
-  const students: StudentProgress[] = roster.map((r) => {
-    const s = statByUser.get(r.id);
+  const rows: StudentProgress[] = students.map((p) => {
+    const s = statByParticipant.get(p.id);
     const answered = s?.answered ?? 0;
     const lastAt = s?.lastAt ?? null;
-    const hasStarted = answered > 0 || opened.has(r.id);
+    const hasStarted = answered > 0 || opened.has(p.id);
 
     let status: StudentProgress["status"];
     if (!hasStarted) {
@@ -497,8 +395,8 @@ export async function getProgress(
     }
 
     return {
-      userId: r.id,
-      fullName: r.fullName,
+      participantId: p.id,
+      displayName: p.displayName,
       status,
       answered,
       total,
@@ -506,7 +404,7 @@ export async function getProgress(
     };
   });
 
-  return { activityId, total, students };
+  return { activityId, total, students: rows };
 }
 
 /**
@@ -534,7 +432,7 @@ export async function getAnalytics(
     byQuestion.set(r.questionId, list);
   }
 
-  const respondents = new Set(rows.map((r) => r.userId)).size;
+  const respondents = new Set(rows.map((r) => r.participantId)).size;
   const questions: QuestionAnalytics[] = [];
   for (const block of loaded.material.blocks) {
     if (block.type !== "question") continue;
@@ -555,32 +453,28 @@ export async function getAnalytics(
   return { activityId, respondents, questions };
 }
 
-// ─── Разбор (Э8.10, §7.3 ТЗ: «показать правильный ответ всем, вынести
-// чей-то ответ на доску») ────────────────────────────────────────────────
+// ─── Разбор (Э8.10, §7.3 ТЗ) ────────────────────────────────────────────
 
 /**
  * Учитель начинает разбор — с этого момента `GET /activities/:id/review`
  * отдаёт ПОЛНЫЙ материал (с ключами ответов) и ученикам тоже. До этого
  * вызова тот же эндпоинт отвечает 409 — идемпотентно (`repo.markReviewed`
  * не двигает уже выставленный `reviewedAt`), поэтому повторный клик
- * учителя (например, после перезагрузки страницы) безопасен. Работает и
- * для домашней работы (Э8.11) — WS-сигнал `activity_reviewed` шлётся,
- * только если это выдача В УРОКЕ (`activity.lessonId` есть): у домашки нет
- * живого канала, куда его слать, ученик просто увидит разбор при
- * следующем заходе на `GET /activities/:id/review`.
+ * учителя (например, после перезагрузки страницы) безопасен.
  */
-export async function startReview(user: AccessTokenPayload, activityId: string): Promise<StartReviewResult> {
+export async function startReview(
+  user: AccessTokenPayload,
+  activityId: string,
+): Promise<StartReviewResult> {
   const activity = await loadActivityForSchool(activityId, user.schoolId);
   await assertActivityOwner(user, activity);
 
   const reviewedAt = await repo.markReviewed(activityId);
 
-  if (activity.lessonId) {
-    // Сигнал «начался разбор» — по WS-каналу урока, тем же путём, что
-    // activity_started (Э8.6): сам материал ученик заберёт отдельным
-    // HTTP-запросом (см. getReview ниже), это только пуш «обнови экран».
-    roomsService.broadcastToLesson(activity.lessonId, { type: "activity_reviewed", activityId });
-  }
+  // Сигнал «начался разбор» — по WS-каналу урока, тем же путём, что
+  // activity_started (Э8.6): сам материал ученик заберёт отдельным
+  // HTTP-запросом (см. getReview ниже), это только пуш «обнови экран».
+  roomsService.broadcastToLesson(activity.lessonId, { type: "activity_reviewed", activityId });
 
   return { activityId, reviewedAt: reviewedAt.toISOString() };
 }
@@ -592,9 +486,8 @@ export async function startReview(user: AccessTokenPayload, activityId: string):
  * в `getMyActivity`, просто с другой стороны — здесь как раз момент, когда
  * их МОЖНО показывать.
  */
-export async function getReview(user: AccessTokenPayload, activityId: string): Promise<ActivityReview> {
-  const activity = await loadActivityForSchool(activityId, user.schoolId);
-  await assertActivityMember(user, activity);
+export async function getReview(actor: LessonActor, activityId: string): Promise<ActivityReview> {
+  const activity = await loadActivityForActor(actor, activityId);
   if (!activity.reviewedAt) {
     throw new AppError(409, "not_reviewed", "Разбор ещё не начат");
   }
@@ -627,17 +520,20 @@ export async function getReviewResponses(
   }
 
   const [roster, rows] = await Promise.all([
-    usersService.listGroupStudents(activity.groupId),
+    roomsService.listLessonParticipants(activity.lessonId),
     repo.listResponsesByActivity(activityId),
   ]);
-  const byUser = new Map(
-    rows.filter((r) => r.questionId === questionId && r.response.type === question.interaction.type).map((r) => [r.userId, r.response]),
+  const byParticipant = new Map(
+    rows
+      .filter((r) => r.questionId === questionId && r.response.type === question.interaction.type)
+      .map((r) => [r.participantId, r.response]),
   );
 
   const responses: ReviewStudentResponse[] = [];
-  for (const student of roster) {
-    const response = byUser.get(student.id);
-    if (response) responses.push({ userId: student.id, fullName: student.fullName, response });
+  for (const p of roster) {
+    if (p.kind !== "guest") continue;
+    const response = byParticipant.get(p.id);
+    if (response) responses.push({ participantId: p.id, displayName: p.displayName, response });
   }
 
   return { questionId, responses };
@@ -648,10 +544,7 @@ export async function getReviewResponses(
  * или с именем») — дописывает текстовый элемент в Y.Doc холста через
  * `canvasService.postAnswerToBoard` (единственная точка входа модуля
  * `canvas`, правило модульности CLAUDE.md). Гейтится `reviewedAt` тем же
- * образом, что `getReviewResponses` — раскрывать чужой ответ на общей доске
- * можно только начиная с явного разбора. У домашней работы (Э8.11) нет
- * урока и, значит, нет общей доски — это ЕДИНСТВЕННОЕ место во всём
- * разборе, которое домашке недоступно принципиально, а не по нехватке прав.
+ * образом, что `getReviewResponses`.
  */
 export async function pushAnswerToBoard(
   user: AccessTokenPayload,
@@ -660,9 +553,6 @@ export async function pushAnswerToBoard(
 ): Promise<void> {
   const activity = await loadActivityForSchool(activityId, user.schoolId);
   await assertActivityOwner(user, activity);
-  if (!activity.lessonId) {
-    throw new AppError(409, "activity_not_in_lesson", "У домашней работы нет общей доски — вынести ответ некуда");
-  }
   if (!activity.reviewedAt) {
     throw new AppError(409, "not_reviewed", "Разбор ещё не начат");
   }
@@ -675,7 +565,10 @@ export async function pushAnswerToBoard(
 
   const rows = await repo.listResponsesByActivity(activityId);
   const responseRow = rows.find(
-    (r) => r.questionId === input.questionId && r.userId === input.userId && r.response.type === question.interaction.type,
+    (r) =>
+      r.questionId === input.questionId &&
+      r.participantId === input.participantId &&
+      r.response.type === question.interaction.type,
   );
   if (!responseRow) {
     throw new AppError(404, "response_not_found", "У этого ученика нет ответа на этот вопрос");
@@ -683,23 +576,26 @@ export async function pushAnswerToBoard(
 
   let label = "Ответ ученика";
   if (!input.anonymous) {
-    const roster = await usersService.listGroupStudents(activity.groupId);
-    const student = roster.find((s) => s.id === input.userId);
-    label = student ? student.fullName : label;
+    const roster = await roomsService.listLessonParticipants(activity.lessonId);
+    const participant = roster.find((p) => p.id === input.participantId);
+    label = participant ? participant.displayName : label;
   }
 
   const answerText = formatResponseText(question.interaction, responseRow.response);
   await canvasService.postAnswerToBoard(activity.lessonId, `${label}:\n${answerText}`);
 }
 
-/** Кто из перечисленных учеников уже открывал задание (метка старта попытки в Redis). */
-async function openedUserIds(activityId: string, userIds: string[]): Promise<Set<string>> {
-  if (userIds.length === 0) return new Set();
-  const keys = userIds.map((uid) => attemptStartKey(deriveAttemptId(activityId, uid, 1)));
+/** Кто из перечисленных участников уже открывал задание (метка старта попытки в Redis). */
+async function openedParticipantIds(
+  activityId: string,
+  participantIds: string[],
+): Promise<Set<string>> {
+  if (participantIds.length === 0) return new Set();
+  const keys = participantIds.map((pid) => attemptStartKey(deriveAttemptId(activityId, pid, 1)));
   const values = await redis.mget(keys);
   const opened = new Set<string>();
-  userIds.forEach((uid, i) => {
-    if (values[i] != null) opened.add(uid);
+  participantIds.forEach((pid, i) => {
+    if (values[i] != null) opened.add(pid);
   });
   return opened;
 }
@@ -750,18 +646,19 @@ function emptyResponseFor(type: QuestionResponse["type"]): QuestionResponse {
  * (Э8.1) и `MaterialPlayer`/`ReviewPanel` (Э8.6/8.10) до Э8.12, не заводится
  * заново — вне рамок стоп-листа этого этапа.
  */
-export async function submitActivity(user: AccessTokenPayload, activityId: string): Promise<SubmitActivityResult> {
-  if (user.role !== "student") {
-    throw new AppError(403, "forbidden", "Сдавать работу может только ученик");
-  }
-  const activity = await loadActivityForSchool(activityId, user.schoolId);
-  await assertActivityMember(user, activity);
+export async function submitActivity(
+  actor: LessonActor,
+  activityId: string,
+): Promise<SubmitActivityResult> {
+  assertGuest(actor);
+  const activity = await loadActivityForActor(actor, activityId);
+  const participant = await roomsService.ensureParticipant(actor, activity.lessonId);
 
   if (activity.deadline && activity.deadline.getTime() < Date.now()) {
     throw new AppError(409, "deadline_passed", "Дедлайн прошёл — сдать работу больше нельзя");
   }
 
-  const { attemptNumber, attemptId } = await resolveAttempt(activityId, user.sub);
+  const { attemptNumber, attemptId } = await resolveAttempt(activityId, participant.id);
   const loaded = await materialsService.getMaterialVersion(activity.materialVersionId);
 
   const saved = await repo.findResponsesByAttempt(attemptId);
@@ -776,7 +673,9 @@ export async function submitActivity(user: AccessTokenPayload, activityId: strin
 
     const existing = savedByQuestion.get(block.id);
     const response =
-      existing && existing.type === block.interaction.type ? existing : emptyResponseFor(block.interaction.type);
+      existing && existing.type === block.interaction.type
+        ? existing
+        : emptyResponseFor(block.interaction.type);
 
     const result = materialsService.gradeResponse(block.interaction, response, block.points);
 
@@ -785,7 +684,7 @@ export async function submitActivity(user: AccessTokenPayload, activityId: strin
       activityId,
       materialId: activity.materialId,
       lessonId: activity.lessonId,
-      userId: user.sub,
+      participantId: participant.id,
       questionId: block.id,
       response,
       attemptNumber,
@@ -806,25 +705,30 @@ export async function submitActivity(user: AccessTokenPayload, activityId: strin
   return { attemptId, score, maxScore, feedback };
 }
 
-// ─── Ручная проверка (Э8.12, §6.4/§8 ТЗ: «попадает в очередь учителя с
-// рубрикой») ─────────────────────────────────────────────────────────────
+// ─── Ручная проверка (Э8.12, §6.4/§8 ТЗ) ─────────────────────────────────
 
 /**
  * Очередь ручной проверки — учителю/админу. `submitted = true, autoGraded =
  * false, gradedBy IS NULL` (`repo.listPendingManualGrading`) после сабмита
  * однозначно означает `open_answer` (Э8.3: единственный тип, где движок
- * возвращает `autoGraded: false`) — черновики (`submitted = false`) сюда не
- * попадают, ученик ещё печатает. Учитель видит только то, что сам выдал
- * (`assignedBy`, тот же критерий владения, что и у остальных ручек, — см.
- * `repo.listPendingManualGrading`), админ — всю школу.
+ * возвращает `autoGraded: false`). Учитель видит только то, что сам выдал
+ * (`assignedBy`), админ — всю школу. Э12.5: имя отвечавшего берётся из
+ * строки участника урока (`roomsService.getParticipantNames`).
  */
 export async function getGradingQueue(user: AccessTokenPayload): Promise<GradingQueueItem[]> {
   if (user.role !== "teacher" && user.role !== "admin") {
     throw new AppError(403, "forbidden", "Очередь ручной проверки доступна только учителю");
   }
-  const rows = await repo.listPendingManualGrading(user.schoolId, user.role === "teacher" ? user.sub : null);
+  const rows = await repo.listPendingManualGrading(
+    user.schoolId,
+    user.role === "teacher" ? user.sub : null,
+  );
 
-  const materialCache = new Map<string, Awaited<ReturnType<typeof materialsService.getMaterialVersion>>>();
+  const names = await roomsService.getParticipantNames(rows.map((r) => r.participantId));
+  const materialCache = new Map<
+    string,
+    Awaited<ReturnType<typeof materialsService.getMaterialVersion>>
+  >();
   const items: GradingQueueItem[] = [];
   for (const row of rows) {
     let loaded = materialCache.get(row.materialVersionId);
@@ -834,19 +738,19 @@ export async function getGradingQueue(user: AccessTokenPayload): Promise<Grading
     }
     const question = findQuestion(loaded.material, row.questionId);
     // Рассинхронизацию (вопрос удалён из версии, чужой тип ответа) молча пропускаем — та же защита, что в getAnalytics.
-    if (!question || question.interaction.type !== "open_answer" || row.response.type !== "open_answer") continue;
+    if (!question || question.interaction.type !== "open_answer" || row.response.type !== "open_answer")
+      continue;
 
     items.push({
       responseId: row.responseId,
       activityId: row.activityId,
-      activityMode: row.activityMode,
       materialTitle: loaded.material.title,
       questionId: row.questionId,
       promptHtml: question.prompt.html,
       rubric: question.interaction.rubric,
       maxScore: question.points,
-      studentId: row.studentId,
-      studentName: row.studentFullName,
+      participantId: row.participantId,
+      participantName: names.get(row.participantId)?.displayName ?? "Участник",
       response: { text: row.response.text, attachmentIds: row.response.attachmentIds },
       submittedAt: row.submittedAt.toISOString(),
     });

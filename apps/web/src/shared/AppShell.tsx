@@ -2,7 +2,6 @@ import { useState, type ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   CalendarDays,
-  ClipboardList,
   GraduationCap,
   Library,
   LogOut,
@@ -29,13 +28,7 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { to: "/lessons", label: "Уроки", icon: CalendarDays, roles: ["admin", "teacher", "student"] },
-  {
-    to: "/homework",
-    label: "Домашние задания",
-    icon: ClipboardList,
-    roles: ["admin", "teacher", "student"],
-  },
+  { to: "/lessons", label: "Уроки", icon: CalendarDays, roles: ["admin", "teacher"] },
   { to: "/materials", label: "Библиотека", icon: Library, roles: ["admin", "methodist", "teacher"] },
 ];
 

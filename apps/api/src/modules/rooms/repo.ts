@@ -1,4 +1,4 @@
-import { eq, and, isNull, lt, desc, count, or, sql } from "drizzle-orm";
+import { eq, and, isNull, lt, desc, asc, count, or, inArray, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { lessonParticipants, chatMessages, users } from "../../db/schema.js";
 
@@ -36,6 +36,84 @@ export async function closeOpenSession(lessonId: string, participantId: string) 
         isNull(lessonParticipants.leftAt),
       ),
     );
+}
+
+/**
+ * Э12.5 — «каноническая» строка участника урока: самая ранняя (`joined_at ASC`)
+ * из строк одного `guestId`/`userId` в уроке. Строки `lesson_participants`
+ * никогда не удаляются (`closeOpenSession` лишь ставит `left_at`), поэтому
+ * самая ранняя стабильна на всё время урока — к ней и привязываются ответы
+ * на задания (`responses.participant_id`), переживая переподключения.
+ */
+export async function findCanonicalParticipant(
+  lessonId: string,
+  identity: { userId: string | null; guestId: string | null },
+): Promise<{ id: string; kind: "staff" | "guest"; displayName: string } | null> {
+  const idMatch = identity.guestId
+    ? eq(lessonParticipants.guestId, identity.guestId)
+    : eq(lessonParticipants.userId, identity.userId!);
+  const rows = await db
+    .select({
+      id: lessonParticipants.id,
+      kind: lessonParticipants.kind,
+      displayName: sql<string>`coalesce(${lessonParticipants.displayName}, ${users.fullName}, 'Участник')`,
+    })
+    .from(lessonParticipants)
+    .leftJoin(users, eq(users.id, lessonParticipants.userId))
+    .where(and(eq(lessonParticipants.lessonId, lessonId), idMatch))
+    .orderBy(asc(lessonParticipants.joinedAt))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/**
+ * Ростер участников урока для учительских панелей заданий (Э12.5) —
+ * канонические строки (по одной на `guestId`/`userId`), самые ранние.
+ * `kind` позволяет вызывающему отфильтровать только учеников.
+ */
+export async function listCanonicalParticipants(
+  lessonId: string,
+): Promise<{ id: string; kind: "staff" | "guest"; displayName: string }[]> {
+  const rows = await db
+    .select({
+      id: lessonParticipants.id,
+      kind: lessonParticipants.kind,
+      guestId: lessonParticipants.guestId,
+      userId: lessonParticipants.userId,
+      joinedAt: lessonParticipants.joinedAt,
+      displayName: sql<string>`coalesce(${lessonParticipants.displayName}, ${users.fullName}, 'Участник')`,
+    })
+    .from(lessonParticipants)
+    .leftJoin(users, eq(users.id, lessonParticipants.userId))
+    .where(eq(lessonParticipants.lessonId, lessonId))
+    .orderBy(asc(lessonParticipants.joinedAt));
+
+  const seen = new Set<string>();
+  const canonical: { id: string; kind: "staff" | "guest"; displayName: string }[] = [];
+  for (const r of rows) {
+    const key = r.guestId ?? r.userId ?? r.id;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    canonical.push({ id: r.id, kind: r.kind, displayName: r.displayName });
+  }
+  return canonical;
+}
+
+/** Имена участников по id строк `lesson_participants` (Э12.5) — для очереди проверки. */
+export async function findParticipantNames(
+  ids: string[],
+): Promise<Map<string, { displayName: string; kind: "staff" | "guest" }>> {
+  if (ids.length === 0) return new Map();
+  const rows = await db
+    .select({
+      id: lessonParticipants.id,
+      kind: lessonParticipants.kind,
+      displayName: sql<string>`coalesce(${lessonParticipants.displayName}, ${users.fullName}, 'Участник')`,
+    })
+    .from(lessonParticipants)
+    .leftJoin(users, eq(users.id, lessonParticipants.userId))
+    .where(inArray(lessonParticipants.id, ids));
+  return new Map(rows.map((r) => [r.id, { displayName: r.displayName, kind: r.kind }]));
 }
 
 export async function insertChatMessage(input: {

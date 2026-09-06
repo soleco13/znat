@@ -5,7 +5,6 @@ import type { AccessTokenPayload } from "@school/shared";
 const {
   repoMock,
   lessonsServiceMock,
-  usersServiceMock,
   storageServiceMock,
   jobsServiceMock,
   roomsServiceMock,
@@ -23,7 +22,6 @@ const {
       deleteDeck: vi.fn(),
     },
     lessonsServiceMock: { getLesson: vi.fn() },
-    usersServiceMock: { isGroupMember: vi.fn() },
     storageServiceMock: {
       uploadFile: vi.fn(),
       copyFile: vi.fn(),
@@ -36,7 +34,6 @@ const {
 
 vi.mock("./repo.js", () => repoMock);
 vi.mock("../lessons/service.js", () => lessonsServiceMock);
-vi.mock("../users/service.js", () => usersServiceMock);
 vi.mock("../storage/service.js", () => storageServiceMock);
 vi.mock("../jobs/service.js", () => jobsServiceMock);
 vi.mock("../rooms/service.js", () => roomsServiceMock);
@@ -373,10 +370,9 @@ describe("listDecks — заметки докладчика видны толь�
     expect(deck?.slides[0]?.notes).toBe("Не забыть сказать про формулу");
   });
 
-  it("ученику заметки не видны — сервер отдаёт null независимо от БД", async () => {
-    usersServiceMock.isGroupMember.mockResolvedValue(true);
-    const [deck] = await listDecks(student, LESSON);
-    expect(deck?.slides[0]?.notes).toBeNull();
+  it("не-персонал (устаревшая роль student) к презентациям урока по HTTP не допускается — 403", async () => {
+    // Э12.5: ученики новой модели аккаунта не имеют; ветка «ученик из группы» убрана.
+    await expect(listDecks(student, LESSON)).rejects.toMatchObject({ statusCode: 403 });
   });
 
   it("чужому учителю (не хозяину урока) заметки не видны", async () => {

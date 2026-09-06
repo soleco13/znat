@@ -44,7 +44,6 @@ export const deckStatusEnum = pgEnum("deck_status", [
   "ready",
   "failed",
 ]);
-export const activityModeEnum = pgEnum("activity_mode", ["lesson", "homework"]);
 export const materialStatusEnum = pgEnum("material_status", ["draft", "review", "published"]);
 /** Э9.7: `video` сознательно не входит — план ограничивает подзадачу «картинки/аудио», видео в медиатеке — отдельная работа (транскодирование/превью не в этом срезе). */
 export const mediaAssetKindEnum = pgEnum("media_asset_kind", ["image", "audio"]);
@@ -449,16 +448,10 @@ export const mediaAssets = pgTable(
  * напрямую — какую именно версию видел ученик, должно быть воспроизводимо
  * даже после того, как методист опубликует новую (Э9.8).
  *
- * `groupId` (Э8.11) — ДЕНОРМАЛИЗОВАН и заполняется ВСЕГДА, для обоих
- * режимов: у `lesson`-выдачи это `lessons.groupId` урока на момент запуска
- * (копия, не FK через `lessons`), у `homework` — группа, которой она
- * прямо адресована. Без этого поля роль «ученик»/«прогресс класса»
- * (Э8.8/8.9) для домашней работы не смогла бы понять, чей это ростер — у
- * homework-активности нет урока, откуда обычно берётся `groupId`.
- * Nullable в схеме БД (не NOT NULL) — намеренно, чтобы `drizzle-kit
- * generate` не потребовал интерактивного дефолта для уже существующих
- * строк; инвариант «всегда заполнено» держит только сервис-слой
- * (`repo.insertActivity` не вызывается без него ни из одного пути).
+ * Э12.5 (§1.3 план-ТЗ): режим `homework` и группы убраны — задание всегда
+ * на уроке (`lessonId` NOT NULL), «домашка» теперь отдельная сущность
+ * `lesson_materials`. Прогресс/аналитика/разбор идут по участникам урока
+ * (`lesson_participants`), а не по ростеру группы.
  */
 export const activities = pgTable(
   "activities",
@@ -467,9 +460,9 @@ export const activities = pgTable(
     materialVersionId: uuid("material_version_id")
       .notNull()
       .references(() => materialVersions.id, { onDelete: "restrict" }),
-    lessonId: uuid("lesson_id").references(() => lessons.id, { onDelete: "cascade" }),
-    groupId: uuid("group_id").references(() => groups.id, { onDelete: "restrict" }),
-    mode: activityModeEnum("mode").notNull(),
+    lessonId: uuid("lesson_id")
+      .notNull()
+      .references(() => lessons.id, { onDelete: "cascade" }),
     assignedBy: uuid("assigned_by")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
@@ -479,7 +472,7 @@ export const activities = pgTable(
     /** Момент, когда учитель начал разбор (Э8.10, §7.3 ТЗ) — до этого момента полный материал (с ключами ответов) не отдаётся никому, кроме учителя (аналитика, Э8.9). `null` — разбор ещё не начат. */
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   },
-  (t) => [index("activities_lesson_idx").on(t.lessonId), index("activities_group_idx").on(t.groupId)],
+  (t) => [index("activities_lesson_idx").on(t.lessonId)],
 );
 
 /**
@@ -500,6 +493,10 @@ export const activities = pgTable(
  *
  * `response` хранится ВСЕГДА, независимо от `autoGraded` — «чтобы можно
  * было перепроверить после исправления ключа ответа» (§6.5 ТЗ дословно).
+ *
+ * Э12.5 (§1.3 план-ТЗ): `user_id` из списка выше заменён на `participant_id`
+ * (FK `lesson_participants.id`) — у учеников новой модели нет аккаунта,
+ * личность отвечающего = строка участника урока (введённое имя + гостевой id).
  */
 export const responses = pgTable(
   "responses",
@@ -513,9 +510,14 @@ export const responses = pgTable(
       .notNull()
       .references(() => materials.id, { onDelete: "cascade" }),
     lessonId: uuid("lesson_id").references(() => lessons.id, { onDelete: "cascade" }),
-    userId: uuid("user_id")
+    /**
+     * Э12.5 (§1.3 план-ТЗ): личность отвечающего — строка участника урока
+     * (`lesson_participants`, введённое имя + гостевой id), а не `users.id`.
+     * У учеников новой модели нет аккаунта.
+     */
+    participantId: uuid("participant_id")
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+      .references(() => lessonParticipants.id, { onDelete: "cascade" }),
     questionId: text("question_id").notNull(),
     response: jsonb("response").notNull(),
     score: numeric("score", { precision: 10, scale: 4 }),
@@ -547,7 +549,7 @@ export const responses = pgTable(
   (t) => [
     // Естественный ключ автосохранения (Э8.7) — upsert-цель «этот ответ этой попытки этого вопроса».
     unique("responses_attempt_question_idx").on(t.attemptId, t.questionId),
-    index("responses_activity_user_idx").on(t.activityId, t.userId),
+    index("responses_activity_participant_idx").on(t.activityId, t.participantId),
     // Аналитика по вопросу (Э8.9): «17 из 24 выбрали B» — агрегат по материалу+вопросу вне привязки к конкретной выдаче.
     index("responses_material_question_idx").on(t.materialId, t.questionId),
     // Очередь ручной проверки (Э8.12): `submitted = true AND auto_graded = false AND graded_by IS NULL`.

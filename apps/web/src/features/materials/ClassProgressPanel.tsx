@@ -59,11 +59,11 @@ export function ClassProgressPanel({ activityId }: { activityId: string }) {
       </div>
       <ul className="divide-y divide-border rounded-lg border border-border">
         {progress.students.map((s) => (
-          <li key={s.userId} className="flex items-center justify-between px-3 py-2 text-sm">
+          <li key={s.participantId} className="flex items-center justify-between px-3 py-2 text-sm">
             <span className="flex items-center gap-2">
               <StatusDot status={s.status} />
-              <UserAvatar name={s.fullName} size={22} />
-              {s.fullName}
+              <UserAvatar name={s.displayName} size={22} />
+              {s.displayName}
             </span>
             <span className="text-xs font-medium text-muted-foreground">
               {s.answered}/{s.total}

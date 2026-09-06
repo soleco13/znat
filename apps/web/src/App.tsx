@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 
 import { LoginPage } from "./features/auth/LoginPage.js";
 import { LessonsListPage } from "./features/lessons/LessonsListPage.js";
-import { HomeworkPage } from "./features/materials/HomeworkPage.js";
 import { MaterialEditorPage } from "./features/materials/MaterialEditorPage.js";
 import { MaterialsLibraryPage } from "./features/materials/MaterialsLibraryPage.js";
 import { EgressPage } from "./features/recordings/EgressPage.js";
@@ -40,7 +39,6 @@ export function App() {
             </RequireAuth>
           }
         />
-        <Route path="/homework" element={<Shell><HomeworkPage /></Shell>} />
         <Route path="/materials" element={<Shell><MaterialsLibraryPage /></Shell>} />
         <Route path="/materials/:id/edit" element={<Shell><MaterialEditorPage /></Shell>} />
         {/* Э10.2 — layout-шаблон записи. Открывается headless-Chrome внутри

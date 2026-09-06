@@ -1,23 +1,21 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { activities, materials, materialVersions, responses, users } from "../../db/schema.js";
-import type { ActivityMode, QuestionResponse } from "@school/shared";
+import { activities, materials, materialVersions, responses } from "../../db/schema.js";
+import type { QuestionResponse } from "@school/shared";
 
 /**
  * Активность вместе с координатами материала (Э8.2: `activities` ссылается
  * на `material_versions`, `schoolId` берётся джойном через `materials`).
+ * Э12.5: задание всегда на уроке, режим/группа убраны.
  */
 export interface ActivityRow {
   id: string;
-  lessonId: string | null;
-  /** Группа выдачи (Э8.11) — заполнено всегда, для обоих режимов. См. докстринг `activities.groupId` в схеме БД. */
-  groupId: string;
+  lessonId: string;
   materialVersionId: string;
   materialId: string;
   materialVersion: number;
   schoolId: string;
-  mode: ActivityMode;
-  /** Кто выдал (Э8.11) — владение домашней работой держится на этом (у группы нет отдельного «хозяина»-учителя, в отличие от урока). */
+  /** Кто выдал — учитель урока или админ; используется для владения (`assertActivityOwner`). */
   assignedBy: string;
   deadline: Date | null;
   timerSeconds: number | null;
@@ -28,12 +26,10 @@ export interface ActivityRow {
 const activitySelection = {
   id: activities.id,
   lessonId: activities.lessonId,
-  groupId: activities.groupId,
   materialVersionId: activities.materialVersionId,
   materialId: materialVersions.materialId,
   materialVersion: materialVersions.version,
   schoolId: materials.schoolId,
-  mode: activities.mode,
   assignedBy: activities.assignedBy,
   deadline: activities.deadline,
   timerSeconds: activities.timerSeconds,
@@ -51,9 +47,7 @@ function withMaterial() {
 
 export async function insertActivity(input: {
   materialVersionId: string;
-  lessonId: string | null;
-  groupId: string;
-  mode: ActivityMode;
+  lessonId: string;
   assignedBy: string;
   deadline: Date | null;
   timerSeconds: number | null;
@@ -74,14 +68,6 @@ export async function listActivitiesByLesson(lessonId: string): Promise<Activity
   return rows as ActivityRow[];
 }
 
-/** Домашние задания группы (Э8.11) — `mode = 'homework'`, вне зависимости от того, кто их выдал. */
-export async function listHomeworkActivitiesByGroup(groupId: string): Promise<ActivityRow[]> {
-  const rows = await withMaterial()
-    .where(and(eq(activities.groupId, groupId), eq(activities.mode, "homework")))
-    .orderBy(desc(activities.createdAt));
-  return rows as ActivityRow[];
-}
-
 /**
  * Начать разбор (Э8.10) — идемпотентно: `COALESCE` не двигает уже
  * выставленный `reviewedAt` при повторном вызове (учитель мог нажать
@@ -96,12 +82,12 @@ export async function markReviewed(id: string): Promise<Date> {
   return row!.reviewedAt!;
 }
 
-/** Наибольший номер попытки этого ученика по этой активности; 0 — попыток ещё не было. */
-export async function maxAttemptNumber(activityId: string, userId: string): Promise<number> {
+/** Наибольший номер попытки этого участника по этой активности; 0 — попыток ещё не было. */
+export async function maxAttemptNumber(activityId: string, participantId: string): Promise<number> {
   const rows = await db
     .select({ max: sql<number | null>`max(${responses.attemptNumber})` })
     .from(responses)
-    .where(and(eq(responses.activityId, activityId), eq(responses.userId, userId)));
+    .where(and(eq(responses.activityId, activityId), eq(responses.participantId, participantId)));
   return rows[0]?.max ?? 0;
 }
 
@@ -126,32 +112,40 @@ export async function findResponsesByAttempt(attemptId: string): Promise<SavedRe
  */
 export async function listResponsesByActivity(
   activityId: string,
-): Promise<{ userId: string; questionId: string; response: QuestionResponse }[]> {
+): Promise<{ participantId: string; questionId: string; response: QuestionResponse }[]> {
   const rows = await db
-    .select({ userId: responses.userId, questionId: responses.questionId, response: responses.response })
+    .select({
+      participantId: responses.participantId,
+      questionId: responses.questionId,
+      response: responses.response,
+    })
     .from(responses)
     .where(eq(responses.activityId, activityId));
-  return rows.map((r) => ({ userId: r.userId, questionId: r.questionId, response: r.response as QuestionResponse }));
+  return rows.map((r) => ({
+    participantId: r.participantId,
+    questionId: r.questionId,
+    response: r.response as QuestionResponse,
+  }));
 }
 
 /**
- * Сводка ответов по ученикам одной активности (Э8.8) — сколько РАЗНЫХ
- * вопросов отвечено и когда было последнее сохранение. Попытка у ученика
+ * Сводка ответов по участникам одной активности (Э8.8) — сколько РАЗНЫХ
+ * вопросов отвечено и когда было последнее сохранение. Попытка у участника
  * фактически одна (`attemptId` детерминирован), поэтому группируем просто
- * по `userId`.
+ * по `participantId`.
  */
 export async function answeredStatsByActivity(
   activityId: string,
-): Promise<{ userId: string; answered: number; lastAt: string }[]> {
+): Promise<{ participantId: string; answered: number; lastAt: string }[]> {
   const rows = await db
     .select({
-      userId: responses.userId,
+      participantId: responses.participantId,
       answered: sql<number>`count(distinct ${responses.questionId})::int`,
       lastAt: sql<string>`max(${responses.submittedAt})::text`,
     })
     .from(responses)
     .where(eq(responses.activityId, activityId))
-    .groupBy(responses.userId);
+    .groupBy(responses.participantId);
   return rows;
 }
 
@@ -169,7 +163,7 @@ export async function upsertDraftResponse(input: {
   activityId: string;
   materialId: string;
   lessonId: string | null;
-  userId: string;
+  participantId: string;
   questionId: string;
   response: QuestionResponse;
   attemptNumber: number;
@@ -183,7 +177,7 @@ export async function upsertDraftResponse(input: {
       activityId: input.activityId,
       materialId: input.materialId,
       lessonId: input.lessonId,
-      userId: input.userId,
+      participantId: input.participantId,
       questionId: input.questionId,
       response: input.response,
       autoGraded: false,
@@ -240,7 +234,7 @@ export async function upsertGradedResponse(input: {
   activityId: string;
   materialId: string;
   lessonId: string | null;
-  userId: string;
+  participantId: string;
   questionId: string;
   response: QuestionResponse;
   attemptNumber: number;
@@ -255,7 +249,7 @@ export async function upsertGradedResponse(input: {
       activityId: input.activityId,
       materialId: input.materialId,
       lessonId: input.lessonId,
-      userId: input.userId,
+      participantId: input.participantId,
       questionId: input.questionId,
       response: input.response,
       score: result.autoGraded ? String(result.score) : null,
@@ -283,12 +277,11 @@ export async function upsertGradedResponse(input: {
 export interface PendingManualGradingRow {
   responseId: string;
   activityId: string;
-  activityMode: ActivityMode;
   materialVersionId: string;
   questionId: string;
   response: QuestionResponse;
-  studentId: string;
-  studentFullName: string;
+  /** Э12.5: id строки участника урока (`lesson_participants.id`); имя резолвит сервис через `roomsService`. */
+  participantId: string;
   submittedAt: Date;
 }
 
@@ -298,9 +291,9 @@ export interface PendingManualGradingRow {
  * после сабмита однозначно означает `open_answer` (Э8.3: только он
  * возвращает `autoGraded: false`), отдельно проверять `response.type` не
  * нужно. `assignedBy` — тот же критерий владения, что и у остальных
- * учительских ручек (`assertActivityOwner`): для `lesson`-выдачи это
- * учитель урока (см. `createActivity`), для `homework` — кто её задал.
- * `null` — без фильтра по владельцу (роль admin, видит всю школу).
+ * учительских ручек (`assertActivityOwner`): учитель урока (см.
+ * `createActivity`). `null` — без фильтра по владельцу (роль admin, видит
+ * всю школу).
  */
 export async function listPendingManualGrading(
   schoolId: string,
@@ -318,19 +311,16 @@ export async function listPendingManualGrading(
     .select({
       responseId: responses.id,
       activityId: responses.activityId,
-      activityMode: activities.mode,
       materialVersionId: activities.materialVersionId,
       questionId: responses.questionId,
       response: responses.response,
-      studentId: users.id,
-      studentFullName: users.fullName,
+      participantId: responses.participantId,
       submittedAt: responses.submittedAt,
     })
     .from(responses)
     .innerJoin(activities, eq(activities.id, responses.activityId))
     .innerJoin(materialVersions, eq(materialVersions.id, activities.materialVersionId))
     .innerJoin(materials, eq(materials.id, materialVersions.materialId))
-    .innerJoin(users, eq(users.id, responses.userId))
     .where(and(...conditions))
     .orderBy(responses.submittedAt);
 

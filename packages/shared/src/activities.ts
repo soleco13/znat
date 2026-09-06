@@ -22,22 +22,13 @@ import {
  * ответов (`stripMaterialAnswerKeys`, Э8.1).
  */
 
-/** `lesson` — выдача во время урока; `homework` — домашняя работа вне урока (Э8.11). Совпадает с enum `activity_mode` в БД. */
-export const activityModeSchema = z.enum(["lesson", "homework"]);
-export type ActivityMode = z.infer<typeof activityModeSchema>;
-
 /**
- * Тело `POST /lessons/:id/activities` (выдача в уроке) и
- * `POST /groups/:id/activities` (домашняя работа, Э8.11) — оба эндпоинта
- * принимают одно и то же тело, `mode` в теле ИГНОРИРУЕТСЯ сервисом: сам
- * режим определяет URL, которым учитель воспользовался (см. докстринги
- * `createActivity`/`createHomeworkActivity` в activities/service.ts) —
- * поле оставлено в схеме только ради обратной совместимости формы, не как
- * реальный переключатель.
+ * Тело `POST /lessons/:id/activities` (Э12.5, §1.3 план-ТЗ). Задание —
+ * всегда на уроке: домашняя работа вне урока и режим `homework` убраны
+ * («домашка» теперь = список материалов урока, `lesson_materials`).
  */
 export const createActivityRequestSchema = z.object({
   materialId: z.string().uuid(),
-  mode: activityModeSchema.default("lesson"),
   /** ISO-момент дедлайна; после него приём ответов закрывается (Э8.7/8.10). */
   deadline: z.string().datetime({ offset: true }).optional(),
   /** Таймер на выполнение, секунды; отсчитывается у каждого ученика от старта его попытки. */
@@ -48,12 +39,10 @@ export type CreateActivityRequest = z.infer<typeof createActivityRequestSchema>;
 /** Учительское представление выдачи (без содержимого материала — оно приходит ученику через `/my`). */
 export interface ActivityDto {
   id: string;
-  lessonId: string | null;
-  /** Группа, которой адресована выдача (Э8.11) — заполнено всегда, для обоих режимов (см. `activities.groupId` в схеме БД). */
-  groupId: string;
+  /** Э12.5: задание всегда на уроке. */
+  lessonId: string;
   materialId: string;
   materialVersion: number;
-  mode: ActivityMode;
   deadline: string | null;
   timerSeconds: number | null;
   createdAt: string;
@@ -99,8 +88,10 @@ export interface SaveResponseResult {
 export type StudentProgressStatus = "not_started" | "in_progress" | "stuck";
 
 export interface StudentProgress {
-  userId: string;
-  fullName: string;
+  /** Э12.5: id строки участника урока (`lesson_participants.id`), не `users.id`. */
+  participantId: string;
+  /** Введённое учеником имя при входе по ссылке (Э12.5). */
+  displayName: string;
   status: StudentProgressStatus;
   /** Сколько разных вопросов уже сохранено. */
   answered: number;
@@ -187,7 +178,6 @@ export interface MyActivity {
   activityId: string;
   attemptId: string;
   attemptNumber: number;
-  mode: ActivityMode;
   deadline: string | null;
   timerSeconds: number | null;
   /** Момент старта ЭТОЙ попытки — точка отсчёта таймера. */
@@ -231,14 +221,15 @@ export interface SubmitActivityResult {
 export interface GradingQueueItem {
   responseId: string;
   activityId: string;
-  activityMode: ActivityMode;
   materialTitle: string;
   questionId: string;
   promptHtml: string;
   rubric: RubricCriterion[];
   maxScore: number;
-  studentId: string;
-  studentName: string;
+  /** Э12.5: id строки участника урока (`lesson_participants.id`). */
+  participantId: string;
+  /** Введённое учеником имя (Э12.5). */
+  participantName: string;
   response: { text: string; attachmentIds: string[] };
   /** ISO-момент сдачи попытки (когда именно этот ответ стал финальным). */
   submittedAt: string;
@@ -289,8 +280,10 @@ export interface ActivityReview {
 
 /** Один ответ ученика на конкретный вопрос — для учительского выбора «чей ответ вынести на доску». */
 export interface ReviewStudentResponse {
-  userId: string;
-  fullName: string;
+  /** Э12.5: id строки участника урока (`lesson_participants.id`). */
+  participantId: string;
+  /** Введённое учеником имя (Э12.5). */
+  displayName: string;
   response: QuestionResponse;
 }
 
@@ -303,7 +296,8 @@ export interface ReviewQuestionResponses {
 /** Тело `POST /activities/:id/review/board` — учитель выносит чей-то ответ на доску урока (§7.3 ТЗ: «анонимно или с именем»). */
 export const pushAnswerToBoardRequestSchema = z.object({
   questionId: z.string().min(1),
-  userId: z.string().uuid(),
+  /** Э12.5: id строки участника урока (`lesson_participants.id`), чей ответ выносится. */
+  participantId: z.string().uuid(),
   anonymous: z.boolean().default(true),
 });
 export type PushAnswerToBoardRequest = z.infer<typeof pushAnswerToBoardRequestSchema>;
