@@ -1,8 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { LiveKitRoom, RoomAudioRenderer, useRoomContext } from "@livekit/components-react";
-import { VideoPresets, type RoomOptions } from "livekit-client";
-import { Hand, LogOut, Pin, Send, Users } from "lucide-react";
+import {
+  LiveKitRoom,
+  RoomAudioRenderer,
+  useRoomContext,
+  useTracks,
+} from "@livekit/components-react";
+import { Track, VideoPresets, type RoomOptions } from "livekit-client";
+import {
+  Copy,
+  GraduationCap,
+  Hand,
+  LogOut,
+  MessageSquare,
+  MoreVertical,
+  PenLine,
+  Pin,
+  Send,
+  Users,
+  Wrench,
+} from "lucide-react";
 import type {
   ChatMessage,
   Deck,
@@ -23,8 +40,16 @@ import { Alert, AlertDescription } from "@/shared/ui/alert";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 import { Input } from "@/shared/ui/input";
 import { ScrollArea } from "@/shared/ui/scroll-area";
+import { toast } from "@/shared/ui/sonner";
 import {
   Select,
   SelectContent,
@@ -32,7 +57,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { UserAvatar } from "@/shared/ui/avatar";
 import { TooltipProvider } from "@/shared/ui/tooltip";
 import { Board } from "../canvas/Board.js";
@@ -78,13 +102,6 @@ const LESSON_MODE_LABEL: Record<LessonMode, string> = {
   spotlight: "У доски",
 };
 
-const LESSON_STATUS_LABEL: Record<LessonStatus, string> = {
-  scheduled: "Запланирован",
-  live: "Идёт",
-  ended: "Завершён",
-  cancelled: "Отменён",
-};
-
 type SocketStatusLike = "connecting" | "connected" | "reconnecting" | "closed";
 
 export function RoomPage() {
@@ -96,6 +113,14 @@ export function RoomPage() {
   const isGuest = identity?.kind === "guest";
   const selfId = identity?.id;
   const [leftAsGuest, setLeftAsGuest] = useState(false);
+
+  // Э12.7 §6.3/§6.4 — каркас урока: левый выдвижной блок (один, три режима)
+  // и что показано на стейдже (плитки участников / доска). Демонстрация
+  // экрана переключает стейдж сама (см. `LiveStage`).
+  const [drawer, setDrawer] = useState<null | "tools" | "people" | "chat">(null);
+  const [stageView, setStageView] = useState<"people" | "board">("people");
+  const toggleDrawer = (mode: "tools" | "people" | "chat") =>
+    setDrawer((cur) => (cur === mode ? null : mode));
 
   const [participants, setParticipants] = useState<ParticipantSnapshot[]>([]);
   const [lessonStatus, setLessonStatus] = useState<LessonStatus | null>(null);
@@ -116,6 +141,7 @@ export function RoomPage() {
   const [joinMicEnabled, setJoinMicEnabled] = useState(true);
   const [joinCamEnabled, setJoinCamEnabled] = useState(true);
   const [lessonTitle, setLessonTitle] = useState<string | null>(null);
+  const [lessonJoinPath, setLessonJoinPath] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const isTeacher = identity?.role === "teacher" || identity?.role === "admin";
@@ -214,9 +240,20 @@ export function RoomPage() {
       return;
     }
     apiFetch<LessonSummary>(`/lessons/${lessonId}`)
-      .then((l) => setLessonTitle(l.title))
+      .then((l) => {
+        setLessonTitle(l.title);
+        setLessonJoinPath(l.joinPath);
+      })
       .catch(() => undefined);
   }, [lessonId, isGuest, guestSession?.lessonTitle]);
+
+  const copyJoinLink = useCallback(() => {
+    if (!lessonJoinPath) return;
+    navigator.clipboard
+      .writeText(`${window.location.origin}${lessonJoinPath}`)
+      .then(() => toast.success("Ссылка для учеников скопирована"))
+      .catch(() => toast.error("Не удалось скопировать ссылку"));
+  }, [lessonJoinPath]);
 
   const refreshDecks = useCallback(() => {
     if (!lessonId) return;
@@ -353,7 +390,7 @@ export function RoomPage() {
   const connected = status === "connected";
 
   const participantsPanel = (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5 p-3">
       {participants.map((p) => (
         <div
           key={p.userId}
@@ -427,6 +464,7 @@ export function RoomPage() {
 
   const chatPanel = (
     <div className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0 border-b border-border px-3 py-2 text-sm font-heavy">Чат</div>
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-2 p-3">
           {chat.length === 0 ? (
@@ -442,7 +480,7 @@ export function RoomPage() {
           <div ref={chatEndRef} />
         </div>
       </ScrollArea>
-      <form onSubmit={sendChat} className="flex gap-2 border-t border-border p-2.5">
+      <form onSubmit={sendChat} className="flex shrink-0 gap-2 border-t border-border p-2.5">
         <Input
           value={chatDraft}
           onChange={(e) => setChatDraft(e.target.value)}
@@ -457,91 +495,28 @@ export function RoomPage() {
     </div>
   );
 
-  const content = (
-    <div className="min-h-dvh bg-background">
-      {/* Топ-бар урока */}
-      <header className="sticky top-0 z-30 flex flex-wrap items-center gap-3 border-b border-border bg-card/85 px-4 py-2.5 backdrop-blur-md sm:px-6">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h1 className="text-base font-heavy tracking-tight">Урок</h1>
-            {lessonStatus ? (
-              <Badge variant={lessonStatus === "live" ? "green" : "gray"}>
-                {LESSON_STATUS_LABEL[lessonStatus]}
-              </Badge>
-            ) : null}
-            <span
-              className={cn(
-                "inline-flex items-center gap-1.5 text-xs font-medium",
-                connected ? "text-success" : "text-warning",
-              )}
+  // §6.4 — «Инструменты»: доска вкл/выкл, презентации, задание классу,
+  // запись, режим урока, «рисовать/заглушить всем». Ученику виден только
+  // блок задания (он его проходит) + переключатель доски.
+  const toolsPanel = (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0 border-b border-border px-3 py-2 text-sm font-heavy">Инструменты</div>
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="flex flex-col gap-4 p-3">
+          <div className="flex flex-col gap-1.5">
+            <span className="ds-label">Доска</span>
+            <Button
+              variant={stageView === "board" ? "secondary" : "outline"}
+              size="sm"
+              className="justify-start"
+              onClick={() => setStageView((v) => (v === "board" ? "people" : "board"))}
             >
-              <span
-                className={cn(
-                  "size-1.5 rounded-full",
-                  connected ? "bg-success" : "bg-warning animate-pulse",
-                )}
-              />
-              {STATUS_LABEL[status]}
-            </span>
-            {media ? <MediaAudioStatus /> : null}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Режим</span>
-          {isTeacher ? (
-            <Select value={lessonMode} onValueChange={(v) => changeLessonMode(v as LessonMode)}>
-              <SelectTrigger className="h-8 w-[180px] text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(LESSON_MODE_LABEL).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <Badge variant="blue">{LESSON_MODE_LABEL[lessonMode]}</Badge>
-          )}
-        </div>
-
-        <div className="ml-auto flex items-center gap-2">
-          {isTeacher && lessonStatus === "live" ? (
-            <Button variant="destructive" size="sm" onClick={endLesson}>
-              Завершить урок
+              <PenLine aria-hidden />
+              {stageView === "board" ? "Скрыть доску (показать участников)" : "Открыть доску"}
             </Button>
-          ) : null}
-          <Button variant="secondary" size="sm" onClick={leaveRoom}>
-            <LogOut aria-hidden />
-            Выйти
-          </Button>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-content px-4 py-5 sm:px-6">
-        <RecordingConsentBanner active={recordingActive} />
-
-        {media ? <ScreenShareTile /> : null}
-
-        {error ? (
-          <Alert variant="destructive" className="mb-4">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
-
-        {media && self?.permissions.canSpeak ? <PacketLossWarning /> : null}
-        {media && (isTeacher || self?.permissions.canPublishVideo) ? <VideoDegradeSuggestion /> : null}
-
-        {lessonId ? (
-          <div className="mb-4">
-            <Board lessonId={lessonId} canDraw={self?.permissions.canDraw ?? false} decks={decks} />
           </div>
-        ) : null}
 
-        {lessonId ? (
-          <div className="mb-4">
+          {lessonId && isTeacher ? (
             <DeckPanel
               lessonId={lessonId}
               isTeacher={isTeacher}
@@ -549,103 +524,292 @@ export function RoomPage() {
               statuses={deckStatuses}
               onChanged={refreshDecks}
             />
-          </div>
-        ) : null}
+          ) : null}
 
-        {lessonId ? (
-          <div className="mb-4">
+          {lessonId ? (
             <LessonActivityPanel
               lessonId={lessonId}
               isTeacher={isTeacher}
               activeActivityId={activeActivityId}
               reviewSignal={reviewSignal}
             />
-          </div>
-        ) : null}
+          ) : null}
 
-        {lessonId && isTeacher ? (
-          <div className="mb-4">
+          {lessonId && isTeacher ? (
             <RecordingPanel
               lessonId={lessonId}
               recordingActive={recordingActive}
               onActiveChange={setRecordingActive}
             />
-          </div>
+          ) : null}
+
+          {isTeacher ? (
+            <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+              <span className="ds-label">Класс</span>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs text-muted-foreground">Режим урока</span>
+                <Select
+                  value={lessonMode}
+                  onValueChange={(v) => changeLessonMode(v as LessonMode)}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(LESSON_MODE_LABEL).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {media ? (
+                <Button variant="outline" size="sm" onClick={muteAll}>
+                  Заглушить всех
+                </Button>
+              ) : null}
+              <div className="flex gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => toggleDrawForAll(true)}
+                >
+                  Рисовать всем
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => toggleDrawForAll(false)}
+                >
+                  Запретить
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+
+  const stageArea = (
+    <>
+      {error ? (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+      {media && self?.permissions.canSpeak ? <PacketLossWarning /> : null}
+      {media && (isTeacher || self?.permissions.canPublishVideo) ? <VideoDegradeSuggestion /> : null}
+
+      {stageView === "board" ? (
+        <div className="flex min-h-0 flex-1 flex-col gap-3">
+          {lessonId ? (
+            <div className="min-h-0 flex-1">
+              <Board
+                lessonId={lessonId}
+                canDraw={self?.permissions.canDraw ?? false}
+                decks={decks}
+              />
+            </div>
+          ) : null}
+          {media ? (
+            <RoomVideoGrid participants={participants} selfId={selfId} mode={lessonMode} variant="filmstrip" />
+          ) : null}
+        </div>
+      ) : media ? (
+        <LiveStage participants={participants} selfId={selfId} mode={lessonMode} />
+      ) : (
+        <div className="flex min-h-0 flex-1 items-center justify-center rounded-xl border border-border bg-card text-sm text-muted-foreground">
+          Подключаемся к аудио и видео…
+        </div>
+      )}
+
+      {stageView === "people" && participants.length <= 1 ? (
+        <div className="rounded-xl border border-border bg-card p-4 text-center">
+          <p className="text-sm font-medium text-foreground">Вы пока один на уроке</p>
+          {isTeacher && lessonJoinPath ? (
+            <>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Отправьте ученикам ссылку, чтобы они подключились.
+              </p>
+              <Button variant="secondary" size="sm" className="mt-2.5" onClick={copyJoinLink}>
+                <Copy aria-hidden />
+                Скопировать ссылку
+              </Button>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+    </>
+  );
+
+  const drawerToggle = (
+    mode: "tools" | "people" | "chat",
+    label: string,
+    Icon: typeof Wrench,
+    badge?: number,
+  ) => (
+    <Button
+      variant={drawer === mode ? "secondary" : "ghost"}
+      size="sm"
+      className="relative"
+      onClick={() => toggleDrawer(mode)}
+      aria-pressed={drawer === mode}
+    >
+      <Icon aria-hidden />
+      <span className="hidden md:inline">{label}</span>
+      {badge != null && badge > 0 ? (
+        <span className="ml-0.5 rounded-full bg-primary/10 px-1.5 text-xs font-semibold text-primary">
+          {badge}
+        </span>
+      ) : null}
+    </Button>
+  );
+
+  const content = (
+    <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+      {/* §6.1 — верхняя строка */}
+      <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-card px-3">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <GraduationCap className="size-4" aria-hidden />
+        </span>
+        <span className="min-w-0 truncate text-sm font-heavy tracking-tight">
+          {lessonTitle ?? "Урок"}
+        </span>
+        {recordingActive ? (
+          <Badge variant="red" className="shrink-0">
+            <span className="mr-1 inline-block size-1.5 animate-pulse rounded-full bg-current" />
+            Запись
+          </Badge>
+        ) : null}
+        <span
+          className={cn(
+            "hidden shrink-0 items-center gap-1.5 text-xs font-medium sm:inline-flex",
+            connected ? "text-success" : "text-warning",
+          )}
+        >
+          <span
+            className={cn(
+              "size-1.5 rounded-full",
+              connected ? "bg-success" : "bg-warning animate-pulse",
+            )}
+          />
+          {STATUS_LABEL[status]}
+        </span>
+        {media ? <span className="hidden lg:inline"><MediaAudioStatus /></span> : null}
+
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          {isTeacher && lessonJoinPath ? (
+            <Button variant="ghost" size="sm" onClick={copyJoinLink}>
+              <Copy aria-hidden />
+              <span className="hidden md:inline">Ссылка</span>
+            </Button>
+          ) : null}
+          {!isTeacher ? (
+            <Badge variant="blue" className="hidden sm:inline-flex">
+              {LESSON_MODE_LABEL[lessonMode]}
+            </Badge>
+          ) : null}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Меню урока">
+                <MoreVertical aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {isTeacher && lessonStatus === "live" ? (
+                <>
+                  <DropdownMenuItem onSelect={endLesson}>Завершить урок для всех</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              ) : null}
+              <DropdownMenuItem onSelect={leaveRoom}>
+                <LogOut aria-hidden />
+                Выйти из урока
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </header>
+
+      <RecordingConsentBanner active={recordingActive} />
+
+      {/* §6.2/§6.4 — левый выдвижной блок + стейдж */}
+      <div className="relative flex min-h-0 flex-1">
+        {drawer ? (
+          <aside className="absolute inset-y-0 left-0 z-20 flex w-full max-w-[360px] flex-col border-r border-border bg-card sm:relative sm:w-[340px]">
+            {drawer === "tools" ? toolsPanel : null}
+            {drawer === "people" ? (
+              <div className="flex h-full min-h-0 flex-col">
+                <div className="shrink-0 border-b border-border px-3 py-2 text-sm font-heavy">
+                  Участники ({participants.length})
+                </div>
+                <ScrollArea className="min-h-0 flex-1">{participantsPanel}</ScrollArea>
+              </div>
+            ) : null}
+            {drawer === "chat" ? chatPanel : null}
+          </aside>
         ) : null}
 
-        {/* Панель управления медиа/правами */}
-        <div className="mb-4 flex flex-wrap items-center gap-2">
+        <main className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">{stageArea}</main>
+      </div>
+
+      {/* §6.3 — нижняя панель управления */}
+      <footer className="flex shrink-0 flex-wrap items-center gap-2 border-t border-border bg-card px-3 py-2">
+        <div className="flex items-center gap-1">
+          {drawerToggle("tools", "Инструменты", Wrench)}
+          {drawerToggle("people", "Участники", Users, participants.length)}
+          {drawerToggle("chat", "Чат", MessageSquare)}
+        </div>
+
+        <div className="mx-auto flex items-center gap-1.5">
           {!isTeacher ? (
             <Button
               variant={self?.handRaised ? "secondary" : "outline"}
               size="sm"
               onClick={toggleHand}
+              aria-pressed={self?.handRaised}
             >
               <Hand aria-hidden />
-              {self?.handRaised ? "Опустить руку" : "Поднять руку"}
+              <span className="hidden sm:inline">{self?.handRaised ? "Опустить" : "Рука"}</span>
             </Button>
+          ) : null}
+          {media && (isTeacher || self?.permissions.canShareScreen) ? (
+            <SelfScreenShareButton priority={isTeacher} />
           ) : null}
           {media && self?.permissions.canSpeak ? <SelfMicButton /> : null}
           {media && isTeacher ? <SelfCameraButton /> : null}
           {media && !isTeacher && self?.permissions.canPublishVideo ? (
             <SelfCameraButton maxResolution={VideoPresets.h360.resolution} />
           ) : null}
-          {media && (isTeacher || self?.permissions.canShareScreen) ? (
-            <SelfScreenShareButton priority={isTeacher} />
-          ) : null}
-          {media && isTeacher ? (
-            <Button variant="outline" size="sm" onClick={muteAll}>
-              Заглушить всех
-            </Button>
-          ) : null}
-          {isTeacher ? (
-            <>
-              <Button variant="outline" size="sm" onClick={() => toggleDrawForAll(true)}>
-                Разрешить рисовать всем
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => toggleDrawForAll(false)}>
-                Запретить рисовать всем
-              </Button>
-            </>
-          ) : null}
+          <Button variant="destructive" size="sm" onClick={leaveRoom}>
+            <LogOut aria-hidden />
+            <span className="hidden sm:inline">Выйти</span>
+          </Button>
         </div>
 
-        {media ? (
-          <div className="mb-4">
-            <RoomVideoGrid participants={participants} selfId={selfId} mode={lessonMode} />
-          </div>
-        ) : null}
-
-        {/* Участники + чат */}
-        <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
-          <div>
-            <h2 className="ds-label mb-2 flex items-center gap-1.5">
-              <Users className="size-3.5" aria-hidden /> Участники ({participants.length})
-            </h2>
-            {participantsPanel}
-          </div>
-
-          <Tabs defaultValue="chat" className="flex min-h-0 flex-col">
-            <TabsList className="w-full">
-              <TabsTrigger value="chat" className="flex-1">
-                Чат
-              </TabsTrigger>
-              <TabsTrigger value="people" className="flex-1 lg:hidden">
-                Люди
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent
-              value="chat"
-              className="mt-2 h-[60vh] overflow-hidden rounded-lg border border-border bg-card"
-            >
-              {chatPanel}
-            </TabsContent>
-            <TabsContent value="people" className="mt-2 lg:hidden">
-              {participantsPanel}
-            </TabsContent>
-          </Tabs>
+        <div className="flex items-center gap-1">
+          <Button
+            variant={stageView === "people" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setStageView("people")}
+          >
+            <Users aria-hidden />
+            <span className="hidden lg:inline">Плитки</span>
+          </Button>
+          <Button
+            variant={stageView === "board" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setStageView("board")}
+          >
+            <PenLine aria-hidden />
+            <span className="hidden lg:inline">Доска</span>
+          </Button>
         </div>
-      </div>
+      </footer>
     </div>
   );
 
@@ -712,6 +876,38 @@ export function RoomPage() {
         <RoomAudioRenderer />
       </LiveKitRoom>
     </TooltipProvider>
+  );
+}
+
+/**
+ * Э12.7 §6.2 — контент стейджа при активном LiveKit: демонстрация экрана
+ * (если кто-то её ведёт) на весь стейдж + плитки участников лентой; иначе —
+ * адаптивная сетка плиток. Внутри `<LiveKitRoom>` — использует `useTracks`.
+ */
+function LiveStage({
+  participants,
+  selfId,
+  mode,
+}: {
+  participants: ParticipantSnapshot[];
+  selfId: string | undefined;
+  mode: LessonMode;
+}) {
+  const screen = useTracks([Track.Source.ScreenShare], { onlySubscribed: true });
+  if (screen.length > 0) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
+        <div className="min-h-0 flex-1">
+          <ScreenShareTile />
+        </div>
+        <RoomVideoGrid participants={participants} selfId={selfId} mode={mode} variant="filmstrip" />
+      </div>
+    );
+  }
+  return (
+    <div className="min-h-0 flex-1">
+      <RoomVideoGrid participants={participants} selfId={selfId} mode={mode} />
+    </div>
   );
 }
 

@@ -114,7 +114,7 @@ export function RoomVideoGrid({
   return (
     <div
       ref={gridRef}
-      className="grid h-[clamp(240px,52vh,560px)] w-full place-content-center content-center justify-center"
+      className="grid h-full min-h-[240px] w-full place-content-center content-center justify-center"
       style={{
         gap: GAP,
         gridTemplateColumns: tile > 0 ? `repeat(${cols}, ${tile}px)` : `repeat(${cols}, 1fr)`,

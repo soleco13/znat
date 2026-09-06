@@ -20,8 +20,8 @@ export function ScreenShareTile() {
   if (!track) return null;
 
   return (
-    <div className="mb-4 overflow-hidden rounded-lg border border-border bg-black shadow-sm">
-      <VideoTrack trackRef={track} className="max-h-[70vh] w-full object-contain" />
+    <div className="flex h-full items-center justify-center overflow-hidden rounded-xl border border-border bg-black shadow-sm">
+      <VideoTrack trackRef={track} className="max-h-full max-w-full object-contain" />
     </div>
   );
 }
