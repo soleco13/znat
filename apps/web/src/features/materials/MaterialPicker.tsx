@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { MaterialStatus, MaterialSummary } from "@school/shared";
 
 import {
@@ -30,21 +30,28 @@ export function MaterialPicker({
 }) {
   const [items, setItems] = useState<MaterialSummary[] | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  // Обновляем список и при открытии выпадашки — материал, опубликованный
+  // методистом уже во время урока, должен появиться без перезагрузки комнаты.
+  const load = useCallback(() => {
     listMaterials({})
-      .then((res) => !cancelled && setItems(res.items))
-      .catch(() => !cancelled && setItems([]));
-    return () => {
-      cancelled = true;
-    };
+      .then((res) => setItems(res.items))
+      .catch(() => setItems((prev) => prev ?? []));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const published = items?.filter((m) => m.status === "published") ?? [];
   const drafts = items?.filter((m) => m.status !== "published") ?? [];
 
   return (
-    <Select value={value} onValueChange={onChange} disabled={items === null}>
+    <Select
+      value={value}
+      onValueChange={onChange}
+      disabled={items === null}
+      onOpenChange={(open) => open && load()}
+    >
       <SelectTrigger className={className}>
         <SelectValue placeholder={items === null ? "Загрузка…" : "Выберите материал"} />
       </SelectTrigger>
