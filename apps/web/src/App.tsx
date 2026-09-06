@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import type { ReactNode } from "react";
 
 import { LoginPage } from "./features/auth/LoginPage.js";
@@ -12,17 +12,18 @@ import { AppShell } from "./shared/AppShell.js";
 import { ErrorBoundary } from "./shared/ErrorBoundary.js";
 import { RequireAuth } from "./shared/RequireAuth.js";
 import { RequireRoomAccess } from "./shared/RequireRoomAccess.js";
+import { HomeRedirect, RequireRole } from "./shared/RequireRole.js";
 import { Toaster } from "./shared/ui/sonner.js";
+import type { Role } from "@school/shared";
 
-/** Защищённая страница внутри общего каркаса приложения. */
-function Shell({ children }: { children: ReactNode }) {
-  return (
-    <RequireAuth>
-      <AppShell>
-        <ErrorBoundary>{children}</ErrorBoundary>
-      </AppShell>
-    </RequireAuth>
+/** Защищённая страница внутри общего каркаса приложения. `roles` — если задан, ограничивает доступ. */
+function Shell({ children, roles }: { children: ReactNode; roles?: Role[] }) {
+  const page = (
+    <AppShell>
+      <ErrorBoundary>{children}</ErrorBoundary>
+    </AppShell>
   );
+  return <RequireAuth>{roles ? <RequireRole roles={roles}>{page}</RequireRole> : page}</RequireAuth>;
 }
 
 export function App() {
@@ -32,7 +33,11 @@ export function App() {
         <Route path="/login" element={<LoginPage />} />
         {/* Э12.6 — вход ученика по прямой ссылке, вне AppShell и RequireAuth. */}
         <Route path="/j/:token" element={<GuestJoinPage />} />
-        <Route path="/lessons" element={<Shell><LessonsListPage /></Shell>} />
+        {/* §4.2 ТЗ: уроки — admin и teacher; методист сюда не ходит. */}
+        <Route
+          path="/lessons"
+          element={<Shell roles={["admin", "teacher"]}><LessonsListPage /></Shell>}
+        />
         <Route
           path="/lessons/:id/room"
           element={
@@ -48,7 +53,7 @@ export function App() {
         {/* Э10.2 — layout-шаблон записи. Открывается headless-Chrome внутри
             LiveKit Egress на второй машине; без нашей сессии, вне каркаса. */}
         <Route path="/egress" element={<EgressPage />} />
-        <Route path="/" element={<Navigate to="/lessons" replace />} />
+        <Route path="/" element={<RequireAuth><HomeRedirect /></RequireAuth>} />
       </Routes>
       <Toaster position="top-right" richColors closeButton />
     </BrowserRouter>

@@ -15,7 +15,9 @@ import * as lessonsService from "./service.js";
 export default async function lessonsRoutes(app: FastifyInstance) {
   app.addHook("preHandler", app.authenticate);
 
-  const staff = { preHandler: app.requireRole("admin", "methodist", "teacher") };
+  // §4.2 ТЗ: у методиста нет доступа к урокам вообще (ни создание, ни вход,
+  // ни материалы урока) — только admin и teacher.
+  const staff = { preHandler: app.requireRole("admin", "teacher") };
   const adminOnly = { preHandler: app.requireRole("admin") };
 
   app.get("/lessons", staff, async (request, reply) => {

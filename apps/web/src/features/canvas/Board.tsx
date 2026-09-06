@@ -929,8 +929,20 @@ export function Board({
           slide={activeMeta?.slide ?? null}
         />
         <div ref={excalidrawWrapperRef} style={{ position: "absolute", inset: 0, zIndex: 1 }}>
+          {/* Э12.7 §6.5: y-excalidraw 2.0.12 в setupUndoRedo хардкодит
+              querySelector('[aria-label="Undo"]') / "Redo" по родным кнопкам
+              Excalidraw. С langCode="ru-RU" их подписи локализованы
+              («Отменить» / «Повторить») → querySelector даёт null →
+              null.addEventListener роняет всю доску. Держим невидимые
+              кнопки-якоря с англ. aria-label первыми в контейнере: слушатели
+              y-excalidraw цепляются к ним и не падают. Родные кнопки всё
+              равно скрыты (Board.css), Undo/Redo рисуем свои в тулбаре. */}
+          <button type="button" aria-label="Undo" tabIndex={-1} aria-hidden className="hidden" />
+          <button type="button" aria-label="Redo" tabIndex={-1} aria-hidden className="hidden" />
           <Excalidraw
             excalidrawAPI={(api) => setExcalidrawAPI(api)}
+            // Э12.7 §6.5 план-ТЗ: весь интерфейс доски — по-русски.
+            langCode="ru-RU"
             initialData={{ appState: { viewBackgroundColor: "transparent" } }}
             // Э3.9: без этого собеседники не увидят курсор — ExcalidrawBinding
             // публикует его в awareness только когда сам вызывается, а вызывает
@@ -944,9 +956,21 @@ export function Board({
             // каждое изменение через componentDidUpdate), поэтому просто
             // передаём текущее значение без ручного вызова updateScene.
             viewModeEnabled={!canDraw}
+            // Э12.7 §6.5 план-ТЗ: доска в уроке — только рисование. Гамбургер-меню
+            // (Открыть / Экспорт / Сбросить холст / Справка / ссылки Excalidraw),
+            // кнопку «?» и подсказку-hint прячем; часть — здесь, часть — в Board.css
+            // (у Excalidraw для них нет опций, только DOM).
             UIOptions={{
               tools: { image: false },
-              canvasActions: { changeViewBackgroundColor: false },
+              canvasActions: {
+                changeViewBackgroundColor: false,
+                clearCanvas: false,
+                export: false,
+                loadScene: false,
+                saveToActiveFile: false,
+                saveAsImage: false,
+                toggleTheme: false,
+              },
             }}
           />
         </div>

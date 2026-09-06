@@ -55,7 +55,7 @@
   background: var(--c-primary-light);
 }
 
-/* ---------- Скрытие лишних для урока инструментов ---------- */
+/* ---------- Скрытие лишних для урока инструментов (Э12.7 §6.5) ---------- */
 .canvas-board .App-toolbar__extra-tools-trigger,
 .canvas-board .App-toolbar__divider {
   display: none !important;
@@ -71,9 +71,25 @@
   display: none !important;
 }
 
-/* Пункты меню Excalidraw, неуместные в уроке: реклама Excalidraw+ («Save to…»),
-   ссылки на соцсети/GitHub проекта, смена темы. Скрываются по стабильным
-   признакам (data-testid / внешние href), а не по позиции. */
+/* Гамбургер-меню целиком (Открыть / Экспорт / Найти / Справка / Сбросить
+   холст / «Excalidraw links» / тёмная тема). В уроке доска — только
+   рисование, файловых операций нет. `main-menu-trigger` — обычная кнопка,
+   `dropdown-menu-button` — она же в старой разметке. */
+.canvas-board .excalidraw [data-testid="main-menu-trigger"],
+.canvas-board .excalidraw .dropdown-menu-button,
+.canvas-board .excalidraw .main-menu-trigger {
+  display: none !important;
+}
+
+/* Кнопка «?» (Справка) справа внизу и подсказка-hint («Кликните и
+   растяните…», «Вернуться к содержимому» и т.п.). */
+.canvas-board .excalidraw .help-icon,
+.canvas-board .excalidraw .HintViewer {
+  display: none !important;
+}
+
+/* Реклама Excalidraw+, ссылки на соцсети/GitHub, «Sign up» — на случай,
+   если меню где-то всё же откроется (мобильная раскладка). */
 .canvas-board .excalidraw [data-testid="json-export-button"],
 .canvas-board .excalidraw button[aria-label="Excalidraw+"],
 .canvas-board .excalidraw a[href*="plus.excalidraw.com"],
@@ -83,4 +99,14 @@
 .canvas-board .excalidraw a[href*="x.com/excalidraw"],
 .canvas-board .excalidraw a[href*="youtube.com/@excalidraw"] {
   display: none !important;
+}
+
+/* Зум-контрол Excalidraw слева внизу — приводим к токенам ДС (радиус,
+   рамка, тень как у islands), не прячем: он функциональный (§6.5 —
+   «зум-контрол под ДС»). */
+.canvas-board .excalidraw .zoom-actions,
+.canvas-board .excalidraw .footer-center > * {
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-xs) !important;
 }
