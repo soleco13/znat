@@ -100,7 +100,9 @@ export async function getMaterialForEdit(
   const latest = await repo.findLatestMaterialVersionForEdit(user.schoolId, materialId);
   if (!latest) throw new AppError(404, "material_not_found", "Материал не найден");
 
-  if (user.role !== "teacher" || latest.createdBy === user.sub) {
+  // Ревизия Э12.7: учитель видит ТОЛЬКО опубликованную версию (просмотр),
+  // непроверенные черновики/форки — не его дело. admin/methodist — последнюю.
+  if (user.role !== "teacher") {
     return { ...parseVersion(latest), status: latest.status, createdBy: latest.createdBy, isCurrent: latest.versionId === latest.currentVersionId };
   }
 
@@ -137,11 +139,12 @@ export async function updateMaterialDraft(
   materialId: string,
   content: Material,
 ): Promise<void> {
+  // Ревизия Э12.7: правит материалы только admin/methodist.
+  if (user.role === "teacher") {
+    throw new AppError(403, "forbidden", "Редактировать материалы может методист или администратор");
+  }
   const row = await repo.findLatestMaterialVersionForEdit(user.schoolId, materialId);
   if (!row) throw new AppError(404, "material_not_found", "Материал не найден");
-  if (user.role === "teacher" && row.createdBy !== user.sub) {
-    throw new AppError(404, "material_not_found", "Материал не найден");
-  }
 
   if (row.status !== "published") {
     await repo.updateDraftVersionContent(row.materialId, row.versionId, content, true);
@@ -163,11 +166,11 @@ export async function updateMaterialDraft(
  * у `publish` ниже: отправить свой черновик на ревью может и сам автор.
  */
 export async function submitForReview(user: AccessTokenPayload, materialId: string): Promise<MaterialStatus> {
+  if (user.role === "teacher") {
+    throw new AppError(403, "forbidden", "Отправить материал на ревью может методист или администратор");
+  }
   const row = await repo.findLatestMaterialVersionForEdit(user.schoolId, materialId);
   if (!row) throw new AppError(404, "material_not_found", "Материал не найден");
-  if (user.role === "teacher" && row.createdBy !== user.sub) {
-    throw new AppError(404, "material_not_found", "Материал не найден");
-  }
   if (row.status !== "draft") {
     throw new AppError(409, "material_not_draft", "На ревью можно отправить только черновик");
   }
@@ -290,6 +293,11 @@ export async function createMaterial(
   user: AccessTokenPayload,
   content: Material,
 ): Promise<{ materialId: string; versionId: string }> {
+  // Ревизия Э12.7: материалы создают только admin/methodist. Учитель —
+  // читатель (выбирает готовый на урок / смотрит в ЛК).
+  if (user.role === "teacher") {
+    throw new AppError(403, "forbidden", "Материалы создаёт методист или администратор");
+  }
   return repo.insertMaterial(user.schoolId, user.sub, content);
 }
 
@@ -320,12 +328,15 @@ export async function listMaterials(
   user: AccessTokenPayload,
   query: ListMaterialsQuery,
 ): Promise<repo.MaterialSummaryRow[]> {
+  // Ревизия Э12.7: учитель видит в библиотеке только ОПУБЛИКОВАННЫЕ
+  // материалы (выбирает готовый на урок / открывает на просмотр).
+  const teacher = user.role === "teacher";
   return repo.listMaterials(user.schoolId, {
     subject: query.subject,
     grade: query.grade,
     topic: query.topic,
     q: query.q,
-    status: query.status,
-    restrictToOwnerOrPublished: user.role === "teacher" ? user.sub : undefined,
+    status: teacher ? "published" : query.status,
+    restrictToOwnerOrPublished: undefined,
   });
 }

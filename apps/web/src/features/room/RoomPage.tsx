@@ -396,6 +396,18 @@ export function RoomPage() {
 
   const connected = status === "connected";
 
+  // «Вы пока один» — показываем 10 сек после того, как стали единственным,
+  // потом прячем (одна плитка и так занимает весь стейдж адаптивно).
+  const [showAlonePill, setShowAlonePill] = useState(true);
+  const connectedCount = participants.filter((p) => p.connected).length;
+  const aloneOnStage = deviceCheckDone && stageView === "people" && connectedCount <= 1;
+  useEffect(() => {
+    if (!aloneOnStage) return;
+    setShowAlonePill(true);
+    const t = setTimeout(() => setShowAlonePill(false), 10_000);
+    return () => clearTimeout(t);
+  }, [aloneOnStage]);
+
   const participantsPanel = (
     <div className="flex flex-col gap-1.5 p-3">
       {participants.map((p) => (
@@ -723,20 +735,21 @@ export function RoomPage() {
         </div>
       )}
 
-      {stageView === "people" && participants.length <= 1 ? (
-        <div className="mx-auto w-full max-w-md rounded-xl border border-border bg-card p-4 text-center">
-          <p className="text-sm font-medium text-foreground">Вы пока один на уроке</p>
-          {isTeacher && lessonJoinPath ? (
-            <>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Отправьте ученикам ссылку, чтобы они подключились.
-              </p>
-              <Button variant="secondary" size="sm" className="mt-2.5" onClick={copyJoinLink}>
+      {/* «Вы пока один» — плавающая подсказка поверх стейджа (не двигает
+          сетку), уходит через 10 сек. */}
+      {aloneOnStage && showAlonePill ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex animate-fade-in justify-center px-3">
+          <div className="pointer-events-auto flex max-w-full items-center gap-3 rounded-full border border-border bg-card/95 px-4 py-2 text-sm shadow-sm backdrop-blur">
+            <span className="truncate text-muted-foreground">
+              {isTeacher ? "Вы пока один — пригласите учеников" : "Ждём других участников"}
+            </span>
+            {isTeacher && lessonJoinPath ? (
+              <Button size="sm" className="shrink-0" onClick={copyJoinLink}>
                 <Copy aria-hidden />
-                Скопировать ссылку
+                Ссылка
               </Button>
-            </>
-          ) : null}
+            ) : null}
+          </div>
         </div>
       ) : null}
     </>
@@ -854,7 +867,9 @@ export function RoomPage() {
           </aside>
         ) : null}
 
-        <main className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">{stageArea}</main>
+        <main className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
+          {stageArea}
+        </main>
       </div>
 
       {/* §6.3 — нижняя панель управления: только иконки, подписи — в подсказках */}

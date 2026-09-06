@@ -22,19 +22,20 @@ import * as materialsService from "./service.js";
 const uuidParam = z.string().uuid();
 
 /**
- * Библиотека материалов (Э9.1, §7.2/§8 ТЗ). Только admin/methodist/teacher —
- * ученик не листает библиотеку напрямую, материал доходит до него только
- * через выдачу (`activities`, Э8.6). `materialSummarySchema.parse` на выходе
- * — тот же паттерн, что у `GroupResponse` (Э8.11): типизированный ответ API,
- * не сырые строки БД (в частности `createdAt`/`updatedAt` — `Date` → ISO-строка).
+ * Библиотека материалов (Э9.1, §7.2/§8 ТЗ; ревизия Э12.7).
+ * Создают и редактируют материалы ТОЛЬКО admin/methodist. Учитель —
+ * читатель: смотрит библиотеку (опубликованные), открывает материал на
+ * просмотр в ЛК и выбирает его для урока (`/lessons/:id/materials`). Ученик
+ * библиотеку не листает вовсе — материал доходит через выдачу (`activities`).
  */
 export default async function materialsRoutes(app: FastifyInstance) {
   app.addHook("preHandler", app.authenticate);
+  // admin/methodist — авторы (создают/правят/публикуют).
+  const authorOnly = { preHandler: app.requireRole("admin", "methodist") };
+  // + учитель на чтение (библиотека, просмотр материала).
+  const anyStaff = { preHandler: app.requireRole("admin", "methodist", "teacher") };
 
-  app.get(
-    "/materials",
-    { preHandler: app.requireRole("admin", "methodist", "teacher") },
-    async (request, reply) => {
+  app.get("/materials", anyStaff, async (request, reply) => {
       const query = listMaterialsQuerySchema.parse(request.query);
       const rows = await materialsService.listMaterials(request.user, query);
       const items = rows.map((row) =>
@@ -50,7 +51,7 @@ export default async function materialsRoutes(app: FastifyInstance) {
 
   // Создание материала (Э9.10, §8 ТЗ) — задел на шаблоны/пустой материал;
   // тело — валидный `Material` целиком (тот же контракт, что и PUT ниже).
-  app.post("/materials", { preHandler: app.requireRole("admin", "methodist", "teacher") }, async (request, reply) => {
+  app.post("/materials", authorOnly, async (request, reply) => {
     const content = materialSchema.parse(request.body);
     const result = await materialsService.createMaterial(request.user, content);
     return reply.status(201).send(createMaterialResultSchema.parse({ materialId: result.materialId }));
@@ -58,7 +59,7 @@ export default async function materialsRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { id: string } }>(
     "/materials/:id",
-    { preHandler: app.requireRole("admin", "methodist", "teacher") },
+    anyStaff,
     async (request, reply) => {
       const parsed = uuidParam.safeParse(request.params.id);
       if (!parsed.success) throw new AppError(400, "bad_material_id", "Некорректный идентификатор материала");
@@ -79,7 +80,7 @@ export default async function materialsRoutes(app: FastifyInstance) {
 
   app.put<{ Params: { id: string } }>(
     "/materials/:id",
-    { preHandler: app.requireRole("admin", "methodist", "teacher") },
+    authorOnly,
     async (request, reply) => {
       const parsed = uuidParam.safeParse(request.params.id);
       if (!parsed.success) throw new AppError(400, "bad_material_id", "Некорректный идентификатор материала");
@@ -92,7 +93,7 @@ export default async function materialsRoutes(app: FastifyInstance) {
   // Версионирование и публикация (Э9.8, §8 ТЗ).
   app.post<{ Params: { id: string } }>(
     "/materials/:id/submit-review",
-    { preHandler: app.requireRole("admin", "methodist", "teacher") },
+    authorOnly,
     async (request, reply) => {
       const parsed = uuidParam.safeParse(request.params.id);
       if (!parsed.success) throw new AppError(400, "bad_material_id", "Некорректный идентификатор материала");
@@ -103,7 +104,7 @@ export default async function materialsRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { id: string } }>(
     "/materials/:id/return-to-draft",
-    { preHandler: app.requireRole("admin", "methodist") },
+    authorOnly,
     async (request, reply) => {
       const parsed = uuidParam.safeParse(request.params.id);
       if (!parsed.success) throw new AppError(400, "bad_material_id", "Некорректный идентификатор материала");
@@ -114,7 +115,7 @@ export default async function materialsRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { id: string } }>(
     "/materials/:id/publish",
-    { preHandler: app.requireRole("admin", "methodist") },
+    authorOnly,
     async (request, reply) => {
       const parsed = uuidParam.safeParse(request.params.id);
       if (!parsed.success) throw new AppError(400, "bad_material_id", "Некорректный идентификатор материала");
@@ -125,7 +126,7 @@ export default async function materialsRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { id: string } }>(
     "/materials/:id/versions",
-    { preHandler: app.requireRole("admin", "methodist", "teacher") },
+    anyStaff,
     async (request, reply) => {
       const parsed = uuidParam.safeParse(request.params.id);
       if (!parsed.success) throw new AppError(400, "bad_material_id", "Некорректный идентификатор материала");
@@ -138,7 +139,7 @@ export default async function materialsRoutes(app: FastifyInstance) {
   // Валидатор перед публикацией (Э9.9, §7.2 ТЗ «Валидация»).
   app.get<{ Params: { id: string } }>(
     "/materials/:id/validate",
-    { preHandler: app.requireRole("admin", "methodist", "teacher") },
+    authorOnly,
     async (request, reply) => {
       const parsed = uuidParam.safeParse(request.params.id);
       if (!parsed.success) throw new AppError(400, "bad_material_id", "Некорректный идентификатор материала");
@@ -153,7 +154,7 @@ export default async function materialsRoutes(app: FastifyInstance) {
   // блоки в открытый в редакторе черновик отдельным действием на клиенте).
   app.post(
     "/materials/import",
-    { preHandler: app.requireRole("admin", "methodist", "teacher") },
+    authorOnly,
     async (request, reply) => {
       const file = await request.file();
       if (!file) throw new AppError(400, "no_file", "Файл не передан");
@@ -165,7 +166,7 @@ export default async function materialsRoutes(app: FastifyInstance) {
 
   // Медиатека (Э9.7) — та же видимость роли, что и у остальной библиотеки материалов;
   // без ограничения по загрузившему: смысл в переиспользовании МЕЖДУ авторами.
-  app.get("/materials/media", { preHandler: app.requireRole("admin", "methodist", "teacher") }, async (request, reply) => {
+  app.get("/materials/media", authorOnly, async (request, reply) => {
     const query = listMediaAssetsQuerySchema.parse(request.query);
     const items = await materialsService.listMediaAssets(request.user.schoolId, query.kind);
     return reply.send({ items: items.map((item) => mediaAssetSchema.parse(item)) });
@@ -173,7 +174,7 @@ export default async function materialsRoutes(app: FastifyInstance) {
 
   app.post(
     "/materials/media",
-    { preHandler: app.requireRole("admin", "methodist", "teacher") },
+    authorOnly,
     async (request, reply) => {
       const file = await request.file();
       if (!file) throw new AppError(400, "no_file", "Файл не передан");

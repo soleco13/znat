@@ -103,14 +103,15 @@ export function MaterialEditorPage() {
   const currentUser = useAuthStore((s) => s.user);
   const [material, setMaterial] = useState<Material | null>(null);
   const [status, setStatus] = useState<MaterialStatus | null>(null);
-  const [createdBy, setCreatedBy] = useState<string | null>(null);
   const [isCurrent, setIsCurrent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [validationIssues, setValidationIssues] = useState<MaterialValidationIssue[] | null>(null);
   const justLoaded = useRef(false);
 
-  const canEdit = currentUser?.role !== "teacher" || createdBy === currentUser?.id;
+  // Ревизия Э12.7: правят материалы только admin/methodist. Учитель
+  // открывает материал только на просмотр (выбрать на урок / ознакомиться).
+  const canEdit = currentUser?.role === "admin" || currentUser?.role === "methodist";
   const autosave = useMaterialAutosave(id ?? null, canEdit);
 
   async function runValidation(): Promise<MaterialValidationIssue[]> {
@@ -129,7 +130,6 @@ export function MaterialEditorPage() {
         if (cancelled) return;
         setMaterial(detail.material);
         setStatus(detail.status);
-        setCreatedBy(detail.createdBy);
         setIsCurrent(detail.isCurrent);
         setSelectedBlockId(detail.material.blocks[0]?.id ?? null);
       })
@@ -217,7 +217,7 @@ export function MaterialEditorPage() {
               canEdit ? "text-muted-foreground" : "font-medium text-warning",
             )}
           >
-            {canEdit ? autosaveLabel(autosave.status) : "Материал создан не вами — только просмотр"}
+            {canEdit ? autosaveLabel(autosave.status) : "Просмотр — редактируют методист и администратор"}
           </p>
         </div>
 

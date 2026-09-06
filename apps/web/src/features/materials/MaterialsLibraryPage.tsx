@@ -53,6 +53,10 @@ export function MaterialsLibraryPage() {
 }
 
 function MaterialsLibraryContent() {
+  // Ревизия Э12.7: создают/правят материалы только admin/methodist.
+  // Учитель — читатель: библиотека, просмотр материала, выбор на урок.
+  const role = useAuthStore((s) => s.user?.role);
+  const isAuthor = role === "admin" || role === "methodist";
   const [subject, setSubject] = useState("");
   const [grade, setGrade] = useState("");
   const [topic, setTopic] = useState("");
@@ -92,20 +96,28 @@ function MaterialsLibraryContent() {
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Библиотека материалов"
-        subtitle="Дерево предмет → класс → тема, поиск и статусы"
+        subtitle={
+          isAuthor
+            ? "Дерево предмет → класс → тема, поиск и статусы"
+            : "Опубликованные материалы — выберите на урок или откройте для просмотра"
+        }
         actions={
-          <Button
-            variant={showCreateForm ? "ghost" : "default"}
-            size="sm"
-            onClick={() => setShowCreateForm((v) => !v)}
-          >
-            {showCreateForm ? <X aria-hidden /> : <Plus aria-hidden />}
-            {showCreateForm ? "Отмена" : "Создать материал"}
-          </Button>
+          isAuthor ? (
+            <Button
+              variant={showCreateForm ? "ghost" : "default"}
+              size="sm"
+              onClick={() => setShowCreateForm((v) => !v)}
+            >
+              {showCreateForm ? <X aria-hidden /> : <Plus aria-hidden />}
+              {showCreateForm ? "Отмена" : "Создать материал"}
+            </Button>
+          ) : undefined
         }
       />
 
-      {showCreateForm ? <CreateMaterialForm onCancel={() => setShowCreateForm(false)} /> : null}
+      {isAuthor && showCreateForm ? (
+        <CreateMaterialForm onCancel={() => setShowCreateForm(false)} />
+      ) : null}
 
       <Card className="mb-6 p-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -123,24 +135,26 @@ function MaterialsLibraryContent() {
           <Field label="Тема">
             <Input value={topic} onChange={(e) => setTopic(e.target.value)} />
           </Field>
-          <Field label="Статус">
-            <Select
-              value={status || ANY_STATUS}
-              onValueChange={(v) => setStatus(v === ANY_STATUS ? "" : (v as MaterialStatus))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ANY_STATUS}>Любой</SelectItem>
-                {(Object.keys(STATUS_LABEL) as MaterialStatus[]).map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {STATUS_LABEL[s]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
+          {isAuthor ? (
+            <Field label="Статус">
+              <Select
+                value={status || ANY_STATUS}
+                onValueChange={(v) => setStatus(v === ANY_STATUS ? "" : (v as MaterialStatus))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ANY_STATUS}>Любой</SelectItem>
+                  {(Object.keys(STATUS_LABEL) as MaterialStatus[]).map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {STATUS_LABEL[s]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          ) : null}
           <div className="sm:col-span-2 lg:col-span-4">
             <Field label="Поиск по названию">
               <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Название материала" />
@@ -159,14 +173,18 @@ function MaterialsLibraryContent() {
           title="Ничего не найдено"
           description={
             hasFilters
-              ? "Попробуйте изменить фильтры или создайте новый материал."
-              : "В библиотеке пока нет материалов."
+              ? "Попробуйте изменить фильтры."
+              : isAuthor
+                ? "В библиотеке пока нет материалов."
+                : "В библиотеке пока нет опубликованных материалов."
           }
           action={
-            <Button size="sm" onClick={() => setShowCreateForm(true)}>
-              <Plus aria-hidden />
-              Создать материал
-            </Button>
+            isAuthor ? (
+              <Button size="sm" onClick={() => setShowCreateForm(true)}>
+                <Plus aria-hidden />
+                Создать материал
+              </Button>
+            ) : undefined
           }
         />
       ) : (

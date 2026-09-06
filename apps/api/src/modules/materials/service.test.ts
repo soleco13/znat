@@ -46,11 +46,11 @@ describe("listMaterials (Э9.1, §7.2/§4.2 ТЗ: библиотека, «лич
     repoMock.listMaterials.mockResolvedValueOnce([]);
   });
 
-  it("учителю — ограничение «свои ЛЮБОГО статуса + чужие только опубликованные»", async () => {
-    await listMaterials(TEACHER, {});
+  it("учителю (ревизия Э12.7) — в библиотеке только опубликованные материалы", async () => {
+    await listMaterials(TEACHER, { status: "draft" });
     expect(repoMock.listMaterials).toHaveBeenCalledWith(
       SCHOOL,
-      expect.objectContaining({ restrictToOwnerOrPublished: TEACHER.sub }),
+      expect.objectContaining({ status: "published", restrictToOwnerOrPublished: undefined }),
     );
   });
 
@@ -121,14 +121,18 @@ describe("createMaterial (Э9.10, §8 ТЗ: POST /materials)", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it.each([
-    ["teacher", TEACHER],
     ["admin", ADMIN],
     ["methodist", METHODIST],
-  ] as const)("%s — становится владельцем (createdBy = свой sub), независимо от роли", async (_label, user) => {
+  ] as const)("%s — становится владельцем (createdBy = свой sub)", async (_label, user) => {
     repoMock.insertMaterial.mockResolvedValueOnce({ materialId: "new-m", versionId: "new-v" });
     const result = await createMaterial(user, VALID_CONTENT);
     expect(repoMock.insertMaterial).toHaveBeenCalledWith(SCHOOL, user.sub, VALID_CONTENT);
     expect(result).toEqual({ materialId: "new-m", versionId: "new-v" });
+  });
+
+  it("учитель — 403 (ревизия Э12.7: материалы создаёт только admin/methodist)", async () => {
+    await expect(createMaterial(TEACHER, VALID_CONTENT)).rejects.toMatchObject({ statusCode: 403 });
+    expect(repoMock.insertMaterial).not.toHaveBeenCalled();
   });
 });
 
@@ -142,29 +146,18 @@ describe("getMaterialForEdit (Э9.2/9.8, §7.2 ТЗ: редактор матер
     await expect(getMaterialForEdit(TEACHER, "m1")).rejects.toMatchObject({ statusCode: 404 });
   });
 
-  it("учителю — доступен свой черновик (последняя версия, isCurrent=false)", async () => {
-    repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(materialRow({ createdBy: TEACHER.sub }));
-    const result = await getMaterialForEdit(TEACHER, "m1");
-    expect(result).toMatchObject({ material: { title: "Материал" }, isCurrent: false });
-  });
-
-  it("учителю — свой ОПУБЛИКОВАННЫЙ материал без форка — isCurrent=true", async () => {
+  it("учителю (ревизия Э12.7) — ВСЕГДА опубликованная версия, даже если latest — чужой черновик", async () => {
     repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(
-      materialRow({ createdBy: TEACHER.sub, status: "published", versionId: "v1", currentVersionId: "v1" }),
+      materialRow({ createdBy: TEACHER.sub, status: "draft", versionId: "v2", currentVersionId: "v1" }),
+    );
+    repoMock.findPublishedMaterialVersionForEdit.mockResolvedValueOnce(
+      materialRow({ status: "published", versionId: "v1", currentVersionId: "v1" }),
     );
     const result = await getMaterialForEdit(TEACHER, "m1");
-    expect(result.isCurrent).toBe(true);
+    expect(result).toMatchObject({ status: "published", versionId: "v1", isCurrent: true });
   });
 
-  it("учителю — свой форк поверх публикации — isCurrent=false, но статус читается как есть (published)", async () => {
-    repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(
-      materialRow({ createdBy: TEACHER.sub, status: "published", versionId: "v2", currentVersionId: "v1" }),
-    );
-    const result = await getMaterialForEdit(TEACHER, "m1");
-    expect(result).toMatchObject({ status: "published", isCurrent: false });
-  });
-
-  it("учителю — 404 на чужой черновик (не свой и никогда не публиковался)", async () => {
+  it("учителю — 404, если опубликованной версии нет вовсе", async () => {
     repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(
       materialRow({ createdBy: "someone-else", status: "draft" }),
     );
@@ -223,50 +216,48 @@ describe("updateMaterialDraft (Э9.3/9.8, §8 ТЗ: PUT /materials/:id)", () => 
 
   it("404, если материала нет вовсе", async () => {
     repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(null);
-    await expect(updateMaterialDraft(TEACHER, "m1", VALID_CONTENT)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(updateMaterialDraft(ADMIN, "m1", VALID_CONTENT)).rejects.toMatchObject({ statusCode: 404 });
     expect(repoMock.updateDraftVersionContent).not.toHaveBeenCalled();
     expect(repoMock.insertNewVersion).not.toHaveBeenCalled();
   });
 
-  it("учителю — 404 на чужой материал, даже черновик", async () => {
-    repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(
-      materialRow({ createdBy: "someone-else", status: "draft" }),
-    );
-    await expect(updateMaterialDraft(TEACHER, "m1", VALID_CONTENT)).rejects.toMatchObject({ statusCode: 404 });
+  it("учитель — 403 (ревизия Э12.7: материалы правит только admin/methodist)", async () => {
+    await expect(updateMaterialDraft(TEACHER, "m1", VALID_CONTENT)).rejects.toMatchObject({ statusCode: 403 });
+    expect(repoMock.findLatestMaterialVersionForEdit).not.toHaveBeenCalled();
     expect(repoMock.updateDraftVersionContent).not.toHaveBeenCalled();
   });
 
   it("черновик (никогда не публиковался) — мутирует на месте, синхронизирует кэш", async () => {
     repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(
-      materialRow({ createdBy: TEACHER.sub, status: "draft" }),
+      materialRow({ createdBy: ADMIN.sub, status: "draft" }),
     );
-    await updateMaterialDraft(TEACHER, "m1", VALID_CONTENT);
+    await updateMaterialDraft(ADMIN, "m1", VALID_CONTENT);
     expect(repoMock.updateDraftVersionContent).toHaveBeenCalledWith("m1", "v1", VALID_CONTENT, true);
     expect(repoMock.insertNewVersion).not.toHaveBeenCalled();
   });
 
   it("на ревью (никогда не публиковался) — тоже мутирует на месте, синхронизирует кэш", async () => {
     repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(
-      materialRow({ createdBy: TEACHER.sub, status: "review" }),
+      materialRow({ createdBy: ADMIN.sub, status: "review" }),
     );
-    await updateMaterialDraft(TEACHER, "m1", VALID_CONTENT);
+    await updateMaterialDraft(ADMIN, "m1", VALID_CONTENT);
     expect(repoMock.updateDraftVersionContent).toHaveBeenCalledWith("m1", "v1", VALID_CONTENT, true);
   });
 
   it("опубликован, форка ЕЩЁ НЕТ (versionId === currentVersionId) — форкает новую версию, кэш НЕ трогает", async () => {
     repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(
-      materialRow({ createdBy: TEACHER.sub, status: "published", versionId: "v1", currentVersionId: "v1" }),
+      materialRow({ createdBy: ADMIN.sub, status: "published", versionId: "v1", currentVersionId: "v1" }),
     );
-    await updateMaterialDraft(TEACHER, "m1", VALID_CONTENT);
-    expect(repoMock.insertNewVersion).toHaveBeenCalledWith("m1", VALID_CONTENT, TEACHER.sub);
+    await updateMaterialDraft(ADMIN, "m1", VALID_CONTENT);
+    expect(repoMock.insertNewVersion).toHaveBeenCalledWith("m1", VALID_CONTENT, ADMIN.sub);
     expect(repoMock.updateDraftVersionContent).not.toHaveBeenCalled();
   });
 
   it("опубликован, форк УЖЕ ЕСТЬ (versionId !== currentVersionId) — мутирует форк на месте, кэш НЕ трогает", async () => {
     repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(
-      materialRow({ createdBy: TEACHER.sub, status: "published", versionId: "v2", currentVersionId: "v1" }),
+      materialRow({ createdBy: ADMIN.sub, status: "published", versionId: "v2", currentVersionId: "v1" }),
     );
-    await updateMaterialDraft(TEACHER, "m1", VALID_CONTENT);
+    await updateMaterialDraft(ADMIN, "m1", VALID_CONTENT);
     expect(repoMock.updateDraftVersionContent).toHaveBeenCalledWith("m1", "v2", VALID_CONTENT, false);
     expect(repoMock.insertNewVersion).not.toHaveBeenCalled();
   });
@@ -286,33 +277,31 @@ describe("updateMaterialDraft (Э9.3/9.8, §8 ТЗ: PUT /materials/:id)", () => 
 describe("submitForReview (Э9.8, draft → review)", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("404 на несуществующий/чужой материал", async () => {
+  it("404 на несуществующий материал", async () => {
     repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(null);
-    await expect(submitForReview(TEACHER, "m1")).rejects.toMatchObject({ statusCode: 404 });
+    await expect(submitForReview(ADMIN, "m1")).rejects.toMatchObject({ statusCode: 404 });
   });
 
   it("409, если материал не в статусе draft", async () => {
     repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(
-      materialRow({ createdBy: TEACHER.sub, status: "review" }),
+      materialRow({ createdBy: ADMIN.sub, status: "review" }),
     );
-    await expect(submitForReview(TEACHER, "m1")).rejects.toMatchObject({ statusCode: 409 });
+    await expect(submitForReview(ADMIN, "m1")).rejects.toMatchObject({ statusCode: 409 });
     expect(repoMock.setMaterialStatus).not.toHaveBeenCalled();
   });
 
-  it("владелец-учитель отправляет свой черновик на ревью", async () => {
+  it("методист/админ отправляет черновик на ревью", async () => {
     repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(
-      materialRow({ createdBy: TEACHER.sub, status: "draft" }),
+      materialRow({ createdBy: METHODIST.sub, status: "draft" }),
     );
-    const result = await submitForReview(TEACHER, "m1");
+    const result = await submitForReview(METHODIST, "m1");
     expect(result).toBe("review");
     expect(repoMock.setMaterialStatus).toHaveBeenCalledWith("m1", "review");
   });
 
-  it("учитель не может отправить на ревью чужой черновик", async () => {
-    repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(
-      materialRow({ createdBy: "someone-else", status: "draft" }),
-    );
-    await expect(submitForReview(TEACHER, "m1")).rejects.toMatchObject({ statusCode: 404 });
+  it("учитель — 403, до похода в БД (ревизия Э12.7)", async () => {
+    await expect(submitForReview(TEACHER, "m1")).rejects.toMatchObject({ statusCode: 403 });
+    expect(repoMock.findLatestMaterialVersionForEdit).not.toHaveBeenCalled();
   });
 });
 
@@ -410,9 +399,9 @@ describe("listMaterialVersions (Э9.8, §8 ТЗ: GET /materials/:id/versions)", 
   });
 
   it("владельцу — список версий из репозитория как есть", async () => {
-    repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(materialRow({ createdBy: TEACHER.sub }));
+    repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(materialRow({ createdBy: ADMIN.sub }));
     repoMock.listMaterialVersions.mockResolvedValueOnce([]);
-    await listMaterialVersions(TEACHER, "m1");
+    await listMaterialVersions(ADMIN, "m1");
     expect(repoMock.listMaterialVersions).toHaveBeenCalledWith(SCHOOL, "m1");
   });
 });
@@ -430,10 +419,10 @@ describe("validateMaterialForEdit (Э9.9, §7.2 ТЗ: экран «Валида�
   });
 
   it("прокидывает schoolId и содержимое загруженной версии в validateMaterial, возвращает её результат как есть", async () => {
-    repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(materialRow({ createdBy: TEACHER.sub }));
+    repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(materialRow({ createdBy: ADMIN.sub }));
     const issues = [{ blockId: "q1", code: "zero_points" as const, message: "За вопрос начисляется 0 баллов" }];
     validationMock.validateMaterial.mockResolvedValueOnce(issues);
-    const result = await validateMaterialForEdit(TEACHER, "m1");
+    const result = await validateMaterialForEdit(ADMIN, "m1");
     expect(validationMock.validateMaterial).toHaveBeenCalledWith(SCHOOL, VALID_CONTENT);
     expect(result).toBe(issues);
   });
