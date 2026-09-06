@@ -431,6 +431,40 @@ variant="filmstrip"`); `LiveStage` выбирает экран/сетку вну
 сохранились), Библиотека без кнопки создания, навигация Библиотека/
 Редактор. Гейты api/web/shared build + 374/54 теста + depcheck — зелёные.
 
+**Э13 переработка (2026-09-06) — редактор = единый документ Tiptap в духе
+Notion (три раза запрошено пользователем). Коммит.**
+- Не список карточек, а ОДИН документ Tiptap. Печатаешь как в заметках,
+  Enter = новый блок, markdown-сокращения.
+- `/` → меню: контент-блоки, 10 типов вопросов, конструкции урока
+  (каждая отдельным пунктом + «все карточками»).
+- Выделение текста → `BubbleMenu`: формат + выбор шрифта + цвет
+  (`@tiptap/extension-text-style`), работает и внутри формулировок вопросов.
+- Вопрос вписан в поток: формулировка = редактируемое `NodeViewContent`,
+  варианты = чистый список без коробок (радио/чек = зелёная галочка),
+  баллы/подсказка в поповерах. Никакой матрёшки редакторов
+  (`question-view.tsx`; сложные типы cloze/matching/ordering/open — в
+  поповере со старым `InteractionEditor`).
+- Врезка = цветная полоса слева + `NodeViewContent`; конструкция = тонкая
+  линия + метка на ховере (`Collapsible`).
+- `content: "paragraph"` у вопроса + keymap Enter → выйти абзацем после.
+- Хранение прежнее: `serialize.ts` — `materialToDoc`/`docToMaterial`
+  (`generateJSON`/`generateHTML`), формат `Material.blocks/groups` не
+  изменён → плеер, движок проверки, выдача на уроке не тронуты.
+- `apps/web/src/features/materials/editor/`: block-id, nodes,
+  question-view, extensions, serialize, slash-menu, MaterialDocEditor,
+  construct-picker, block-fields, editor.css.
+- Из `MaterialEditorPage` удалён «редактор карточек» (buildUnits, dnd-kit,
+  BlockCard, GroupFrame, InsertMenu, ...) — ~900 строк.
+- `sanitize-html`: + `h1`/`blockquote`/`code` + inline-`style` (шрифт/цвет;
+  DOMPurify чистит опасное в style).
+- Зависимости (бланковое разрешение): `@tiptap/suggestion`,
+  `@tiptap/extension-text-style`, `@tiptap/extension-bubble-menu`,
+  `@tiptap/extensions`, `@floating-ui/dom`.
+
+Проверено вживую: печать, «/»-меню + вставка «Разбор задачи», плавающая
+панель + цвет, Enter-выход из вопроса, сохранение + перезагрузка
+(round-trip стабилен), «Просмотр» рендерит через плеер.
+
 **Э13 доп. (2026-09-06) — shadcn-компоненты (бланковое разрешение
 пользователя на зависимости). Коммит.**
 - `ui/command.tsx` (cmdk) — меню вставки блоков в редакторе стало
