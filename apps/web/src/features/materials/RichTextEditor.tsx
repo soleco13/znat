@@ -3,6 +3,8 @@ import { EditorContent, type Editor, useEditor, useEditorState } from "@tiptap/r
 import StarterKit from "@tiptap/starter-kit";
 import {
   Bold,
+  Heading2,
+  Heading3,
   Italic,
   List,
   ListOrdered,
@@ -35,7 +37,9 @@ export function RichTextEditor({ html, onChange }: { html: string; onChange: (ht
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        heading: false,
+        // Э13: подзаголовки h2/h3 внутри материала-«листа». Ровно уровни 2–3
+        // (h1 = `material.title`), синхронно с `ALLOWED_TAGS` в sanitize-html.
+        heading: { levels: [2, 3] },
         blockquote: false,
         codeBlock: false,
         code: false,
@@ -64,6 +68,8 @@ export function RichTextEditor({ html, onChange }: { html: string; onChange: (ht
     selector: (ctx) =>
       ctx.editor
         ? {
+            heading2: ctx.editor.isActive("heading", { level: 2 }),
+            heading3: ctx.editor.isActive("heading", { level: 3 }),
             bold: ctx.editor.isActive("bold"),
             italic: ctx.editor.isActive("italic"),
             underline: ctx.editor.isActive("underline"),
@@ -83,7 +89,7 @@ export function RichTextEditor({ html, onChange }: { html: string; onChange: (ht
       <Toolbar editor={editor} state={toolbarState} />
       <EditorContent
         editor={editor}
-        className="text-sm [&_.ProseMirror]:min-h-[4rem] [&_.ProseMirror]:px-3 [&_.ProseMirror]:py-2 [&_.ProseMirror]:outline-none [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:pl-5 [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-5"
+        className="text-sm [&_.ProseMirror]:min-h-[4rem] [&_.ProseMirror]:px-3 [&_.ProseMirror]:py-2 [&_.ProseMirror]:outline-none [&_.ProseMirror_h2]:mt-3 [&_.ProseMirror_h2]:text-[1.15em] [&_.ProseMirror_h2]:font-bold [&_.ProseMirror_h3]:mt-2.5 [&_.ProseMirror_h3]:font-semibold [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:pl-5 [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-5"
       />
     </div>
   );
@@ -95,6 +101,8 @@ function Toolbar({
 }: {
   editor: Editor;
   state: {
+    heading2: boolean;
+    heading3: boolean;
     bold: boolean;
     italic: boolean;
     underline: boolean;
@@ -107,6 +115,19 @@ function Toolbar({
 }) {
   return (
     <div className="flex flex-wrap gap-0.5 border-b border-border bg-secondary/50 p-1">
+      <ToolbarButton
+        icon={Heading2}
+        title="Подзаголовок"
+        active={state.heading2}
+        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+      />
+      <ToolbarButton
+        icon={Heading3}
+        title="Малый подзаголовок"
+        active={state.heading3}
+        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+      />
+      <span className="mx-0.5 w-px self-stretch bg-border" />
       <ToolbarButton
         icon={Bold}
         title="Жирный"

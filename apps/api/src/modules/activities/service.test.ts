@@ -109,6 +109,7 @@ const material: Material = {
   subject: "Математика",
   grades: [5],
   tags: [],
+  groups: [],
   settings: { shuffleBlocks: false, showFeedback: "after_submit", attemptsAllowed: 1 },
   blocks: [
     {

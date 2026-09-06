@@ -85,6 +85,7 @@ const VALID_CONTENT: Material = {
   subject: "математика",
   grades: [8],
   tags: [],
+  groups: [],
   settings: { shuffleBlocks: false, showFeedback: "after_submit", attemptsAllowed: 1 },
   blocks: [],
 };

@@ -266,6 +266,24 @@ export const materialSettingsSchema = z.object({
 });
 export type MaterialSettings = z.infer<typeof materialSettingsSchema>;
 
+/**
+ * Группа блоков, вставленная в редакторе из «конструкции»-шаблона (Э13,
+ * `material-templates.ts`). ЧИСТО РЕДАКТОРСКАЯ метаданность: показывает
+ * методисту, что эти блоки пришли из одного шаблона (визуальная рамка,
+ * сворачивание, «разгруппировать»). Материал остаётся плоским списком
+ * блоков — плеер и движок проверки `groups` игнорируют, а
+ * `stripMaterialAnswerKeys` их вообще не отдаёт ученику. `blockIds`
+ * ссылаются на `blocks[].id`; порядок и непрерывность группы
+ * поддерживает редактор, схема этого не гарантирует.
+ */
+export const materialBlockGroupSchema = z.object({
+  id: z.string().min(1),
+  templateId: z.string().min(1),
+  label: z.string().min(1),
+  blockIds: z.array(z.string().min(1)).min(1),
+});
+export type MaterialBlockGroup = z.infer<typeof materialBlockGroupSchema>;
+
 export const materialSchema = z.object({
   id: z.string().min(1),
   /** Версия ФОРМАТА JSON (эта схема), не версия содержимого материала (`material_versions`, Э8.2/Э9.8). */
@@ -285,6 +303,12 @@ export const materialSchema = z.object({
   estimatedMinutes: z.number().int().positive().optional(),
   settings: materialSettingsSchema,
   blocks: z.array(materialBlockSchema),
+  /**
+   * Редакторские группы блоков из шаблонов-конструкций (Э13). Не влияют на
+   * прохождение материала учеником — см. `materialBlockGroupSchema`.
+   * `.default([])` — материалы Э8–Э12 без этого поля читаются как есть.
+   */
+  groups: z.array(materialBlockGroupSchema).default([]),
 });
 export type Material = z.infer<typeof materialSchema>;
 
@@ -635,8 +659,11 @@ export type PublicQuestionBlock = ReturnType<typeof stripQuestionBlockAnswerKey>
 
 /** Материал без ключей ответов — контентные блоки не меняются, `question`-блоки проходят через `stripQuestionBlockAnswerKey`. */
 export function stripMaterialAnswerKeys(material: Material, seed: string) {
+  // `groups` — редакторская метаданность (происхождение блоков из шаблона),
+  // ученику не нужна и не отдаётся.
+  const { groups: _editorGroups, ...rest } = material;
   return {
-    ...material,
+    ...rest,
     blocks: material.blocks.map((block) =>
       block.type === "question" ? stripQuestionBlockAnswerKey(block, seed) : block,
     ),

@@ -8,6 +8,7 @@ import {
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
+  SquarePen,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Role } from "@school/shared";
@@ -25,11 +26,20 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   roles: Role[];
+  /** NavLink `end` — активна только при точном совпадении пути (см. «Библиотека» vs «Редактор»). */
+  end?: boolean;
 }
 
 const NAV: NavItem[] = [
   { to: "/lessons", label: "Уроки", icon: CalendarDays, roles: ["admin", "teacher"] },
-  { to: "/materials", label: "Библиотека", icon: Library, roles: ["admin", "methodist", "teacher"] },
+  {
+    to: "/materials",
+    label: "Библиотека",
+    icon: Library,
+    roles: ["admin", "methodist", "teacher"],
+    end: true,
+  },
+  { to: "/materials/edit", label: "Редактор", icon: SquarePen, roles: ["admin", "methodist"] },
 ];
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -58,10 +68,11 @@ function NavItems({ role, onNavigate }: { role: Role; onNavigate?: () => void })
   const items = NAV.filter((n) => n.roles.includes(role));
   return (
     <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
-      {items.map(({ to, label, icon: Icon }) => (
+      {items.map(({ to, label, icon: Icon, end }) => (
         <NavLink
           key={to}
           to={to}
+          end={end}
           onClick={onNavigate}
           className={({ isActive }) =>
             cn(
@@ -99,10 +110,11 @@ function SidebarContent({
           <Wordmark compact />
         </div>
         <nav className="flex flex-1 flex-col gap-1 p-2.5">
-          {items.map(({ to, label, icon: Icon }) => (
+          {items.map(({ to, label, icon: Icon, end }) => (
             <SimpleTooltip key={to} content={label} side="right">
               <NavLink
                 to={to}
+                end={end}
                 className={({ isActive }) =>
                   cn(
                     "flex size-11 items-center justify-center rounded-md transition-colors",
