@@ -49,9 +49,8 @@ import { MicStatusIcon, SelfMicButton } from "./MicControls.js";
 import { MicSync } from "./MicSync.js";
 import { ParticipantPresenceDot } from "./ParticipantPresenceDot.js";
 import { SelfScreenShareButton } from "./ScreenShareControls.js";
+import { RoomVideoGrid } from "./RoomVideoGrid.js";
 import { ScreenShareTile } from "./ScreenShareTile.js";
-import { StudentVideoGrid } from "./StudentVideoGrid.js";
-import { TeacherVideoTile } from "./TeacherVideoTile.js";
 import { useRoomSocket } from "./useRoomSocket.js";
 import { VideoSubscriptionManager } from "./VideoSubscriptions.js";
 
@@ -611,7 +610,11 @@ export function RoomPage() {
           ) : null}
         </div>
 
-        {media ? <StudentVideoGrid participants={participants} mode={lessonMode} /> : null}
+        {media ? (
+          <div className="mb-4">
+            <RoomVideoGrid participants={participants} selfId={selfId} mode={lessonMode} />
+          </div>
+        ) : null}
 
         {/* Участники + чат */}
         <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
@@ -705,7 +708,6 @@ export function RoomPage() {
         <ApplyAudioOutput deviceId={spkDeviceId} />
         <MicSync enabled={self?.permissions.canSpeak ?? false} />
         <VideoSubscriptionManager participants={participants} mode={lessonMode} />
-        <TeacherVideoTile />
         {content}
         <RoomAudioRenderer />
       </LiveKitRoom>
