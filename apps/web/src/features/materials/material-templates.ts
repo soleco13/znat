@@ -45,6 +45,12 @@ export interface MaterialConstruct {
   icon: LucideIcon;
   /** Короткая схема состава — чипы на карточке пикера. */
   outline: string[];
+  /**
+   * Слова/фразы в тексте, при которых редактор подсказывает эту
+   * конструкцию (Э13). Однословные — по границе слова, многословные —
+   * подстрокой; регистр не важен.
+   */
+  triggers: string[];
   build: () => MaterialBlock[];
 }
 
@@ -105,6 +111,7 @@ export const MATERIAL_CONSTRUCTS: MaterialConstruct[] = [
     description: "Условие, формула, пошаговое решение и вопрос с числовым ответом.",
     icon: Calculator,
     outline: ["Условие", "Формула", "Шаг 1", "Шаг 2", "Числовой вопрос"],
+    triggers: ["реши","решим","решите","разбор","разберём","найдите","вычислите","дано:","условие задачи","пример решения"],
     build: () => [
       richText("<h2>Разбор задачи</h2><p>Условие задачи.</p>"),
       formula("x"),
@@ -120,6 +127,7 @@ export const MATERIAL_CONSTRUCTS: MaterialConstruct[] = [
     description: "Короткая инструкция и три вопроса с одним правильным ответом.",
     icon: ListChecks,
     outline: ["Инструкция", "Вопрос 1", "Вопрос 2", "Вопрос 3"],
+    triggers: ["проверим","проверка","закрепим","ответьте на вопрос","тест","мини-тест","вопросы для проверки"],
     build: () => [
       richText("<p>Ответьте на вопросы ниже.</p>"),
       question("single_choice", "<p>Вопрос 1</p>"),
@@ -134,6 +142,7 @@ export const MATERIAL_CONSTRUCTS: MaterialConstruct[] = [
     description: "Вступление и пять текстовых вопросов — по одному на слово.",
     icon: SpellCheck2,
     outline: ["Вступление", "5 × слово"],
+    triggers: ["диктант","словарн","запишите слов","напишите без ошибок","орфограмм","под диктовку"],
     build: () => [
       richText("<p>Учитель диктует слово — впишите его без ошибок.</p>"),
       ...Array.from({ length: 5 }, (_, i) => question("text_input", `<p>Слово ${i + 1}</p>`)),
@@ -146,6 +155,7 @@ export const MATERIAL_CONSTRUCTS: MaterialConstruct[] = [
     description: "Три врезки: определение, теорема, пример применения.",
     icon: BookMarked,
     outline: ["Определение", "Теорема", "Пример"],
+    triggers: ["определение и теорема","введём понятие","новое понятие"],
     build: () => [
       callout("note", "<p><strong>Определение.</strong> </p>"),
       callout("warning", "<p><strong>Теорема.</strong> </p>"),
@@ -159,6 +169,7 @@ export const MATERIAL_CONSTRUCTS: MaterialConstruct[] = [
     description: "Подзаголовок и текст параграфа, затем два вопроса на понимание.",
     icon: FileText,
     outline: ["Текст параграфа", "Вопрос-выбор", "Верно/неверно"],
+    triggers: ["параграф","изучите","прочитайте","новая тема","разберём тему"],
     build: () => [
       richText("<h2>Название параграфа</h2><p>Текст параграфа.</p>"),
       question("single_choice", "<p>Вопрос по тексту</p>"),
@@ -173,6 +184,7 @@ export const MATERIAL_CONSTRUCTS: MaterialConstruct[] = [
     description: "Синяя врезка с заголовком «Определение».",
     icon: Quote,
     outline: ["Врезка · заметка"],
+    triggers: ["определение","называется","определяется как","по определению","термин"],
     build: () => [callout("note", "<p><strong>Определение.</strong> </p>")],
   },
   {
@@ -182,6 +194,7 @@ export const MATERIAL_CONSTRUCTS: MaterialConstruct[] = [
     description: "Врезка-предупреждение с заголовком «Теорема».",
     icon: Quote,
     outline: ["Врезка · внимание"],
+    triggers: ["теорема","лемма","следствие","утверждение","свойство","правило"],
     build: () => [callout("warning", "<p><strong>Теорема.</strong> </p>")],
   },
   {
@@ -191,6 +204,7 @@ export const MATERIAL_CONSTRUCTS: MaterialConstruct[] = [
     description: "Врезка с разобранным примером.",
     icon: Quote,
     outline: ["Врезка · пример"],
+    triggers: ["пример","например","к примеру","рассмотрим случай","проиллюстрируем"],
     build: () => [callout("example", "<p><strong>Пример.</strong> </p>")],
   },
   {
@@ -200,6 +214,7 @@ export const MATERIAL_CONSTRUCTS: MaterialConstruct[] = [
     description: "Вопрос с одним правильным ответом и четырьмя вариантами.",
     icon: SquareCheckBig,
     outline: ["Один ответ · 4 варианта"],
+    triggers: ["выберите вариант","какой из","что из перечисленного","отметьте верное"],
     build: () => [
       mcQuestion("<p>Формулировка вопроса</p>", ["Вариант 1", "Вариант 2", "Вариант 3", "Вариант 4"], 0),
     ],
@@ -211,6 +226,7 @@ export const MATERIAL_CONSTRUCTS: MaterialConstruct[] = [
     description: "Числовой вопрос с относительным допуском 1 %.",
     icon: Sigma,
     outline: ["Число · допуск ±1 %"],
+    triggers: ["вычислите","чему равно","чему равен","найдите значение","посчитайте","рассчитайте"],
     build: () => {
       const block = createQuestionBlock("numeric_input", crypto.randomUUID());
       block.prompt = { html: "<p>Вычислите значение</p>" };

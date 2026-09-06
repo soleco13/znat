@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/react";
-import { BubbleMenu } from "@tiptap/react/menus";
+import { BubbleMenu, FloatingMenu } from "@tiptap/react/menus";
 import { Placeholder } from "@tiptap/extensions/placeholder";
 import {
   Bold,
@@ -10,6 +10,7 @@ import {
   Link2,
   List,
   ListOrdered,
+  Plus,
   Strikethrough,
   Type,
   Underline,
@@ -30,6 +31,7 @@ import { baseExtensions } from "./extensions.js";
 import { ConstructPickerDialog } from "./construct-picker.js";
 import { docToMaterial, materialToDoc } from "./serialize.js";
 import { SlashCommand } from "./slash-menu.js";
+import { SuggestConstruct } from "./suggest-construct.js";
 import "./editor.css";
 
 const FONTS = [
@@ -99,6 +101,7 @@ export function MaterialDocEditor({
       SlashCommand.configure({
         onOpenConstructs: (insert) => setConstructInsert(() => insert),
       }),
+      SuggestConstruct,
     ],
     content: materialToDoc(material),
     editorProps: {
@@ -139,6 +142,27 @@ export function MaterialDocEditor({
       >
         <FormatBar editor={editor} />
       </BubbleMenu>
+
+      <FloatingMenu
+        editor={editor}
+        options={{ placement: "left-start", offset: 4 }}
+        shouldShow={({ editor, state }) => {
+          const { $from, empty } = state.selection;
+          if (!empty) return false;
+          if ($from.parent.type.name !== "paragraph" || $from.parent.content.size !== 0) return false;
+          const parent = $from.node(-1);
+          return !parent || (parent.type.name !== "callout" && parent.type.name !== "questionBlock");
+        }}
+      >
+        <button
+          type="button"
+          className="doc-add-btn"
+          aria-label="Добавить блок"
+          onClick={() => editor.chain().focus().insertContent("/").run()}
+        >
+          <Plus className="size-4" />
+        </button>
+      </FloatingMenu>
 
       <EditorContent editor={editor} />
 

@@ -88,6 +88,59 @@
   font-size: 1.15em;
 }
 
+/* контекстная подсказка конструкции (SuggestConstruct) */
+.construct-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  padding: 1px 4px 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--c-border-solid);
+  background: hsl(var(--secondary));
+  font-size: 11px;
+  line-height: 1.6;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  user-select: none;
+  vertical-align: middle;
+  white-space: nowrap;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+}
+.construct-hint:hover {
+  border-color: var(--c-primary);
+  color: var(--c-primary);
+  background: hsl(var(--accent));
+}
+.construct-hint__key {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: hsl(var(--card));
+  border: 1px solid var(--c-border-solid);
+  font-size: 10px;
+}
+
+/* «+» на пустой строке (FloatingMenu) */
+.doc-add-btn {
+  display: inline-flex;
+  height: 1.5rem;
+  width: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius, 10px);
+  color: hsl(var(--muted-foreground));
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+.doc-add-btn:hover {
+  background: hsl(var(--secondary));
+  color: hsl(var(--foreground));
+}
+
 /* внутри нод-вью (block-fields) абзацы редактора формулировок — свои стили,
    не наследуют .prose-editor крупный шрифт */
 .prose-editor [contenteditable="false"] .ProseMirror {

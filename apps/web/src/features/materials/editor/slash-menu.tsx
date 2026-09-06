@@ -191,9 +191,10 @@ export interface SlashOptions {
   onOpenConstructs: (insert: (construct: MaterialConstruct) => void) => void;
 }
 
-export function insertConstructAt(editor: Editor, range: Range | null, construct: MaterialConstruct) {
+/** JSON-содержимое конструкции для вставки в документ Tiptap. */
+export function constructContent(construct: MaterialConstruct) {
   const { blocks, group } = instantiateConstruct(construct);
-  const content = group
+  return group
     ? [
         {
           type: "templateGroup",
@@ -202,9 +203,12 @@ export function insertConstructAt(editor: Editor, range: Range | null, construct
         },
       ]
     : blocks.flatMap((b) => blockToNodes(b));
+}
+
+export function insertConstructAt(editor: Editor, range: Range | null, construct: MaterialConstruct) {
   const chain = editor.chain().focus();
   if (range) chain.deleteRange(range);
-  chain.insertContent(content).run();
+  chain.insertContent(constructContent(construct)).run();
 }
 
 function buildItems(options: SlashOptions): SlashItem[] {
