@@ -1,4 +1,35 @@
-# Текущий этап: Э11 — Достройка (оформление фронта)
+# Текущий этап: Э12 — гостевой вход учеников, новый UI урока
+
+План-ТЗ: `docs/Э12-план-тз-переработка.md` (согласован 2026-09-06).
+Начато 2026-09-06, НОВЫЙ контекст (после `/clear`, «продолжай разработку»).
+Порядок жёсткий: схемы → БД → бэкенд → фронт.
+
+## Что сделано (Э12)
+
+**Э12.1 — схемы и типы (`packages/shared`).** Добавлено (аддитивно, старые
+схемы урока помечены `@deprecated` и держатся до Э12.3 ради зелёной сборки):
+- `roles.ts`: `participantKindSchema` (`staff | guest`).
+- `guests.ts` (новый): `guestTokenPayloadSchema` (JWT `{typ:"guest",
+  lessonId, guestId, name}`), `guestLessonInfoSchema` (ответ `GET /j/:token`),
+  `guestEnterRequest/ResponseSchema`.
+- `lessons.ts`: `lessonSettingsSchema` (+`defaultLessonSettings`),
+  `adminCreateLessonRequestSchema`, `updateLessonRequestSchema`,
+  `lessonSummarySchema` (с `joinToken`/`joinPath`),
+  `rotateLessonLinkResponseSchema`, `lessonAttendanceRow/Schema`,
+  `lessonMaterialSchema` + `assignLessonMaterialRequestSchema`.
+- `index.ts`: реэкспорт `guests.js`.
+
+Сборка/тесты/depcheck зелёные. Коммит — schemas only, бэкенд ещё на старой
+модели.
+
+**Осталось по Э12:** Э12.2 (БД/миграции) → Э12.3 (модуль lessons) →
+Э12.4 (гостевой вход, SENSITIVE) → Э12.5 (задания на participant) →
+Э12.6 (фронт: вход ученика) → Э12.7 (фронт: UI урока) → Э12.8 (админка
+«Уроки») → Э12.9 (миграция, ТЗ, гейт).
+
+---
+
+# Архив: Э11 — Достройка (оформление фронта)
 
 Начато 2026-09-05, НОВЫЙ контекст (после `/clear`, «продолжай разработку»
 → Э0–Э10 закрыты технически → пользователь явно выбрал: «начинай оформление
