@@ -12,8 +12,14 @@ const { lessonsServiceMock } = vi.hoisted(() => ({
 
 vi.mock("../lessons/service.js", () => lessonsServiceMock);
 
-const { enterAsGuest, verifyGuestToken, resolveGuestSession, hashJoinToken, getPublicLessonInfo } =
-  await import("./service.js");
+const {
+  enterAsGuest,
+  verifyGuestToken,
+  resolveGuestSession,
+  hashJoinToken,
+  getPublicLessonInfo,
+  getGuestSessionInfo,
+} = await import("./service.js");
 
 const SCHOOL_ID = "11111111-1111-1111-1111-111111111111";
 const LESSON_ID = "22222222-2222-2222-2222-222222222222";
@@ -148,5 +154,36 @@ describe("resolveGuestSession — гейт доступа гостя к урок
       .sign(new TextEncoder().encode("some-other-secret-at-least-32-characters!"));
 
     await expect(resolveGuestSession(forged)).rejects.toMatchObject({ statusCode: 401 });
+  });
+});
+
+describe("getGuestSessionInfo (GET /guest/session) — восстановление по куке", () => {
+  it("отдаёт личность, срок и имя урока для действующей сессии", async () => {
+    lessonsServiceMock.resolveJoinToken.mockResolvedValue(lessonRow());
+    lessonsServiceMock.getLessonForGuestSession.mockResolvedValue(lessonRow());
+    const { token, payload, expiresAt } = await enterAsGuest(JOIN_TOKEN, "Аня");
+
+    const info = await getGuestSessionInfo(token);
+
+    expect(info).toEqual({
+      lessonId: LESSON_ID,
+      guestId: payload.guestId,
+      name: "Аня",
+      expiresAt: expiresAt.toISOString(),
+      lessonTitle: "Постоянный урок",
+    });
+  });
+
+  it("ротация ссылки урока инвалидирует восстановление сессии", async () => {
+    lessonsServiceMock.resolveJoinToken.mockResolvedValue(lessonRow());
+    const { token } = await enterAsGuest(JOIN_TOKEN, "Аня");
+    lessonsServiceMock.getLessonForGuestSession.mockResolvedValue(
+      lessonRow({ joinToken: "b".repeat(64) }),
+    );
+
+    await expect(getGuestSessionInfo(token)).rejects.toMatchObject({
+      statusCode: 401,
+      code: "guest_link_rotated",
+    });
   });
 });

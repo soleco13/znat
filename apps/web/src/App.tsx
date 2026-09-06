@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import type { ReactNode } from "react";
 
 import { LoginPage } from "./features/auth/LoginPage.js";
+import { GuestJoinPage } from "./features/guest/GuestJoinPage.js";
 import { LessonsListPage } from "./features/lessons/LessonsListPage.js";
 import { MaterialEditorPage } from "./features/materials/MaterialEditorPage.js";
 import { MaterialsLibraryPage } from "./features/materials/MaterialsLibraryPage.js";
@@ -10,6 +11,7 @@ import { RoomPage } from "./features/room/RoomPage.js";
 import { AppShell } from "./shared/AppShell.js";
 import { ErrorBoundary } from "./shared/ErrorBoundary.js";
 import { RequireAuth } from "./shared/RequireAuth.js";
+import { RequireRoomAccess } from "./shared/RequireRoomAccess.js";
 import { Toaster } from "./shared/ui/sonner.js";
 
 /** Защищённая страница внутри общего каркаса приложения. */
@@ -28,15 +30,17 @@ export function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        {/* Э12.6 — вход ученика по прямой ссылке, вне AppShell и RequireAuth. */}
+        <Route path="/j/:token" element={<GuestJoinPage />} />
         <Route path="/lessons" element={<Shell><LessonsListPage /></Shell>} />
         <Route
           path="/lessons/:id/room"
           element={
-            <RequireAuth>
+            <RequireRoomAccess>
               <ErrorBoundary title="Ошибка в уроке">
                 <RoomPage />
               </ErrorBoundary>
-            </RequireAuth>
+            </RequireRoomAccess>
           }
         />
         <Route path="/materials" element={<Shell><MaterialsLibraryPage /></Shell>} />

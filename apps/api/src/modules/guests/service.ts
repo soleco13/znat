@@ -3,6 +3,7 @@ import { SignJWT, jwtVerify } from "jose";
 import {
   guestTokenPayloadSchema,
   type GuestLessonInfo,
+  type GuestSession,
   type GuestTokenPayload,
   type Role,
 } from "@school/shared";
@@ -140,5 +141,25 @@ export async function resolveGuestSession(token: string): Promise<Extract<Lesson
     role: null,
     lessonId: payload.lessonId,
     displayName: payload.name,
+  };
+}
+
+/**
+ * `GET /guest/session` (Э12.6) — восстановление гостевой личности из куки
+ * после перезагрузки страницы. Полная проверка (`resolveGuestSession`:
+ * подпись + срок + актуальность ссылки + существование урока) плюс `exp`
+ * из токена и имя урока для экрана. Нового токена не выдаёт — истечёт,
+ * значит нужен перезаход по ссылке (§1.6 план-ТЗ, без refresh).
+ */
+export async function getGuestSessionInfo(token: string): Promise<GuestSession> {
+  const actor = await resolveGuestSession(token);
+  const { payload } = await jwtVerify(token, guestSecret);
+  const lesson = await lessonsService.getLessonForGuestSession(actor.lessonId);
+  return {
+    lessonId: actor.lessonId,
+    guestId: actor.participantId,
+    name: actor.displayName,
+    expiresAt: new Date((payload.exp as number) * 1000).toISOString(),
+    lessonTitle: lesson?.title ?? "Урок",
   };
 }

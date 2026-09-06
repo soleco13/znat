@@ -12,6 +12,18 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Э12.6 — режим гостя-ученика: аккаунта и refresh-токена нет, личность
+ * держится httpOnly-кукой `guest_session`. В этом режиме на 401 не пытаемся
+ * обновить персональный access-токен (`POST /auth/refresh` гостю всегда
+ * вернёт 401 и зря дёрнет `clearAuth`). Взводится при восстановлении/входе
+ * гостевой сессии, снимается при выходе из урока.
+ */
+let guestMode = false;
+export function setGuestMode(on: boolean): void {
+  guestMode = on;
+}
+
 let refreshInFlight: Promise<boolean> | null = null;
 
 export async function refreshAccessToken(): Promise<boolean> {
@@ -53,7 +65,7 @@ export async function apiFetch<T>(
     credentials: "include",
   });
 
-  if (res.status === 401 && _retry) {
+  if (res.status === 401 && _retry && !guestMode) {
     const refreshed = await refreshAccessToken();
     if (refreshed) {
       return apiFetch<T>(path, options, false);

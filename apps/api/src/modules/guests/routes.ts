@@ -44,4 +44,21 @@ export default async function guestsRoutes(app: FastifyInstance) {
       return reply.status(201).send(response);
     },
   );
+
+  /**
+   * Э12.6 — восстановление гостевой личности из httpOnly-куки при
+   * перезагрузке страницы урока. Не под `:token` (чтобы не коллизировать
+   * с `GET /j/:token`) и без rate-limit-цели «перебор токена» — но общий
+   * лимит держим, вызов дешёвый и редкий.
+   */
+  app.get("/guest/session", rateLimited, async (request, reply) => {
+    const cookie = request.cookies?.[GUEST_COOKIE_NAME];
+    if (!cookie) {
+      return reply
+        .status(401)
+        .send({ error: "no_guest_session", message: "Гостевая сессия не найдена" });
+    }
+    const info = await guestsService.getGuestSessionInfo(cookie);
+    return reply.send(info);
+  });
 }

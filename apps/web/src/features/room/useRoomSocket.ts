@@ -10,8 +10,17 @@ const MAX_BACKOFF_MS = 16_000;
  * WS-канал комнаты урока: только пуш от сервера, переподключение с экспоненциальным
  * бэкоффом. `enabled=false` держит канал закрытым — используется, пока ученик проходит
  * экран проверки устройств (Э2.4) и ещё не вошёл в урок.
+ *
+ * Э12.6 — `mode`: персонал передаёт access-токен в query, гость-ученик его
+ * не имеет (httpOnly-кука `guest_session` уходит с рукопожатием сама,
+ * см. `rooms/ws.ts`) — тогда параметр `token` опускаем.
  */
-export function useRoomSocket(lessonId: string, onMessage: (message: ServerRoomMessage) => void, enabled = true) {
+export function useRoomSocket(
+  lessonId: string,
+  onMessage: (message: ServerRoomMessage) => void,
+  enabled = true,
+  mode: "staff" | "guest" = "staff",
+) {
   const [status, setStatus] = useState<SocketStatus>("connecting");
   const onMessageRef = useRef(onMessage);
   onMessageRef.current = onMessage;
@@ -24,14 +33,18 @@ export function useRoomSocket(lessonId: string, onMessage: (message: ServerRoomM
     let stopped = false;
 
     const connect = () => {
-      const token = useAuthStore.getState().accessToken;
-      if (!token) {
-        setStatus("reconnecting");
-        reconnectTimer = setTimeout(connect, 1000);
-        return;
+      let tokenParam = "";
+      if (mode === "staff") {
+        const token = useAuthStore.getState().accessToken;
+        if (!token) {
+          setStatus("reconnecting");
+          reconnectTimer = setTimeout(connect, 1000);
+          return;
+        }
+        tokenParam = `&token=${encodeURIComponent(token)}`;
       }
       const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-      const url = `${protocol}//${location.host}/ws?lessonId=${encodeURIComponent(lessonId)}&token=${encodeURIComponent(token)}`;
+      const url = `${protocol}//${location.host}/ws?lessonId=${encodeURIComponent(lessonId)}${tokenParam}`;
       setStatus(attempt === 0 ? "connecting" : "reconnecting");
       socket = new WebSocket(url);
 
@@ -62,7 +75,7 @@ export function useRoomSocket(lessonId: string, onMessage: (message: ServerRoomM
       if (reconnectTimer) clearTimeout(reconnectTimer);
       socket?.close();
     };
-  }, [lessonId, enabled]);
+  }, [lessonId, enabled, mode]);
 
   return status;
 }

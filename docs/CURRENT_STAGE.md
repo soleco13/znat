@@ -188,9 +188,42 @@
   зелёные. `/security-review` по под-этапу — за пользователем (нужен
   запуск); сделан ручной разбор гостевого периметра `/activities/*`.
 
-**Осталось по Э12:** Э12.6 (фронт: вход ученика) → Э12.7 (фронт: UI урока)
-→ Э12.8 (админка «Уроки») → Э12.9 (миграция на dev, ТЗ/ПЛАН/CLAUDE.md,
-гейт, `/security-review` по всему этапу).
+**Э12.6 — фронт: вход ученика. Один коммит.**
+
+- `packages/shared/guests.ts`: `guestSessionSchema` (= `guestEnterResponse`
+  + `lessonTitle`) — ответ `GET /guest/session`; `GUEST_CANVAS_TOKEN_MARKER`
+  (`"guest"`) — маркер в поле `token` Yjs-подключения гостя (провайдер не
+  шлёт auth при пустом токене, настоящий JWT в httpOnly-куке).
+- Бэк: `GET /guest/session` (`guests/routes.ts`, rate-limited) —
+  восстановление гостевой личности из куки при перезагрузке (аналог
+  `/auth/refresh`, но без выдачи нового токена). `guests/service.ts#
+  getGuestSessionInfo` — полная проверка (`resolveGuestSession`) + `exp` из
+  токена + имя урока. `canvas/hocuspocus.ts#resolveCanvasConnectionActor` —
+  `token === GUEST_CANVAS_TOKEN_MARKER` трактуется как гость (личность из
+  куки), staff-JWT с маркером не пересекается.
+- Фронт: маршрут `/j/:token` (`GuestJoinPage`) вне `AppShell`/`RequireAuth`
+  — карточка урока → «Представьтесь» произвольным именем → навигация в
+  комнату (экран проверки устройств живёт внутри `RoomPage`).
+  `guest-session-store` (zustand, только в памяти), `guest-api.ts`
+  (`fetchGuestLessonInfo`/`enterGuestLesson`/`restoreGuestSession`).
+  `api-client.ts` — флаг `guestMode` (на 401 не дёргать `/auth/refresh`).
+  `RequireRoomAccess` заменил `RequireAuth` на `/lessons/:id/room` — два
+  периметра: staff (`/auth/refresh`) ∪ guest (`/guest/session`); отказ →
+  экран «нет доступа». `useRoomIdentity` — нормализованная личность
+  (staff из auth-store / guest из guest-store), `RoomPage` переведён с
+  `me` на неё (`selfId`, `isGuest`); имя урока гостю из стора, `leave` →
+  экран выхода (у гостя нет `/lessons`). `useRoomSocket` — режим `guest`
+  (без `&token`, кука уходит с рукопожатием). `Board.tsx` — гость
+  подключается к `/collab` с маркером.
+- Тесты: `guests/service.test.ts` +2 (`getGuestSessionInfo`: happy path,
+  ротация ссылки). `pnpm -r build` без `any` / `pnpm -r test` (shared 54,
+  api 376) / `pnpm depcheck` (292 модуля, 0 нарушений) — зелёные. Живьём
+  (гость по ссылке → урок → доска) не прогонялось — нет Docker/LiveKit,
+  проверка за пользователем / в Э12.9.
+
+**Осталось по Э12:** Э12.7 (фронт: UI урока) → Э12.8 (админка «Уроки»)
+→ Э12.9 (миграция на dev, ТЗ/ПЛАН/CLAUDE.md, гейт, `/security-review` по
+всему этапу).
 
 ---
 

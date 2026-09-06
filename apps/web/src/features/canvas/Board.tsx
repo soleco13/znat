@@ -15,10 +15,12 @@ import {
   Trash2,
   Undo2,
 } from "lucide-react";
+import { GUEST_CANVAS_TOKEN_MARKER } from "@school/shared";
 import type { CanvasImageUploadResponse, Deck } from "@school/shared";
 
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/shared/auth-store";
+import { useGuestSessionStore } from "@/features/guest/guest-session-store";
 import { apiFetch } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
 import { Separator } from "@/shared/ui/separator";
@@ -136,6 +138,8 @@ export function Board({
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null);
   const accessToken = useAuthStore((s) => s.accessToken);
   const me = useAuthStore((s) => s.user);
+  const guestSession = useGuestSessionStore((s) => s.session);
+  const isGuest = !me && !!guestSession;
   const role = me?.role;
   const isTeacher = role === "teacher" || role === "admin";
   const [followTeacher, setFollowTeacher] = useState(false);
@@ -165,7 +169,12 @@ export function Board({
   const ydoc = provider?.document ?? null;
 
   useEffect(() => {
-    if (!accessToken) return;
+    // Э12.6: персонал подключается с access-токеном; гость-ученик — с
+    // литералом-маркером (`HocuspocusProvider` не шлёт auth-сообщение при
+    // пустом токене), доступ проверяется по httpOnly-куке `guest_session`
+    // в `canvas/hocuspocus.ts#resolveCanvasConnectionActor`.
+    const token = accessToken ?? (isGuest ? GUEST_CANVAS_TOKEN_MARKER : null);
+    if (!token) return;
 
     const doc = new Y.Doc();
     const protocol = location.protocol === "https:" ? "wss:" : "ws:";
@@ -173,7 +182,7 @@ export function Board({
       url: `${protocol}//${location.host}/collab`,
       name: lessonId,
       document: doc,
-      token: accessToken,
+      token,
     });
     setProvider(nextProvider);
 
@@ -184,7 +193,7 @@ export function Board({
       nextProvider.destroy();
       doc.destroy();
     };
-  }, [lessonId, accessToken]);
+  }, [lessonId, accessToken, isGuest]);
 
   useEffect(() => {
     if (!ydoc) return;

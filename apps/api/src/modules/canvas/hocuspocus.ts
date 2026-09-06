@@ -13,6 +13,7 @@ import { generateKeyBetween } from "fractional-indexing";
 import * as Y from "yjs";
 import { encodeStateAsUpdate } from "yjs";
 import { z } from "zod";
+import { GUEST_CANVAS_TOKEN_MARKER } from "@school/shared";
 import type { AccessTokenPayload, ParticipantKind } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
 import { verifyAccessToken } from "../auth/service.js";
@@ -136,7 +137,12 @@ async function resolveCanvasConnectionActor(
   requestHeaders: Headers | undefined,
   lessonId: string,
 ): Promise<CanvasConnectionActor> {
-  if (token) {
+  // Э12.6: `HocuspocusProvider` не шлёт auth-сообщение при пустом токене, а
+  // гостевой JWT лежит в httpOnly-куке (клиент его не читает). Поэтому гость
+  // подключается с литералом-маркером `"guest"` в поле `token` — сам доступ
+  // проверяется по куке ниже. Staff-токен — всегда JWT, с этим маркером не
+  // совпадает.
+  if (token && token !== GUEST_CANVAS_TOKEN_MARKER) {
     const user = await verifyAccessToken(token);
     await assertStaffLessonAccess(user, lessonId);
     return { kind: "staff", participantId: user.sub, role: user.role };

@@ -17,8 +17,8 @@ import type {
 } from "@school/shared";
 
 import { cn } from "@/lib/utils";
-import { apiFetch } from "@/shared/api-client";
-import { useAuthStore } from "@/shared/auth-store";
+import { apiFetch, setGuestMode } from "@/shared/api-client";
+import { useGuestSessionStore } from "@/features/guest/guest-session-store";
 import { Alert, AlertDescription } from "@/shared/ui/alert";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -43,6 +43,7 @@ import { RecordingConsentBanner, RecordingPanel } from "../recordings/RecordingP
 import { SelfCameraButton, VideoDegradeSuggestion } from "./CameraControls.js";
 import { ConnectionQualityDot, PacketLossWarning } from "./ConnectionQuality.js";
 import { DeviceCheckScreen, type DeviceCheckResult } from "./DeviceCheckScreen.js";
+import { useRoomIdentity } from "./use-room-identity.js";
 import { MediaAudioStatus } from "./MediaAudioStatus.js";
 import { MicStatusIcon, SelfMicButton } from "./MicControls.js";
 import { MicSync } from "./MicSync.js";
@@ -90,7 +91,12 @@ type SocketStatusLike = "connecting" | "connected" | "reconnecting" | "closed";
 export function RoomPage() {
   const { id: lessonId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const me = useAuthStore((s) => s.user);
+  const identity = useRoomIdentity();
+  const guestSession = useGuestSessionStore((s) => s.session);
+  const clearGuestSession = useGuestSessionStore((s) => s.clearSession);
+  const isGuest = identity?.kind === "guest";
+  const selfId = identity?.id;
+  const [leftAsGuest, setLeftAsGuest] = useState(false);
 
   const [participants, setParticipants] = useState<ParticipantSnapshot[]>([]);
   const [lessonStatus, setLessonStatus] = useState<LessonStatus | null>(null);
@@ -113,7 +119,7 @@ export function RoomPage() {
   const [lessonTitle, setLessonTitle] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const isTeacher = me?.role === "teacher" || me?.role === "admin";
+  const isTeacher = identity?.role === "teacher" || identity?.role === "admin";
 
   const handleMessage = useCallback((message: ServerRoomMessage) => {
     switch (message.type) {
@@ -173,7 +179,12 @@ export function RoomPage() {
     }
   }, []);
 
-  const status = useRoomSocket(lessonId ?? "", handleMessage, deviceCheckDone);
+  const status = useRoomSocket(
+    lessonId ?? "",
+    handleMessage,
+    deviceCheckDone,
+    isGuest ? "guest" : "staff",
+  );
 
   useEffect(() => {
     if (!lessonId || !deviceCheckDone) return;
@@ -197,10 +208,16 @@ export function RoomPage() {
 
   useEffect(() => {
     if (!lessonId) return;
+    // Гость формы `LessonSummary` не видит (§1.4 план-ТЗ) — имя урока берём
+    // из гостевой сессии (загружено на экране входа / восстановлено по куке).
+    if (isGuest) {
+      setLessonTitle(guestSession?.lessonTitle ?? null);
+      return;
+    }
     apiFetch<LessonSummary>(`/lessons/${lessonId}`)
       .then((l) => setLessonTitle(l.title))
       .catch(() => undefined);
-  }, [lessonId]);
+  }, [lessonId, isGuest, guestSession?.lessonTitle]);
 
   const refreshDecks = useCallback(() => {
     if (!lessonId) return;
@@ -240,11 +257,18 @@ export function RoomPage() {
     }
   }, [deckStatuses, decks, refreshDecks]);
 
-  const self = participants.find((p) => p.userId === me?.id);
+  const self = participants.find((p) => p.userId === selfId);
 
   async function leaveRoom() {
     if (!lessonId) return;
     await apiFetch(`/lessons/${lessonId}/leave`, { method: "POST" }).catch(() => undefined);
+    if (isGuest) {
+      // У гостя нет /lessons и личного кабинета — показываем экран выхода.
+      setGuestMode(false);
+      clearGuestSession();
+      setLeftAsGuest(true);
+      return;
+    }
     navigate("/lessons");
   }
 
@@ -362,7 +386,7 @@ export function RoomPage() {
             {media ? <ConnectionQualityDot userId={p.userId} /> : null}
           </div>
 
-          {isTeacher && p.userId !== me?.id ? (
+          {isTeacher && p.userId !== selfId ? (
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-border pt-2 text-xs">
               {(
                 [
@@ -621,6 +645,19 @@ export function RoomPage() {
       </div>
     </div>
   );
+
+  if (leftAsGuest) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-[#eff6ff] to-[#f0fdfa] p-6">
+        <div className="w-full max-w-[400px] rounded-xl border border-border bg-card p-9 text-center shadow-lg">
+          <h1 className="text-[22px] font-heavy tracking-tight">Вы вышли из урока</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Чтобы вернуться, откройте ссылку на урок ещё раз.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!deviceCheckDone) {
     return (

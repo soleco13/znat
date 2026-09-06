@@ -66,3 +66,24 @@ export const guestEnterResponseSchema = z.object({
   expiresAt: z.string(),
 });
 export type GuestEnterResponse = z.infer<typeof guestEnterResponseSchema>;
+
+/**
+ * Ответ `GET /guest/session` (Э12.6) — восстановление гостевой личности из
+ * httpOnly-куки при перезагрузке страницы урока (аналог `POST /auth/refresh`
+ * для персонала, но без выдачи нового токена — кука не возобновляется).
+ * Добавляет `lessonTitle`, чтобы экран урока не делал отдельный запрос:
+ * форму `LessonSummary` гость не видит никогда (§1.4 план-ТЗ).
+ */
+export const guestSessionSchema = guestEnterResponseSchema.extend({
+  lessonTitle: z.string(),
+});
+export type GuestSession = z.infer<typeof guestSessionSchema>;
+
+/**
+ * Э12.6 — маркер в поле `token` Yjs-подключения к доске (`/collab`) для
+ * гостя-ученика. `HocuspocusProvider` не отправляет auth-сообщение при
+ * пустом токене, а настоящий гостевой JWT лежит в httpOnly-куке и клиенту
+ * недоступен; сервер по этому маркеру берёт личность из куки
+ * (`canvas/hocuspocus.ts`). Staff-токен — всегда JWT, не пересекается.
+ */
+export const GUEST_CANVAS_TOKEN_MARKER = "guest";
