@@ -8,12 +8,14 @@ import { ExcalidrawBinding } from "y-excalidraw";
 import * as Y from "yjs";
 import {
   ImagePlus,
+  MoreHorizontal,
   Navigation,
   Plus,
   Presentation,
   Redo2,
   Trash2,
   Undo2,
+  X,
 } from "lucide-react";
 import { GUEST_CANVAS_TOKEN_MARKER } from "@school/shared";
 import type { CanvasImageUploadResponse, Deck } from "@school/shared";
@@ -23,14 +25,15 @@ import { useAuthStore } from "@/shared/auth-store";
 import { useGuestSessionStore } from "@/features/guest/guest-session-store";
 import { apiFetch } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
-import { Separator } from "@/shared/ui/separator";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
+import { Separator } from "@/shared/ui/separator";
 import { SimpleTooltip } from "@/shared/ui/tooltip";
 import {
   BACKGROUND_KIND_LABELS,
@@ -129,11 +132,14 @@ export function Board({
   lessonId,
   canDraw,
   decks = [],
+  onClose,
 }: {
   lessonId: string;
   canDraw: boolean;
   /** Э4.6: готовые презентации урока — учитель импортирует их слайды как страницы. */
   decks?: Deck[];
+  /** Э12.7 §6.5: «Скрыть доску» в шапке доски (у учителя) — возврат к плиткам. */
+  onClose?: () => void;
 }) {
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null);
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -688,168 +694,84 @@ export function Board({
     pages.map(([, m]) => m.slide?.deckId).filter((v): v is string => typeof v === "string"),
   );
 
-  return (
-    <div>
-      {ydoc && (
-        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-card p-2">
-          {/* Страницы */}
-          <div className="flex flex-wrap items-center gap-1">
-            {nonSlidePages.map(([pageId], index) => (
-              <button
-                key={pageId}
-                onClick={() => isTeacher && switchPage(pageId)}
-                disabled={!isTeacher}
-                aria-current={pageId === activePageId}
-                className={cn(
-                  "flex size-8 items-center justify-center rounded-md text-sm font-medium transition-colors",
-                  pageId === activePageId
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-                  !isTeacher && "cursor-default",
-                )}
-              >
-                {index + 1}
-              </button>
-            ))}
-            {isTeacher && (
-              <SimpleTooltip content="Добавить страницу">
-                <Button variant="ghost" size="icon-sm" onClick={addPage} aria-label="Добавить страницу">
-                  <Plus />
-                </Button>
-              </SimpleTooltip>
-            )}
-            {isTeacher && activePageId && pages.length > 1 && (
-              <SimpleTooltip content="Удалить страницу">
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="text-destructive hover:bg-destructive/10"
-                  onClick={() => deletePage(activePageId)}
-                  aria-label="Удалить страницу"
-                >
-                  <Trash2 />
-                </Button>
-              </SimpleTooltip>
-            )}
-          </div>
-
-          {isTeacher && activePageId && activeMeta?.kind !== "image" && (
-            <>
-              <Separator orientation="vertical" className="h-6" />
-              <Select
-                value={activeMeta?.kind ?? "blank"}
-                onValueChange={(v) => setPageBackgroundKind(activePageId, v as BackgroundKind)}
-              >
-                <SelectTrigger className="h-8 w-[150px] text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(BACKGROUND_KIND_LABELS).map(([kind, label]) => (
-                    <SelectItem key={kind} value={kind}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </>
-          )}
-
-          {isTeacher && readyDecks.length > 0 && (
-            <>
-              <Separator orientation="vertical" className="h-6" />
-              <div className="flex items-center gap-1.5">
-                <Presentation className="size-4 text-muted-foreground" aria-hidden />
-                <Select
-                  value={importDeckId}
-                  onValueChange={(v) => {
-                    setImportDeckId(v);
-                    setImportNote(null);
-                  }}
-                >
-                  <SelectTrigger className="h-8 w-[180px] text-xs">
-                    <SelectValue placeholder="Презентация…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {readyDecks.map((d) => (
-                      <SelectItem key={d.id} value={d.id}>
-                        {d.title} · {deckPageCount(d)}
-                        {d.renderMode === "pdf" ? " · PDF" : ""}
-                        {importedDeckIds.has(d.id) ? " · на доске" : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {importDeckId && importedDeckIds.has(importDeckId) ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:bg-destructive/10"
-                    onClick={() => removeDeckSlides(importDeckId)}
-                  >
-                    Убрать слайды
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!importDeckId}
-                    onClick={() => {
-                      const d = readyDecks.find((x) => x.id === importDeckId);
-                      if (d) void importDeckSlides(d);
-                    }}
-                  >
-                    Импортировать слайды
-                  </Button>
-                )}
-              </div>
-            </>
-          )}
-
-          {!isTeacher && (
-            <Button
-              variant={followTeacher ? "secondary" : "outline"}
-              size="sm"
-              onClick={() => setFollowTeacher((v) => !v)}
+  const boardChrome = ydoc ? (
+    <div className="pointer-events-none absolute right-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] items-center gap-1.5">
+      {/* Страницы — компактная лента */}
+      <div className="pointer-events-auto flex items-center gap-1 rounded-xl border border-border bg-card/95 p-1 shadow-sm backdrop-blur">
+        <div className="flex max-w-[40vw] items-center gap-0.5 overflow-x-auto">
+          {nonSlidePages.map(([pageId], index) => (
+            <button
+              key={pageId}
+              onClick={() => isTeacher && switchPage(pageId)}
+              disabled={!isTeacher}
+              aria-current={pageId === activePageId}
+              className={cn(
+                "flex size-7 shrink-0 items-center justify-center rounded-md text-sm font-medium transition-colors",
+                pageId === activePageId
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                !isTeacher && "cursor-default",
+              )}
             >
-              <Navigation aria-hidden />
-              {followTeacher ? "Не следовать за учителем" : "Следовать за учителем"}
+              {index + 1}
+            </button>
+          ))}
+        </div>
+        {isTeacher && (
+          <SimpleTooltip content="Добавить страницу">
+            <Button variant="ghost" size="icon-sm" onClick={addPage} aria-label="Добавить страницу">
+              <Plus />
             </Button>
-          )}
+          </SimpleTooltip>
+        )}
+        {isTeacher && activePageId && pages.length > 1 && (
+          <SimpleTooltip content="Удалить страницу">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="text-destructive hover:bg-destructive/10"
+              onClick={() => deletePage(activePageId)}
+              aria-label="Удалить страницу"
+            >
+              <Trash2 />
+            </Button>
+          </SimpleTooltip>
+        )}
+      </div>
 
-          {(canDraw && undoState) || canDraw ? (
-            <Separator orientation="vertical" className="h-6" />
-          ) : null}
-          {canDraw && undoState && (
-            <div className="flex items-center gap-0.5">
-              <SimpleTooltip content="Отменить (Ctrl+Z)">
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => undoState.manager.undo()}
-                  disabled={!undoState.canUndo}
-                  aria-label="Отменить"
-                >
-                  <Undo2 />
-                </Button>
-              </SimpleTooltip>
-              <SimpleTooltip content="Повторить (Ctrl+Shift+Z)">
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => undoState.manager.redo()}
-                  disabled={!undoState.canRedo}
-                  aria-label="Повторить"
-                >
-                  <Redo2 />
-                </Button>
-              </SimpleTooltip>
-            </div>
-          )}
-          {canDraw && (
-            <Button asChild variant="outline" size="sm" className="cursor-pointer">
-              <label>
+      {/* Действия: undo/redo, фото, ⋯ (доп.), скрыть доску */}
+      <div className="pointer-events-auto flex items-center gap-0.5 rounded-xl border border-border bg-card/95 p-1 shadow-sm backdrop-blur">
+        {canDraw && undoState && (
+          <>
+            <SimpleTooltip content="Отменить (Ctrl+Z)">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => undoState.manager.undo()}
+                disabled={!undoState.canUndo}
+                aria-label="Отменить"
+              >
+                <Undo2 />
+              </Button>
+            </SimpleTooltip>
+            <SimpleTooltip content="Повторить (Ctrl+Shift+Z)">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => undoState.manager.redo()}
+                disabled={!undoState.canRedo}
+                aria-label="Повторить"
+              >
+                <Redo2 />
+              </Button>
+            </SimpleTooltip>
+          </>
+        )}
+        {canDraw && (
+          <SimpleTooltip content="Фото на доску">
+            <Button asChild variant="ghost" size="icon-sm" className="cursor-pointer">
+              <label aria-label="Фото на доску">
                 <ImagePlus aria-hidden />
-                Фото на доску
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/webp"
@@ -863,26 +785,90 @@ export function Board({
                 />
               </label>
             </Button>
-          )}
+          </SimpleTooltip>
+        )}
 
-          {importNote && <span className="text-sm text-muted-foreground">{importNote}</span>}
-          {uploadError && <span className="text-sm font-medium text-destructive">{uploadError}</span>}
-          {pageElementCount >= PAGE_ELEMENT_WARN_AT && (
-            <span
-              className={cn(
-                "ml-auto text-xs",
-                pageElementCount >= PAGE_ELEMENT_LIMIT
-                  ? "font-semibold text-destructive"
-                  : "text-warning",
+        {(isTeacher || !isTeacher) && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label="Ещё">
+                <MoreHorizontal />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              {!isTeacher && (
+                <DropdownMenuItem onSelect={() => setFollowTeacher((v) => !v)}>
+                  <Navigation aria-hidden />
+                  {followTeacher ? "Не следовать за учителем" : "Следовать за учителем"}
+                </DropdownMenuItem>
               )}
-            >
-              {pageElementCount >= PAGE_ELEMENT_LIMIT
-                ? `Достигнут предел в ${PAGE_ELEMENT_LIMIT} объектов — добавьте новую страницу`
-                : `Объектов на странице: ${pageElementCount} / ${PAGE_ELEMENT_LIMIT}`}
-            </span>
-          )}
-        </div>
-      )}
+              {isTeacher && activePageId && activeMeta?.kind !== "image" && (
+                <>
+                  <DropdownMenuLabel>Фон страницы</DropdownMenuLabel>
+                  {Object.entries(BACKGROUND_KIND_LABELS).map(([kind, label]) => (
+                    <DropdownMenuItem
+                      key={kind}
+                      onSelect={() => setPageBackgroundKind(activePageId, kind as BackgroundKind)}
+                    >
+                      <span
+                        className={cn(
+                          "size-1.5 rounded-full",
+                          (activeMeta?.kind ?? "blank") === kind ? "bg-primary" : "bg-transparent",
+                        )}
+                        aria-hidden
+                      />
+                      {label}
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
+              {isTeacher && readyDecks.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Импорт слайдов презентации</DropdownMenuLabel>
+                  {readyDecks.map((d) => (
+                    <DropdownMenuItem
+                      key={d.id}
+                      onSelect={() => {
+                        if (importedDeckIds.has(d.id)) {
+                          removeDeckSlides(d.id);
+                        } else {
+                          void importDeckSlides(d);
+                        }
+                      }}
+                    >
+                      <Presentation aria-hidden />
+                      <span className="min-w-0 flex-1 truncate">
+                        {d.title} · {deckPageCount(d)}
+                        {d.renderMode === "pdf" ? " · PDF" : ""}
+                      </span>
+                      {importedDeckIds.has(d.id) ? (
+                        <span className="text-xs text-destructive">убрать</span>
+                      ) : null}
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
+        {onClose && isTeacher && (
+          <>
+            <Separator orientation="vertical" className="mx-0.5 h-5" />
+            <SimpleTooltip content="Скрыть доску">
+              <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Скрыть доску">
+                <X />
+              </Button>
+            </SimpleTooltip>
+          </>
+        )}
+      </div>
+    </div>
+  ) : null;
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
       {ydoc && isTeacher && slidePages.length > 0 && (
         <SlideSearch
           slides={slidePages.map(([pageId, meta], i) => ({
@@ -898,27 +884,10 @@ export function Board({
           onJump={switchPage}
         />
       )}
-      {ydoc && slidePages.length > 0 && (
-        <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1">
-          {slidePages.map(([pageId, meta], i) => (
-            <button
-              key={pageId}
-              onClick={() => isTeacher && switchPage(pageId)}
-              disabled={!isTeacher}
-              title={`Слайд ${i + 1}`}
-              className={`shrink-0 overflow-hidden rounded border ${
-                pageId === activePageId ? "border-primary ring-2 ring-primary/30" : "border-border"
-              } ${isTeacher ? "" : "cursor-default"}`}
-            >
-              <SlideThumb slide={meta.slide!} alt={`Слайд ${i + 1}`} />
-            </button>
-          ))}
-        </div>
-      )}
       <div
         ref={boardContainerRef}
-        className="canvas-board"
-        style={{ height: "70vh", position: "relative" }}
+        className="canvas-board relative min-h-0 flex-1"
+        style={{ position: "relative" }}
         onDragOverCapture={handleDragOverCapture}
         onDropCapture={handleDropCapture}
         onPasteCapture={handlePasteCapture}
@@ -928,6 +897,52 @@ export function Board({
           kind={activeMeta?.kind ?? "blank"}
           slide={activeMeta?.slide ?? null}
         />
+        {boardChrome}
+        {(importNote || uploadError || pageElementCount >= PAGE_ELEMENT_WARN_AT) && (
+          <div className="pointer-events-none absolute inset-x-3 top-16 z-10 flex flex-col items-center gap-1 text-center">
+            {importNote && (
+              <span className="rounded-md bg-card/95 px-2 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur">
+                {importNote}
+              </span>
+            )}
+            {uploadError && (
+              <span className="rounded-md bg-card/95 px-2 py-1 text-xs font-medium text-destructive shadow-sm backdrop-blur">
+                {uploadError}
+              </span>
+            )}
+            {pageElementCount >= PAGE_ELEMENT_WARN_AT && (
+              <span
+                className={cn(
+                  "rounded-md bg-card/95 px-2 py-1 text-xs shadow-sm backdrop-blur",
+                  pageElementCount >= PAGE_ELEMENT_LIMIT
+                    ? "font-semibold text-destructive"
+                    : "text-warning",
+                )}
+              >
+                {pageElementCount >= PAGE_ELEMENT_LIMIT
+                  ? `Предел ${PAGE_ELEMENT_LIMIT} объектов — добавьте страницу`
+                  : `Объектов: ${pageElementCount} / ${PAGE_ELEMENT_LIMIT}`}
+              </span>
+            )}
+          </div>
+        )}
+        {ydoc && slidePages.length > 0 && (
+          <div className="pointer-events-auto absolute inset-x-3 bottom-3 z-10 flex gap-1.5 overflow-x-auto rounded-lg bg-card/90 p-1.5 shadow-sm backdrop-blur">
+            {slidePages.map(([pageId, meta], i) => (
+              <button
+                key={pageId}
+                onClick={() => isTeacher && switchPage(pageId)}
+                disabled={!isTeacher}
+                title={`Слайд ${i + 1}`}
+                className={`shrink-0 overflow-hidden rounded border ${
+                  pageId === activePageId ? "border-primary ring-2 ring-primary/30" : "border-border"
+                } ${isTeacher ? "" : "cursor-default"}`}
+              >
+                <SlideThumb slide={meta.slide!} alt={`Слайд ${i + 1}`} />
+              </button>
+            ))}
+          </div>
+        )}
         <div ref={excalidrawWrapperRef} style={{ position: "absolute", inset: 0, zIndex: 1 }}>
           {/* Э12.7 §6.5: y-excalidraw 2.0.12 в setupUndoRedo хардкодит
               querySelector('[aria-label="Undo"]') / "Redo" по родным кнопкам
@@ -976,7 +991,7 @@ export function Board({
         </div>
       </div>
       {activeSlideNotes && (
-        <div className="mt-2 rounded-lg border border-warning/25 bg-warning/5 p-3 text-sm">
+        <div className="mt-2 max-h-32 shrink-0 overflow-y-auto rounded-lg border border-warning/25 bg-warning/5 p-3 text-sm">
           <div className="mb-1 text-xs font-semibold text-warning">Заметки докладчика (видно только вам)</div>
           <p className="whitespace-pre-wrap text-foreground">{activeSlideNotes}</p>
         </div>

@@ -21,8 +21,8 @@ export function SelfCameraButton({
       active={isCameraEnabled}
       activeIcon={Video}
       inactiveIcon={VideoOff}
-      activeLabel="Камера"
-      inactiveLabel="Камера выкл."
+      activeLabel="Выключить камеру"
+      inactiveLabel="Включить камеру"
       onToggle={() =>
         localParticipant.setCameraEnabled(!isCameraEnabled, { resolution: maxResolution })
       }

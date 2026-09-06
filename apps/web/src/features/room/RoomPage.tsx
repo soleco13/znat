@@ -64,7 +64,7 @@ import {
   SelectValue,
 } from "@/shared/ui/select";
 import { UserAvatar } from "@/shared/ui/avatar";
-import { TooltipProvider } from "@/shared/ui/tooltip";
+import { SimpleTooltip, TooltipProvider } from "@/shared/ui/tooltip";
 import { Board } from "../canvas/Board.js";
 import { DeckPanel } from "../decks/DeckPanel.js";
 import { listLessonActivities } from "../materials/activity-api.js";
@@ -75,7 +75,6 @@ import { ConnectionQualityDot, PacketLossWarning } from "./ConnectionQuality.js"
 import { DeviceCheckScreen, type DeviceCheckResult } from "./DeviceCheckScreen.js";
 import { RoomControlButton } from "./RoomControlButton.js";
 import { useRoomIdentity } from "./use-room-identity.js";
-import { MediaAudioStatus } from "./MediaAudioStatus.js";
 import { MicStatusIcon, SelfMicButton } from "./MicControls.js";
 import { MicSync } from "./MicSync.js";
 import { ParticipantPresenceDot } from "./ParticipantPresenceDot.js";
@@ -703,6 +702,7 @@ export function RoomPage() {
                 lessonId={lessonId}
                 canDraw={self?.permissions.canDraw ?? false}
                 decks={decks}
+                onClose={isTeacher ? () => setStageView("people") : undefined}
               />
             </div>
           ) : null}
@@ -724,7 +724,7 @@ export function RoomPage() {
       )}
 
       {stageView === "people" && participants.length <= 1 ? (
-        <div className="rounded-xl border border-border bg-card p-4 text-center">
+        <div className="mx-auto w-full max-w-md rounded-xl border border-border bg-card p-4 text-center">
           <p className="text-sm font-medium text-foreground">Вы пока один на уроке</p>
           {isTeacher && lessonJoinPath ? (
             <>
@@ -748,21 +748,23 @@ export function RoomPage() {
     Icon: typeof Wrench,
     badge?: number,
   ) => (
-    <Button
-      variant={drawer === mode ? "secondary" : "ghost"}
-      size="sm"
-      className="relative"
-      onClick={() => toggleDrawer(mode)}
-      aria-pressed={drawer === mode}
-    >
-      <Icon aria-hidden />
-      <span className="hidden md:inline">{label}</span>
-      {badge != null && badge > 0 ? (
-        <span className="ml-0.5 rounded-full bg-primary/10 px-1.5 text-xs font-semibold text-primary">
-          {badge}
-        </span>
-      ) : null}
-    </Button>
+    <SimpleTooltip content={label} side="top">
+      <Button
+        variant={drawer === mode ? "secondary" : "ghost"}
+        size="icon"
+        className="relative size-10"
+        onClick={() => toggleDrawer(mode)}
+        aria-pressed={drawer === mode}
+        aria-label={label}
+      >
+        <Icon aria-hidden />
+        {badge != null && badge > 0 ? (
+          <span className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+            {badge}
+          </span>
+        ) : null}
+      </Button>
+    </SimpleTooltip>
   );
 
   const content = (
@@ -795,7 +797,6 @@ export function RoomPage() {
           />
           {STATUS_LABEL[status]}
         </span>
-        {media ? <span className="hidden lg:inline"><MediaAudioStatus /></span> : null}
 
         <div className="ml-auto flex shrink-0 items-center gap-1">
           {isTeacher && lessonJoinPath ? (
@@ -856,23 +857,23 @@ export function RoomPage() {
         <main className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">{stageArea}</main>
       </div>
 
-      {/* §6.3 — нижняя панель управления */}
-      <footer className="flex shrink-0 flex-wrap items-center justify-center gap-x-3 gap-y-2 border-t border-border bg-card px-3 py-2 sm:justify-between">
+      {/* §6.3 — нижняя панель управления: только иконки, подписи — в подсказках */}
+      <footer className="flex shrink-0 flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-border bg-card px-3 py-2 sm:justify-between">
         <div className="flex items-center gap-1">
           {drawerToggle("tools", "Инструменты", Wrench)}
           {drawerToggle("people", "Участники", Users, participants.length)}
           {drawerToggle("chat", "Чат", MessageSquare)}
         </div>
 
-        <div className="flex items-end gap-1.5">
+        <div className="flex items-center gap-2">
           {!isTeacher ? (
             <RoomControlButton
               tone="action"
               active={self?.handRaised ?? false}
               activeIcon={Hand}
               inactiveIcon={Hand}
-              activeLabel="Опустить"
-              inactiveLabel="Рука"
+              activeLabel="Опустить руку"
+              inactiveLabel="Поднять руку"
               onToggle={toggleHand}
             />
           ) : null}
@@ -884,7 +885,7 @@ export function RoomPage() {
           {media && !isTeacher && self?.permissions.canPublishVideo ? (
             <SelfCameraButton maxResolution={VideoPresets.h360.resolution} />
           ) : null}
-          <div className="flex w-[4.75rem] shrink-0 flex-col items-center gap-1">
+          <SimpleTooltip content="Выйти из урока" side="top">
             <button
               type="button"
               onClick={leaveRoom}
@@ -893,30 +894,12 @@ export function RoomPage() {
             >
               <LogOut className="size-5" aria-hidden />
             </button>
-            <span className="text-[11px] font-medium leading-none text-destructive">Выйти</span>
-          </div>
+          </SimpleTooltip>
         </div>
 
-        <div className="flex items-center rounded-lg bg-secondary p-0.5">
-          <Button
-            variant={stageView === "people" ? "outline" : "ghost"}
-            size="sm"
-            className="h-8"
-            onClick={() => setStageView("people")}
-          >
-            <Users aria-hidden />
-            <span className="hidden lg:inline">Плитки</span>
-          </Button>
-          <Button
-            variant={stageView === "board" ? "outline" : "ghost"}
-            size="sm"
-            className="h-8"
-            onClick={() => setStageView("board")}
-          >
-            <PenLine aria-hidden />
-            <span className="hidden lg:inline">Доска</span>
-          </Button>
-        </div>
+        {/* правый кластер намеренно пуст — переключение «плитки / доска»
+            живёт в панели «Инструменты» и в шапке доски (§6.5). */}
+        <div className="hidden w-[120px] sm:block" aria-hidden />
       </footer>
     </div>
   );
@@ -975,7 +958,9 @@ export function RoomPage() {
             ? { resolution: VideoPresets.h720.resolution, deviceId: camDeviceId ?? undefined }
             : false
         }
-        onDisconnected={() => setError("Аудио отключено")}
+        // Разрыв аудио не показываем баннером — состояние видно на самой
+        // кнопке микрофона (красная «Звук выкл.»), плюс индикатор связи в шапке.
+        onDisconnected={() => undefined}
       >
         <ApplyAudioOutput deviceId={spkDeviceId} />
         <MicSync enabled={self?.permissions.canSpeak ?? false} />
