@@ -67,6 +67,17 @@ const ACCEPTED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 const PAGE_ELEMENT_LIMIT = 500;
 const PAGE_ELEMENT_WARN_AT = 450;
 
+/**
+ * Э12.7 — фиксированный id первой страницы доски. Если два клиента откроют
+ * ещё пустой холст одновременно, оба вызовут `pagesMap.set(FIRST_PAGE_ID, …)`
+ * — Yjs сольёт их в ОДНУ запись (та же ключевая строка), а не создаст две
+ * копии листа. Инициализация к тому же отложена до синхронизации с сервером
+ * (см. эффект ниже), так что в норме гонки нет вовсе.
+ */
+const FIRST_PAGE_ID = "board-page-1";
+/** §6.5: не больше 3 листов доски (слайды презентации — отдельно, не в счёт). */
+const MAX_BOARD_PAGES = 3;
+
 /** Стабильный цвет курсора участника — из userId, без похода на сервер (Э3.9). */
 function cursorColorFor(userId: string): string {
   let hash = 0;
@@ -202,37 +213,57 @@ export function Board({
   }, [lessonId, accessToken, isGuest]);
 
   useEffect(() => {
-    if (!ydoc) return;
+    if (!ydoc || !provider) return;
     const pagesMap = ydoc.getMap<PageMeta>("pages");
     const metaMap = ydoc.getMap<unknown>("meta");
 
     const syncPages = () => setPages(sortedPageEntries(pagesMap));
-    const syncActivePage = () => setActivePageId((metaMap.get("activePageId") as string | undefined) ?? null);
+    // Активная страница: если её id пропал из `pagesMap` (пришла
+    // синхронизация с сервером и локально созданная временная страница
+    // затёрлась, или лист удалили) — показываем первую существующую, а не
+    // пустоту. Именно это чинит «ученик не видит лист учителя».
+    const syncActivePage = () => {
+      const id = metaMap.get("activePageId") as string | undefined;
+      if (id && pagesMap.has(id)) setActivePageId(id);
+      else setActivePageId(sortedPageEntries(pagesMap)[0]?.[0] ?? null);
+    };
 
-    // Идемпотентная инициализация первой страницы для ещё пустого холста —
-    // перепроверка внутри transact() сужает (не убирает совсем — Yjs-транзакции
-    // синхронные локально, но не атомарны по сети) окно гонки, если два
-    // участника открыли пустой урок одновременно; на выходе получится
-    // максимум лишняя страница, а не потеря данных.
-    ydoc.transact(() => {
-      if (pagesMap.size === 0) {
-        const firstPageId = crypto.randomUUID();
-        pagesMap.set(firstPageId, { order: 0, backgroundAssetId: null, kind: "blank" });
-      }
-      if (!metaMap.get("activePageId")) {
-        metaMap.set("activePageId", sortedPageEntries(pagesMap)[0]![0]);
-      }
-    });
+    // Первую страницу создаём ТОЛЬКО после синхронизации с сервером: до неё
+    // локально пустой (ещё не загруженный) документ выглядит как «страниц
+    // нет», и каждый вошедший плодил бы свою копию листа. Фиксированный
+    // `FIRST_PAGE_ID` — страховка от остаточной гонки.
+    let initialized = false;
+    const initFirstPage = () => {
+      if (initialized) return;
+      initialized = true;
+      ydoc.transact(() => {
+        if (pagesMap.size === 0) {
+          pagesMap.set(FIRST_PAGE_ID, { order: 0, backgroundAssetId: null, kind: "blank" });
+        }
+        const active = metaMap.get("activePageId") as string | undefined;
+        if (!active || !pagesMap.has(active)) {
+          metaMap.set("activePageId", sortedPageEntries(pagesMap)[0]![0]);
+        }
+      });
+      syncPages();
+      syncActivePage();
+    };
+
+    if (provider.isSynced) initFirstPage();
+    else provider.on("synced", initFirstPage);
 
     syncPages();
     syncActivePage();
     pagesMap.observe(syncPages);
+    pagesMap.observe(syncActivePage);
     metaMap.observe(syncActivePage);
     return () => {
+      provider.off("synced", initFirstPage);
       pagesMap.unobserve(syncPages);
+      pagesMap.unobserve(syncActivePage);
       metaMap.unobserve(syncActivePage);
     };
-  }, [ydoc]);
+  }, [ydoc, provider]);
 
   // Экземпляр привязки в состоянии (не только внутри эффекта) — нужен
   // снаружи, чтобы прокинуть `binding.onPointerUpdate` в проп `<Excalidraw
@@ -415,6 +446,9 @@ export function Board({
 
   function addPage() {
     if (!ydoc) return;
+    // §6.5: не больше `MAX_BOARD_PAGES` листов доски (слайды презентации не в счёт).
+    const boardPages = pages.filter(([, m]) => m.kind !== "image" || !m.slide);
+    if (boardPages.length >= MAX_BOARD_PAGES) return;
     const pagesMap = ydoc.getMap<PageMeta>("pages");
     const newId = crypto.randomUUID();
     const nextOrder = pages.reduce((max, [, meta]) => Math.max(max, meta.order), -1) + 1;
@@ -718,8 +752,20 @@ export function Board({
           ))}
         </div>
         {isTeacher && (
-          <SimpleTooltip content="Добавить страницу">
-            <Button variant="ghost" size="icon-sm" onClick={addPage} aria-label="Добавить страницу">
+          <SimpleTooltip
+            content={
+              nonSlidePages.length >= MAX_BOARD_PAGES
+                ? `Максимум ${MAX_BOARD_PAGES} листа`
+                : "Добавить лист"
+            }
+          >
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={addPage}
+              disabled={nonSlidePages.length >= MAX_BOARD_PAGES}
+              aria-label="Добавить лист"
+            >
               <Plus />
             </Button>
           </SimpleTooltip>

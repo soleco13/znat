@@ -70,14 +70,35 @@
 
   --ui-font: var(--font);
   --color-selection: var(--c-primary);
+
+  /* Ползунки (непрозрачность фигуры) — фирменный синий. */
+  --color-slider-track: var(--c-primary);
+  --color-slider-thumb: var(--c-primary);
+  --color-range-track: var(--c-primary);
+}
+.canvas-board .excalidraw input[type="range"],
+.canvas-board .excalidraw .range-input {
+  accent-color: var(--c-primary) !important;
 }
 
-/* Панели-«острова» (тулбар, свойства фигуры, зум) — рамка и тень как у
-   карточек ДС, единый радиус. */
-.canvas-board .excalidraw .Island {
-  border: 1px solid var(--c-border-solid);
-  border-radius: var(--radius) !important;
-  box-shadow: var(--shadow-sm);
+/* Э12.7: панели-«острова» Excalidraw (тулбар, свойства фигуры, зум,
+   контекст-меню) — ТОТ ЖЕ рецепт, что у нашей шапки доски и карточек ДС:
+   `rounded-xl` + рамка + мягкая тень + полупрозрачный фон с блюром. */
+.canvas-board .excalidraw .Island,
+.canvas-board .excalidraw .zoom-actions,
+.canvas-board .excalidraw .scroll-back-to-content,
+.canvas-board .excalidraw .context-menu,
+.canvas-board .excalidraw .dropdown-menu-container {
+  border: 1px solid var(--c-border-solid) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-sm) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(6px);
+}
+
+/* Подсказку-hint внутри тулбара («Чтобы двигать холст…») прячем всегда. */
+.canvas-board .excalidraw .HintViewer {
+  display: none !important;
 }
 
 /* Э12.7 §6.5: раскладка доски как в КонтурТолк —
