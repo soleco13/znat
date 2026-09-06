@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   pgTable,
   uuid,
@@ -107,17 +108,37 @@ export const lessons = pgTable(
     schoolId: uuid("school_id")
       .notNull()
       .references(() => schools.id, { onDelete: "cascade" }),
-    groupId: uuid("group_id")
-      .notNull()
-      .references(() => groups.id, { onDelete: "restrict" }),
+    /**
+     * Э12: группа урока отменена (`groups`/`group_members` удаляются в
+     * рамках Э12.4). Колонка временно nullable — уроки, созданные в новой
+     * модели (только admin, без группы), её не заполняют. Старые проверки
+     * членства ученика по группе (`rooms`/`activities`/`canvas`/`decks`)
+     * трактуют NULL как «группы нет → не член» до перевода на гостевой
+     * доступ (Э12.4).
+     */
+    groupId: uuid("group_id").references(() => groups.id, { onDelete: "restrict" }),
     teacherId: uuid("teacher_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
     title: text("title").notNull(),
-    subject: text("subject").notNull(),
-    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
-    durationMin: integer("duration_min").notNull(),
+    /** Э12: предмет больше не задаётся при создании урока — дефолт ради совместимости старых колонок, из API убран. */
+    subject: text("subject").notNull().default(""),
+    /**
+     * Э12: «плановое время» — только метка для сортировки в списке уроков,
+     * ничего не гейтит (§1.1 план-ТЗ). Колонка NOT NULL с дефолтом ради
+     * старого расчёта TTL LiveKit-токена (`media/service.ts`), API отдаёт
+     * её как `scheduledAt`.
+     */
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Э12: длительность урока отменена (постоянный урок). Дефолт — ради старого расчёта TTL токена. */
+    durationMin: integer("duration_min").notNull().default(60),
+    /** @deprecated Э12 — урок постоянный, без статус-машины. Колонка ещё читается `rooms` до Э12.4. */
     status: lessonStatusEnum("status").notNull().default("scheduled"),
+    /** Токен прямой ссылки ученика `/j/:token` (Э12, §1.6 план-ТЗ). 24 случайных байта hex. Перевыпуск admin — старый мгновенно недействителен. */
+    joinToken: text("join_token")
+      .notNull()
+      .unique()
+      .default(sql`encode(gen_random_bytes(24), 'hex')`),
     livekitRoom: text("livekit_room"),
     startedAt: timestamp("started_at", { withTimezone: true }),
     endedAt: timestamp("ended_at", { withTimezone: true }),
@@ -342,6 +363,30 @@ export const materialVersions = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique("material_versions_material_version_idx").on(t.materialId, t.version)],
+);
+
+/**
+ * Э12 (§1.3 план-ТЗ) — «домашнее задание» в новой модели: просто список
+ * материалов из библиотеки, назначенных уроку. Ученик по ссылке видит их и
+ * проходит сам, без сдачи ответов и проверки. Отдельная сущность, не
+ * пересекается с `activities` (интерактивные задания на самом уроке).
+ */
+export const lessonMaterials = pgTable(
+  "lesson_materials",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    lessonId: uuid("lesson_id")
+      .notNull()
+      .references(() => lessons.id, { onDelete: "cascade" }),
+    materialId: uuid("material_id")
+      .notNull()
+      .references(() => materials.id, { onDelete: "cascade" }),
+    assignedBy: uuid("assigned_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    assignedAt: timestamp("assigned_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique("lesson_materials_lesson_material_idx").on(t.lessonId, t.materialId)],
 );
 
 /**

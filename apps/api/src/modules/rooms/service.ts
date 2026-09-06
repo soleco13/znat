@@ -72,7 +72,10 @@ async function assertMembership(schoolId: string, lessonId: string, user: Access
     return lesson;
   }
   if (user.role === "student") {
-    const isMember = await usersService.isGroupMember(lesson.groupId, user.sub);
+    // Э12: уроки новой модели без группы — ученик входит гостевым путём
+    // (`/j/:token`, Э12.4), не через эту проверку членства.
+    const isMember =
+      lesson.groupId !== null && (await usersService.isGroupMember(lesson.groupId, user.sub));
     if (!isMember) {
       throw new AppError(403, "forbidden", "Вы не состоите в группе этого урока");
     }

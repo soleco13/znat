@@ -51,7 +51,11 @@ async function assertLessonViewer(user: AccessTokenPayload, lessonId: string) {
   const lesson = await lessonsService.getLesson(user.schoolId, lessonId);
   if (user.role === "admin") return lesson;
   if (user.role === "teacher" && lesson.teacherId === user.sub) return lesson;
-  if (user.role === "student" && (await usersService.isGroupMember(lesson.groupId, user.sub))) {
+  if (
+    user.role === "student" &&
+    lesson.groupId !== null &&
+    (await usersService.isGroupMember(lesson.groupId, user.sub))
+  ) {
     return lesson;
   }
   throw new AppError(403, "forbidden", "Нет доступа к этому уроку");

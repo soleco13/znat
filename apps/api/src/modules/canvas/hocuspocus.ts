@@ -104,7 +104,10 @@ async function assertLessonMembership(
     return;
   }
   if (user.role === "student") {
-    const isMember = await usersService.isGroupMember(lesson.groupId, user.sub);
+    // Э12: уроки новой модели без группы — ученик подключается к Y.Doc
+    // гостевым JWT (Э12.4), не этой веткой.
+    const isMember =
+      lesson.groupId !== null && (await usersService.isGroupMember(lesson.groupId, user.sub));
     if (!isMember) {
       throw new AppError(403, "forbidden", "Вы не состоите в группе этого урока");
     }

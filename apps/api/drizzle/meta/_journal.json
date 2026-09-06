@@ -106,6 +106,13 @@
       "when": 1788620413446,
       "tag": "0014_wise_ironclad",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1788680889733,
+      "tag": "0015_e12_lessons_guest_base",
+      "breakpoints": true
     }
   ]
 }

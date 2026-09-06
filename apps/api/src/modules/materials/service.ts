@@ -302,6 +302,20 @@ export async function createMaterial(
  * (CLAUDE.md, «не делегировать вслепую») — решение читано и написано
  * построчно, а не сгенерировано.
  */
+/** Сводки материалов по id (Э12: список «домашки» урока). Молча пропускает id не из этой школы. */
+export async function getMaterialSummaries(
+  schoolId: string,
+  ids: string[],
+): Promise<repo.MaterialSummaryRow[]> {
+  return repo.findMaterialSummariesByIds(schoolId, [...new Set(ids)]);
+}
+
+/** Материал существует в школе? (Э12: перед назначением материала уроку.) */
+export async function assertMaterialInSchool(schoolId: string, materialId: string): Promise<void> {
+  const [row] = await repo.findMaterialSummariesByIds(schoolId, [materialId]);
+  if (!row) throw new AppError(404, "material_not_found", "Материал не найден");
+}
+
 export async function listMaterials(
   user: AccessTokenPayload,
   query: ListMaterialsQuery,

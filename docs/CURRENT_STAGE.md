@@ -22,8 +22,57 @@
 Сборка/тесты/depcheck зелёные. Коммит — schemas only, бэкенд ещё на старой
 модели.
 
-**Осталось по Э12:** Э12.2 (БД/миграции) → Э12.3 (модуль lessons) →
-Э12.4 (гостевой вход, SENSITIVE) → Э12.5 (задания на participant) →
+**Э12.2 + Э12.3 — БД и модуль `lessons` (один коммит, чтобы сборка осталась
+зелёной; согласовано — вариант A).**
+
+Миграция `0015_e12_lessons_guest_base.sql`:
+- `lessons`: `group_id` → nullable; `subject`/`starts_at`/`duration_min`
+  получили дефолты (`''`/`now()`/`60`) — колонки не задаются в новой модели,
+  но нужны старому расчёту TTL LiveKit-токена; `join_token text unique not
+  null` (дефолт `encode(gen_random_bytes(24),'hex')`, `CREATE EXTENSION
+  pgcrypto`). `status` пока жив (нужен `rooms` до Э12.4).
+- новая `lesson_materials` (lesson_id, material_id, assigned_by, assigned_at,
+  uniq по паре).
+- `lesson_participants`/`responses` НЕ тронуты — Э12.4/12.5.
+
+Модуль `lessons` переработан:
+- `POST /lessons` — только admin (`adminCreateLessonRequestSchema`), минтит
+  `joinToken` (32 байта), группа не нужна.
+- `GET /lessons` — admin все / teacher свои, отдаёт `LessonSummary[]`
+  (`{ items }`) с `teacherName` + `joinPath`.
+- `PATCH /lessons/:id`, `DELETE /lessons/:id`, `POST /lessons/:id/link/rotate`
+  — только admin.
+- `GET /lessons/:id/attendance` — журнал посещений (staff).
+- `GET/POST/DELETE /lessons/:id/materials` — «домашка» = список материалов
+  (staff).
+- `start`/`end`/`summary`/статус — из HTTP убраны; сервис-функции
+  `startLesson`/`endLesson` оставлены `@deprecated` (их ещё зовёт `rooms`
+  для авто-завершения пустой комнаты — уйдут в Э12.4).
+- `getLesson`/`ensureLivekitRoom`/`getLessonByLivekitRoom` — без изменений.
+
+Переходные заглушки (уйдут в Э12.4/12.5):
+- `rooms`/`decks`/`canvas`/`activities`: проверка членства ученика по группе
+  трактует `lesson.groupId === null` как «не член» (ученик новой модели
+  войдёт гостевым путём).
+- `activities.createActivity`: на уроке без группы бросает 409
+  `lesson_activities_pending` — интерактив на уроках новой модели включится
+  в Э12.5.
+
+Новые сервис-хелперы: `users.getUserNames`/`assertTeacher`/`findUsersByIds`,
+`materials.getMaterialSummaries`/`assertMaterialInSchool`/
+`findMaterialSummariesByIds` (модули не лезут в чужие таблицы напрямую).
+
+Фронт — минимальные правки под зелёную сборку (полный UI — Э12.7/12.8):
+`LessonsListPage` переведён на `LessonSummary` (карточка урока + копирование
+ссылки для учеников), `RoomPage` — тип `LessonSummary`.
+
+`seed-dev.ts` — новая модель: только персонал, 2 постоянных урока с
+токенами, назначение опубликованных материалов первому уроку.
+
+Сборка (api/web/shared) / тесты (54 + 377) / depcheck зелёные. Миграция на
+живой БД не прогонялась (нет Docker в среде).
+
+**Осталось по Э12:** Э12.4 (гостевой вход, SENSITIVE) → Э12.5 (задания на participant) →
 Э12.6 (фронт: вход ученика) → Э12.7 (фронт: UI урока) → Э12.8 (админка
 «Уроки») → Э12.9 (миграция, ТЗ, гейт).
 

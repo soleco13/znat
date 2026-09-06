@@ -1,72 +1,77 @@
 import { Link } from "react-router-dom";
-import { CalendarDays, ArrowRight, Radio } from "lucide-react";
-import type { LessonResponse } from "@school/shared";
+import { CalendarDays, ArrowRight, Link2, Video } from "lucide-react";
+import type { LessonSummary } from "@school/shared";
 
 import { apiFetch } from "@/shared/api-client";
 import { useAsync } from "@/shared/hooks/use-async";
-import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { ErrorState } from "@/shared/ui/error-state";
 import { PageHeader } from "@/shared/ui/page-header";
 import { Skeleton } from "@/shared/ui/skeleton";
+import { toast } from "@/shared/ui/sonner";
 
-const STATUS: Record<string, { label: string; variant: "green" | "blue" | "gray" }> = {
-  live: { label: "Идёт сейчас", variant: "green" },
-  scheduled: { label: "Запланирован", variant: "blue" },
-  ended: { label: "Завершён", variant: "gray" },
-};
+function joinUrl(joinPath: string): string {
+  return `${window.location.origin}${joinPath}`;
+}
 
-function LessonRow({ lesson }: { lesson: LessonResponse }) {
-  const status = STATUS[lesson.status] ?? { label: lesson.status, variant: "gray" as const };
-  const joinable = lesson.status === "scheduled" || lesson.status === "live";
+async function copyJoinLink(joinPath: string) {
+  try {
+    await navigator.clipboard.writeText(joinUrl(joinPath));
+    toast.success("Ссылка для учеников скопирована");
+  } catch {
+    toast.error("Не удалось скопировать ссылку");
+  }
+}
+
+function LessonRow({ lesson }: { lesson: LessonSummary }) {
   return (
     <Card className="flex flex-col gap-3 p-4 transition-shadow hover:shadow-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <div className="flex min-w-0 items-start gap-3.5">
         <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary">
-          {lesson.status === "live" ? (
-            <Radio className="size-5 animate-pulse" aria-hidden />
-          ) : (
-            <CalendarDays className="size-5" aria-hidden />
-          )}
+          <Video className="size-5" aria-hidden />
         </span>
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="truncate font-semibold text-foreground">{lesson.title}</span>
-            <Badge variant={status.variant}>{status.label}</Badge>
-          </div>
+          <span className="block truncate font-semibold text-foreground">{lesson.title}</span>
           <div className="mt-0.5 text-sm text-muted-foreground">
-            {lesson.subject} · {new Date(lesson.startsAt).toLocaleString("ru-RU", {
-              day: "numeric",
-              month: "long",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+            {lesson.teacherName}
+            {lesson.scheduledAt
+              ? ` · ${new Date(lesson.scheduledAt).toLocaleString("ru-RU", {
+                  day: "numeric",
+                  month: "long",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}`
+              : ""}
           </div>
         </div>
       </div>
-      {joinable ? (
-        <Button asChild size="sm" variant={lesson.status === "live" ? "default" : "secondary"} className="shrink-0">
+      <div className="flex shrink-0 gap-2">
+        <Button size="sm" variant="ghost" onClick={() => void copyJoinLink(lesson.joinPath)}>
+          <Link2 aria-hidden />
+          Ссылка
+        </Button>
+        <Button asChild size="sm" variant="secondary">
           <Link to={`/lessons/${lesson.id}/room`}>
             Войти
             <ArrowRight aria-hidden />
           </Link>
         </Button>
-      ) : null}
+      </div>
     </Card>
   );
 }
 
 export function LessonsListPage() {
   const { data, error, loading, reload } = useAsync(
-    () => apiFetch<{ items: LessonResponse[] }>("/lessons"),
+    () => apiFetch<{ items: LessonSummary[] }>("/lessons"),
     [],
   );
 
   return (
     <div className="mx-auto max-w-4xl">
-      <PageHeader title="Уроки" subtitle="Расписание и вход в комнату урока" />
+      <PageHeader title="Уроки" subtitle="Постоянные комнаты уроков и ссылки для учеников" />
 
       {loading ? (
         <div className="flex flex-col gap-3">
@@ -93,7 +98,7 @@ export function LessonsListPage() {
         <EmptyState
           icon={CalendarDays}
           title="Уроков пока нет"
-          description="Здесь появятся запланированные уроки, как только их создадут."
+          description="Уроки создаёт администратор в разделе «Администрирование»."
         />
       )}
     </div>

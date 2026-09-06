@@ -9,7 +9,7 @@ import type {
   DeckProgressEvent,
   JoinLessonResponse,
   LessonMode,
-  LessonResponse,
+  LessonSummary,
   LessonStatus,
   MediaConnection,
   ParticipantSnapshot,
@@ -197,7 +197,7 @@ export function RoomPage() {
 
   useEffect(() => {
     if (!lessonId) return;
-    apiFetch<LessonResponse>(`/lessons/${lessonId}`)
+    apiFetch<LessonSummary>(`/lessons/${lessonId}`)
       .then((l) => setLessonTitle(l.title))
       .catch(() => undefined);
   }, [lessonId]);

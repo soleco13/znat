@@ -76,6 +76,21 @@ export async function getUserForAuth(schoolId: string, id: string) {
   return repo.findUserById(id, schoolId);
 }
 
+/** Имена по набору id (Э12) — обогащение списков уроков/журнала посещений именем учителя/участника. */
+export async function getUserNames(schoolId: string, ids: string[]) {
+  const rows = await repo.findUsersByIds(schoolId, [...new Set(ids)]);
+  return new Map(rows.map((r) => [r.id, r]));
+}
+
+/** Проверяет, что пользователь существует в школе и он учитель (Э12: назначение учителя уроку). */
+export async function assertTeacher(schoolId: string, teacherId: string) {
+  const user = await repo.findUserById(teacherId, schoolId);
+  if (!user || user.role !== "teacher") {
+    throw new AppError(400, "invalid_teacher", "Указанный пользователь не является учителем");
+  }
+  return user;
+}
+
 export async function getGroupOrThrow(schoolId: string, groupId: string) {
   const group = await repo.findGroupById(groupId, schoolId);
   if (!group) {

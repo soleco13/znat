@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import type { Material, MaterialStatus } from "@school/shared";
 import { db } from "../../db/client.js";
 import { materials, materialVersions } from "../../db/schema.js";
@@ -320,6 +320,18 @@ const summarySelection = {
   createdAt: materials.createdAt,
   updatedAt: materials.updatedAt,
 };
+
+/** Сводки материалов по набору id в пределах школы (Э12: список материалов урока — «домашка»). */
+export async function findMaterialSummariesByIds(
+  schoolId: string,
+  ids: string[],
+): Promise<MaterialSummaryRow[]> {
+  if (ids.length === 0) return [];
+  return db
+    .select(summarySelection)
+    .from(materials)
+    .where(and(eq(materials.schoolId, schoolId), inArray(materials.id, ids)));
+}
 
 /**
  * Библиотека материалов (Э9.1, §8 ТЗ: `GET /materials?subject=&grade=&q=&status=`

@@ -119,7 +119,10 @@ async function assertLessonMember(user: AccessTokenPayload, lessonId: string) {
     return lesson;
   }
   if (user.role === "student") {
-    const isMember = await usersService.isGroupMember(lesson.groupId, user.sub);
+    // Э12: у уроков новой модели группы нет (`groupId === null`) — ученик
+    // на них попадает гостевым путём (Э12.4), не через эту проверку.
+    const isMember =
+      lesson.groupId !== null && (await usersService.isGroupMember(lesson.groupId, user.sub));
     if (!isMember) {
       throw new AppError(403, "forbidden", "Вы не состоите в группе этого урока");
     }
@@ -173,6 +176,16 @@ export async function createActivity(
   const lesson = await assertLessonTeacher(user, lessonId);
   if (lesson.status === "ended") {
     throw new AppError(409, "lesson_ended", "Урок уже завершён — задание не выдать");
+  }
+  if (!lesson.groupId) {
+    // Э12: интерактивные задания на уроках новой модели репойнтятся с
+    // группы на участника (`lesson_participants`) в Э12.5 — до этого
+    // момента их можно запускать только в legacy-уроках с группой.
+    throw new AppError(
+      409,
+      "lesson_activities_pending",
+      "Задания на уроке этого типа появятся после Э12.5",
+    );
   }
 
   // Закрепляем ИМЕННО ту версию, что учитель видит сейчас (Э8.2): разбор и
