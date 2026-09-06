@@ -12,6 +12,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file=.env src/db/migrate.ts",
     "seed:material": "tsx --env-file=.env src/db/seed-material.ts",
+    "seed:dev": "tsx --env-file=.env src/db/seed-dev.ts",
     "db:migrate:prod": "node dist/db/migrate.js"
   },
   "dependencies": {

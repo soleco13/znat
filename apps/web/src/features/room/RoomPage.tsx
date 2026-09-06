@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
+import { LiveKitRoom, RoomAudioRenderer, useRoomContext } from "@livekit/components-react";
 import { VideoPresets, type RoomOptions } from "livekit-client";
 import { Hand, LogOut, Pin, Send, Users } from "lucide-react";
 import type {
@@ -9,6 +9,7 @@ import type {
   DeckProgressEvent,
   JoinLessonResponse,
   LessonMode,
+  LessonResponse,
   LessonStatus,
   MediaConnection,
   ParticipantSnapshot,
@@ -41,7 +42,7 @@ import { LessonActivityPanel } from "../materials/LessonActivityPanel.js";
 import { RecordingConsentBanner, RecordingPanel } from "../recordings/RecordingPanel.js";
 import { SelfCameraButton, VideoDegradeSuggestion } from "./CameraControls.js";
 import { ConnectionQualityDot, PacketLossWarning } from "./ConnectionQuality.js";
-import { DeviceCheckScreen } from "./DeviceCheckScreen.js";
+import { DeviceCheckScreen, type DeviceCheckResult } from "./DeviceCheckScreen.js";
 import { MediaAudioStatus } from "./MediaAudioStatus.js";
 import { MicStatusIcon, SelfMicButton } from "./MicControls.js";
 import { MicSync } from "./MicSync.js";
@@ -106,6 +107,10 @@ export function RoomPage() {
   const [deviceCheckDone, setDeviceCheckDone] = useState(false);
   const [micDeviceId, setMicDeviceId] = useState<string | null>(null);
   const [camDeviceId, setCamDeviceId] = useState<string | null>(null);
+  const [spkDeviceId, setSpkDeviceId] = useState<string | null>(null);
+  const [joinMicEnabled, setJoinMicEnabled] = useState(true);
+  const [joinCamEnabled, setJoinCamEnabled] = useState(true);
+  const [lessonTitle, setLessonTitle] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const isTeacher = me?.role === "teacher" || me?.role === "admin";
@@ -189,6 +194,13 @@ export function RoomPage() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat]);
+
+  useEffect(() => {
+    if (!lessonId) return;
+    apiFetch<LessonResponse>(`/lessons/${lessonId}`)
+      .then((l) => setLessonTitle(l.title))
+      .catch(() => undefined);
+  }, [lessonId]);
 
   const refreshDecks = useCallback(() => {
     if (!lessonId) return;
@@ -611,9 +623,14 @@ export function RoomPage() {
   if (!deviceCheckDone) {
     return (
       <DeviceCheckScreen
-        onContinue={(micId, camId) => {
-          setMicDeviceId(micId);
-          setCamDeviceId(camId);
+        lessonTitle={lessonTitle}
+        defaultCameraOn={isTeacher}
+        onContinue={(r: DeviceCheckResult) => {
+          setMicDeviceId(r.micDeviceId);
+          setCamDeviceId(r.camDeviceId);
+          setSpkDeviceId(r.spkDeviceId);
+          setJoinMicEnabled(r.micEnabled);
+          setJoinCamEnabled(r.camEnabled);
           setDeviceCheckDone(true);
         }}
       />
@@ -632,15 +649,21 @@ export function RoomPage() {
         // Э6.2, §5.2 ТЗ: автоподписка LiveKit выключена намеренно — подпиской
         // управляет `VideoSubscriptionManager` ниже, единственное место.
         connectOptions={{ autoSubscribe: false }}
-        audio={self?.permissions.canSpeak ? { deviceId: micDeviceId ?? undefined } : false}
-        // Э5.1/Э5.4/Э6.1 — см. историю в git; логика неизменна.
+        audio={
+          self?.permissions.canSpeak && joinMicEnabled
+            ? { deviceId: micDeviceId ?? undefined }
+            : false
+        }
+        // Э5.1/Э5.4/Э6.1 — см. историю в git; логика неизменна. joinCamEnabled —
+        // Э11: с каким состоянием камеры участник нажал «Присоединиться».
         video={
-          isTeacher
+          isTeacher && joinCamEnabled
             ? { resolution: VideoPresets.h720.resolution, deviceId: camDeviceId ?? undefined }
             : false
         }
         onDisconnected={() => setError("Аудио отключено")}
       >
+        <ApplyAudioOutput deviceId={spkDeviceId} />
         <MicSync enabled={self?.permissions.canSpeak ?? false} />
         <VideoSubscriptionManager participants={participants} mode={lessonMode} />
         <TeacherVideoTile />
@@ -649,4 +672,18 @@ export function RoomPage() {
       </LiveKitRoom>
     </TooltipProvider>
   );
+}
+
+/**
+ * Применяет выбранное на экране проверки устройство вывода звука к комнате
+ * LiveKit (Э11). `setSinkId` под капотом — тихо игнорируется браузерами без
+ * поддержки; сбой выбора не должен ронять урок (§1.2 ТЗ).
+ */
+function ApplyAudioOutput({ deviceId }: { deviceId: string | null }) {
+  const room = useRoomContext();
+  useEffect(() => {
+    if (!deviceId) return;
+    void room.switchActiveDevice("audiooutput", deviceId).catch(() => undefined);
+  }, [room, deviceId]);
+  return null;
 }
