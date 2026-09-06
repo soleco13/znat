@@ -89,8 +89,9 @@
 .canvas-board .excalidraw .scroll-back-to-content,
 .canvas-board .excalidraw .context-menu,
 .canvas-board .excalidraw .dropdown-menu-container {
+  /* radius-xl (20px) — ровно как у нашей шапки доски (`rounded-xl`). */
   border: 1px solid var(--c-border-solid) !important;
-  border-radius: var(--radius-lg) !important;
+  border-radius: var(--radius-xl) !important;
   box-shadow: var(--shadow-sm) !important;
   background: rgba(255, 255, 255, 0.95) !important;
   backdrop-filter: blur(6px);
@@ -139,7 +140,7 @@
   display: flex !important;
   flex-direction: column !important;
   width: auto !important;
-  border-radius: var(--radius) !important;
+  border-radius: var(--radius-xl) !important;
 }
 .canvas-board .excalidraw .App-toolbar .Stack_horizontal {
   grid-auto-flow: row !important;
