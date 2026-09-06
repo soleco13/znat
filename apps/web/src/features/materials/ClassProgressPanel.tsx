@@ -1,8 +1,18 @@
 import { useEffect, useRef, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import type { ActivityProgress, StudentProgress, StudentProgressStatus } from "@school/shared";
 
 import { UserAvatar } from "@/shared/ui/avatar";
+import { Badge } from "@/shared/ui/badge";
 import { CenteredSpinner } from "@/shared/ui/spinner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/shared/ui/table";
 import { getActivityProgress } from "./activity-api.js";
 
 /** Как часто учитель опрашивает прогресс класса — «живая картина» без пуша (§7.3 ТЗ). */
@@ -55,6 +65,8 @@ export function ClassProgressPanel({
 
   const counts = tally(progress.students);
 
+  const clickable = Boolean(onSelectStudent);
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2 text-xs">
@@ -64,37 +76,56 @@ export function ClassProgressPanel({
         <Stat label="не начали" value={counts.not_started} tone="gray" />
         {error ? <span className="self-center text-warning">обновление прервалось</span> : null}
       </div>
-      <ul className="divide-y divide-border rounded-lg border border-border">
-        {progress.students.map((s) => {
-          const inner = (
-            <>
-              <span className="flex items-center gap-2">
-                <StatusDot status={s.status} />
-                <UserAvatar name={s.displayName} size={22} />
-                {s.displayName}
-              </span>
-              <span className="text-xs font-medium text-muted-foreground">
-                {s.answered}/{s.total}
-              </span>
-            </>
-          );
-          return (
-            <li key={s.participantId}>
-              {onSelectStudent ? (
-                <button
-                  type="button"
-                  onClick={() => onSelectStudent(s.participantId, s.displayName)}
-                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors hover:bg-secondary"
+      <div className="overflow-hidden rounded-lg border border-border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Ученик</TableHead>
+              <TableHead className="w-28">Статус</TableHead>
+              <TableHead className="w-20 text-right">Ответы</TableHead>
+              {clickable ? <TableHead className="w-8" /> : null}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {progress.students.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={clickable ? 4 : 3}
+                  className="py-6 text-center text-sm text-muted-foreground"
                 >
-                  {inner}
-                </button>
-              ) : (
-                <div className="flex items-center justify-between px-3 py-2 text-sm">{inner}</div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+                  Учеников на уроке пока нет
+                </TableCell>
+              </TableRow>
+            ) : (
+              progress.students.map((s) => (
+                <TableRow
+                  key={s.participantId}
+                  onClick={onSelectStudent ? () => onSelectStudent(s.participantId, s.displayName) : undefined}
+                  className={clickable ? "cursor-pointer" : undefined}
+                >
+                  <TableCell>
+                    <span className="flex items-center gap-2 font-medium">
+                      <UserAvatar name={s.displayName} size={24} />
+                      {s.displayName}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={s.status} />
+                  </TableCell>
+                  <TableCell className="text-right text-xs font-medium text-muted-foreground">
+                    {s.answered}/{s.total}
+                  </TableCell>
+                  {clickable ? (
+                    <TableCell className="text-muted-foreground">
+                      <ChevronRight className="size-4" aria-hidden />
+                    </TableCell>
+                  ) : null}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
@@ -121,6 +152,17 @@ function Stat({
   );
 }
 
+const STATUS_BADGE: Record<StudentProgressStatus, { label: string; variant: "gray" | "blue" | "yellow" }> = {
+  not_started: { label: "не начал", variant: "gray" },
+  in_progress: { label: "в работе", variant: "blue" },
+  stuck: { label: "застрял", variant: "yellow" },
+};
+
+function StatusBadge({ status }: { status: StudentProgressStatus }) {
+  const meta = STATUS_BADGE[status];
+  return <Badge variant={meta.variant}>{meta.label}</Badge>;
+}
+
 function tally(students: StudentProgress[]) {
   const counts = { not_started: 0, in_progress: 0, stuck: 0, done: 0 };
   for (const s of students) {
@@ -128,22 +170,4 @@ function tally(students: StudentProgress[]) {
     else counts[s.status] += 1;
   }
   return counts;
-}
-
-const DOT_CLASS: Record<StudentProgressStatus, string> = {
-  not_started: "bg-text-3",
-  in_progress: "bg-primary",
-  stuck: "bg-warning",
-};
-
-function StatusDot({ status }: { status: StudentProgressStatus }) {
-  const label =
-    status === "not_started" ? "не начал" : status === "stuck" ? "застрял" : "в работе";
-  return (
-    <span
-      className={`inline-block size-2.5 shrink-0 rounded-full ${DOT_CLASS[status]}`}
-      title={label}
-      aria-label={label}
-    />
-  );
 }

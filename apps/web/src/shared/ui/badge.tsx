@@ -13,7 +13,7 @@ const badgeVariants = cva(
         blue: "bg-primary-light text-primary",
         green: "bg-success-light text-success",
         success: "bg-success-light text-success",
-        yellow: "bg-warn-light text-[#b45309]",
+        yellow: "bg-warn-light text-warn",
         warning: "bg-warn-light text-[#b45309]",
         red: "bg-danger-light text-danger",
         destructive: "bg-danger-light text-danger",

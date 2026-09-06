@@ -1,4 +1,4 @@
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   DndContext,
@@ -40,7 +40,6 @@ import {
   ListChecks,
   Plus,
   Quote,
-  Search,
   SeparatorHorizontal,
   Settings2,
   Sigma,
@@ -75,6 +74,21 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/shared/auth-store";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
+import { Card } from "@/shared/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/shared/ui/collapsible";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/shared/ui/command";
 import {
   Dialog,
   DialogContent,
@@ -86,6 +100,7 @@ import {
 } from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
+import { Switch } from "@/shared/ui/switch";
 import {
   Select,
   SelectContent,
@@ -96,6 +111,7 @@ import {
 import { CenteredSpinner } from "@/shared/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { Textarea } from "@/shared/ui/textarea";
+import { SimpleTooltip } from "@/shared/ui/tooltip";
 import { toast } from "@/shared/ui/sonner";
 import { ContentBlockView } from "./MaterialPlayer.js";
 import { QuestionPlayer } from "./QuestionPlayer.js";
@@ -904,25 +920,27 @@ function SortableUnit({
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn("group/unit relative py-1.5 pl-9", isDragging && "opacity-50")}
     >
-      <div className="absolute left-0 top-2 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/unit:opacity-100 group-focus-within/unit:opacity-100">
+      <div className="absolute left-0 top-1.5 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/unit:opacity-100 group-focus-within/unit:opacity-100">
         <InsertMenu onInsert={onInsertAfter}>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-sm"
             aria-label="Вставить блок"
-            className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            className="text-muted-foreground"
           >
-            <Plus className="size-4" />
-          </button>
+            <Plus />
+          </Button>
         </InsertMenu>
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon-sm"
           aria-label="Перетащить"
-          className="cursor-grab rounded p-0.5 text-muted-foreground/60 transition-colors hover:bg-secondary hover:text-foreground"
+          className="cursor-grab text-muted-foreground/60"
           {...attributes}
           {...listeners}
         >
-          <GripVertical className="size-4" />
-        </button>
+          <GripVertical />
+        </Button>
       </div>
 
       {unit.kind === "group" ? (
@@ -971,93 +989,76 @@ function GroupFrame({
   onUngroup: () => void;
   onMove: (blockId: string, direction: -1 | 1) => void;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [open, setOpen] = useState(true);
   return (
-    <div className="rounded-xl border border-primary-muted bg-primary-light/40">
+    <Collapsible
+      open={open}
+      onOpenChange={setOpen}
+      className="rounded-xl border border-primary-muted bg-primary-light/40"
+    >
       <div className="flex items-center justify-between gap-2 px-3 py-1.5">
-        <button
-          type="button"
-          onClick={() => setCollapsed((v) => !v)}
-          className="flex items-center gap-1.5 text-xs font-semibold text-primary"
-        >
+        <CollapsibleTrigger className="flex items-center gap-1.5 text-xs font-semibold text-primary">
           <ChevronDown
-            className={cn("size-3.5 transition-transform", collapsed && "-rotate-90")}
+            className={cn("size-3.5 transition-transform", !open && "-rotate-90")}
             aria-hidden
           />
           <LayoutTemplate className="size-3.5" aria-hidden />
           Шаблон · {group.label}
-        </button>
+        </CollapsibleTrigger>
         <div className="flex items-center gap-0.5">
-          <button
-            type="button"
-            onClick={onUngroup}
-            aria-label="Разгруппировать"
-            title="Разгруппировать — оставить блоки, убрать рамку"
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-          >
-            <Ungroup className="size-3.5" />
-          </button>
-          <button
-            type="button"
+          <SimpleTooltip content="Разгруппировать — оставить блоки, убрать рамку">
+            <Button variant="ghost" size="icon-sm" onClick={onUngroup} aria-label="Разгруппировать">
+              <Ungroup />
+            </Button>
+          </SimpleTooltip>
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={onRemoveGroup}
             aria-label="Удалить конструкцию"
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           >
-            <Trash2 className="size-3.5" />
-          </button>
+            <Trash2 />
+          </Button>
         </div>
       </div>
-      {!collapsed ? (
-        <div className="flex flex-col gap-2 px-3 pb-3">
-          {blocks.map((block, i) => (
-            <div key={block.id} className="flex items-start gap-1.5">
-              <div className="flex flex-col pt-1">
-                <button
-                  type="button"
-                  disabled={i === 0}
-                  onClick={() => onMove(block.id, -1)}
-                  aria-label="Выше"
-                  className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-secondary disabled:opacity-25"
-                >
-                  <ChevronUp className="size-3.5" />
-                </button>
-                <button
-                  type="button"
-                  disabled={i === blocks.length - 1}
-                  onClick={() => onMove(block.id, 1)}
-                  aria-label="Ниже"
-                  className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-secondary disabled:opacity-25"
-                >
-                  <ChevronDown className="size-3.5" />
-                </button>
-              </div>
-              <div className="min-w-0 flex-1">
-                <BlockCard
-                  block={block}
-                  issues={issues}
-                  focus={focusBlockId === block.id}
-                  onChange={(updater) => onUpdateBlock(block.id, updater)}
-                  onRemove={() => onRemoveBlock(block.id)}
-                />
-              </div>
+      <CollapsibleContent className="flex flex-col gap-2 px-3 pb-3">
+        {blocks.map((block, i) => (
+          <div key={block.id} className="flex items-start gap-1.5">
+            <div className="flex flex-col pt-1">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                disabled={i === 0}
+                onClick={() => onMove(block.id, -1)}
+                aria-label="Выше"
+              >
+                <ChevronUp />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                disabled={i === blocks.length - 1}
+                onClick={() => onMove(block.id, 1)}
+                aria-label="Ниже"
+              >
+                <ChevronDown />
+              </Button>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="px-3 pb-2 text-xs text-muted-foreground">
-          {blocks.length} {plural(blocks.length, "блок", "блока", "блоков")} свёрнуто
-        </div>
-      )}
-    </div>
+            <div className="min-w-0 flex-1">
+              <BlockCard
+                block={block}
+                issues={issues}
+                focus={focusBlockId === block.id}
+                onChange={(updater) => onUpdateBlock(block.id, updater)}
+                onRemove={() => onRemoveBlock(block.id)}
+              />
+            </div>
+          </div>
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
   );
-}
-
-function plural(n: number, one: string, few: string, many: string): string {
-  const m10 = n % 10;
-  const m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return one;
-  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
-  return many;
 }
 
 // ─── Карточка блока ─────────────────────────────────────────────────────
@@ -1091,61 +1092,75 @@ function BlockCard({
       ? INTERACTION_ICONS[block.interaction.type]
       : CONTENT_BLOCK_ICONS[block.type];
 
+  const issuesBlock =
+    blockIssues.length > 0 ? (
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5 px-3 pb-2 text-[11px] text-warning">
+        {blockIssues.map((i, k) => (
+          <span key={k} className="inline-flex items-center gap-1">
+            <AlertTriangle className="size-3" aria-hidden />
+            {i.message}
+          </span>
+        ))}
+      </div>
+    ) : null;
+
+  if (bare) {
+    return (
+      <div
+        id={`block-${block.id}`}
+        className={cn(
+          "group/card relative scroll-mt-28 rounded-xl transition-shadow",
+          focus && "ring-2 ring-primary/40",
+        )}
+      >
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onRemove}
+          aria-label="Удалить блок"
+          className="absolute -right-1 top-0 z-10 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover/card:opacity-100"
+        >
+          <Trash2 />
+        </Button>
+        <ContentBlockFields block={block} onChange={(patch) => set(patch)} />
+        {issuesBlock}
+      </div>
+    );
+  }
+
   return (
-    <div
+    <Card
       id={`block-${block.id}`}
       className={cn(
-        "group/card relative scroll-mt-28 rounded-xl transition-colors",
-        !bare && "border border-border bg-card",
+        "group/card scroll-mt-28 overflow-hidden transition-shadow",
         blockIssues.length > 0 && "border-warning/70",
         focus && "ring-2 ring-primary/40",
       )}
     >
-      {!bare ? (
-        <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1.5">
-          <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <Icon className="size-3.5" aria-hidden />
-            {blockLabel(block)}
-          </span>
-          <button
-            type="button"
-            onClick={onRemove}
-            aria-label="Удалить блок"
-            className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover/card:opacity-100"
-          >
-            <Trash2 className="size-3.5" />
-          </button>
-        </div>
-      ) : (
-        <button
-          type="button"
+      <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1.5">
+        <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <Icon className="size-3.5" aria-hidden />
+          {blockLabel(block)}
+        </span>
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={onRemove}
           aria-label="Удалить блок"
-          className="absolute -right-1 top-0 z-10 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover/card:opacity-100"
+          className="text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover/card:opacity-100"
         >
-          <Trash2 className="size-3.5" />
-        </button>
-      )}
-
-      <div className={cn(bare ? "" : "p-3")}>
+          <Trash2 />
+        </Button>
+      </div>
+      <div className="p-3">
         {block.type === "question" ? (
           <QuestionBlockFields block={block} onChange={(patch) => set(patch)} />
         ) : (
           <ContentBlockFields block={block} onChange={(patch) => set(patch)} />
         )}
       </div>
-
-      {blockIssues.length > 0 ? (
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5 px-3 pb-2 text-[11px] text-warning">
-          {blockIssues.map((i, k) => (
-            <span key={k} className="inline-flex items-center gap-1">
-              <AlertTriangle className="size-3" aria-hidden />
-              {i.message}
-            </span>
-          ))}
-        </div>
-      ) : null}
-    </div>
+      {issuesBlock}
+    </Card>
   );
 }
 
@@ -1159,85 +1174,104 @@ function InsertMenu({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
   const [constructsOpen, setConstructsOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const contentTypes = Object.keys(CONTENT_BLOCK_LABELS) as ContentBlock["type"][];
   const questionTypes = Object.keys(INTERACTION_LABELS) as QuestionInteraction["type"][];
-  const q = query.trim().toLowerCase();
-  const match = (label: string) => !q || label.toLowerCase().includes(q);
 
   function addAtomic(key: ContentBlock["type"] | QuestionInteraction["type"]) {
     onInsert([createBlock(key)], null);
-    close();
-  }
-  function close() {
     setOpen(false);
-    setQuery("");
+  }
+
+  async function handleImportFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setOpen(false);
+    try {
+      const result = await importQuestionsFromDocument(file);
+      if (result.blocks.length === 0) {
+        toast.error("В файле не нашлось текста");
+        return;
+      }
+      onInsert(result.blocks, null);
+      toast.success(
+        `Добавлено блоков: ${result.blocks.length}${
+          result.truncated ? ` (лимит ${IMPORT_MAX_QUESTIONS})` : ""
+        } — проверьте вручную`,
+      );
+    } catch {
+      toast.error("Не удалось разобрать файл (.docx / .pdf)");
+    }
   }
 
   return (
     <>
-      <Popover open={open} onOpenChange={(o) => (o ? setOpen(true) : close())}>
+      <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>{children}</PopoverTrigger>
         <PopoverContent align="start" className="w-72 p-0">
-          <div className="border-b border-border p-2">
-            <div className="flex items-center gap-2 rounded-md border border-border px-2">
-              <Search className="size-3.5 text-muted-foreground" aria-hidden />
-              <input
-                autoFocus
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Тип блока…"
-                className="h-8 w-full bg-transparent text-sm outline-none"
-              />
-            </div>
-          </div>
-          <div className="max-h-[50vh] overflow-y-auto p-1.5">
-            <button
-              type="button"
-              onClick={() => {
-                setConstructsOpen(true);
-                close();
-              }}
-              className="flex w-full items-center gap-2 rounded-md border border-primary-muted bg-primary-light/50 px-2 py-2 text-left text-sm font-medium text-primary transition-colors hover:bg-primary-light"
-            >
-              <LayoutTemplate className="size-4 shrink-0" aria-hidden />
-              Конструкции — готовые каркасы…
-            </button>
-
-            <MenuGroup label="Контент">
-              {contentTypes.filter((t) => match(CONTENT_BLOCK_LABELS[t])).map((t) => (
-                <MenuRow
-                  key={t}
-                  icon={CONTENT_BLOCK_ICONS[t]}
-                  label={CONTENT_BLOCK_LABELS[t]}
-                  onClick={() => addAtomic(t)}
-                />
-              ))}
-            </MenuGroup>
-            <MenuGroup label="Вопрос">
-              {questionTypes.filter((t) => match(INTERACTION_LABELS[t])).map((t) => (
-                <MenuRow
-                  key={t}
-                  icon={INTERACTION_ICONS[t]}
-                  label={INTERACTION_LABELS[t]}
-                  onClick={() => addAtomic(t)}
-                />
-              ))}
-            </MenuGroup>
-
-            <div className="border-t border-border pt-1">
-              <ImportRow
-                onImported={(blocks) => {
-                  onInsert(blocks, null);
-                  close();
-                }}
-              />
-            </div>
-          </div>
+          <Command>
+            <CommandInput placeholder="Тип блока…" autoFocus />
+            <CommandList>
+              <CommandEmpty>Ничего не найдено</CommandEmpty>
+              <CommandGroup>
+                <CommandItem
+                  value="конструкции каркасы шаблоны готовые"
+                  onSelect={() => {
+                    setConstructsOpen(true);
+                    setOpen(false);
+                  }}
+                  className="font-medium text-primary [&_svg]:text-primary"
+                >
+                  <LayoutTemplate aria-hidden />
+                  Конструкции — готовые каркасы…
+                </CommandItem>
+              </CommandGroup>
+              <CommandSeparator />
+              <CommandGroup heading="Контент">
+                {contentTypes.map((t) => (
+                  <InsertCommandItem
+                    key={t}
+                    icon={CONTENT_BLOCK_ICONS[t]}
+                    label={CONTENT_BLOCK_LABELS[t]}
+                    onSelect={() => addAtomic(t)}
+                  />
+                ))}
+              </CommandGroup>
+              <CommandGroup heading="Вопрос">
+                {questionTypes.map((t) => (
+                  <InsertCommandItem
+                    key={t}
+                    icon={INTERACTION_ICONS[t]}
+                    label={INTERACTION_LABELS[t]}
+                    onSelect={() => addAtomic(t)}
+                  />
+                ))}
+              </CommandGroup>
+              <CommandSeparator />
+              <CommandGroup>
+                <CommandItem
+                  value="импорт word pdf документ"
+                  onSelect={() => fileInputRef.current?.click()}
+                >
+                  <FileUp aria-hidden />
+                  Импорт из Word / PDF
+                </CommandItem>
+              </CommandGroup>
+            </CommandList>
+          </Command>
         </PopoverContent>
       </Popover>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".docx,.pdf"
+        onChange={handleImportFile}
+        className="hidden"
+      />
 
       <ConstructPickerDialog
         open={constructsOpen}
@@ -1252,76 +1286,20 @@ function InsertMenu({
   );
 }
 
-function MenuGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  const items = Array.isArray(children) ? children.filter(Boolean) : children;
-  if (Array.isArray(items) && items.length === 0) return null;
-  return (
-    <div className="mt-1">
-      <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-text-3">
-        {label}
-      </p>
-      {items}
-    </div>
-  );
-}
-
-function MenuRow({
+function InsertCommandItem({
   icon: Icon,
   label,
-  onClick,
+  onSelect,
 }: {
   icon: LucideIcon;
   label: string;
-  onClick: () => void;
+  onSelect: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-secondary"
-    >
-      <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+    <CommandItem value={label} onSelect={onSelect}>
+      <Icon aria-hidden />
       {label}
-    </button>
-  );
-}
-
-function ImportRow({ onImported }: { onImported: (blocks: MaterialBlock[]) => void }) {
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-
-  async function handleFile(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    setBusy(true);
-    setMessage(null);
-    try {
-      const result = await importQuestionsFromDocument(file);
-      if (result.blocks.length === 0) {
-        setMessage("В файле не нашлось текста");
-        return;
-      }
-      onImported(result.blocks);
-      toast.success(
-        `Добавлено блоков: ${result.blocks.length}${
-          result.truncated ? ` (лимит ${IMPORT_MAX_QUESTIONS})` : ""
-        } — проверьте вручную`,
-      );
-    } catch {
-      setMessage("Не удалось разобрать файл (.docx / .pdf)");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <label className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
-      <FileUp className="size-4 shrink-0" aria-hidden />
-      {busy ? "Распознавание…" : "Импорт из Word/PDF"}
-      <input type="file" accept=".docx,.pdf" onChange={handleFile} disabled={busy} className="hidden" />
-      {message ? <span className="text-[11px] text-destructive">{message}</span> : null}
-    </label>
+    </CommandItem>
   );
 }
 
@@ -1718,10 +1696,9 @@ function SettingsMenu({
         <p className="text-xs font-semibold text-muted-foreground">Настройки материала</p>
         <label className="flex items-center justify-between gap-2 text-sm">
           Перемешивать блоки
-          <input
-            type="checkbox"
+          <Switch
             checked={settings.shuffleBlocks}
-            onChange={(e) => onChange({ shuffleBlocks: e.target.checked })}
+            onCheckedChange={(checked) => onChange({ shuffleBlocks: checked })}
           />
         </label>
         <label className="flex flex-col gap-1.5">
