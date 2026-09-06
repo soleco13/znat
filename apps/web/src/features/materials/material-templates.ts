@@ -253,7 +253,31 @@ export function instantiateConstruct(construct: MaterialConstruct): {
   };
 }
 
-/** Пустой валидный `Material` для мгновенного создания черновика (Э13, вкладка «Редактор»). */
+/**
+ * Метки «черновик только что создан, метаданные ещё не заданы» (Э13).
+ * `schemaVersion` требует непустые `subject`/`grades`, поэтому пустой
+ * черновик заводится с заглушками; редактор просит указать настоящие
+ * название и класс при первом «Сохранить» и блокирует до этого
+ * отправку на ревью/публикацию.
+ */
+export const DRAFT_PLACEHOLDER = { title: "Черновик материала", subject: "—", grade: 1 } as const;
+
+export function isPlaceholderMeta(meta: { title: string; subject: string }): boolean {
+  return (
+    meta.title.trim() === DRAFT_PLACEHOLDER.title && meta.subject.trim() === DRAFT_PLACEHOLDER.subject
+  );
+}
+
+/** Мгновенно создаваемый пустой черновик — метаданные методист укажет позже (Э13). */
+export function buildPlaceholderDraft(): Material {
+  return buildBlankMaterial({
+    title: DRAFT_PLACEHOLDER.title,
+    subject: DRAFT_PLACEHOLDER.subject,
+    grades: [DRAFT_PLACEHOLDER.grade],
+  });
+}
+
+/** Пустой валидный `Material` (Э13, вкладка «Редактор»). */
 export function buildBlankMaterial(meta: {
   title: string;
   subject: string;

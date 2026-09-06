@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText, Plus, SquarePen } from "lucide-react";
 import type { MaterialStatus, MaterialSummary } from "@school/shared";
@@ -6,22 +6,12 @@ import type { MaterialStatus, MaterialSummary } from "@school/shared";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/shared/ui/dialog";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { ErrorState } from "@/shared/ui/error-state";
-import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
 import { PageHeader } from "@/shared/ui/page-header";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { toast } from "@/shared/ui/sonner";
-import { buildBlankMaterial } from "./material-templates.js";
+import { buildPlaceholderDraft } from "./material-templates.js";
 import { createMaterial, listMaterials } from "./materials-api.js";
 
 const STATUS_LABEL: Record<MaterialStatus, string> = {
@@ -78,7 +68,7 @@ export function MaterialsEditorLandingPage() {
       <PageHeader
         title="Редактор материалов"
         subtitle="Создавайте и правьте учебные материалы. Готовые публикуются в библиотеку."
-        actions={<NewMaterialDialog />}
+        actions={<NewMaterialButton />}
       />
 
       {error ? (
@@ -93,7 +83,7 @@ export function MaterialsEditorLandingPage() {
           icon={SquarePen}
           title="Пока нет материалов"
           description="Создайте первый — дальше добавите текст, вопросы и готовые конструкции прямо в листе."
-          action={<NewMaterialDialog />}
+          action={<NewMaterialButton />}
         />
       ) : (
         <div className="flex flex-col gap-8">
@@ -144,9 +134,15 @@ function MaterialCard({ material }: { material: MaterialSummary }) {
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-foreground">{material.title}</p>
         <p className="mt-0.5 truncate text-xs text-muted-foreground">
-          {material.subject}
-          {material.grades.length > 0 ? ` · ${material.grades.join(", ")} кл.` : ""}
-          {material.topic ? ` · ${material.topic}` : ""}
+          {material.subject === "—" ? (
+            "данные не заполнены"
+          ) : (
+            <>
+              {material.subject}
+              {material.grades.length > 0 ? ` · ${material.grades.join(", ")} кл.` : ""}
+              {material.topic ? ` · ${material.topic}` : ""}
+            </>
+          )}
         </p>
       </div>
       <p className="text-[11px] text-text-3">
@@ -156,113 +152,27 @@ function MaterialCard({ material }: { material: MaterialSummary }) {
   );
 }
 
-function NewMaterialDialog() {
+function NewMaterialButton() {
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [subject, setSubject] = useState("");
-  const [gradesText, setGradesText] = useState("");
-  const [topic, setTopic] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  function parseGrades(text: string): number[] {
-    return [
-      ...new Set(
-        text
-          .split(",")
-          .map((s) => Number(s.trim()))
-          .filter((n) => Number.isInteger(n) && n > 0),
-      ),
-    ];
-  }
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    const grades = parseGrades(gradesText);
-    if (!title.trim() || !subject.trim() || grades.length === 0) {
-      setError("Заполните название, предмет и хотя бы один класс (числом)");
-      return;
-    }
-    setSubmitting(true);
-    setError(null);
+  async function create() {
+    setBusy(true);
     try {
-      const result = await createMaterial(
-        buildBlankMaterial({ title: title.trim(), subject: subject.trim(), grades, topic }),
-      );
-      toast.success("Черновик создан");
+      // Мгновенно создаём пустой черновик (Э13). Название и класс методист
+      // укажет в самом листе при «Сохранить».
+      const result = await createMaterial(buildPlaceholderDraft());
       navigate(`/materials/edit/${result.materialId}`);
     } catch {
-      setError("Не удалось создать материал — попробуйте ещё раз");
-      setSubmitting(false);
+      toast.error("Не удалось создать материал — попробуйте ещё раз");
+      setBusy(false);
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">
-          <Plus aria-hidden />
-          Новый материал
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Новый материал</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="nm-title">Название</Label>
-            <Input
-              id="nm-title"
-              autoFocus
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Квадратные уравнения"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="nm-subject">Предмет</Label>
-              <Input
-                id="nm-subject"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="математика"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="nm-grades">Классы</Label>
-              <Input
-                id="nm-grades"
-                value={gradesText}
-                onChange={(e) => setGradesText(e.target.value)}
-                placeholder="8 или 8, 9"
-                inputMode="numeric"
-              />
-            </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="nm-topic">Тема (необязательно)</Label>
-            <Input id="nm-topic" value={topic} onChange={(e) => setTopic(e.target.value)} />
-          </div>
-
-          {error ? (
-            <p className="text-sm font-medium text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
-
-          <DialogFooter>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
-              Отмена
-            </Button>
-            <Button type="submit" size="sm" loading={submitting}>
-              Создать и открыть
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <Button size="sm" loading={busy} onClick={create}>
+      <Plus aria-hidden />
+      Новый материал
+    </Button>
   );
 }
