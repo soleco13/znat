@@ -1,18 +1,8 @@
-import { useState } from "react";
 import { useLocalParticipant, useTracks } from "@livekit/components-react";
-import { ScreenSharePresets, Track, VideoPreset } from "livekit-client";
+import { Track, VideoPreset } from "livekit-client";
 import { MonitorUp, MonitorX } from "lucide-react";
 
-import { Button } from "@/shared/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/ui/select";
-
-type ScreenShareContentType = "document" | "video";
+import { RoomControlButton } from "./RoomControlButton.js";
 
 /**
  * Э7.1, §5.2 ТЗ: «1080p@5fps для документов». `ScreenSharePresets`
@@ -22,14 +12,12 @@ type ScreenShareContentType = "document" | "video";
  * `h1080fps15` берёт 2.5 Мбит/с на 15 fps, при втрое меньшем fps (5)
  * пропорционально вышло бы ~0.83 Мбит/с, округлено чуть вверх ради чёткости
  * текста документа (низкий fps не должен экономить на резкости кадра).
+ *
+ * Э12.7 UX: выбор «документ / видео» из панели убран (ученики и пожилые
+ * учителя не должны выбирать fps/битрейт). Демонстрация всегда стартует в
+ * профиле «документ» — приоритет чёткости текста, это типовой случай урока.
  */
 const DOCUMENT_SCREEN_SHARE_PRESET = new VideoPreset(1920, 1080, 1_000_000, 5, "medium");
-
-/** §5.2 ТЗ: «720p@15fps для видео» — это готовый пресет LiveKit, ничего оценивать не пришлось. */
-const CONTENT_PRESETS: Record<ScreenShareContentType, VideoPreset> = {
-  document: DOCUMENT_SCREEN_SHARE_PRESET,
-  video: ScreenSharePresets.h720fps15,
-};
 
 /**
  * Демонстрация экрана (Э7.1) — переключатель типа контента ДО старта:
@@ -59,7 +47,6 @@ const CONTENT_PRESETS: Record<ScreenShareContentType, VideoPreset> = {
  */
 export function SelfScreenShareButton({ priority = false }: { priority?: boolean }) {
   const { localParticipant, isScreenShareEnabled } = useLocalParticipant();
-  const [contentType, setContentType] = useState<ScreenShareContentType>("document");
   const othersSharing = useTracks([Track.Source.ScreenShare], { onlySubscribed: false }).some(
     (t) => t.participant.identity !== localParticipant.identity,
   );
@@ -70,40 +57,28 @@ export function SelfScreenShareButton({ priority = false }: { priority?: boolean
       await localParticipant.setScreenShareEnabled(false);
       return;
     }
-    const preset = CONTENT_PRESETS[contentType];
     await localParticipant.setScreenShareEnabled(
       true,
-      { audio: false, resolution: preset.resolution, contentHint: contentType === "document" ? "detail" : "motion" },
-      { screenShareEncoding: preset.encoding },
+      {
+        audio: false,
+        resolution: DOCUMENT_SCREEN_SHARE_PRESET.resolution,
+        contentHint: "detail",
+      },
+      { screenShareEncoding: DOCUMENT_SCREEN_SHARE_PRESET.encoding },
     );
   }
 
   return (
-    <div className="flex items-center gap-2">
-      {!isScreenShareEnabled && (
-        <Select
-          value={contentType}
-          onValueChange={(v) => setContentType(v as ScreenShareContentType)}
-        >
-          <SelectTrigger className="h-8 w-[190px] text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="document">Документ (1080p, 5 fps)</SelectItem>
-            <SelectItem value="video">Видео (720p, 15 fps)</SelectItem>
-          </SelectContent>
-        </Select>
-      )}
-      <Button
-        variant={isScreenShareEnabled ? "outline" : "secondary"}
-        size="sm"
-        onClick={toggle}
-        disabled={blocked}
-        title={blocked ? "Кто-то уже демонстрирует экран" : undefined}
-      >
-        {isScreenShareEnabled ? <MonitorX aria-hidden /> : <MonitorUp aria-hidden />}
-        {isScreenShareEnabled ? "Остановить демонстрацию" : "Демонстрация экрана"}
-      </Button>
-    </div>
+    <RoomControlButton
+      tone="action"
+      active={isScreenShareEnabled}
+      activeIcon={MonitorX}
+      inactiveIcon={MonitorUp}
+      activeLabel="Стоп показ"
+      inactiveLabel="Показать"
+      onToggle={toggle}
+      disabled={blocked}
+      title={blocked ? "Кто-то уже демонстрирует экран" : undefined}
+    />
   );
 }

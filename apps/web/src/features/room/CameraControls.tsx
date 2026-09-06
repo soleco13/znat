@@ -4,6 +4,7 @@ import { Track, VideoPresets, type VideoResolution } from "livekit-client";
 import { AlertTriangle, Video, VideoOff } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
+import { RoomControlButton } from "./RoomControlButton.js";
 
 /**
  * Кнопка «камера» (Э5.1/Э5.3/Э6.1). Публикация трека ручная, как и микрофон.
@@ -16,16 +17,16 @@ export function SelfCameraButton({
 }) {
   const { localParticipant, isCameraEnabled } = useLocalParticipant();
   return (
-    <Button
-      variant={isCameraEnabled ? "outline" : "secondary"}
-      size="sm"
-      onClick={() =>
+    <RoomControlButton
+      active={isCameraEnabled}
+      activeIcon={Video}
+      inactiveIcon={VideoOff}
+      activeLabel="Камера"
+      inactiveLabel="Камера выкл."
+      onToggle={() =>
         localParticipant.setCameraEnabled(!isCameraEnabled, { resolution: maxResolution })
       }
-    >
-      {isCameraEnabled ? <VideoOff aria-hidden /> : <Video aria-hidden />}
-      {isCameraEnabled ? "Скрыть видео (только доска)" : "Показать видео"}
-    </Button>
+    />
   );
 }
 

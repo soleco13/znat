@@ -142,7 +142,13 @@ function clearEmptyRoomTimer(lessonId: string): void {
   }
 }
 
-async function scheduleAutoEndIfEmpty(schoolId: string, lessonId: string): Promise<void> {
+/**
+ * Э12 (§0 план-ТЗ): урок постоянный, без статус-машины. Когда комната
+ * пустеет, урок НЕ «завершается» — он остаётся доступен по ссылке всегда.
+ * Освобождаем только эфемерные ресурсы: выгружаем Y.Doc холста и снимаем
+ * урок с учёта активного трафика. Название функции историческое.
+ */
+async function scheduleAutoEndIfEmpty(_schoolId: string, lessonId: string): Promise<void> {
   const participants = await presence.listParticipants(lessonId);
   if (participants.size > 0) {
     clearEmptyRoomTimer(lessonId);
@@ -156,14 +162,10 @@ async function scheduleAutoEndIfEmpty(schoolId: string, lessonId: string): Promi
       try {
         const stillEmpty = (await presence.listParticipants(lessonId)).size === 0;
         if (!stillEmpty) return;
-        const lesson = await lessonsService.getLesson(schoolId, lessonId);
-        if (lesson.status !== "live") return;
-        await lessonsService.endLesson(schoolId, lessonId);
         canvasService.closeCanvasDocument(lessonId);
-        emitRoomEvent(lessonId, { type: "lesson_status", status: "ended" });
         activeLessons.delete(lessonId);
       } catch (err) {
-        console.error("rooms: auto-end failed", lessonId, err);
+        console.error("rooms: room cleanup failed", lessonId, err);
       }
     })();
   }, EMPTY_ROOM_AUTOEND_MS);
@@ -263,9 +265,8 @@ export async function getActiveLessonTrafficSnapshot(): Promise<
 
 export async function join(actor: LessonActor, lessonId: string): Promise<JoinLessonResponse> {
   const lesson = await assertMembership(actor, lessonId);
-  if (lesson.status === "ended" || lesson.status === "cancelled") {
-    throw new AppError(409, "lesson_not_joinable", "Урок завершён или отменён");
-  }
+  // Э12 (§0 план-ТЗ): урок постоянный, без статуса — войти можно всегда,
+  // проверка `ended`/`cancelled` убрана.
 
   const schoolId = actor.schoolId;
   const participantId = actor.participantId;

@@ -195,11 +195,11 @@ describe("join: контроль доступа", () => {
     ).rejects.toMatchObject({ statusCode: 403 });
   });
 
-  it("нельзя войти в завершённый или отменённый урок", async () => {
+  it("Э12: урок постоянный — войти можно независимо от статуса", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson({ status: "ended" }));
 
-    await expect(roomsService.join(guestActor(), LESSON_ID)).rejects.toMatchObject({
-      statusCode: 409,
+    await expect(roomsService.join(guestActor(), LESSON_ID)).resolves.toMatchObject({
+      participants: expect.any(Array),
     });
   });
 
