@@ -89,7 +89,7 @@ function mcQuestion(promptHtml: string, options: string[], correctIndex: number)
     shuffle: false,
     options: options.map((html, i) => ({
       id: crypto.randomUUID(),
-      html: `<p>${html}</p>`,
+      html,
       correct: i === correctIndex,
     })),
   };

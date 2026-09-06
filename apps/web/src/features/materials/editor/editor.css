@@ -1,0 +1,96 @@
+/* Редактор-«лист» (Э13) — стили содержимого ProseMirror под дизайн-систему. */
+
+.prose-editor {
+  font-size: 15px;
+  line-height: 1.65;
+  color: hsl(var(--foreground));
+}
+.prose-editor:focus {
+  outline: none;
+}
+.prose-editor > * + * {
+  margin-top: 0.45em;
+}
+.prose-editor > *:first-child {
+  margin-top: 0;
+}
+.prose-editor p {
+  margin: 0;
+}
+.prose-editor h1 {
+  font-size: 1.6em;
+  font-weight: 800;
+  line-height: 1.25;
+  margin: 0.7em 0 0.15em;
+}
+.prose-editor h2 {
+  font-size: 1.28em;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0.7em 0 0.15em;
+}
+.prose-editor h3 {
+  font-size: 1.08em;
+  font-weight: 650;
+  line-height: 1.3;
+  margin: 0.6em 0 0.1em;
+}
+.prose-editor ul {
+  list-style: disc;
+  padding-left: 1.4em;
+}
+.prose-editor ol {
+  list-style: decimal;
+  padding-left: 1.4em;
+}
+.prose-editor li {
+  margin: 0.12em 0;
+}
+.prose-editor li > p {
+  margin: 0;
+}
+.prose-editor blockquote {
+  border-left: 3px solid var(--c-border-solid);
+  padding-left: 0.9em;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+.prose-editor a {
+  color: var(--c-primary);
+  text-decoration: underline;
+}
+.prose-editor strong {
+  font-weight: 700;
+}
+
+/* placeholder (extension Placeholder, includeChildren) */
+.prose-editor .is-empty::before {
+  content: attr(data-placeholder);
+  color: hsl(var(--muted-foreground));
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* выделенная нода (атом — формула, вопрос, картинка) */
+.prose-editor .ProseMirror-selectednode {
+  outline: 2px solid var(--c-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius, 10px);
+}
+
+/* вложенная проза во врезке */
+.prose-editor [data-callout] .is-empty::before {
+  color: hsl(var(--muted-foreground) / 0.7);
+}
+
+.prose-editor .katex-render .katex {
+  font-size: 1.15em;
+}
+
+/* внутри нод-вью (block-fields) абзацы редактора формулировок — свои стили,
+   не наследуют .prose-editor крупный шрифт */
+.prose-editor [contenteditable="false"] .ProseMirror {
+  font-size: 14px;
+  line-height: 1.5;
+}

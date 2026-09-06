@@ -18,11 +18,14 @@ import DOMPurify from "dompurify";
 const ALLOWED_TAGS = [
   "p",
   "br",
-  // Подзаголовки внутри rich_text (Э13, редактор-«лист»). Только h2/h3 —
-  // h1 — это заголовок самого материала (`material.title`), внутри текста
-  // блока не нужен; глубже h3 методисту в линейном материале незачем.
+  // Заголовки в rich_text (Э13, редактор-«лист» в духе Notion). h1 —
+  // подзаголовок раздела внутри материала (не путать с `material.title`);
+  // глубже h3 методисту в линейном материале незачем.
+  "h1",
   "h2",
   "h3",
+  "blockquote",
+  "code",
   "strong",
   "b",
   "em",
@@ -38,9 +41,17 @@ const ALLOWED_TAGS = [
   "span",
 ];
 
+/**
+ * `style` разрешён (Э13) — редактор пишет `font-family`/`color` инлайном
+ * (`<span style="…">`). DOMPurify по умолчанию вычищает опасное содержимое
+ * `style` (`expression()`, `url(javascript:…)`), оставляя безопасные
+ * CSS-свойства.
+ */
+const ALLOWED_ATTR = ["href", "target", "rel", "style"];
+
 export function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS,
-    ALLOWED_ATTR: ["href", "target", "rel"],
+    ALLOWED_ATTR,
   });
 }
