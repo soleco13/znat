@@ -349,7 +349,9 @@ export function RoomPage() {
             )}
             <UserAvatar name={p.fullName} size={26} />
             <span className="min-w-0 truncate font-medium text-foreground">{p.fullName}</span>
-            <span className="text-xs text-muted-foreground">({p.role})</span>
+            <span className="text-xs text-muted-foreground">
+              ({p.kind === "staff" ? p.role : "ученик"})
+            </span>
             {p.handRaised ? (
               <Hand className="size-3.5 text-warning" aria-label="Поднята рука" />
             ) : null}
@@ -383,7 +385,7 @@ export function RoomPage() {
                   Заглушить
                 </Button>
               ) : null}
-              {media && p.role === "student" ? (
+              {media && p.kind === "guest" ? (
                 <Button
                   variant={p.pinned ? "secondary" : "outline"}
                   size="sm"

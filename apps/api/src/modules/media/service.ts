@@ -1,5 +1,5 @@
 import { AccessToken, RoomServiceClient, TrackSource } from "livekit-server-sdk";
-import type { MediaConnection, ParticipantPermissions, Role } from "@school/shared";
+import type { MediaConnection, ParticipantKind, ParticipantPermissions } from "@school/shared";
 import { env } from "../../plugins/env.js";
 
 const GRACE_AFTER_END_MS = 15 * 60 * 1000;
@@ -47,8 +47,8 @@ export function ttlSecondsUntilLessonGraceEnd(lessonStartsAt: Date, lessonDurati
  * обновления прав (`updateLivePermissions`) — грант должен совпадать в
  * обоих местах.
  */
-function buildPublishGrant(permissions: ParticipantPermissions, role: Role) {
-  const isStaff = role === "teacher" || role === "admin";
+function buildPublishGrant(permissions: ParticipantPermissions, kind: ParticipantKind) {
+  const isStaff = kind === "staff";
   const canPublishCamera = isStaff || permissions.canPublishVideo;
   const sources = [TrackSource.MICROPHONE];
   if (canPublishCamera) sources.push(TrackSource.CAMERA);
@@ -66,7 +66,7 @@ export async function createParticipantConnection(params: {
   livekitRoom: string;
   userId: string;
   fullName: string;
-  role: Role;
+  kind: ParticipantKind;
   permissions: ParticipantPermissions;
   lessonStartsAt: Date;
   lessonDurationMin: number;
@@ -75,13 +75,14 @@ export async function createParticipantConnection(params: {
     identity: params.userId,
     name: params.fullName,
     ttl: ttlSecondsUntilLessonGraceEnd(params.lessonStartsAt, params.lessonDurationMin),
-    // Э6.1: роль как LiveKit-атрибут участника — клиенту (`TeacherVideoTile`)
-    // нужно отличить камеру учителя от камеры ученика с granted canPublishVideo
-    // без похода за отдельным WS presence-списком. Роль на время урока
-    // неизменна, живое обновление (в отличие от прав) не требуется.
-    attributes: { role: params.role },
+    // Э6.1 / Э12.4: вид участника (`staff | guest`) как LiveKit-атрибут —
+    // клиенту (`TeacherVideoTile`) нужно отличить камеру персонала от камеры
+    // ученика с granted canPublishVideo без похода за отдельным WS
+    // presence-списком. Вид на время урока неизменен, живое обновление (в
+    // отличие от прав) не требуется.
+    attributes: { kind: params.kind },
   });
-  at.addGrant({ roomJoin: true, room: params.livekitRoom, ...buildPublishGrant(params.permissions, params.role) });
+  at.addGrant({ roomJoin: true, room: params.livekitRoom, ...buildPublishGrant(params.permissions, params.kind) });
   const token = await at.toJwt();
   return { token, url: env.LIVEKIT_PUBLIC_URL };
 }
@@ -102,10 +103,10 @@ export async function updateLivePermissions(
   livekitRoom: string,
   userId: string,
   permissions: ParticipantPermissions,
-  role: Role,
+  kind: ParticipantKind,
 ): Promise<void> {
   try {
-    await roomService.updateParticipant(livekitRoom, userId, { permission: buildPublishGrant(permissions, role) });
+    await roomService.updateParticipant(livekitRoom, userId, { permission: buildPublishGrant(permissions, kind) });
   } catch (err) {
     if (!isNotFoundError(err)) throw err;
     // участник ещё не подключался к LiveKit (только presence) — при подключении

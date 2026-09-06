@@ -13,11 +13,11 @@ import { generateKeyBetween } from "fractional-indexing";
 import * as Y from "yjs";
 import { encodeStateAsUpdate } from "yjs";
 import { z } from "zod";
-import type { AccessTokenPayload } from "@school/shared";
+import type { AccessTokenPayload, ParticipantKind } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
 import { verifyAccessToken } from "../auth/service.js";
+import { GUEST_COOKIE_NAME, verifyGuestToken } from "../guests/service.js";
 import * as lessonsService from "../lessons/service.js";
-import * as usersService from "../users/service.js";
 import * as repo from "./repo.js";
 
 const documentNameSchema = z.string().uuid();
@@ -37,10 +37,12 @@ const documentNameSchema = z.string().uuid();
  */
 const drawPermissionOverrides = new Map<string, Map<string, boolean>>();
 
-function computeCanDraw(role: string, lessonId: string, userId: string): boolean {
-  const override = drawPermissionOverrides.get(lessonId)?.get(userId);
+function computeCanDraw(kind: ParticipantKind, lessonId: string, participantId: string): boolean {
+  const override = drawPermissionOverrides.get(lessonId)?.get(participantId);
   if (override !== undefined) return override;
-  return role === "teacher" || role === "admin";
+  // Дефолт по роли, как в `presence.ts#defaultPermissions`: персонал рисует,
+  // гость-ученик — нет, пока учитель не разрешил (живой пуш через `setDrawPermission`).
+  return kind === "staff";
 }
 
 /**
@@ -77,20 +79,21 @@ export async function clearDrawPermissionOverrides(
 }
 
 /**
- * Проверка «состоит ли user в уроке lessonId» — общая часть для двух мест:
- * подключения к `/collab` (ниже) и HTTP-загрузки изображений на доску
- * (Э3.10, `assertCanDrawForLesson`). Вынесена при Э3.10 из
- * `authenticateCanvasConnection` дословным переносом (порядок вызовов и
- * тексты ошибок не менялись) — новый вызывающий код появился, сама логика
- * прав нет.
+ * Проверка «допущен ли персонал к уроку lessonId» — общая часть для двух
+ * мест: подключения персонала к `/collab` (ниже) и HTTP-загрузки изображений
+ * на доску (Э3.10, `assertCanDrawForLesson`).
  *
  * Логика прав ролей намеренно ДУБЛИРУЕТ rooms/service.ts#assertMembership, а
  * не переиспользует её: canvas не должен зависеть от rooms (это
  * presence/WS-модуль, а не владелец правил доступа к уроку), а правило
  * модульности CLAUDE.md запрещает модулю тянуть чужой repo.ts — здесь
  * используются только публичные сервисы lessons/users, как и в rooms.
+ *
+ * Э12.4: гость-ученик подключается к Y.Doc отдельным путём
+ * (`resolveCanvasConnectionActor` ниже) — гостевой JWT сам по себе несёт
+ * `lessonId`, дополнительная проверка членства не нужна.
  */
-async function assertLessonMembership(
+async function assertStaffLessonAccess(
   user: Pick<AccessTokenPayload, "sub" | "role" | "schoolId">,
   lessonId: string,
 ): Promise<void> {
@@ -103,17 +106,56 @@ async function assertLessonMembership(
     }
     return;
   }
-  if (user.role === "student") {
-    // Э12: уроки новой модели без группы — ученик подключается к Y.Doc
-    // гостевым JWT (Э12.4), не этой веткой.
-    const isMember =
-      lesson.groupId !== null && (await usersService.isGroupMember(lesson.groupId, user.sub));
-    if (!isMember) {
-      throw new AppError(403, "forbidden", "Вы не состоите в группе этого урока");
-    }
-    return;
-  }
   throw new AppError(403, "forbidden", "Роль не допускается к участию в уроке");
+}
+
+type CanvasConnectionActor = { kind: ParticipantKind; participantId: string; role: string };
+
+/** Достаёт одну куку из заголовка `Cookie` без зависимости от Fastify-контекста (хук `onAuthenticate` вне request-жизненного цикла). */
+function readCookie(header: string | null | undefined, name: string): string | undefined {
+  if (!header) return undefined;
+  for (const pair of header.split(";")) {
+    const eq = pair.indexOf("=");
+    if (eq === -1) continue;
+    if (pair.slice(0, eq).trim() === name) {
+      return decodeURIComponent(pair.slice(eq + 1).trim());
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Э12.4 — кто подключается к холсту урока. Персонал: access-токен в
+ * Yjs-параметре `token` + проверка допуска к уроку. Гость: гостевой JWT из
+ * httpOnly-куки `guest_session` (`payload.requestHeaders.cookie`), `lessonId`
+ * из токена обязан совпасть с документом. Читать построчно (CLAUDE.md
+ * «работа с Y.Doc» + права доступа).
+ */
+async function resolveCanvasConnectionActor(
+  token: string,
+  requestHeaders: Headers | undefined,
+  lessonId: string,
+): Promise<CanvasConnectionActor> {
+  if (token) {
+    const user = await verifyAccessToken(token);
+    await assertStaffLessonAccess(user, lessonId);
+    return { kind: "staff", participantId: user.sub, role: user.role };
+  }
+
+  const guestToken = readCookie(requestHeaders?.get("cookie"), GUEST_COOKIE_NAME);
+  if (!guestToken) {
+    throw new AppError(401, "missing_token", "Требуется вход в урок");
+  }
+  let guest;
+  try {
+    guest = await verifyGuestToken(guestToken);
+  } catch {
+    throw new AppError(401, "invalid_guest_session", "Гостевая сессия недействительна или истекла");
+  }
+  if (guest.lessonId !== lessonId) {
+    throw new AppError(403, "forbidden", "Гостевая сессия относится к другому уроку");
+  }
+  return { kind: "guest", participantId: guest.guestId, role: "guest" };
 }
 
 /**
@@ -127,7 +169,10 @@ async function assertLessonMembership(
  * `Connection`; возвращаемое значение уходит только в `context`.
  */
 export async function authenticateCanvasConnection(
-  payload: Pick<onAuthenticatePayload, "token" | "documentName" | "connectionConfig">,
+  payload: Pick<
+    onAuthenticatePayload,
+    "token" | "documentName" | "connectionConfig" | "requestHeaders"
+  >,
 ): Promise<{ userId: string; role: string }> {
   const parsedLessonId = documentNameSchema.safeParse(payload.documentName);
   if (!parsedLessonId.success) {
@@ -135,10 +180,9 @@ export async function authenticateCanvasConnection(
   }
   const lessonId = parsedLessonId.data;
 
-  const user = await verifyAccessToken(payload.token);
-  await assertLessonMembership(user, lessonId);
-  payload.connectionConfig.readOnly = !computeCanDraw(user.role, lessonId, user.sub);
-  return { userId: user.sub, role: user.role };
+  const actor = await resolveCanvasConnectionActor(payload.token, payload.requestHeaders, lessonId);
+  payload.connectionConfig.readOnly = !computeCanDraw(actor.kind, lessonId, actor.participantId);
+  return { userId: actor.participantId, role: actor.role };
 }
 
 /**
@@ -154,8 +198,8 @@ export async function assertCanDrawForLesson(
   user: Pick<AccessTokenPayload, "sub" | "role" | "schoolId">,
   lessonId: string,
 ): Promise<void> {
-  await assertLessonMembership(user, lessonId);
-  if (!computeCanDraw(user.role, lessonId, user.sub)) {
+  await assertStaffLessonAccess(user, lessonId);
+  if (!computeCanDraw("staff", lessonId, user.sub)) {
     throw new AppError(403, "forbidden", "Нет прав на рисование в этом уроке");
   }
 }

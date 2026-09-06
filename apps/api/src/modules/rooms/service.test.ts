@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AccessTokenPayload } from "@school/shared";
+import type { LessonActor } from "../guests/service.js";
 
 const { lessonsServiceMock, usersServiceMock, repoMock, mediaServiceMock, canvasServiceMock } = vi.hoisted(() => ({
   canvasServiceMock: {
@@ -127,6 +128,29 @@ function studentToken(sub = STUDENT_ID): AccessTokenPayload {
   return { sub, schoolId: SCHOOL_ID, role: "student" };
 }
 
+/** Э12.4: нормализованный actor для `join`/`leave`/чата/руки — как его строит `requireLessonAccess`. */
+function staffActor(over: Partial<Extract<LessonActor, { kind: "staff" }>> = {}): LessonActor {
+  return {
+    kind: "staff",
+    participantId: TEACHER_ID,
+    schoolId: SCHOOL_ID,
+    role: "teacher",
+    lessonId: LESSON_ID,
+    displayName: "Учитель",
+    ...over,
+  };
+}
+function guestActor(participantId = STUDENT_ID, lessonId = LESSON_ID): LessonActor {
+  return {
+    kind: "guest",
+    participantId,
+    schoolId: SCHOOL_ID,
+    role: null,
+    lessonId,
+    displayName: "Ученик",
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   presence.__clear();
@@ -138,45 +162,43 @@ afterEach(() => {
 });
 
 describe("join: контроль доступа", () => {
-  it("ученик из группы урока может войти", async () => {
+  it("Э12.4: гость входит в свой урок (личность = введённое имя + guestId)", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
-    usersServiceMock.isGroupMember.mockResolvedValue(true);
 
-    const result = await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+    const result = await roomsService.join(guestActor(), LESSON_ID);
     expect(result.self.userId).toBe(STUDENT_ID);
-    expect(usersServiceMock.isGroupMember).toHaveBeenCalledWith(GROUP_ID, STUDENT_ID);
+    expect(result.self.kind).toBe("guest");
+    expect(result.self.fullName).toBe("Ученик");
   });
 
-  it("ученик НЕ из группы урока получает 403", async () => {
+  it("Э12.4: гостевая сессия другого урока получает 403", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
-    usersServiceMock.isGroupMember.mockResolvedValue(false);
 
-    await expect(roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(OTHER_STUDENT_ID), "Чужой"))
-      .rejects.toMatchObject({ statusCode: 403 });
+    await expect(
+      roomsService.join(guestActor(OTHER_STUDENT_ID, SECOND_LESSON_ID), LESSON_ID),
+    ).rejects.toMatchObject({ statusCode: 403 });
   });
 
   it("учитель, не ведущий этот урок, получает 403", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson({ teacherId: "77777777-7777-7777-7777-777777777777" }));
 
-    await expect(roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Другой учитель")).rejects.toMatchObject({
+    await expect(roomsService.join(staffActor(), LESSON_ID)).rejects.toMatchObject({
       statusCode: 403,
     });
   });
 
   it("методист не допускается к участию в уроке", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
-    const methodistToken: AccessTokenPayload = { sub: STUDENT_ID, schoolId: SCHOOL_ID, role: "methodist" };
 
-    await expect(roomsService.join(SCHOOL_ID, LESSON_ID, methodistToken, "Методист")).rejects.toMatchObject({
-      statusCode: 403,
-    });
+    await expect(
+      roomsService.join(staffActor({ role: "methodist", participantId: STUDENT_ID }), LESSON_ID),
+    ).rejects.toMatchObject({ statusCode: 403 });
   });
 
   it("нельзя войти в завершённый или отменённый урок", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson({ status: "ended" }));
-    usersServiceMock.isGroupMember.mockResolvedValue(true);
 
-    await expect(roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик")).rejects.toMatchObject({
+    await expect(roomsService.join(guestActor(), LESSON_ID)).rejects.toMatchObject({
       statusCode: 409,
     });
   });
@@ -186,13 +208,71 @@ describe("join: контроль доступа", () => {
     usersServiceMock.isGroupMember.mockResolvedValue(true);
     lessonsServiceMock.startLesson.mockResolvedValue(baseLesson({ status: "live" }));
 
-    const studentJoin = await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+    const studentJoin = await roomsService.join(guestActor(), LESSON_ID);
     expect(studentJoin.lessonStatus).toBe("scheduled");
     expect(lessonsServiceMock.startLesson).not.toHaveBeenCalled();
 
-    const teacherJoin = await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+    const teacherJoin = await roomsService.join(staffActor(), LESSON_ID);
     expect(teacherJoin.lessonStatus).toBe("live");
     expect(lessonsServiceMock.startLesson).toHaveBeenCalledWith(SCHOOL_ID, LESSON_ID);
+  });
+});
+
+describe("Э12.4: гость на уроке — журнал, presence, чат, рука", () => {
+  beforeEach(() => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+  });
+
+  it("вход гостя пишет строку журнала с guestId и введённым именем, без userId", async () => {
+    await roomsService.join(guestActor("guest-1"), LESSON_ID);
+
+    expect(repoMock.insertJoin).toHaveBeenCalledWith({
+      lessonId: LESSON_ID,
+      kind: "guest",
+      userId: null,
+      guestId: "guest-1",
+      displayName: "Ученик",
+    });
+  });
+
+  it("гость поднимает руку — presence обновляется по его guestId", async () => {
+    await roomsService.join(guestActor("guest-1"), LESSON_ID);
+
+    await roomsService.setHandRaised(guestActor("guest-1"), LESSON_ID, true);
+
+    const snapshot = await roomsService.listParticipantsSnapshot(LESSON_ID);
+    expect(snapshot.find((p) => p.userId === "guest-1")?.handRaised).toBe(true);
+  });
+
+  it("сообщение чата от гостя пишется с guestId и authorName, без userId", async () => {
+    repoMock.insertChatMessage.mockResolvedValue({
+      id: "m1",
+      lessonId: LESSON_ID,
+      userId: null,
+      body: "привет",
+      createdAt: new Date(),
+    });
+    await roomsService.join(guestActor("guest-1"), LESSON_ID);
+
+    const message = await roomsService.sendChatMessage(guestActor("guest-1"), LESSON_ID, "привет");
+
+    expect(repoMock.insertChatMessage).toHaveBeenCalledWith({
+      lessonId: LESSON_ID,
+      userId: null,
+      guestId: "guest-1",
+      authorName: "Ученик",
+      body: "привет",
+    });
+    expect(message.userId).toBeNull();
+    expect(message.authorName).toBe("Ученик");
+  });
+
+  it("явный выход гостя закрывает сессию журнала по participantId", async () => {
+    await roomsService.join(guestActor("guest-1"), LESSON_ID);
+
+    await roomsService.leave(guestActor("guest-1"), LESSON_ID);
+
+    expect(repoMock.closeOpenSession).toHaveBeenCalledWith(LESSON_ID, "guest-1");
   });
 });
 
@@ -200,7 +280,7 @@ describe("права участников", () => {
   it("только учитель этого урока (или админ) может менять права", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
     usersServiceMock.isGroupMember.mockResolvedValue(true);
-    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+    await roomsService.join(guestActor(), LESSON_ID);
 
     await expect(
       roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, studentToken(OTHER_STUDENT_ID), STUDENT_ID, {
@@ -216,7 +296,7 @@ describe("права участников", () => {
   it("выдача canSpeak синхронизирует уже выданный LiveKit-грант вживую (Э2.5)", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
     usersServiceMock.isGroupMember.mockResolvedValue(true);
-    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+    await roomsService.join(guestActor(), LESSON_ID);
 
     await roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, { canSpeak: true });
 
@@ -224,14 +304,14 @@ describe("права участников", () => {
       `lesson-${LESSON_ID}`,
       STUDENT_ID,
       expect.objectContaining({ canSpeak: true }),
-      "student",
+      "guest",
     );
   });
 
   it("если синхронизация с LiveKit падает, presence не меняется и ученику не начинает казаться замьюченным зря", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
     usersServiceMock.isGroupMember.mockResolvedValue(true);
-    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+    await roomsService.join(guestActor(), LESSON_ID);
     mediaServiceMock.updateLivePermissions.mockRejectedValueOnce(new Error("livekit unreachable"));
 
     await expect(
@@ -253,12 +333,12 @@ describe("права участников", () => {
       "99999999-9999-9999-9999-999999999999",
     ];
     for (const id of studentIds) {
-      await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(id), "Ученик");
+      await roomsService.join(guestActor(id), LESSON_ID);
       await roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), id, { canSpeak: true });
     }
 
     const fifthId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
-    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(fifthId), "Пятый ученик");
+    await roomsService.join(guestActor(fifthId), LESSON_ID);
 
     await expect(
       roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), fifthId, { canSpeak: true }),
@@ -276,7 +356,7 @@ describe("права участников", () => {
       "99999999-9999-9999-9999-999999999999",
     ];
     for (const id of studentIds) {
-      await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(id), "Ученик");
+      await roomsService.join(guestActor(id), LESSON_ID);
       await roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), id, { canSpeak: true });
     }
 
@@ -288,7 +368,7 @@ describe("права участников", () => {
   it("изменение canDraw пушится в canvas живым обновлением (Э3.8)", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
     usersServiceMock.isGroupMember.mockResolvedValue(true);
-    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+    await roomsService.join(guestActor(), LESSON_ID);
 
     await roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, { canDraw: true });
 
@@ -298,7 +378,7 @@ describe("права участников", () => {
   it("изменение canSpeak НЕ трогает canvas — canDraw не менялся", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
     usersServiceMock.isGroupMember.mockResolvedValue(true);
-    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+    await roomsService.join(guestActor(), LESSON_ID);
 
     await roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, { canSpeak: true });
 
@@ -318,9 +398,9 @@ describe("глобальный тумблер рисования (Э3.8)", () =>
   it("выдаёт canDraw всем подключённым ученикам, учителя не трогает", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
     usersServiceMock.isGroupMember.mockResolvedValue(true);
-    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
-    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(OTHER_STUDENT_ID), "Другой ученик");
-    await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+    await roomsService.join(guestActor(), LESSON_ID);
+    await roomsService.join(guestActor(OTHER_STUDENT_ID), LESSON_ID);
+    await roomsService.join(staffActor(), LESSON_ID);
 
     await roomsService.setDrawForAllStudents(SCHOOL_ID, LESSON_ID, teacherToken(), true);
 
@@ -336,7 +416,7 @@ describe("глобальный тумблер рисования (Э3.8)", () =>
   it("не синхронизирует LiveKit-грант — canDraw на аудио не влияет", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
     usersServiceMock.isGroupMember.mockResolvedValue(true);
-    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+    await roomsService.join(guestActor(), LESSON_ID);
 
     await roomsService.setDrawForAllStudents(SCHOOL_ID, LESSON_ID, teacherToken(), true);
 
@@ -359,9 +439,9 @@ describe("мьют микрофонов учителем (Э2.5)", () => {
   it("«мьют всех» глушит только учеников, не трогает учителя", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
     usersServiceMock.isGroupMember.mockResolvedValue(true);
-    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
-    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(OTHER_STUDENT_ID), "Другой ученик");
-    await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+    await roomsService.join(guestActor(), LESSON_ID);
+    await roomsService.join(guestActor(OTHER_STUDENT_ID), LESSON_ID);
+    await roomsService.join(staffActor(), LESSON_ID);
 
     await expect(roomsService.muteAllNow(SCHOOL_ID, LESSON_ID, studentToken())).rejects.toMatchObject({
       statusCode: 403,
@@ -378,7 +458,7 @@ describe("закрепление в сетке видео (Э6.3)", () => {
   it("только учитель этого урока (или админ) может закреплять участников", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
     usersServiceMock.isGroupMember.mockResolvedValue(true);
-    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+    await roomsService.join(guestActor(), LESSON_ID);
 
     await expect(
       roomsService.setPinned(SCHOOL_ID, LESSON_ID, studentToken(OTHER_STUDENT_ID), STUDENT_ID, true),
@@ -392,7 +472,7 @@ describe("закрепление в сетке видео (Э6.3)", () => {
   it("открепление возвращает pinned в false", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
     usersServiceMock.isGroupMember.mockResolvedValue(true);
-    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+    await roomsService.join(guestActor(), LESSON_ID);
     await roomsService.setPinned(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, true);
 
     await roomsService.setPinned(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, false);
@@ -415,7 +495,7 @@ describe("режим урока (Э6.4)", () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
     usersServiceMock.isGroupMember.mockResolvedValue(true);
 
-    const result = await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+    const result = await roomsService.join(guestActor(), LESSON_ID);
 
     expect(result.lessonMode).toBe("lecture");
   });
@@ -429,7 +509,7 @@ describe("режим урока (Э6.4)", () => {
     ).rejects.toMatchObject({ statusCode: 403 });
 
     await roomsService.setLessonMode(SCHOOL_ID, LESSON_ID, teacherToken(), "discussion");
-    const result = await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+    const result = await roomsService.join(guestActor(), LESSON_ID);
     expect(result.lessonMode).toBe("discussion");
   });
 });
@@ -455,16 +535,16 @@ describe("оценка трафика платформы (Э6.5)", () => {
     usersServiceMock.isGroupMember.mockResolvedValue(true);
 
     // "Другой" урок — Обсуждение с большим классом, суммарно > 600 Мбит/с (106 × 6 = 636).
-    await roomsService.join(SCHOOL_ID, SECOND_LESSON_ID, teacherToken(), "Учитель");
+    await roomsService.join(staffActor({ lessonId: SECOND_LESSON_ID }), SECOND_LESSON_ID);
     await roomsService.setLessonMode(SCHOOL_ID, SECOND_LESSON_ID, teacherToken(), "discussion");
     for (let i = 0; i < 105; i++) {
-      await roomsService.join(SCHOOL_ID, SECOND_LESSON_ID, studentToken(`traffic-student-${i}`), "Ученик");
+      await roomsService.join(guestActor(`traffic-student-${i}`, SECOND_LESSON_ID), SECOND_LESSON_ID);
     }
 
     // Новая комната LESSON_ID должна открыться в Лекции, даже если её режим
     // был заранее (или по ошибке) выставлен в discussion.
     await roomsService.setLessonMode(SCHOOL_ID, LESSON_ID, teacherToken(), "discussion");
-    const result = await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+    const result = await roomsService.join(staffActor(), LESSON_ID);
 
     expect(result.lessonMode).toBe("lecture");
   });
@@ -473,15 +553,15 @@ describe("оценка трафика платформы (Э6.5)", () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
     usersServiceMock.isGroupMember.mockResolvedValue(true);
 
-    await roomsService.join(SCHOOL_ID, SECOND_LESSON_ID, teacherToken(), "Учитель");
+    await roomsService.join(staffActor({ lessonId: SECOND_LESSON_ID }), SECOND_LESSON_ID);
     await roomsService.setLessonMode(SCHOOL_ID, SECOND_LESSON_ID, teacherToken(), "discussion");
     // Всего 5 участников в "другом" уроке — далеко не 600 Мбит/с.
     for (let i = 0; i < 5; i++) {
-      await roomsService.join(SCHOOL_ID, SECOND_LESSON_ID, studentToken(`light-student-${i}`), "Ученик");
+      await roomsService.join(guestActor(`light-student-${i}`, SECOND_LESSON_ID), SECOND_LESSON_ID);
     }
 
     await roomsService.setLessonMode(SCHOOL_ID, LESSON_ID, teacherToken(), "discussion");
-    const result = await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+    const result = await roomsService.join(staffActor(), LESSON_ID);
 
     expect(result.lessonMode).toBe("discussion");
   });
@@ -490,9 +570,9 @@ describe("оценка трафика платформы (Э6.5)", () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
     usersServiceMock.isGroupMember.mockResolvedValue(true);
 
-    await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+    await roomsService.join(staffActor(), LESSON_ID);
     await roomsService.setLessonMode(SCHOOL_ID, LESSON_ID, teacherToken(), "discussion");
-    await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+    await roomsService.join(guestActor(), LESSON_ID);
 
     const snapshot = await roomsService.getActiveLessonTrafficSnapshot();
     const entry = snapshot.find((s) => s.lessonId === LESSON_ID);
@@ -575,18 +655,18 @@ describe("вебхуки LiveKit (Э2.7)", () => {
     });
 
     it("учитель начинает демонстрацию — переводит урок в lecture, никого не гасит (конфликтов нет)", async () => {
-      await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+      await roomsService.join(staffActor(), LESSON_ID);
       await roomsService.setLessonMode(SCHOOL_ID, LESSON_ID, teacherToken(), "discussion");
 
       await roomsService.handleScreenShareStartedWebhook(LIVEKIT_ROOM, TEACHER_ID);
 
       expect(mediaServiceMock.muteScreenShare).not.toHaveBeenCalled();
-      const snapshot = await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+      const snapshot = await roomsService.join(staffActor(), LESSON_ID);
       expect(snapshot.lessonMode).toBe("lecture");
     });
 
     it("учитель начинает демонстрацию, пока ученик уже делится — гасит демонстрацию ученика (приоритет учителю)", async () => {
-      await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+      await roomsService.join(staffActor(), LESSON_ID);
       mediaServiceMock.findOtherActiveScreenShares.mockResolvedValueOnce([STUDENT_ID]);
 
       await roomsService.handleScreenShareStartedWebhook(LIVEKIT_ROOM, TEACHER_ID);
@@ -595,47 +675,47 @@ describe("вебхуки LiveKit (Э2.7)", () => {
     });
 
     it("ученик пытается начать демонстрацию, пока кто-то уже делится — гасит СВОЮ новую демонстрацию, режим не трогает", async () => {
-      await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+      await roomsService.join(guestActor(), LESSON_ID);
       await roomsService.setLessonMode(SCHOOL_ID, LESSON_ID, teacherToken(), "discussion");
       mediaServiceMock.findOtherActiveScreenShares.mockResolvedValueOnce([TEACHER_ID]);
 
       await roomsService.handleScreenShareStartedWebhook(LIVEKIT_ROOM, STUDENT_ID);
 
       expect(mediaServiceMock.muteScreenShare).toHaveBeenCalledWith(LIVEKIT_ROOM, STUDENT_ID);
-      const snapshot = await roomsService.join(SCHOOL_ID, LESSON_ID, studentToken(), "Ученик");
+      const snapshot = await roomsService.join(guestActor(), LESSON_ID);
       expect(snapshot.lessonMode).toBe("discussion");
     });
 
     it("демонстрация окончена и других не осталось — возвращает сохранённый режим", async () => {
-      await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+      await roomsService.join(staffActor(), LESSON_ID);
       await roomsService.setLessonMode(SCHOOL_ID, LESSON_ID, teacherToken(), "discussion");
       await roomsService.handleScreenShareStartedWebhook(LIVEKIT_ROOM, TEACHER_ID);
 
       await roomsService.handleScreenShareStoppedWebhook(LIVEKIT_ROOM);
 
-      const snapshot = await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+      const snapshot = await roomsService.join(staffActor(), LESSON_ID);
       expect(snapshot.lessonMode).toBe("discussion");
     });
 
     it("демонстрация окончена, но другая ещё идёт — режим пока не возвращает", async () => {
-      await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+      await roomsService.join(staffActor(), LESSON_ID);
       await roomsService.setLessonMode(SCHOOL_ID, LESSON_ID, teacherToken(), "discussion");
       await roomsService.handleScreenShareStartedWebhook(LIVEKIT_ROOM, TEACHER_ID);
       mediaServiceMock.findOtherActiveScreenShares.mockResolvedValueOnce([STUDENT_ID]);
 
       await roomsService.handleScreenShareStoppedWebhook(LIVEKIT_ROOM);
 
-      const snapshot = await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+      const snapshot = await roomsService.join(staffActor(), LESSON_ID);
       expect(snapshot.lessonMode).toBe("lecture");
     });
 
     it("режим уже был lecture до демонстрации — после окончания ничего не меняет", async () => {
-      await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+      await roomsService.join(staffActor(), LESSON_ID);
       await roomsService.handleScreenShareStartedWebhook(LIVEKIT_ROOM, TEACHER_ID);
 
       await roomsService.handleScreenShareStoppedWebhook(LIVEKIT_ROOM);
 
-      const snapshot = await roomsService.join(SCHOOL_ID, LESSON_ID, teacherToken(), "Учитель");
+      const snapshot = await roomsService.join(staffActor(), LESSON_ID);
       expect(snapshot.lessonMode).toBe("lecture");
     });
   });

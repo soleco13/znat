@@ -6,8 +6,9 @@ import type { LessonMode, ParticipantSnapshot } from "@school/shared";
 /** Э6.2, §5.2 ТЗ: не более 9 одновременно видимых видео учеников (лимит применяется только в режиме "discussion", см. computeVisibleStudentIds). */
 export const MAX_VISIBLE_STUDENT_VIDEOS = 9;
 
-function isTeacherRole(role: string | undefined): boolean {
-  return role === "teacher" || role === "admin";
+/** Э12.4: LiveKit-атрибут участника теперь `kind` (`staff | guest`), а не роль. */
+function isStaffAttr(kind: string | undefined): boolean {
+  return kind === "staff";
 }
 
 /**
@@ -95,11 +96,11 @@ export function VideoSubscriptionManager({
   useEffect(() => {
     const pinnedIds = new Set(participants.filter((p) => p.pinned).map((p) => p.userId));
     const speakingIds = new Set(
-      speakingParticipants.filter((p) => !isTeacherRole(p.attributes.role)).map((p) => p.identity),
+      speakingParticipants.filter((p) => !isStaffAttr(p.attributes.kind)).map((p) => p.identity),
     );
     const publishingStudentIds = new Set(
       tracks
-        .filter((t) => t.source === Track.Source.Camera && !isTeacherRole(t.participant.attributes.role))
+        .filter((t) => t.source === Track.Source.Camera && !isStaffAttr(t.participant.attributes.kind))
         .map((t) => t.participant.identity),
     );
     const visibleStudentIds = computeVisibleStudentIds(mode, pinnedIds, speakingIds, publishingStudentIds);
@@ -112,7 +113,7 @@ export function VideoSubscriptionManager({
       const shouldSubscribe =
         t.source === Track.Source.Microphone ||
         t.source === Track.Source.ScreenShare ||
-        (isTeacherRole(t.participant.attributes.role) && teacherVisible) ||
+        (isStaffAttr(t.participant.attributes.kind) && teacherVisible) ||
         visibleStudentIds.has(t.participant.identity);
 
       if (pub.isSubscribed !== shouldSubscribe) pub.setSubscribed(shouldSubscribe);

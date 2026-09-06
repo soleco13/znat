@@ -11,9 +11,9 @@ import type {
 } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
 import * as canvasService from "../canvas/service.js";
+import type { LessonActor } from "../guests/service.js";
 import * as lessonsService from "../lessons/service.js";
 import * as mediaService from "../media/service.js";
-import * as usersService from "../users/service.js";
 import * as presence from "./presence.js";
 import type { PresenceEntry } from "./presence.js";
 import * as repo from "./repo.js";
@@ -33,10 +33,11 @@ const activeLessons = new Map<string, string>();
 const emptyRoomTimers = new Map<string, NodeJS.Timeout>();
 let sweepInterval: NodeJS.Timeout | null = null;
 
-function toSnapshot(userId: string, entry: PresenceEntry): ParticipantSnapshot {
+function toSnapshot(participantId: string, entry: PresenceEntry): ParticipantSnapshot {
   return {
-    userId,
+    userId: participantId,
     fullName: entry.fullName,
+    kind: entry.kind,
     role: entry.role,
     connected: entry.connected,
     handRaised: entry.handRaised,
@@ -61,23 +62,29 @@ export async function listParticipantsSnapshot(lessonId: string): Promise<Partic
   return [...participants.entries()].map(([id, entry]) => toSnapshot(id, entry));
 }
 
-/** Проверяет, что пользователь имеет право находиться в этом уроке. Читать построчно (§1.2 CLAUDE.md). */
-async function assertMembership(schoolId: string, lessonId: string, user: AccessTokenPayload) {
-  const lesson = await lessonsService.getLesson(schoolId, lessonId);
-  if (user.role === "admin") return lesson;
-  if (user.role === "teacher") {
-    if (lesson.teacherId !== user.sub) {
-      throw new AppError(403, "forbidden", "Вы не ведёте этот урок");
+/**
+ * Проверяет, что actor имеет право находиться в этом уроке (Э12.4). Читать
+ * построчно (§1.2 CLAUDE.md) — это гейт доступа к живому уроку.
+ *  - `guest`: гостевая сессия уже проверена `requireLessonAccess` (подпись,
+ *    срок, актуальность ссылки) и жёстко привязана к одному `lessonId` —
+ *    здесь только сверяем, что это тот же урок, и что урок существует;
+ *  - `staff/admin`: любой урок школы;
+ *  - `staff/teacher`: только свой урок;
+ *  - `staff/methodist`: в комнату урока не допускается (у методиста нет роли
+ *    на живом уроке — только библиотека/материалы).
+ */
+async function assertMembership(actor: LessonActor, lessonId: string) {
+  const lesson = await lessonsService.getLesson(actor.schoolId, lessonId);
+  if (actor.kind === "guest") {
+    if (actor.lessonId !== lessonId) {
+      throw new AppError(403, "forbidden", "Гостевая сессия относится к другому уроку");
     }
     return lesson;
   }
-  if (user.role === "student") {
-    // Э12: уроки новой модели без группы — ученик входит гостевым путём
-    // (`/j/:token`, Э12.4), не через эту проверку членства.
-    const isMember =
-      lesson.groupId !== null && (await usersService.isGroupMember(lesson.groupId, user.sub));
-    if (!isMember) {
-      throw new AppError(403, "forbidden", "Вы не состоите в группе этого урока");
+  if (actor.role === "admin") return lesson;
+  if (actor.role === "teacher") {
+    if (lesson.teacherId !== actor.participantId) {
+      throw new AppError(403, "forbidden", "Вы не ведёте этот урок");
     }
     return lesson;
   }
@@ -211,40 +218,46 @@ export async function getActiveLessonTrafficSnapshot(): Promise<
   return Promise.all([...activeLessons.keys()].map((id) => getLessonTrafficInfo(id)));
 }
 
-export async function join(
-  schoolId: string,
-  lessonId: string,
-  user: AccessTokenPayload,
-  fullName: string,
-): Promise<JoinLessonResponse> {
-  const lesson = await assertMembership(schoolId, lessonId, user);
+export async function join(actor: LessonActor, lessonId: string): Promise<JoinLessonResponse> {
+  const lesson = await assertMembership(actor, lessonId);
   if (lesson.status === "ended" || lesson.status === "cancelled") {
     throw new AppError(409, "lesson_not_joinable", "Урок завершён или отменён");
   }
 
+  const schoolId = actor.schoolId;
+  const participantId = actor.participantId;
+  const isStaff = actor.kind === "staff";
+
   activeLessons.set(lessonId, schoolId);
   clearEmptyRoomTimer(lessonId);
 
-  const existing = await presence.getParticipant(lessonId, user.sub);
+  const existing = await presence.getParticipant(lessonId, participantId);
   const entry: PresenceEntry = existing
     ? { ...existing, connected: true, lastSeenAt: Date.now() }
     : {
-        fullName,
-        role: user.role,
+        fullName: actor.displayName,
+        kind: actor.kind,
+        role: actor.role,
         connected: true,
         handRaised: false,
         pinned: false,
-        permissions: presence.defaultPermissions(user.role),
+        permissions: presence.defaultPermissions(actor.kind),
         joinedAt: new Date().toISOString(),
         lastSeenAt: Date.now(),
       };
-  await presence.setParticipant(lessonId, user.sub, entry);
+  await presence.setParticipant(lessonId, participantId, entry);
   if (!existing) {
-    await repo.insertJoin(lessonId, user.sub);
+    await repo.insertJoin({
+      lessonId,
+      kind: actor.kind,
+      userId: isStaff ? participantId : null,
+      guestId: isStaff ? null : participantId,
+      displayName: isStaff ? null : actor.displayName,
+    });
   }
 
   let lessonStatus: LessonStatus = lesson.status;
-  if (lessonStatus === "scheduled" && (user.role === "teacher" || user.role === "admin")) {
+  if (lessonStatus === "scheduled" && isStaff && actor.role !== "methodist") {
     const updated = await lessonsService.startLesson(schoolId, lessonId);
     lessonStatus = updated.status;
     emitRoomEvent(lessonId, { type: "lesson_status", status: lessonStatus });
@@ -262,7 +275,7 @@ export async function join(
     }
   }
 
-  const snapshot = toSnapshot(user.sub, entry);
+  const snapshot = toSnapshot(participantId, entry);
   if (existing) {
     emitRoomEvent(lessonId, { type: "presence", participants: await listParticipantsSnapshot(lessonId) });
   } else {
@@ -272,9 +285,9 @@ export async function join(
   const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
   const media = await mediaService.createParticipantConnection({
     livekitRoom,
-    userId: user.sub,
-    fullName,
-    role: entry.role,
+    userId: participantId,
+    fullName: entry.fullName,
+    kind: entry.kind,
     permissions: entry.permissions,
     lessonStartsAt: lesson.startsAt,
     lessonDurationMin: lesson.durationMin,
@@ -286,11 +299,11 @@ export async function join(
 }
 
 /** Явный выход (кнопка «Выйти»/POST leave) — без grace-периода на переподключение. */
-export async function leave(schoolId: string, lessonId: string, user: AccessTokenPayload): Promise<void> {
-  await presence.removeParticipant(lessonId, user.sub);
-  await repo.closeOpenSession(lessonId, user.sub);
-  emitRoomEvent(lessonId, { type: "participant_left", userId: user.sub });
-  await scheduleAutoEndIfEmpty(schoolId, lessonId);
+export async function leave(actor: LessonActor, lessonId: string): Promise<void> {
+  await presence.removeParticipant(lessonId, actor.participantId);
+  await repo.closeOpenSession(lessonId, actor.participantId);
+  emitRoomEvent(lessonId, { type: "participant_left", userId: actor.participantId });
+  await scheduleAutoEndIfEmpty(actor.schoolId, lessonId);
 }
 
 /**
@@ -325,20 +338,19 @@ export async function touchHeartbeat(lessonId: string, userId: string): Promise<
 }
 
 export async function setHandRaised(
-  schoolId: string,
+  actor: LessonActor,
   lessonId: string,
-  user: AccessTokenPayload,
   raised: boolean,
 ): Promise<void> {
-  await assertMembership(schoolId, lessonId, user);
-  const entry = await presence.getParticipant(lessonId, user.sub);
+  await assertMembership(actor, lessonId);
+  const entry = await presence.getParticipant(lessonId, actor.participantId);
   if (!entry) {
     throw new AppError(409, "not_in_room", "Сначала войдите в урок");
   }
   entry.handRaised = raised;
   entry.lastSeenAt = Date.now();
-  await presence.setParticipant(lessonId, user.sub, entry);
-  emitRoomEvent(lessonId, { type: "hand_raised", userId: user.sub, raised });
+  await presence.setParticipant(lessonId, actor.participantId, entry);
+  emitRoomEvent(lessonId, { type: "hand_raised", userId: actor.participantId, raised });
 }
 
 /**
@@ -392,13 +404,13 @@ export async function setLessonMode(
   emitRoomEvent(lessonId, { type: "lesson_mode", mode });
 }
 
-/** Считает учеников (не учителей/админов) с уже включённым микрофоном, кроме исключённого — для проверки лимита §5.2 ТЗ. */
+/** Считает гостей-учеников (не персонал) с уже включённым микрофоном, кроме исключённого — для проверки лимита §5.2 ТЗ. */
 async function countActiveStudentMics(lessonId: string, excludeUserId?: string): Promise<number> {
   const participants = await presence.listParticipants(lessonId);
   let count = 0;
   for (const [userId, entry] of participants) {
     if (userId === excludeUserId) continue;
-    if (entry.role === "student" && entry.permissions.canSpeak) count++;
+    if (entry.kind === "guest" && entry.permissions.canSpeak) count++;
   }
   return count;
 }
@@ -428,7 +440,7 @@ export async function updatePermissions(
     throw new AppError(404, "not_found", "Участник не найден в комнате");
   }
 
-  if (patch.canSpeak === true && entry.role === "student" && !entry.permissions.canSpeak) {
+  if (patch.canSpeak === true && entry.kind === "guest" && !entry.permissions.canSpeak) {
     const activeMics = await countActiveStudentMics(lessonId, targetUserId);
     if (activeMics >= MAX_SIMULTANEOUS_STUDENT_MICS) {
       throw new AppError(
@@ -441,7 +453,7 @@ export async function updatePermissions(
 
   const permissions = { ...entry.permissions, ...patch };
   const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
-  await mediaService.updateLivePermissions(livekitRoom, targetUserId, permissions, entry.role);
+  await mediaService.updateLivePermissions(livekitRoom, targetUserId, permissions, entry.kind);
 
   entry.permissions = permissions;
   await presence.setParticipant(lessonId, targetUserId, entry);
@@ -475,7 +487,7 @@ export async function setDrawForAllStudents(
   }
   const participants = await presence.listParticipants(lessonId);
   for (const [userId, entry] of participants) {
-    if (entry.role !== "student") continue;
+    if (entry.kind !== "guest") continue;
     entry.permissions = { ...entry.permissions, canDraw };
     await presence.setParticipant(lessonId, userId, entry);
     canvasService.setDrawPermission(lessonId, userId, canDraw);
@@ -508,7 +520,9 @@ export async function muteAllNow(schoolId: string, lessonId: string, requester: 
   }
   const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
   const participants = await presence.listParticipants(lessonId);
-  const studentIds = [...participants.entries()].filter(([, entry]) => entry.role === "student").map(([userId]) => userId);
+  const studentIds = [...participants.entries()]
+    .filter(([, entry]) => entry.kind === "guest")
+    .map(([userId]) => userId);
   await mediaService.muteMicrophones(livekitRoom, studentIds);
 }
 
@@ -578,7 +592,7 @@ export async function handleScreenShareStartedWebhook(livekitRoom: string, userI
   if (!lesson) return;
 
   const publisher = await presence.getParticipant(lesson.id, userId);
-  const isPublisherStaff = publisher?.role === "teacher" || publisher?.role === "admin";
+  const isPublisherStaff = publisher?.kind === "staff";
   const others = await mediaService.findOtherActiveScreenShares(livekitRoom, userId);
 
   if (others.length > 0) {
@@ -627,17 +641,23 @@ export async function handleScreenShareStoppedWebhook(livekitRoom: string): Prom
 }
 
 export async function sendChatMessage(
-  schoolId: string,
+  actor: LessonActor,
   lessonId: string,
-  user: AccessTokenPayload,
   body: string,
 ): Promise<ChatMessage> {
-  await assertMembership(schoolId, lessonId, user);
-  const entry = await presence.getParticipant(lessonId, user.sub);
+  await assertMembership(actor, lessonId);
+  const entry = await presence.getParticipant(lessonId, actor.participantId);
   if (!entry) {
     throw new AppError(409, "not_in_room", "Сначала войдите в урок");
   }
-  const row = await repo.insertChatMessage(lessonId, user.sub, body);
+  const isStaff = actor.kind === "staff";
+  const row = await repo.insertChatMessage({
+    lessonId,
+    userId: isStaff ? actor.participantId : null,
+    guestId: isStaff ? null : actor.participantId,
+    authorName: entry.fullName,
+    body,
+  });
   const message: ChatMessage = {
     id: row.id,
     lessonId: row.lessonId,
@@ -651,12 +671,11 @@ export async function sendChatMessage(
 }
 
 export async function listChatHistory(
-  schoolId: string,
+  actor: LessonActor,
   lessonId: string,
-  user: AccessTokenPayload,
   query: ListChatQuery,
 ): Promise<ChatMessage[]> {
-  await assertMembership(schoolId, lessonId, user);
+  await assertMembership(actor, lessonId);
   const rows = await repo.listChatMessages(lessonId, query.before ? new Date(query.before) : undefined, query.limit);
   return rows.map((row) => ({
     id: row.id,

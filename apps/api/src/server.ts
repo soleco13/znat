@@ -11,11 +11,13 @@ import { env } from "./plugins/env.js";
 import errorsPlugin from "./plugins/errors.js";
 import authenticatePlugin from "./plugins/authenticate.js";
 import rbacPlugin from "./plugins/rbac.js";
+import lessonAccessPlugin from "./plugins/lesson-access.js";
 import metricsPlugin from "./plugins/metrics.js";
 import { initErrorReporting } from "./plugins/sentry.js";
 import authRoutes from "./modules/auth/routes.js";
 import usersRoutes from "./modules/users/routes.js";
 import lessonsRoutes from "./modules/lessons/routes.js";
+import guestsRoutes from "./modules/guests/routes.js";
 import roomsRoutes from "./modules/rooms/routes.js";
 import roomsWsRoutes from "./modules/rooms/ws.js";
 import livekitWebhookRoutes from "./modules/rooms/livekit-webhook.js";
@@ -59,6 +61,7 @@ export function buildServer() {
   app.register(errorsPlugin);
   app.register(authenticatePlugin);
   app.register(rbacPlugin);
+  app.register(lessonAccessPlugin);
   app.register(metricsPlugin);
 
   app.get("/health", async () => ({ status: "ok" }));
@@ -73,6 +76,7 @@ export function buildServer() {
       api.register(authRoutes);
       api.register(usersRoutes);
       api.register(lessonsRoutes);
+      api.register(guestsRoutes);
       api.register(roomsRoutes);
       api.register(canvasRoutes);
       api.register(decksRoutes);

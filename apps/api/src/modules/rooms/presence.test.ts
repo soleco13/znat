@@ -7,11 +7,12 @@ const HEARTBEAT_TIMEOUT_MS = 60_000;
 function entry(overrides: Partial<PresenceEntry> = {}): PresenceEntry {
   return {
     fullName: "Тест",
-    role: "student",
+    kind: "guest",
+    role: null,
     connected: true,
     handRaised: false,
     pinned: false,
-    permissions: defaultPermissions("student"),
+    permissions: defaultPermissions("guest"),
     joinedAt: new Date().toISOString(),
     lastSeenAt: Date.now(),
     ...overrides,
@@ -19,14 +20,8 @@ function entry(overrides: Partial<PresenceEntry> = {}): PresenceEntry {
 }
 
 describe("defaultPermissions", () => {
-  it("учитель и админ получают все права по умолчанию", () => {
-    expect(defaultPermissions("teacher")).toEqual({
-      canDraw: true,
-      canSpeak: true,
-      canShareScreen: true,
-      canPublishVideo: true,
-    });
-    expect(defaultPermissions("admin")).toEqual({
+  it("персонал получает все права по умолчанию", () => {
+    expect(defaultPermissions("staff")).toEqual({
       canDraw: true,
       canSpeak: true,
       canShareScreen: true,
@@ -34,14 +29,8 @@ describe("defaultPermissions", () => {
     });
   });
 
-  it("ученик и методист без прав по умолчанию", () => {
-    expect(defaultPermissions("student")).toEqual({
-      canDraw: false,
-      canSpeak: false,
-      canShareScreen: false,
-      canPublishVideo: false,
-    });
-    expect(defaultPermissions("methodist")).toEqual({
+  it("гость-ученик без прав по умолчанию", () => {
+    expect(defaultPermissions("guest")).toEqual({
       canDraw: false,
       canSpeak: false,
       canShareScreen: false,

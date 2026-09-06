@@ -25,6 +25,13 @@ const bytea = customType<{ data: Buffer }>({
 });
 
 export const roleEnum = pgEnum("role", ["admin", "methodist", "teacher", "student"]);
+/**
+ * Э12.4 (§1.3 план-ТЗ) — вид участника урока в новой модели доступа.
+ * `staff` — учитель/админ/методист с аккаунтом (`lesson_participants.user_id`),
+ * `guest` — ученик, вошедший по ссылке с введённым именем
+ * (`lesson_participants.guest_id` + `display_name`, `user_id` NULL).
+ */
+export const participantKindEnum = pgEnum("participant_kind", ["staff", "guest"]);
 export const lessonStatusEnum = pgEnum("lesson_status", [
   "scheduled",
   "live",
@@ -154,13 +161,21 @@ export const lessonParticipants = pgTable(
     lessonId: uuid("lesson_id")
       .notNull()
       .references(() => lessons.id, { onDelete: "cascade" }),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    /** Э12.4: NULL у гостя-ученика (аккаунта нет) — личность в `guestId` + `displayName`. */
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    kind: participantKindEnum("kind").notNull().default("staff"),
+    /** Э12.4: стабильный id гостевой сессии ученика (из гостевого JWT). NULL у персонала. */
+    guestId: uuid("guest_id"),
+    /** Э12.4: имя, которое ученик ввёл при входе по ссылке. NULL у персонала (имя берётся из `users`). ПДн — §11 ревизии ТЗ. */
+    displayName: text("display_name"),
     joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
     leftAt: timestamp("left_at", { withTimezone: true }),
   },
-  (t) => [index("lesson_participants_lesson_idx").on(t.lessonId)],
+  (t) => [
+    index("lesson_participants_lesson_idx").on(t.lessonId),
+    // Переподключение гостя по стабильному `guestId` в пределах урока (Э12.4).
+    index("lesson_participants_lesson_guest_idx").on(t.lessonId, t.guestId),
+  ],
 );
 
 export const chatMessages = pgTable(
@@ -170,9 +185,16 @@ export const chatMessages = pgTable(
     lessonId: uuid("lesson_id")
       .notNull()
       .references(() => lessons.id, { onDelete: "cascade" }),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    /** Э12.4: NULL у сообщения гостя-ученика (аккаунта нет) — автор в `guestId` + `authorName`. */
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    /** Э12.4: id гостевой сессии автора-ученика. NULL у персонала. */
+    guestId: uuid("guest_id"),
+    /**
+     * Э12.4: денормализованное имя автора. Обязательно для гостя (нет строки
+     * `users`); для персонала заполняется тоже — чат урока эфемерен, тянуть
+     * `users` join ради имени в истории не нужно.
+     */
+    authorName: text("author_name"),
     body: text("body").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),

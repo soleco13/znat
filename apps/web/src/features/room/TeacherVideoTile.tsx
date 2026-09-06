@@ -29,7 +29,7 @@ export function TeacherVideoTile() {
   const [corner, setCorner] = useState<Corner>("bottom-right");
   const tracks = useTracks([Track.Source.Camera], { onlySubscribed: true });
   const teacherTrack = tracks.find(
-    (t) => t.participant.attributes.role === "teacher" || t.participant.attributes.role === "admin",
+    (t) => t.participant.attributes.kind === "staff",
   );
   if (!teacherTrack) return null;
 

@@ -41,7 +41,7 @@ export function StudentVideoGrid({
   const videoTracks = useTracks([Track.Source.Camera]);
   const videoByUserId = new Map(videoTracks.map((t) => [t.participant.identity, t]));
 
-  const students = participants.filter((p) => p.role === "student");
+  const students = participants.filter((p) => p.kind === "guest");
   if (students.length === 0) return null;
 
   const visible = students.filter((s) => videoByUserId.has(s.userId));

@@ -24,6 +24,14 @@ export const guestTokenPayloadSchema = z.object({
   lessonId: z.string().uuid(),
   guestId: z.string().uuid(),
   name: z.string().min(1).max(80),
+  /**
+   * sha256(hex) значения `lessons.join_token` на момент входа. Проверяется
+   * при каждом гостевом запросе к уроку: admin перевыпустил ссылку
+   * (`POST /lessons/:id/link/rotate`) → хеш перестал совпадать → сессия
+   * недействительна, нужен перезаход по новой ссылке (§1.6 план-ТЗ:
+   * «старый мгновенно недействителен»).
+   */
+  lt: z.string().length(64),
 });
 export type GuestTokenPayload = z.infer<typeof guestTokenPayloadSchema>;
 

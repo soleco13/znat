@@ -1,28 +1,51 @@
-import { eq, and, isNull, lt, desc, count } from "drizzle-orm";
+import { eq, and, isNull, lt, desc, count, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { lessonParticipants, chatMessages, users } from "../../db/schema.js";
 
-export async function insertJoin(lessonId: string, userId: string) {
-  const [row] = await db.insert(lessonParticipants).values({ lessonId, userId }).returning();
+/**
+ * Строка журнала посещений (Э12.4). Персонал — `userId`; гость-ученик —
+ * `guestId` + `displayName` (введённое имя, ПДн), `userId` NULL.
+ */
+export async function insertJoin(input: {
+  lessonId: string;
+  kind: "staff" | "guest";
+  userId: string | null;
+  guestId: string | null;
+  displayName: string | null;
+}) {
+  const [row] = await db.insert(lessonParticipants).values(input).returning();
   return row;
 }
 
-/** Закрывает самую свежую открытую сессию участника (leftAt IS NULL) в этом уроке. */
-export async function closeOpenSession(lessonId: string, userId: string) {
+/**
+ * Закрывает самую свежую открытую сессию участника (leftAt IS NULL) в этом
+ * уроке. `participantId` — `users.id` персонала ИЛИ `guest_id` ученика
+ * (совпадает с presence-ключом и LiveKit-identity).
+ */
+export async function closeOpenSession(lessonId: string, participantId: string) {
   await db
     .update(lessonParticipants)
     .set({ leftAt: new Date() })
     .where(
       and(
         eq(lessonParticipants.lessonId, lessonId),
-        eq(lessonParticipants.userId, userId),
+        or(
+          eq(lessonParticipants.userId, participantId),
+          eq(lessonParticipants.guestId, participantId),
+        ),
         isNull(lessonParticipants.leftAt),
       ),
     );
 }
 
-export async function insertChatMessage(lessonId: string, userId: string, body: string) {
-  const [row] = await db.insert(chatMessages).values({ lessonId, userId, body }).returning();
+export async function insertChatMessage(input: {
+  lessonId: string;
+  userId: string | null;
+  guestId: string | null;
+  authorName: string;
+  body: string;
+}) {
+  const [row] = await db.insert(chatMessages).values(input).returning();
   return row!;
 }
 
@@ -42,10 +65,13 @@ export async function listChatMessages(lessonId: string, before: Date | undefine
       userId: chatMessages.userId,
       body: chatMessages.body,
       createdAt: chatMessages.createdAt,
-      authorName: users.fullName,
+      // Э12.4: имя автора — денормализованное `author_name` (обязательно у
+      // гостя, нет строки `users`), с откатом на `users.full_name` для
+      // старых строк персонала до миграции.
+      authorName: sql<string>`coalesce(${chatMessages.authorName}, ${users.fullName}, 'Участник')`,
     })
     .from(chatMessages)
-    .innerJoin(users, eq(users.id, chatMessages.userId))
+    .leftJoin(users, eq(users.id, chatMessages.userId))
     .where(and(...conditions))
     .orderBy(desc(chatMessages.createdAt))
     .limit(limit);

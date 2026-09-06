@@ -1,4 +1,4 @@
-import type { LessonMode, ParticipantPermissions, Role } from "@school/shared";
+import type { LessonMode, ParticipantKind, ParticipantPermissions, Role } from "@school/shared";
 import { redis } from "../../db/redis.js";
 
 /** Э6.4, §5.2 ТЗ: продуктовый рычаг — экономит 3–4× трафика, переключение осознанное действие учителя. */
@@ -6,7 +6,10 @@ const DEFAULT_LESSON_MODE: LessonMode = "lecture";
 
 export interface PresenceEntry {
   fullName: string;
-  role: Role;
+  /** Э12.4: вид участника — права на уроке зависят от него, не от `role`. */
+  kind: ParticipantKind;
+  /** Роль аккаунта персонала; `null` у гостя-ученика. */
+  role: Role | null;
   connected: boolean;
   handRaised: boolean;
   /** Э6.3, §5.3 ТЗ: закреплено учителем в видимой сетке видео — не право, обычное ephemeral-состояние, как handRaised. */
@@ -16,9 +19,9 @@ export interface PresenceEntry {
   lastSeenAt: number;
 }
 
-/** Учитель и админ по умолчанию управляют комнатой, ученик получает права от учителя. */
-export function defaultPermissions(role: Role): ParticipantPermissions {
-  const isStaff = role === "teacher" || role === "admin";
+/** Персонал (`staff`) по умолчанию управляет комнатой, гость-ученик получает права от учителя. */
+export function defaultPermissions(kind: ParticipantKind): ParticipantPermissions {
+  const isStaff = kind === "staff";
   return { canDraw: isStaff, canSpeak: isStaff, canShareScreen: isStaff, canPublishVideo: isStaff };
 }
 

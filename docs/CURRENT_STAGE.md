@@ -72,9 +72,63 @@
 Сборка (api/web/shared) / тесты (54 + 377) / depcheck зелёные. Миграция на
 живой БД не прогонялась (нет Docker в среде).
 
-**Осталось по Э12:** Э12.4 (гостевой вход, SENSITIVE) → Э12.5 (задания на participant) →
+**Э12.4 — гостевой вход (SENSITIVE, «не делегировать вслепую»). Один
+коммит.**
+
+Пользователь выбрал полный вариант: инфраструктура сессии + токен-плоскость
++ полный actor-рефактор `rooms/media/canvas` + правка фронт-контрактов в
+одном подэтапе.
+
+- `packages/shared`: `guestTokenPayloadSchema` +`lt` (sha256 ссылки урока на
+  момент входа — ротация admin мгновенно инвалидирует сессию).
+  `participantSnapshotSchema`: `+kind: staff|guest`, `role` → nullable.
+  `chatMessageSchema.userId` → nullable.
+- env: `JWT_GUEST_SECRET` (отдельный секрет), `GUEST_SESSION_TTL_HOURS`
+  (деф. 6). `.env.example` (оба), `apps/api/.env.example`, `vitest.config`.
+- Миграция `0016_e12_4_guest_participants.sql`: `participant_kind` enum;
+  `lesson_participants` — `user_id` nullable, `+kind/guest_id/display_name`,
+  индекс `(lesson_id, guest_id)`; `chat_messages` — `user_id` nullable,
+  `+guest_id/author_name`. На живой БД не прогонялась (нет Docker).
+- Новый модуль `guests`: `service.ts` (`enterAsGuest` минтит гостевой JWT
+  jose HS256; `resolveGuestSession` = подпись+срок+сверка `lt`+существование
+  урока; `LessonActor` — общий тип `staff|guest`), `routes.ts`
+  (`GET /j/:token`, `POST /j/:token/enter` → httpOnly+Secure(prod)+Lax
+  cookie `guest_session`, rate-limit 20/мин на IP).
+- `plugins/lesson-access.ts` — `requireLessonAccess`: Bearer→staff-actor
+  (+lookup имени), кука→guest-actor (`lessonId` из токена обязан совпасть с
+  `:id`). Авторизацию (admin любой / teacher свой / methodist не в урок)
+  по-прежнему делает сервис.
+- `media/service.ts`: `buildPublishGrant`/`createParticipantConnection`/
+  `updateLivePermissions` — `kind: staff|guest` вместо `role: Role`.
+  LiveKit-атрибут участника: `{ kind }` вместо `{ role }`.
+- `canvas/hocuspocus.ts`: `onAuthenticate` принимает и гостя — гостевой JWT
+  из куки в `requestHeaders`; staff-путь — `assertStaffLessonAccess` (ветку
+  ученика-по-группе убрал). `computeCanDraw(kind, …)`.
+- `rooms`: `service.ts` — `join/leave/setHandRaised/sendChatMessage/
+  listChatHistory` берут `LessonActor`; `assertMembership` по actor;
+  presence-ключ = `participantId` (staff `userId` / guest `guestId`);
+  `PresenceEntry.kind`; лимит микрофонов/mute-all/draw-all по `kind==='guest'`.
+  `routes.ts` — два периметра: гость∪staff (`requireLessonAccess`) и
+  только staff (`app.authenticate`). `ws.ts` — гость по куке (`token`
+  в query опционален). `repo.ts` — `insertJoin`/`insertChatMessage` с
+  guest-полями, `closeOpenSession` по `user_id OR guest_id`,
+  `listChatMessages` leftJoin + `coalesce(author_name, users.full_name)`.
+- `lessons/service.ts#getAttendance` — `kind`/`displayName` из строки журнала.
+- Фронт (минимум под контракты, полный UI — Э12.7): `VideoSubscriptions`/
+  `TeacherVideoTile`/`StudentVideoGrid`/`RoomPage` — `kind` вместо `role`
+  там, где отличали ученика от персонала.
+- Тесты: `guests/service.test.ts` (8, реальный jose — минт, ротация,
+  истечение, чужой секрет), `rooms/service.test.ts` (+гость: журнал,
+  presence, чат, leave; actor-хелперы), правки `media`/`presence`/
+  `hocuspocus` тестов. Сборка api/web / 388 тестов / depcheck — зелёные.
+- **Не сделано в Э12.4** (осознанно): гость не грузит картинки на доску по
+  HTTP (`canvas/routes.ts` остаётся staff-only) — рисует через Yjs;
+  `/security-review` по под-этапу не прогонялся в этой среде (нужен запуск
+  пользователем) — сделан ручной разбор гостевой токен-плоскости.
+
+**Осталось по Э12:** Э12.5 (задания на participant) →
 Э12.6 (фронт: вход ученика) → Э12.7 (фронт: UI урока) → Э12.8 (админка
-«Уроки») → Э12.9 (миграция, ТЗ, гейт).
+«Уроки») → Э12.9 (миграция, ТЗ, гейт, `/security-review` по всему этапу).
 
 ---
 

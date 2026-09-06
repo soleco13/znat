@@ -104,6 +104,16 @@ export async function resolveJoinToken(joinToken: string) {
   return lesson;
 }
 
+/**
+ * Урок для проверки живой гостевой сессии (Э12.4) — по `lessonId` из
+ * гостевого JWT, без школы (у гостя её нет). Вызывающий сверяет
+ * `sha256(lesson.joinToken)` с `lt` из токена: не совпало → admin
+ * перевыпустил ссылку, сессия недействительна.
+ */
+export async function getLessonForGuestSession(lessonId: string) {
+  return repo.findLessonByIdAnySchool(lessonId);
+}
+
 // ─── Админские операции над уроком ───────────────────────────────────────────
 
 export async function createLesson(
@@ -192,14 +202,12 @@ export async function getAttendance(schoolId: string, id: string): Promise<Lesso
   const userIds = rows.flatMap((r) => (r.userId ? [r.userId] : []));
   const names = await usersService.getUserNames(schoolId, userIds);
   const attendance: LessonAttendanceRow[] = rows.map((r) => {
-    const user = r.userId ? names.get(r.userId) : undefined;
-    // Э12: до перевода `lesson_participants` на гостевую модель (Э12.4)
-    // все строки имеют `user_id`; ученик = роль `student` → `guest`.
-    const kind = user && user.role !== "student" ? "staff" : "guest";
+    const staffName = r.userId ? names.get(r.userId)?.fullName : undefined;
     return {
       participantId: r.participantId,
-      kind,
-      displayName: user?.fullName ?? "Гость",
+      kind: r.kind,
+      // Персонал — имя из `users`; гость — введённое имя из журнала (ПДн).
+      displayName: staffName ?? r.displayName ?? "Участник",
       userId: r.userId,
       joinedAt: r.joinedAt.toISOString(),
       leftAt: r.leftAt ? r.leftAt.toISOString() : null,

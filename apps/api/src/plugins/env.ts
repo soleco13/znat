@@ -7,6 +7,15 @@ const envSchema = z.object({
   REDIS_URL: z.string().min(1).default("redis://localhost:6379"),
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
+  /**
+   * Э12.4 — подпись гостевого JWT ученика (`/j/:token/enter`). Отдельный
+   * секрет от персонального `JWT_ACCESS_SECRET`: у гостевого токена другой
+   * периметр (только один урок, httpOnly-cookie, без refresh) и компрометация
+   * одного секрета не должна давать второй класс токенов.
+   */
+  JWT_GUEST_SECRET: z.string().min(32),
+  /** Э12.4 — срок жизни гостевой сессии урока (§1.6 план-ТЗ: «~6 ч, без refresh»). Истекла → перезаход по ссылке. */
+  GUEST_SESSION_TTL_HOURS: z.coerce.number().int().min(1).max(24).default(6),
   COOKIE_SECRET: z.string().min(32),
   STORAGE_ROOT: z.string().min(1).default("/data/assets"),
   STORAGE_HMAC_SECRET: z.string().min(32),

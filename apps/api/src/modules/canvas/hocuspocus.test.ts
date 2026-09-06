@@ -3,15 +3,16 @@ import { Doc, Map as YMap, Text as YText, applyUpdate, encodeStateAsUpdate } fro
 import type { Document as HocuspocusDocument } from "@hocuspocus/server";
 import type { AccessTokenPayload } from "@school/shared";
 
-const { authServiceMock, lessonsServiceMock, usersServiceMock, repoMock } = vi.hoisted(() => ({
+const { authServiceMock, lessonsServiceMock, guestsServiceMock, repoMock } = vi.hoisted(() => ({
   authServiceMock: {
     verifyAccessToken: vi.fn(),
   },
   lessonsServiceMock: {
     getLesson: vi.fn(),
   },
-  usersServiceMock: {
-    isGroupMember: vi.fn(),
+  guestsServiceMock: {
+    GUEST_COOKIE_NAME: "guest_session",
+    verifyGuestToken: vi.fn(),
   },
   repoMock: {
     loadDoc: vi.fn(),
@@ -21,8 +22,13 @@ const { authServiceMock, lessonsServiceMock, usersServiceMock, repoMock } = vi.h
 
 vi.mock("../auth/service.js", () => authServiceMock);
 vi.mock("../lessons/service.js", () => lessonsServiceMock);
-vi.mock("../users/service.js", () => usersServiceMock);
+vi.mock("../guests/service.js", () => guestsServiceMock);
 vi.mock("./repo.js", () => repoMock);
+
+/** Э12.4: гостевую куку `guest_session` кладём в заголовок `Cookie` — hocuspocus отдаёт `requestHeaders` как `Headers`. */
+function guestCookieHeaders(token: string): Headers {
+  return new Headers({ cookie: `guest_session=${token}` });
+}
 
 const {
   authenticateCanvasConnection,
@@ -83,7 +89,7 @@ beforeEach(() => {
 describe("authenticateCanvasConnection", () => {
   it("некорректный documentName (не UUID) отклоняется до похода в БД", async () => {
     await expect(
-      authenticateCanvasConnection({ token: "t", documentName: "not-a-uuid", connectionConfig: fakeConnectionConfig() }),
+      authenticateCanvasConnection({ token: "t", documentName: "not-a-uuid", connectionConfig: fakeConnectionConfig(), requestHeaders: new Headers() }),
     ).rejects.toMatchObject({ statusCode: 400 });
     expect(lessonsServiceMock.getLesson).not.toHaveBeenCalled();
   });
@@ -92,7 +98,7 @@ describe("authenticateCanvasConnection", () => {
     authServiceMock.verifyAccessToken.mockResolvedValue(tokenFor({ role: "admin", sub: "admin-1" }));
     const connectionConfig = fakeConnectionConfig();
 
-    const result = await authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig });
+    const result = await authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig, requestHeaders: new Headers() });
     expect(result).toEqual({ userId: "admin-1", role: "admin" });
     expect(connectionConfig.readOnly).toBe(false);
   });
@@ -101,7 +107,7 @@ describe("authenticateCanvasConnection", () => {
     authServiceMock.verifyAccessToken.mockResolvedValue(tokenFor({ role: "teacher", sub: TEACHER_ID }));
     const connectionConfig = fakeConnectionConfig();
 
-    const result = await authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig });
+    const result = await authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig, requestHeaders: new Headers() });
     expect(result).toEqual({ userId: TEACHER_ID, role: "teacher" });
     expect(connectionConfig.readOnly).toBe(false);
   });
@@ -112,35 +118,65 @@ describe("authenticateCanvasConnection", () => {
     );
 
     await expect(
-      authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig: fakeConnectionConfig() }),
+      authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig: fakeConnectionConfig(), requestHeaders: new Headers() }),
     ).rejects.toMatchObject({ statusCode: 403 });
   });
 
-  it("ученик из группы урока подключается, но по умолчанию readOnly (Э3.8 — canDraw:false у ученика без явного гранта)", async () => {
-    authServiceMock.verifyAccessToken.mockResolvedValue(tokenFor({ role: "student", sub: STUDENT_ID }));
-    usersServiceMock.isGroupMember.mockResolvedValue(true);
+  it("Э12.4: гость подключается к своему уроку по куке, но по умолчанию readOnly (canDraw:false у гостя)", async () => {
+    guestsServiceMock.verifyGuestToken.mockResolvedValue({
+      typ: "guest",
+      lessonId: LESSON_ID,
+      guestId: STUDENT_ID,
+      name: "Аня",
+      lt: "l".repeat(64),
+    });
     const connectionConfig = fakeConnectionConfig();
 
-    const result = await authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig });
-    expect(result).toEqual({ userId: STUDENT_ID, role: "student" });
-    expect(usersServiceMock.isGroupMember).toHaveBeenCalledWith(GROUP_ID, STUDENT_ID);
+    const result = await authenticateCanvasConnection({
+      token: "",
+      documentName: LESSON_ID,
+      connectionConfig,
+      requestHeaders: guestCookieHeaders("guest-jwt"),
+    });
+    expect(result).toEqual({ userId: STUDENT_ID, role: "guest" });
     expect(connectionConfig.readOnly).toBe(true);
   });
 
-  it("ученик НЕ из группы урока (чужой урок) отклоняется", async () => {
-    authServiceMock.verifyAccessToken.mockResolvedValue(tokenFor({ role: "student", sub: STUDENT_ID }));
-    usersServiceMock.isGroupMember.mockResolvedValue(false);
+  it("Э12.4: гостевая сессия другого урока отклоняется", async () => {
+    guestsServiceMock.verifyGuestToken.mockResolvedValue({
+      typ: "guest",
+      lessonId: "99999999-9999-9999-9999-999999999999",
+      guestId: STUDENT_ID,
+      name: "Аня",
+      lt: "l".repeat(64),
+    });
 
     await expect(
-      authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig: fakeConnectionConfig() }),
+      authenticateCanvasConnection({
+        token: "",
+        documentName: LESSON_ID,
+        connectionConfig: fakeConnectionConfig(),
+        requestHeaders: guestCookieHeaders("guest-jwt"),
+      }),
     ).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("Э12.4: ни access-токена, ни гостевой куки — 401", async () => {
+    await expect(
+      authenticateCanvasConnection({
+        token: "",
+        documentName: LESSON_ID,
+        connectionConfig: fakeConnectionConfig(),
+        requestHeaders: new Headers(),
+      }),
+    ).rejects.toMatchObject({ statusCode: 401 });
   });
 
   it("methodist к уроку не допускается", async () => {
     authServiceMock.verifyAccessToken.mockResolvedValue(tokenFor({ role: "methodist", sub: "88888888-8888-8888-8888-888888888888" }));
 
     await expect(
-      authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig: fakeConnectionConfig() }),
+      authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig: fakeConnectionConfig(), requestHeaders: new Headers() }),
     ).rejects.toMatchObject({ statusCode: 403 });
   });
 
@@ -148,7 +184,7 @@ describe("authenticateCanvasConnection", () => {
     authServiceMock.verifyAccessToken.mockRejectedValue(new Error("bad token"));
 
     await expect(
-      authenticateCanvasConnection({ token: "bad", documentName: LESSON_ID, connectionConfig: fakeConnectionConfig() }),
+      authenticateCanvasConnection({ token: "bad", documentName: LESSON_ID, connectionConfig: fakeConnectionConfig(), requestHeaders: new Headers() }),
     ).rejects.toThrow();
   });
 });
@@ -325,13 +361,27 @@ describe("setDrawPermission (Э3.8)", () => {
     clearDrawPermissionOverrides({ documentName: LESSON_ID });
   });
 
+  function mockGuest(sub: string) {
+    guestsServiceMock.verifyGuestToken.mockResolvedValue({
+      typ: "guest",
+      lessonId: LESSON_ID,
+      guestId: sub,
+      name: "Гость",
+      lt: "l".repeat(64),
+    });
+  }
+
   it("влияет на readOnly следующего подключения того же участника (документ ещё не в памяти)", async () => {
     setDrawPermission(LESSON_ID, STUDENT_ID, true);
-    authServiceMock.verifyAccessToken.mockResolvedValue(tokenFor({ role: "student", sub: STUDENT_ID }));
-    usersServiceMock.isGroupMember.mockResolvedValue(true);
+    mockGuest(STUDENT_ID);
     const connectionConfig = fakeConnectionConfig();
 
-    await authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig });
+    await authenticateCanvasConnection({
+      token: "",
+      documentName: LESSON_ID,
+      connectionConfig,
+      requestHeaders: guestCookieHeaders("g"),
+    });
 
     expect(connectionConfig.readOnly).toBe(false);
   });
@@ -339,11 +389,15 @@ describe("setDrawPermission (Э3.8)", () => {
   it("отзыв права переопределяет даже ранее выданное разрешение", async () => {
     setDrawPermission(LESSON_ID, STUDENT_ID, true);
     setDrawPermission(LESSON_ID, STUDENT_ID, false);
-    authServiceMock.verifyAccessToken.mockResolvedValue(tokenFor({ role: "student", sub: STUDENT_ID }));
-    usersServiceMock.isGroupMember.mockResolvedValue(true);
+    mockGuest(STUDENT_ID);
     const connectionConfig = fakeConnectionConfig();
 
-    await authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig });
+    await authenticateCanvasConnection({
+      token: "",
+      documentName: LESSON_ID,
+      connectionConfig,
+      requestHeaders: guestCookieHeaders("g"),
+    });
 
     expect(connectionConfig.readOnly).toBe(true);
   });
@@ -386,29 +440,9 @@ describe("assertCanDrawForLesson (Э3.10 — право загружать из�
     ).rejects.toMatchObject({ statusCode: 403 });
   });
 
-  it("ученик без явного гранта отклоняется (canDraw:false по умолчанию у роли, Э3.8)", async () => {
-    usersServiceMock.isGroupMember.mockResolvedValue(true);
-
+  it("Э12.4: не-персонал (роль вне admin/teacher) к этому HTTP-пути не допускается", async () => {
     await expect(
-      assertCanDrawForLesson({ sub: STUDENT_ID, role: "student", schoolId: SCHOOL_ID }, LESSON_ID),
-    ).rejects.toMatchObject({ statusCode: 403, code: "forbidden" });
-  });
-
-  it("ученик с явно выданным canDraw проходит", async () => {
-    usersServiceMock.isGroupMember.mockResolvedValue(true);
-    setDrawPermission(LESSON_ID, STUDENT_ID, true);
-
-    await expect(
-      assertCanDrawForLesson({ sub: STUDENT_ID, role: "student", schoolId: SCHOOL_ID }, LESSON_ID),
-    ).resolves.toBeUndefined();
-  });
-
-  it("ученик НЕ из группы урока отклоняется до проверки canDraw", async () => {
-    usersServiceMock.isGroupMember.mockResolvedValue(false);
-    setDrawPermission(LESSON_ID, STUDENT_ID, true);
-
-    await expect(
-      assertCanDrawForLesson({ sub: STUDENT_ID, role: "student", schoolId: SCHOOL_ID }, LESSON_ID),
+      assertCanDrawForLesson({ sub: STUDENT_ID, role: "methodist", schoolId: SCHOOL_ID }, LESSON_ID),
     ).rejects.toMatchObject({ statusCode: 403 });
   });
 });

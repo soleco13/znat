@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { roleSchema, lessonStatusSchema } from "./roles.js";
+import { roleSchema, lessonStatusSchema, participantKindSchema } from "./roles.js";
 import { mediaConnectionSchema } from "./media.js";
 import { deckProgressEventSchema } from "./decks.js";
 
@@ -18,9 +18,18 @@ export type UpdateParticipantPermissionsRequest = z.infer<
 >;
 
 export const participantSnapshotSchema = z.object({
+  /**
+   * Идентичность участника на уроке (Э12.4): для персонала — `users.id`,
+   * для гостя-ученика — стабильный `guestId` из гостевой сессии. Совпадает
+   * с LiveKit-identity участника. Имя поля историческое (`userId`), но это
+   * уже не всегда id из `users`.
+   */
   userId: z.string().uuid(),
   fullName: z.string(),
-  role: roleSchema,
+  /** Э12.4: `staff` — персонал с аккаунтом, `guest` — ученик по ссылке. Права на уроке привязаны к этому, а не к `role`. */
+  kind: participantKindSchema,
+  /** Роль из аккаунта персонала; `null` у гостя (у ученика аккаунта нет). */
+  role: roleSchema.nullable(),
   connected: z.boolean(),
   handRaised: z.boolean(),
   /** Э6.3, §5.3 ТЗ: закреплено учителем в видимой сетке видео — ephemeral-состояние, не право (см. participantPermissionsSchema). */
@@ -53,7 +62,8 @@ export type JoinLessonResponse = z.infer<typeof joinLessonResponseSchema>;
 export const chatMessageSchema = z.object({
   id: z.string().uuid(),
   lessonId: z.string().uuid(),
-  userId: z.string().uuid(),
+  /** Э12.4: `null` у сообщения гостя-ученика (аккаунта нет) — имя в `authorName`. */
+  userId: z.string().uuid().nullable(),
   authorName: z.string(),
   body: z.string(),
   createdAt: z.string(),

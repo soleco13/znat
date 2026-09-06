@@ -39,7 +39,7 @@ describe("createParticipantConnection: источники трека по рол
 
   async function grantOf(
     canSpeak: boolean,
-    role: "teacher" | "student" | "admin" = "student",
+    kind: "staff" | "guest" = "guest",
     canPublishVideo = false,
     canShareScreen = false,
   ) {
@@ -47,7 +47,7 @@ describe("createParticipantConnection: источники трека по рол
       livekitRoom: "lesson-test-room",
       userId: "user-1",
       fullName: "Тест Тестов",
-      role,
+      kind,
       permissions: { canDraw: false, canSpeak, canShareScreen, canPublishVideo },
       lessonStartsAt: startsAt,
       lessonDurationMin: 45,
@@ -57,52 +57,52 @@ describe("createParticipantConnection: источники трека по рол
   }
 
   it("canPublish повторяет право canSpeak участника-ученика", async () => {
-    expect((await grantOf(true, "student")).grant.canPublish).toBe(true);
-    expect((await grantOf(false, "student")).grant.canPublish).toBe(false);
+    expect((await grantOf(true, "guest")).grant.canPublish).toBe(true);
+    expect((await grantOf(false, "guest")).grant.canPublish).toBe(false);
   });
 
   it("источник публикации ученика жёстко ограничен микрофоном, даже если canSpeak=true, без canPublishVideo", async () => {
-    const { grant } = await grantOf(true, "student");
+    const { grant } = await grantOf(true, "guest");
     expect(grant.canPublishSources).toEqual(["microphone"]);
     expect(grant.canPublishData).toBe(false);
   });
 
   it("Э6.1: ученик с canPublishVideo получает источник camera и canPublish=true даже при canSpeak=false", async () => {
-    const { grant } = await grantOf(false, "student", true);
+    const { grant } = await grantOf(false, "guest", true);
     expect(grant.canPublish).toBe(true);
     expect(grant.canPublishSources).toEqual(expect.arrayContaining(["microphone", "camera"]));
   });
 
   it("Э5.1: учитель получает источник camera всегда, независимо от canSpeak", async () => {
-    const { grant } = await grantOf(false, "teacher");
+    const { grant } = await grantOf(false, "staff");
     expect(grant.canPublish).toBe(true);
     expect(grant.canPublishSources).toEqual(expect.arrayContaining(["microphone", "camera"]));
   });
 
   it("Э5.1: admin тоже получает источник camera (роль, не отдельное право)", async () => {
-    const { grant } = await grantOf(false, "admin");
+    const { grant } = await grantOf(false, "staff");
     expect(grant.canPublishSources).toEqual(expect.arrayContaining(["microphone", "camera"]));
   });
 
   it("демонстрация экрана не входит в грант без права canShareScreen", async () => {
-    const { grant } = await grantOf(true, "teacher");
+    const { grant } = await grantOf(true, "staff");
     expect(grant.canPublishSources).not.toContain("screen_share");
   });
 
   it("Э7.1/Э7.4: право canShareScreen добавляет источник screen_share и canPublish=true — учителю и ученику одинаково", async () => {
-    const teacher = await grantOf(false, "teacher", false, true);
+    const teacher = await grantOf(false, "staff", false, true);
     expect(teacher.grant.canPublish).toBe(true);
     expect(teacher.grant.canPublishSources).toEqual(expect.arrayContaining(["microphone", "camera", "screen_share"]));
 
-    const student = await grantOf(false, "student", false, true);
+    const student = await grantOf(false, "guest", false, true);
     expect(student.grant.canPublish).toBe(true);
     expect(student.grant.canPublishSources).toEqual(expect.arrayContaining(["microphone", "screen_share"]));
     expect(student.grant.canPublishSources).not.toContain("camera");
   });
 
   it("Э6.1: токен несёт роль в attributes — клиент отличает камеру учителя от камеры ученика", async () => {
-    expect((await grantOf(false, "teacher")).attributes).toEqual({ role: "teacher" });
-    expect((await grantOf(false, "student")).attributes).toEqual({ role: "student" });
+    expect((await grantOf(false, "staff")).attributes).toEqual({ kind: "staff" });
+    expect((await grantOf(false, "guest")).attributes).toEqual({ kind: "guest" });
   });
 });
 
@@ -117,7 +117,7 @@ describe("updateLivePermissions: живое обновление гранта у
       "lesson-room",
       "user-1",
       { canDraw: false, canSpeak: true, canShareScreen: false, canPublishVideo: false },
-      "student",
+      "guest",
     );
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -137,7 +137,7 @@ describe("updateLivePermissions: живое обновление гранта у
       "lesson-room",
       "teacher-1",
       { canDraw: true, canSpeak: false, canShareScreen: true, canPublishVideo: true },
-      "teacher",
+      "staff",
     );
 
     const [, init] = fetchMock.mock.calls[0] as [unknown, RequestInit];
@@ -154,7 +154,7 @@ describe("updateLivePermissions: живое обновление гранта у
       "lesson-room",
       "user-1",
       { canDraw: false, canSpeak: false, canShareScreen: false, canPublishVideo: true },
-      "student",
+      "guest",
     );
 
     const [, init] = fetchMock.mock.calls[0] as [unknown, RequestInit];
@@ -171,7 +171,7 @@ describe("updateLivePermissions: живое обновление гранта у
       "lesson-room",
       "user-1",
       { canDraw: false, canSpeak: false, canShareScreen: false, canPublishVideo: false },
-      "student",
+      "guest",
     );
 
     const [, init] = fetchMock.mock.calls[0] as [unknown, RequestInit];
@@ -187,7 +187,7 @@ describe("updateLivePermissions: живое обновление гранта у
       "lesson-room",
       "user-1",
       { canDraw: false, canSpeak: false, canShareScreen: true, canPublishVideo: false },
-      "student",
+      "guest",
     );
 
     const [, init] = fetchMock.mock.calls[0] as [unknown, RequestInit];
@@ -204,7 +204,7 @@ describe("updateLivePermissions: живое обновление гранта у
         "lesson-room",
         "user-1",
         { canDraw: false, canSpeak: false, canShareScreen: false, canPublishVideo: false },
-        "student",
+        "guest",
       ),
     ).resolves.toBeUndefined();
   });
@@ -217,7 +217,7 @@ describe("updateLivePermissions: живое обновление гранта у
         "lesson-room",
         "user-1",
         { canDraw: false, canSpeak: true, canShareScreen: false, canPublishVideo: false },
-        "student",
+        "guest",
       ),
     ).rejects.toThrow();
   });

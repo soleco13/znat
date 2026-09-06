@@ -43,6 +43,17 @@ export async function findLessonByJoinToken(joinToken: string) {
 }
 
 /**
+ * Урок по id без фильтра по школе — для проверки гостевой сессии (Э12.4):
+ * гостевой JWT несёт `lessonId`, школа выводится из самого урока, а не из
+ * сессии (у гостя её нет). Подлинность гарантируется подписью JWT и сверкой
+ * хеша текущей ссылки урока (`lt` в payload).
+ */
+export async function findLessonByIdAnySchool(id: string) {
+  const rows = await db.select().from(lessons).where(eq(lessons.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+/**
  * Без фильтра по schoolId: LiveKit-вебхук (Э2.7) знает только имя комнаты,
  * не школу — событие приходит от единого self-hosted LiveKit на все школы,
  * а подлинность подтверждается подписью в самом вебхуке, не сессией пользователя.
@@ -131,7 +142,10 @@ export async function listAttendance(lessonId: string) {
   return db
     .select({
       participantId: lessonParticipants.id,
+      kind: lessonParticipants.kind,
       userId: lessonParticipants.userId,
+      guestId: lessonParticipants.guestId,
+      displayName: lessonParticipants.displayName,
       joinedAt: lessonParticipants.joinedAt,
       leftAt: lessonParticipants.leftAt,
     })

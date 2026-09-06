@@ -113,6 +113,13 @@
       "when": 1788680889733,
       "tag": "0015_e12_lessons_guest_base",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1788681918076,
+      "tag": "0016_e12_4_guest_participants",
+      "breakpoints": true
     }
   ]
 }
