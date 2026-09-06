@@ -3,6 +3,7 @@ import type {
   ActivityDto,
   ActivityProgress,
   ActivityReview,
+  ActivityStudentAttempt,
   CreateActivityRequest,
   GradeManualResponseRequest,
   GradeManualResponseResult,
@@ -44,6 +45,16 @@ export function getActivityProgress(activityId: string): Promise<ActivityProgres
 /** Учитель: агрегированная аналитика по вопросам — гистограмма ответов (Э8.9). */
 export function getActivityAnalytics(activityId: string): Promise<ActivityAnalytics> {
   return apiFetch<ActivityAnalytics>(`/activities/${activityId}/analytics`);
+}
+
+/** Учитель: полная попытка одного ученика — материал с ключами + его текущие ответы (§7.3 ТЗ). */
+export function getStudentAttempt(
+  activityId: string,
+  participantId: string,
+): Promise<ActivityStudentAttempt> {
+  return apiFetch<ActivityStudentAttempt>(
+    `/activities/${activityId}/students/${encodeURIComponent(participantId)}`,
+  );
 }
 
 /** Ученик/учитель: своя копия задания без ключей ответов + ранее сохранённые черновики. */

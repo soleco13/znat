@@ -12,9 +12,12 @@ import { ReviewPanel } from "./ReviewPanel.js";
 export function ActivityTeacherTabs({
   activityId,
   reviewSignal = 0,
+  onSelectStudent,
 }: {
   activityId: string;
   reviewSignal?: number;
+  /** §7.3 ТЗ: клик по ученику в «Прогрессе» — открыть его материал. */
+  onSelectStudent?: (participantId: string, displayName: string) => void;
 }) {
   return (
     <Tabs defaultValue="progress" className="space-y-3">
@@ -25,7 +28,7 @@ export function ActivityTeacherTabs({
         <TabsTrigger value="grading">Проверка</TabsTrigger>
       </TabsList>
       <TabsContent value="progress">
-        <ClassProgressPanel activityId={activityId} />
+        <ClassProgressPanel activityId={activityId} onSelectStudent={onSelectStudent} />
       </TabsContent>
       <TabsContent value="analytics">
         <QuestionAnalyticsPanel activityId={activityId} />

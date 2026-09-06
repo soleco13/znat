@@ -12,7 +12,14 @@ const POLL_MS = 4_000;
  * Панель прогресса класса по заданию (Э8.8, §7.3 ТЗ). Опрос
  * `GET /activities/:id/progress`, не пуш.
  */
-export function ClassProgressPanel({ activityId }: { activityId: string }) {
+export function ClassProgressPanel({
+  activityId,
+  onSelectStudent,
+}: {
+  activityId: string;
+  /** Э12.5/§7.3: клик по ученику — открыть его попытку (учителю на уроке). */
+  onSelectStudent?: (participantId: string, displayName: string) => void;
+}) {
   const [progress, setProgress] = useState<ActivityProgress | null>(null);
   const [error, setError] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -58,18 +65,35 @@ export function ClassProgressPanel({ activityId }: { activityId: string }) {
         {error ? <span className="self-center text-warning">обновление прервалось</span> : null}
       </div>
       <ul className="divide-y divide-border rounded-lg border border-border">
-        {progress.students.map((s) => (
-          <li key={s.participantId} className="flex items-center justify-between px-3 py-2 text-sm">
-            <span className="flex items-center gap-2">
-              <StatusDot status={s.status} />
-              <UserAvatar name={s.displayName} size={22} />
-              {s.displayName}
-            </span>
-            <span className="text-xs font-medium text-muted-foreground">
-              {s.answered}/{s.total}
-            </span>
-          </li>
-        ))}
+        {progress.students.map((s) => {
+          const inner = (
+            <>
+              <span className="flex items-center gap-2">
+                <StatusDot status={s.status} />
+                <UserAvatar name={s.displayName} size={22} />
+                {s.displayName}
+              </span>
+              <span className="text-xs font-medium text-muted-foreground">
+                {s.answered}/{s.total}
+              </span>
+            </>
+          );
+          return (
+            <li key={s.participantId}>
+              {onSelectStudent ? (
+                <button
+                  type="button"
+                  onClick={() => onSelectStudent(s.participantId, s.displayName)}
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm transition-colors hover:bg-secondary"
+                >
+                  {inner}
+                </button>
+              ) : (
+                <div className="flex items-center justify-between px-3 py-2 text-sm">{inner}</div>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
@@ -87,7 +111,7 @@ function Stat({
   const cls = {
     green: "bg-success-light text-success",
     blue: "bg-primary-light text-primary",
-    yellow: "bg-warn-light text-[#b45309]",
+    yellow: "bg-warn-light text-warn",
     gray: "bg-surface-3 text-muted-foreground",
   }[tone];
   return (

@@ -69,6 +69,7 @@ import { Board } from "../canvas/Board.js";
 import { DeckPanel } from "../decks/DeckPanel.js";
 import { listLessonActivities } from "../materials/activity-api.js";
 import { LessonActivityPanel } from "../materials/LessonActivityPanel.js";
+import { ActivityStage } from "./ActivityStage.js";
 import { RecordingConsentBanner, RecordingPanel } from "../recordings/RecordingPanel.js";
 import { SelfCameraButton, VideoDegradeSuggestion } from "./CameraControls.js";
 import { ConnectionQualityDot, PacketLossWarning } from "./ConnectionQuality.js";
@@ -124,7 +125,7 @@ export function RoomPage() {
   // и что показано на стейдже (плитки участников / доска). Демонстрация
   // экрана переключает стейдж сама (см. `LiveStage`).
   const [drawer, setDrawer] = useState<null | "tools" | "people" | "chat">(null);
-  const [stageView, setStageView] = useState<"people" | "board">("people");
+  const [stageView, setStageView] = useState<"people" | "board" | "activity">("people");
   const [activeTool, setActiveTool] = useState<null | "deck" | "activity" | "recording" | "class">(
     null,
   );
@@ -204,6 +205,8 @@ export function RoomPage() {
         break;
       case "activity_started":
         setActiveActivityId(message.activityId);
+        // §7.3 ТЗ: выданный материал сразу выходит на стейдж (плитки — в ленту).
+        setStageView("activity");
         break;
       case "activity_reviewed":
         setReviewSignal((n) => n + 1);
@@ -555,9 +558,28 @@ export function RoomPage() {
       key: "activity",
       icon: ClipboardList,
       label: isTeacher ? "Задание классу" : "Задание",
-      hint: isTeacher ? "выдать и проверить" : "выполнить задание урока",
+      hint: activeActivityId
+        ? stageView === "activity"
+          ? "на экране"
+          : "открыть на экране"
+        : isTeacher
+          ? "выдать и проверить"
+          : "выполнить задание урока",
       show: Boolean(lessonId),
-      onClick: () => setActiveTool("activity"),
+      onClick: () => {
+        if (activeActivityId && !isTeacher) {
+          setStageView("activity");
+          setDrawer(null);
+        } else {
+          setActiveTool("activity");
+        }
+      },
+      trailing:
+        activeActivityId && stageView === "activity" ? (
+          <Badge variant="green" className="shrink-0">
+            на экране
+          </Badge>
+        ) : undefined,
     },
     {
       key: "recording",
@@ -591,7 +613,14 @@ export function RoomPage() {
         lessonId={lessonId}
         isTeacher={isTeacher}
         activeActivityId={activeActivityId}
-        reviewSignal={reviewSignal}
+        onShowOnStage={
+          activeActivityId
+            ? () => {
+                setStageView("activity");
+                setDrawer(null);
+              }
+            : undefined
+        }
       />
     ) : activeTool === "recording" && lessonId ? (
       <RecordingPanel
@@ -706,7 +735,26 @@ export function RoomPage() {
       {media && self?.permissions.canSpeak ? <PacketLossWarning /> : null}
       {media && (isTeacher || self?.permissions.canPublishVideo) ? <VideoDegradeSuggestion /> : null}
 
-      {stageView === "board" ? (
+      {stageView === "activity" && activeActivityId ? (
+        <div className="flex min-h-0 flex-1 flex-col gap-3 sm:flex-row">
+          <div className="min-h-0 flex-1">
+            <ActivityStage
+              activityId={activeActivityId}
+              isTeacher={isTeacher}
+              reviewSignal={reviewSignal}
+              onClose={() => setStageView("people")}
+            />
+          </div>
+          {media ? (
+            <RoomVideoGrid
+              participants={participants}
+              selfId={selfId}
+              mode={lessonMode}
+              variant="rail"
+            />
+          ) : null}
+        </div>
+      ) : stageView === "board" ? (
         <div className="flex min-h-0 flex-1 flex-col gap-3 sm:flex-row">
           {lessonId ? (
             <div className="min-h-0 flex-1">

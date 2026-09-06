@@ -58,6 +58,23 @@ export default async function activitiesRoutes(app: FastifyInstance) {
     },
   );
 
+  // §7.3 ТЗ: полная попытка одного ученика — учителю урока, «открыть материал
+  // ученика, который он выполняет прямо сейчас».
+  app.get<{ Params: { id: string; participantId: string } }>(
+    "/activities/:id/students/:participantId",
+    staffOnly,
+    async (request, reply) => {
+      const activityId = uuidParam.parse(request.params.id);
+      const participantId = uuidParam.parse(request.params.participantId);
+      const attempt = await activitiesService.getStudentAttempt(
+        request.user,
+        activityId,
+        participantId,
+      );
+      return reply.send(attempt);
+    },
+  );
+
   // Э8.9: агрегированная аналитика по вопросам — учителю (гистограмма ответов).
   app.get<{ Params: { id: string } }>(
     "/activities/:id/analytics",

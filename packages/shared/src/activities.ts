@@ -108,6 +108,27 @@ export interface ActivityProgress {
   students: StudentProgress[];
 }
 
+/**
+ * Ответ `GET /activities/:id/students/:participantId` (§7.3 ТЗ — «открыть
+ * материал ученика, который он выполняет»). Только персонал-владелец урока
+ * (учитель урока / admin). `material` — ПОЛНЫЙ, с ключами ответов: учителю
+ * они видны (как в `getAnalytics` и редакторе). `responses` — текущие
+ * черновики попытки ученика (или зафиксированные, если `submittedAt`
+ * не `null`), по `questionId`.
+ */
+export interface ActivityStudentAttempt {
+  activityId: string;
+  participantId: string;
+  displayName: string;
+  attemptNumber: number;
+  submittedAt: string | null;
+  lastActivityAt: string | null;
+  answered: number;
+  total: number;
+  material: Material;
+  responses: Record<string, QuestionResponse>;
+}
+
 // ─── Аналитика по вопросу (Э8.9, §7.3 ТЗ: «17 из 24 выбрали B») ────────────
 
 /** Один столбец гистограммы: вариант ответа, сколько учеников его выбрало, верный ли он. */

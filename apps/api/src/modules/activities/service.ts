@@ -36,6 +36,7 @@ import {
   type SaveResponseResult,
   type ActivityProgress,
   type StudentProgress,
+  type ActivityStudentAttempt,
   type ActivityAnalytics,
   type QuestionAnalytics,
   type QuestionResponse,
@@ -405,6 +406,59 @@ export async function getProgress(
   });
 
   return { activityId, total, students: rows };
+}
+
+/**
+ * Полная попытка ОДНОГО ученика — учителю урока (§7.3 ТЗ: «открыть материал
+ * ученика, который он выполняет»). Read-only: не трогает `ensureAttemptStart`
+ * (не создаёт метку старта у ещё не начавшего), не оценивает черновики.
+ * `attemptId` детерминирован по тройке (activity, participant, номер попытки)
+ * — тот же, что отдаётся ученику в `getMyActivity`, поэтому учитель видит
+ * ровно то, над чем ученик работает прямо сейчас. Материал отдаётся ПОЛНЫМ
+ * (с ключами) — учителю верные ответы видны по определению.
+ */
+export async function getStudentAttempt(
+  user: AccessTokenPayload,
+  activityId: string,
+  participantId: string,
+): Promise<ActivityStudentAttempt> {
+  const activity = await loadActivityForSchool(activityId, user.schoolId);
+  await assertActivityOwner(user, activity);
+
+  const roster = await roomsService.listLessonParticipants(activity.lessonId);
+  const participant = roster.find((p) => p.id === participantId && p.kind === "guest");
+  if (!participant) {
+    throw new AppError(404, "participant_not_found", "Ученик не найден на этом уроке");
+  }
+
+  const attemptNumber = Math.max(await repo.maxAttemptNumber(activityId, participantId), 1);
+  const attemptId = deriveAttemptId(activityId, participantId, attemptNumber);
+
+  const [loaded, saved, submittedAt, stats] = await Promise.all([
+    materialsService.getMaterialVersion(activity.materialVersionId),
+    repo.findResponsesByAttempt(attemptId),
+    repo.attemptSubmittedAt(attemptId),
+    repo.answeredStatsByActivity(activityId),
+  ]);
+
+  const responses: Record<string, QuestionResponse> = {};
+  for (const r of saved) responses[r.questionId] = r.response;
+
+  const stat = stats.find((s) => s.participantId === participantId);
+  const total = loaded.material.blocks.filter((b) => b.type === "question").length;
+
+  return {
+    activityId,
+    participantId,
+    displayName: participant.displayName,
+    attemptNumber,
+    submittedAt: submittedAt ? submittedAt.toISOString() : null,
+    lastActivityAt: stat?.lastAt ? new Date(stat.lastAt).toISOString() : null,
+    answered: saved.length,
+    total,
+    material: loaded.material,
+    responses,
+  };
 }
 
 /**

@@ -51,6 +51,7 @@ const {
   listLessonActivities,
   saveResponse,
   getProgress,
+  getStudentAttempt,
   getAnalytics,
   startReview,
   getReview,
@@ -445,6 +446,53 @@ describe("getAnalytics (Э8.9) — гистограмма ответов", () =>
 
   it("чужой учитель — 403", async () => {
     await expect(getAnalytics(otherTeacher, ACTIVITY)).rejects.toMatchObject({ statusCode: 403 });
+  });
+});
+
+describe("getStudentAttempt (§7.3 ТЗ) — работа одного ученика учителю", () => {
+  beforeEach(() => {
+    roomsServiceMock.listLessonParticipants.mockResolvedValue([
+      { id: PARTICIPANT_A, kind: "guest", displayName: "Аня" },
+      { id: "staff-row", kind: "staff", displayName: "Учитель" },
+    ]);
+    repoMock.maxAttemptNumber.mockResolvedValue(1);
+    repoMock.findResponsesByAttempt.mockResolvedValue([
+      { questionId: "q1", response: { type: "single_choice", selectedOptionId: "o2" } },
+    ]);
+    repoMock.answeredStatsByActivity.mockResolvedValue([
+      { participantId: PARTICIPANT_A, answered: 1, lastAt: "2026-09-04T09:30:00.000Z" },
+    ]);
+    repoMock.attemptSubmittedAt.mockResolvedValue(null);
+  });
+
+  it("отдаёт полный материал (с ключами) + текущие черновики ученика", async () => {
+    const attempt = await getStudentAttempt(teacher, ACTIVITY, PARTICIPANT_A);
+
+    expect(attempt).toMatchObject({
+      participantId: PARTICIPANT_A,
+      displayName: "Аня",
+      answered: 1,
+      submittedAt: null,
+      lastActivityAt: "2026-09-04T09:30:00.000Z",
+    });
+    expect(attempt.responses.q1).toEqual({ type: "single_choice", selectedOptionId: "o2" });
+    // Материал НЕ пропущен через stripMaterialAnswerKeys — учителю ключи видны.
+    expect(JSON.stringify(attempt.material)).toContain('"correct"');
+    expect(repoMock.findResponsesByAttempt).toHaveBeenCalledWith(
+      deriveAttemptId(ACTIVITY, PARTICIPANT_A, 1),
+    );
+  });
+
+  it("участник не на этом уроке — 404", async () => {
+    await expect(getStudentAttempt(teacher, ACTIVITY, PARTICIPANT_B)).rejects.toMatchObject({
+      statusCode: 404,
+    });
+  });
+
+  it("чужой учитель — 403", async () => {
+    await expect(getStudentAttempt(otherTeacher, ACTIVITY, PARTICIPANT_A)).rejects.toMatchObject({
+      statusCode: 403,
+    });
   });
 });
 
