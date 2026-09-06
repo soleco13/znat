@@ -1,61 +1,142 @@
 /*
- * Оформление доски урока под общую дизайн-систему проекта.
- * Excalidraw темизируется через собственные CSS-переменные на корневом
- * `.excalidraw`; здесь они переопределены значениями токенов из
- * apps/web/src/index.css. Плюс — скрытие лишних для урока инструментов.
+ * Оформление доски урока (Excalidraw) под дизайн-систему Shkola.
+ * Excalidraw темизируется собственными CSS-переменными на корневом
+ * `.excalidraw` — переопределяем их токенами из apps/web/src/index.css
+ * (`--c-*`, `--radius-*`, `--shadow-*`, `--font`). Плюс — точечная правка
+ * разметки там, где переменных нет, и скрытие лишнего для урока (§6.5).
+ *
+ * Только светлая тема (тёмная в проекте отключена).
  */
 
 /* ---------- Рамка холста ---------- */
 .canvas-board {
-  border: 1px solid hsl(var(--border));
+  border: 1px solid var(--c-border-solid);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: var(--shadow-xs);
-  background: hsl(var(--background));
+  box-shadow: var(--shadow-sm);
+  background: var(--c-surface);
 }
 
-/* ---------- Токены Excalidraw ---------- */
+/* ---------- Токены Excalidraw → токены ДС ---------- */
 .canvas-board .excalidraw {
-  --color-primary: #1d4ed8;
-  --color-primary-darker: #1a45be;
-  --color-primary-darkest: #1e40af;
-  --color-primary-light: #dbe6ff;
-  --color-primary-hover: #1d4ed8;
+  /* Акцент — фирменный синий вместо дефолтного фиолетового */
+  --color-primary: var(--c-primary);
+  --color-primary-darker: var(--c-primary-hover);
+  --color-primary-darkest: #1a3a9c;
+  --color-primary-light: var(--c-primary-light);
+  --color-primary-hover: var(--c-primary-hover);
+  --color-primary-light-darker: var(--c-primary-muted);
 
+  /* Поверхности — белые карточки на светло-сером фоне ДС */
+  --island-bg-color: var(--c-surface);
+  --default-bg-color: var(--c-surface);
+  --popup-bg-color: var(--c-surface);
+  --sidebar-bg-color: var(--c-surface);
+  --sidebar-border-color: var(--c-border-solid);
+  --color-surface-high: var(--c-surface-3);
+  --color-surface-mid: var(--c-surface-2);
+  --color-surface-low: var(--c-surface-2);
+  --color-surface-lowest: var(--c-surface);
+  --color-surface-primary-container: var(--c-primary-light);
+  --color-on-surface: var(--c-text);
+  --color-on-primary-container: var(--c-primary);
+
+  /* Текст / приглушённые элементы */
+  --text-primary-color: var(--c-text);
+  --color-muted: var(--c-text-3);
+  --color-muted-darker: var(--c-text-2);
+  --color-muted-background: var(--c-surface-2);
+
+  /* Границы */
+  --color-border-outline: var(--c-border-solid);
+  --color-border-outline-variant: var(--c-border-solid);
+
+  /* Кнопки */
   --button-hover-bg: var(--c-surface-2);
   --button-active-bg: var(--c-primary-light);
+  --button-active-border: var(--c-primary);
 
-  --island-bg-color: #ffffff;
-  --default-bg-color: #ffffff;
-  --sidebar-bg-color: #ffffff;
-  --popup-bg-color: #ffffff;
-
-  --input-bg-color: #ffffff;
+  /* Поля ввода (панель свойств фигуры) */
+  --input-bg-color: var(--c-surface);
   --input-border-color: var(--c-border-solid);
   --input-hover-bg-color: var(--c-surface-2);
   --input-label-color: var(--c-text-2);
 
-  --border-radius-lg: 12px;
-  --border-radius-md: 10px;
-
-  --shadow-island:
-    0 1px 3px rgba(16, 24, 40, 0.06), 0 8px 24px rgba(16, 24, 40, 0.08);
+  /* Радиусы и тени как у карточек ДС */
+  --border-radius-sm: var(--radius-sm);
+  --border-radius-md: var(--radius);
+  --border-radius-lg: var(--radius-lg);
+  --shadow-island: var(--shadow);
 
   --ui-font: var(--font);
+  --color-selection: var(--c-primary);
 }
 
-/* Панель-«остров» инструментов — мягкая рамка в тон карточкам ДС. */
+/* Панели-«острова» (тулбар, свойства фигуры, зум) — рамка и тень как у
+   карточек ДС, единый радиус. */
 .canvas-board .excalidraw .Island {
-  border: 1px solid hsl(var(--border));
+  border: 1px solid var(--c-border-solid);
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow-sm);
 }
 
-/* Активный инструмент — фирменный синий, а не дефолтный фиолетовый. */
+/* Верхний тулбар инструментов — чуть плотнее, ровный радиус. */
+.canvas-board .excalidraw .App-toolbar {
+  border-radius: var(--radius) !important;
+}
+
+/* Кнопка инструмента: активный — синий фон + синяя иконка/цифра
+   (дефолт Excalidraw — бледно-фиолетовый). */
 .canvas-board .excalidraw .ToolIcon__icon.active,
-.canvas-board .excalidraw .ToolIcon--selected .ToolIcon__icon {
-  background: var(--c-primary-light);
+.canvas-board .excalidraw .ToolIcon--selected .ToolIcon__icon,
+.canvas-board .excalidraw .App-toolbar__tool--active,
+.canvas-board .excalidraw button.active {
+  background: var(--c-primary-light) !important;
+  color: var(--c-primary) !important;
+}
+.canvas-board .excalidraw .ToolIcon__keybinding {
+  color: var(--c-text-3);
 }
 
-/* ---------- Скрытие лишних для урока инструментов (Э12.7 §6.5) ---------- */
+/* Ховер по кнопке инструмента. */
+.canvas-board .excalidraw .ToolIcon:hover .ToolIcon__icon {
+  background: var(--c-surface-2);
+}
+
+/* Зум-контрол и «вернуться к содержимому» слева внизу — как отдельные
+   pill-кнопки ДС (§6.5: «зум-контрол под ДС»). */
+.canvas-board .excalidraw .zoom-actions,
+.canvas-board .excalidraw .scroll-back-to-content {
+  border: 1px solid var(--c-border-solid) !important;
+  border-radius: var(--radius-pill) !important;
+  box-shadow: var(--shadow-xs) !important;
+  background: var(--c-surface) !important;
+  overflow: hidden;
+}
+.canvas-board .excalidraw .zoom-actions .zoom-button:hover,
+.canvas-board .excalidraw .zoom-actions .reset-zoom-button:hover {
+  background: var(--c-surface-2) !important;
+}
+
+/* Контекстное меню (правый клик по холсту) — карточка ДС. */
+.canvas-board .excalidraw .context-menu {
+  border: 1px solid var(--c-border-solid);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+}
+.canvas-board .excalidraw .context-menu-item:hover {
+  background: var(--c-primary-light);
+  color: var(--c-primary);
+}
+
+/* Всплывающие палитры цвета / выбор из панели свойств. */
+.canvas-board .excalidraw .popover,
+.canvas-board .excalidraw .Popover__wrapper {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+}
+
+/* ---------- Скрытие лишнего для урока (Э12.7 §6.5) ---------- */
 .canvas-board .App-toolbar__extra-tools-trigger,
 .canvas-board .App-toolbar__divider {
   display: none !important;
@@ -73,8 +154,7 @@
 
 /* Гамбургер-меню целиком (Открыть / Экспорт / Найти / Справка / Сбросить
    холст / «Excalidraw links» / тёмная тема). В уроке доска — только
-   рисование, файловых операций нет. `main-menu-trigger` — обычная кнопка,
-   `dropdown-menu-button` — она же в старой разметке. */
+   рисование, файловых операций нет. */
 .canvas-board .excalidraw [data-testid="main-menu-trigger"],
 .canvas-board .excalidraw .dropdown-menu-button,
 .canvas-board .excalidraw .main-menu-trigger {
@@ -82,7 +162,7 @@
 }
 
 /* Кнопка «?» (Справка) справа внизу и подсказка-hint («Кликните и
-   растяните…», «Вернуться к содержимому» и т.п.). */
+   растяните…», «Вернуться к содержимому» — текстовая подсказка). */
 .canvas-board .excalidraw .help-icon,
 .canvas-board .excalidraw .HintViewer {
   display: none !important;
@@ -99,14 +179,4 @@
 .canvas-board .excalidraw a[href*="x.com/excalidraw"],
 .canvas-board .excalidraw a[href*="youtube.com/@excalidraw"] {
   display: none !important;
-}
-
-/* Зум-контрол Excalidraw слева внизу — приводим к токенам ДС (радиус,
-   рамка, тень как у islands), не прячем: он функциональный (§6.5 —
-   «зум-контрол под ДС»). */
-.canvas-board .excalidraw .zoom-actions,
-.canvas-board .excalidraw .footer-center > * {
-  border: 1px solid hsl(var(--border)) !important;
-  border-radius: var(--radius-md) !important;
-  box-shadow: var(--shadow-xs) !important;
 }
