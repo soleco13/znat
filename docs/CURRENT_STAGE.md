@@ -431,6 +431,18 @@ variant="filmstrip"`); `LiveStage` выбирает экран/сетку вну
 сохранились), Библиотека без кнопки создания, навигация Библиотека/
 Редактор. Гейты api/web/shared build + 374/54 теста + depcheck — зелёные.
 
+**Э13 доп. (2026-09-06) — shadcn-компоненты (бланковое разрешение
+пользователя на зависимости). Коммит.**
+- `ui/command.tsx` (cmdk) — меню вставки блоков в редакторе стало
+  `Command` (поиск, группы, клавнавигация, фильтр по кириллице).
+- `ui/collapsible.tsx` (`@radix-ui/react-collapsible`) — `GroupFrame`
+  (рамка конструкции) на `Collapsible`.
+- `ui/table.tsx` (без новой зависимости) — `ClassProgressPanel` на
+  `Table` со статус-бейджами и кликом по строке.
+- `BlockCard` → `Card` + `Button(icon-sm)`; gutter/удалить/up-down →
+  `Button ghost icon-sm`; чекбокс «перемешивать» → `Switch`;
+  `badge.tsx` yellow `text-[#b45309]` → `text-warn`.
+
 **Осталось по Э13 (полировка, не начато):** оглавление длинного листа;
 `h2/h3` в импорте Word/PDF (`document-import.ts` — свой allowlist);
 `/materials/edit/:id` для роли student (сейчас RequireAuth без гейта, как
