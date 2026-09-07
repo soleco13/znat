@@ -26,6 +26,7 @@ export function SelfCameraButton({
       onToggle={() =>
         localParticipant.setCameraEnabled(!isCameraEnabled, { resolution: maxResolution })
       }
+      caption="Камера"
     />
   );
 }

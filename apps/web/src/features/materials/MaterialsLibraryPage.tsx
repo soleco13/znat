@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, Copy, FileText, Library, SquarePen } from "lucide-react";
+import { FileText, Library, SquarePen } from "lucide-react";
 import type { ListMaterialsQuery, MaterialStatus, MaterialSummary } from "@school/shared";
 
 import { useAuthStore } from "@/shared/auth-store";
@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from "@/shared/ui/select";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { toast } from "@/shared/ui/sonner";
 import { listMaterials } from "./materials-api.js";
 
 const STATUS_LABEL: Record<MaterialStatus, string> = {
@@ -212,20 +211,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function MaterialRow({ material }: { material: MaterialSummary }) {
-  const [copied, setCopied] = useState(false);
-
-  async function copyId() {
-    try {
-      await navigator.clipboard.writeText(material.id);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      toast.error("Буфер обмена недоступен");
-    }
-  }
-
   return (
-    <Card className="flex items-center justify-between gap-3 px-3.5 py-2.5 transition-colors hover:border-primary-muted">
+    <Card className="px-3.5 py-2.5 transition-colors hover:border-primary-muted">
       <Link
         to={`/materials/edit/${material.id}`}
         className="flex min-w-0 items-center gap-2 text-sm font-medium hover:text-primary hover:underline"
@@ -236,10 +223,6 @@ function MaterialRow({ material }: { material: MaterialSummary }) {
           {STATUS_LABEL[material.status]}
         </Badge>
       </Link>
-      <Button variant="ghost" size="sm" className="shrink-0" onClick={copyId}>
-        {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
-        {copied ? "Скопировано" : `id ${material.id.slice(0, 8)}…`}
-      </Button>
     </Card>
   );
 }

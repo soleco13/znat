@@ -79,6 +79,7 @@ export function SelfScreenShareButton({ priority = false }: { priority?: boolean
       onToggle={toggle}
       disabled={blocked}
       title={blocked ? "Кто-то уже демонстрирует экран" : undefined}
+      caption="Экран"
     />
   );
 }

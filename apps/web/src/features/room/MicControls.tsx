@@ -16,6 +16,7 @@ export function SelfMicButton() {
       inactiveLabel="Включить звук"
       speaking={speaking && isMicrophoneEnabled}
       onToggle={() => localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}
+      caption="Микрофон"
     />
   );
 }

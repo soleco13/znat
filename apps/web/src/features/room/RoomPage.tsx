@@ -17,7 +17,6 @@ import {
   Hand,
   LogOut,
   MessageSquare,
-  MoreVertical,
   PenLine,
   Pin,
   Presentation,
@@ -45,13 +44,6 @@ import { Alert, AlertDescription } from "@/shared/ui/alert";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/shared/ui/dropdown-menu";
 import { Input } from "@/shared/ui/input";
 import { ScrollArea } from "@/shared/ui/scroll-area";
 import { toast } from "@/shared/ui/sonner";
@@ -145,6 +137,7 @@ export function RoomPage() {
   const [reviewSignal, setReviewSignal] = useState(0);
   const [recordingActive, setRecordingActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [joinFailed, setJoinFailed] = useState(false);
   const [media, setMedia] = useState<MediaConnection | null>(null);
   const [deviceCheckDone, setDeviceCheckDone] = useState(false);
   const [micDeviceId, setMicDeviceId] = useState<string | null>(null);
@@ -222,20 +215,26 @@ export function RoomPage() {
     isGuest ? "guest" : "staff",
   );
 
-  useEffect(() => {
-    if (!lessonId || !deviceCheckDone) return;
+  const attemptJoin = useCallback(() => {
+    if (!lessonId) return;
+    setJoinFailed(false);
     apiFetch<JoinLessonResponse>(`/lessons/${lessonId}/join`, { method: "POST" })
       .then((data) => {
         setParticipants(data.participants);
         setLessonMode(data.lessonMode);
         setMedia(data.media);
       })
-      .catch(() => setError("Не удалось войти в урок"));
+      .catch(() => setJoinFailed(true));
+  }, [lessonId]);
+
+  useEffect(() => {
+    if (!lessonId || !deviceCheckDone) return;
+    attemptJoin();
 
     apiFetch<{ items: ChatMessage[] }>(`/lessons/${lessonId}/chat`)
       .then((data) => setChat([...data.items].reverse()))
       .catch(() => undefined);
-  }, [lessonId, deviceCheckDone]);
+  }, [lessonId, deviceCheckDone, attemptJoin]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -771,6 +770,13 @@ export function RoomPage() {
         </div>
       ) : media ? (
         <LiveStage participants={participants} selfId={selfId} mode={lessonMode} />
+      ) : joinFailed ? (
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 text-sm">
+          <span className="text-foreground">Не удалось войти в урок</span>
+          <Button size="sm" onClick={attemptJoin}>
+            Повторить
+          </Button>
+        </div>
       ) : (
         <div className="flex min-h-0 flex-1 items-center justify-center rounded-xl border border-border bg-card text-sm text-muted-foreground">
           Подключаемся к аудио и видео…
@@ -803,23 +809,26 @@ export function RoomPage() {
     Icon: typeof Wrench,
     badge?: number,
   ) => (
-    <SimpleTooltip content={label} side="top">
-      <Button
-        variant={drawer === mode ? "secondary" : "ghost"}
-        size="icon"
-        className="relative size-10"
-        onClick={() => toggleDrawer(mode)}
-        aria-pressed={drawer === mode}
-        aria-label={label}
-      >
-        <Icon aria-hidden />
-        {badge != null && badge > 0 ? (
-          <span className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
-            {badge}
-          </span>
-        ) : null}
-      </Button>
-    </SimpleTooltip>
+    <div className="flex flex-col items-center gap-1">
+      <SimpleTooltip content={label} side="top">
+        <Button
+          variant={drawer === mode ? "secondary" : "ghost"}
+          size="icon"
+          className="relative size-10"
+          onClick={() => toggleDrawer(mode)}
+          aria-pressed={drawer === mode}
+          aria-label={label}
+        >
+          <Icon aria-hidden />
+          {badge != null && badge > 0 ? (
+            <span className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+              {badge}
+            </span>
+          ) : null}
+        </Button>
+      </SimpleTooltip>
+      <span className="text-[11px] leading-none text-muted-foreground">{label}</span>
+    </div>
   );
 
   const content = (
@@ -865,28 +874,6 @@ export function RoomPage() {
               {LESSON_MODE_LABEL[lessonMode]}
             </Badge>
           ) : null}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Меню урока">
-                <MoreVertical aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {isTeacher && lessonJoinPath ? (
-                <>
-                  <DropdownMenuItem onSelect={copyJoinLink}>
-                    <Copy aria-hidden />
-                    Скопировать ссылку для учеников
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              ) : null}
-              <DropdownMenuItem onSelect={leaveRoom}>
-                <LogOut aria-hidden />
-                Выйти из урока
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </header>
 
@@ -914,7 +901,7 @@ export function RoomPage() {
         </main>
       </div>
 
-      {/* §6.3 — нижняя панель управления: только иконки, подписи — в подсказках */}
+      {/* §6.3 — нижняя панель управления: иконка + короткая подпись под ней */}
       <footer className="flex shrink-0 flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-border bg-card px-3 py-2 sm:justify-between">
         <div className="flex items-center gap-1">
           {drawerToggle("tools", "Инструменты", Wrench)}
@@ -932,6 +919,7 @@ export function RoomPage() {
               activeLabel="Опустить руку"
               inactiveLabel="Поднять руку"
               onToggle={toggleHand}
+              caption="Рука"
             />
           ) : null}
           {media && (isTeacher || self?.permissions.canShareScreen) ? (
@@ -942,16 +930,19 @@ export function RoomPage() {
           {media && !isTeacher && self?.permissions.canPublishVideo ? (
             <SelfCameraButton maxResolution={VideoPresets.h360.resolution} />
           ) : null}
-          <SimpleTooltip content="Выйти из урока" side="top">
-            <button
-              type="button"
-              onClick={leaveRoom}
-              className="flex size-10 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-              aria-label="Выйти из урока"
-            >
-              <LogOut className="size-5" aria-hidden />
-            </button>
-          </SimpleTooltip>
+          <div className="flex flex-col items-center gap-1">
+            <SimpleTooltip content="Выйти из урока" side="top">
+              <button
+                type="button"
+                onClick={leaveRoom}
+                className="flex size-10 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+                aria-label="Выйти из урока"
+              >
+                <LogOut className="size-5" aria-hidden />
+              </button>
+            </SimpleTooltip>
+            <span className="text-[11px] leading-none text-muted-foreground">Выйти</span>
+          </div>
         </div>
 
         {/* правый кластер намеренно пуст — переключение «плитки / доска»

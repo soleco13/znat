@@ -24,6 +24,7 @@ export function RoomControlButton({
   tone = "media",
   speaking = false,
   title,
+  caption,
 }: {
   active: boolean;
   activeIcon: LucideIcon;
@@ -38,10 +39,12 @@ export function RoomControlButton({
   speaking?: boolean;
   /** Переопределяет текст подсказки (напр. причину, по которой кнопка недоступна). */
   title?: string;
+  /** Короткая постоянная подпись под кнопкой (не зависит от состояния — само состояние видно на кнопке). */
+  caption?: string;
 }) {
   const Icon = active ? ActiveIcon : InactiveIcon;
   const label = title ?? (active ? activeLabel : inactiveLabel);
-  return (
+  const button = (
     <SimpleTooltip content={label} side="top">
       <span className="relative inline-flex">
         {speaking ? (
@@ -60,5 +63,12 @@ export function RoomControlButton({
         </Toggle>
       </span>
     </SimpleTooltip>
+  );
+  if (!caption) return button;
+  return (
+    <div className="flex flex-col items-center gap-1">
+      {button}
+      <span className="text-[11px] leading-none text-muted-foreground">{caption}</span>
+    </div>
   );
 }
