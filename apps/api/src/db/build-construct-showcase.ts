@@ -950,8 +950,26 @@ const outPath = fileURLToPath(new URL("../../../../docs/materials/construct-show
 await mkdir(dirname(outPath), { recursive: true });
 await writeFile(outPath, JSON.stringify(parsed, null, 2), "utf8");
 
+/**
+ * Структура по разделам/конструкциям — отдельным файлом ДЛЯ ЧТЕНИЯ (не для
+ * seed-material.ts, тот берёт только construct-showcase.json). Нужна,
+ * потому что сам `Material.blocks` — плоский список (формат хранения,
+ * менять нельзя), а несколько конструкций используют `<h2>`/`<h3>` В
+ * СВОЁМ содержимом (например, `problem_walkthrough`) — разбирать разделы
+ * назад по заголовкам из плоского списка было бы хрупко (ровно так
+ * сначала и делал витрину-артефакт — задваивало разделы). Экспортируем
+ * готовую структуру, чтобы любой внешний просмотрщик не гадал.
+ */
+const sectionsOut = SECTIONS.map((s) => ({
+  subject: s.subject,
+  items: s.items.map((it) => ({ id: it.id, label: it.label, blocks: it.blocks })),
+}));
+const sectionsPath = fileURLToPath(new URL("../../../../docs/materials/construct-showcase-sections.json", import.meta.url));
+await writeFile(sectionsPath, JSON.stringify(sectionsOut, null, 2), "utf8");
+
 console.log(`Материал собран: ${parsed.blocks.length} блоков, ${SECTIONS.length} разделов, ${SECTIONS.flatMap((s) => s.items).length} конструкций.`);
 console.log(`Записано: ${outPath}`);
+console.log(`Записано (структура по разделам): ${sectionsPath}`);
 if (issues.length > 0) {
   console.log(`\nОставшиеся проблемы валидатора (${issues.length}):`);
   for (const i of issues) console.log(`  [${i.code}] ${i.blockId ?? "—"}: ${i.message}`);
