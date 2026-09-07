@@ -43,6 +43,7 @@ import {
 } from "@/shared/ui/select";
 import { CenteredSpinner } from "@/shared/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+import { SimpleTooltip } from "@/shared/ui/tooltip";
 import { toast } from "@/shared/ui/sonner";
 import { ContentBlockView } from "./MaterialPlayer.js";
 import { QuestionPlayer } from "./QuestionPlayer.js";
@@ -716,12 +717,13 @@ function VersionHistory({ materialId }: { materialId: string }) {
 
   return (
     <Popover onOpenChange={(o) => o && load()}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm">
-          <History aria-hidden />
-          Версии
-        </Button>
-      </PopoverTrigger>
+      <SimpleTooltip content="Версии">
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="icon" aria-label="Версии">
+            <History aria-hidden />
+          </Button>
+        </PopoverTrigger>
+      </SimpleTooltip>
       <PopoverContent align="end" className="w-72">
         <p className="mb-2 text-xs font-semibold text-muted-foreground">История версий</p>
         <ul className="space-y-1.5 text-xs text-muted-foreground">
@@ -773,19 +775,24 @@ function ValidationButton({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm">
-          {issues === null ? (
-            <CircleHelp aria-hidden />
-          ) : issues.length === 0 ? (
-            <CheckCircle2 className="text-success" aria-hidden />
-          ) : (
-            <AlertTriangle className="text-warning" aria-hidden />
-          )}
-          Проверка
-          {issues && issues.length > 0 ? <Badge variant="yellow">{issues.length}</Badge> : null}
-        </Button>
-      </PopoverTrigger>
+      <SimpleTooltip content="Проверка перед публикацией">
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="icon" className="relative" aria-label="Проверка">
+            {issues === null ? (
+              <CircleHelp aria-hidden />
+            ) : issues.length === 0 ? (
+              <CheckCircle2 className="text-success" aria-hidden />
+            ) : (
+              <AlertTriangle className="text-warning" aria-hidden />
+            )}
+            {issues && issues.length > 0 ? (
+              <span className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-warning px-1 text-[10px] font-semibold text-warning-foreground">
+                {issues.length}
+              </span>
+            ) : null}
+          </Button>
+        </PopoverTrigger>
+      </SimpleTooltip>
       <PopoverContent align="end" className="w-80">
         <div className="mb-2 flex items-center justify-between">
           <p className="text-xs font-semibold text-muted-foreground">Проверка перед публикацией</p>
@@ -844,12 +851,13 @@ function SettingsMenu({
 }) {
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm">
-          <Settings2 aria-hidden />
-          Настройки
-        </Button>
-      </PopoverTrigger>
+      <SimpleTooltip content="Настройки материала">
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="icon" aria-label="Настройки">
+            <Settings2 aria-hidden />
+          </Button>
+        </PopoverTrigger>
+      </SimpleTooltip>
       <PopoverContent align="end" className="w-72 space-y-3">
         <p className="text-xs font-semibold text-muted-foreground">Настройки материала</p>
         <label className="flex items-center justify-between gap-2 text-sm">

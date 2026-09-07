@@ -220,7 +220,12 @@ function buildItems(options: SlashOptions): SlashItem[] {
     run: (editor: Editor, range: Range) => insertConstructAt(editor, range, c),
   }));
 
+  // Юзабилити-правка: сначала то, чем пишут абзац за абзацем (текст,
+  // заголовки, вопросы), конструкции-шаблоны урока — отдельной секцией
+  // ниже, а не первым, что видит методист при каждом нажатии «/».
   return [
+    ...CONTENT_ITEMS,
+    ...QUESTION_ITEMS,
     {
       title: "Все конструкции — карточками…",
       group: "Конструкции урока",
@@ -232,8 +237,6 @@ function buildItems(options: SlashOptions): SlashItem[] {
       },
     },
     ...constructItems,
-    ...CONTENT_ITEMS,
-    ...QUESTION_ITEMS,
   ];
 }
 
