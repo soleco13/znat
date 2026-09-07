@@ -36,6 +36,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/ui/alert-dialog";
+import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { Checkbox } from "@/shared/ui/checkbox";
@@ -74,6 +75,7 @@ import {
   createLesson,
   deleteLesson,
   getAttendance,
+  getPresenceCounts,
   listLessonMaterials,
   listLessons,
   listTeachers,
@@ -536,6 +538,7 @@ function LessonMaterialsDialog({
 function LessonRow({
   lesson,
   isAdmin,
+  presenceCount,
   onEdit,
   onAttendance,
   onMaterials,
@@ -544,6 +547,8 @@ function LessonRow({
 }: {
   lesson: LessonSummary;
   isAdmin: boolean;
+  /** Сколько человек сейчас в комнате урока (Э12 полировка) — `undefined`, пока не подгрузилось. */
+  presenceCount: number | undefined;
   onEdit: () => void;
   onAttendance: () => void;
   onMaterials: () => void;
@@ -557,7 +562,15 @@ function LessonRow({
           <Video className="size-5" aria-hidden />
         </span>
         <div className="min-w-0">
-          <span className="block truncate font-semibold text-foreground">{lesson.title}</span>
+          <span className="flex items-center gap-2">
+            <span className="truncate font-semibold text-foreground">{lesson.title}</span>
+            {presenceCount ? (
+              <Badge variant="green" className="shrink-0">
+                <Users aria-hidden />
+                {presenceCount}
+              </Badge>
+            ) : null}
+          </span>
           <div className="mt-0.5 text-sm text-muted-foreground">
             {lesson.teacherName} · {formatSchedule(lesson.scheduledAt)}
           </div>
@@ -623,6 +636,15 @@ export function LessonsListPage() {
   const { data, error, loading, reload, setData } = useAsync(() => listLessons(), []);
   const teachersAsync = useAsync(() => (isAdmin ? listTeachers() : Promise.resolve([])), [isAdmin]);
   const teachers = useMemo(() => teachersAsync.data ?? [], [teachersAsync.data]);
+
+  // Э12 полировка: «сколько человек в комнате» — отдельным лёгким запросом,
+  // чтобы не тормозить основной список уроков.
+  const lessonIdsKey = data?.items.map((l) => l.id).join(",") ?? "";
+  const presenceAsync = useAsync(
+    () => getPresenceCounts(lessonIdsKey ? lessonIdsKey.split(",") : []),
+    [lessonIdsKey],
+  );
+  const presence = presenceAsync.data ?? {};
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<LessonSummary | null>(null);
@@ -714,6 +736,7 @@ export function LessonsListPage() {
               key={lesson.id}
               lesson={lesson}
               isAdmin={isAdmin}
+              presenceCount={presence[lesson.id]}
               onEdit={() => {
                 setEditing(lesson);
                 setFormOpen(true);

@@ -56,3 +56,12 @@ export function assignLessonMaterial(id: string, materialId: string): Promise<{ 
 export function unassignLessonMaterial(id: string, materialId: string): Promise<void> {
   return apiFetch<void>(`/lessons/${id}/materials/${materialId}`, { method: "DELETE" });
 }
+
+/** Сколько человек сейчас в каждом из перечисленных уроков (Э12 полировка). */
+export function getPresenceCounts(ids: string[]): Promise<Record<string, number>> {
+  if (ids.length === 0) return Promise.resolve({});
+  const qs = ids.map(encodeURIComponent).join(",");
+  return apiFetch<{ counts: Record<string, number> }>(`/lessons/presence-counts?ids=${qs}`).then(
+    (r) => r.counts,
+  );
+}
