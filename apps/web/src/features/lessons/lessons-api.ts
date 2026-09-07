@@ -1,6 +1,7 @@
 import type {
   AdminCreateLessonRequest,
   LessonAttendance,
+  LessonMaterial,
   LessonSummary,
   RotateLessonLinkResponse,
   UpdateLessonRequest,
@@ -38,4 +39,20 @@ export function rotateJoinLink(id: string): Promise<RotateLessonLinkResponse> {
 
 export function getAttendance(id: string): Promise<LessonAttendance> {
   return apiFetch<LessonAttendance>(`/lessons/${id}/attendance`);
+}
+
+/** «Домашка» урока — список материалов, доступных ученику по ссылке (Э12.8). */
+export function listLessonMaterials(id: string): Promise<{ items: LessonMaterial[] }> {
+  return apiFetch<{ items: LessonMaterial[] }>(`/lessons/${id}/materials`);
+}
+
+export function assignLessonMaterial(id: string, materialId: string): Promise<{ items: LessonMaterial[] }> {
+  return apiFetch<{ items: LessonMaterial[] }>(`/lessons/${id}/materials`, {
+    method: "POST",
+    body: JSON.stringify({ materialId }),
+  });
+}
+
+export function unassignLessonMaterial(id: string, materialId: string): Promise<void> {
+  return apiFetch<void>(`/lessons/${id}/materials/${materialId}`, { method: "DELETE" });
 }

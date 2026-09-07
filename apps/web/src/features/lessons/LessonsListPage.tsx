@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
+  BookOpen,
   CalendarDays,
   Link2,
   MoreVertical,
@@ -11,11 +12,14 @@ import {
   Trash2,
   Users,
   Video,
+  X,
 } from "lucide-react";
 import type {
   LessonAttendance,
+  LessonMaterial,
   LessonSettings,
   LessonSummary,
+  MaterialSummary,
   UserResponse,
 } from "@school/shared";
 
@@ -64,13 +68,17 @@ import {
 } from "@/shared/ui/select";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { toast } from "@/shared/ui/sonner";
+import { listMaterials } from "@/features/materials/materials-api.js";
 import {
+  assignLessonMaterial,
   createLesson,
   deleteLesson,
   getAttendance,
+  listLessonMaterials,
   listLessons,
   listTeachers,
   rotateJoinLink,
+  unassignLessonMaterial,
   updateLesson,
 } from "./lessons-api.js";
 
@@ -382,11 +390,155 @@ function AttendanceDialog({
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+function LessonMaterialsDialog({
+  lesson,
+  onClose,
+}: {
+  lesson: LessonSummary | null;
+  onClose: () => void;
+}) {
+  const [items, setItems] = useState<LessonMaterial[] | null>(null);
+  const [available, setAvailable] = useState<MaterialSummary[] | null>(null);
+  const [selected, setSelected] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!lesson) return;
+    setItems(null);
+    setAvailable(null);
+    setSelected("");
+    setError(null);
+    Promise.all([listLessonMaterials(lesson.id), listMaterials({ status: "published" })])
+      .then(([materials, library]) => {
+        setItems(materials.items);
+        setAvailable(library.items);
+      })
+      .catch(() => setError("Не удалось загрузить материалы"));
+  }, [lesson]);
+
+  const assignedIds = useMemo(() => new Set((items ?? []).map((m) => m.materialId)), [items]);
+  const options = useMemo(
+    () => (available ?? []).filter((m) => !assignedIds.has(m.id)),
+    [available, assignedIds],
+  );
+
+  async function add() {
+    if (!lesson || !selected) return;
+    setBusy(true);
+    try {
+      const res = await assignLessonMaterial(lesson.id, selected);
+      setItems(res.items);
+      setSelected("");
+    } catch {
+      toast.error("Не удалось назначить материал");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(materialId: string) {
+    if (!lesson) return;
+    setBusy(true);
+    try {
+      await unassignLessonMaterial(lesson.id, materialId);
+      setItems((prev) => (prev ?? []).filter((m) => m.materialId !== materialId));
+    } catch {
+      toast.error("Не удалось снять материал");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={Boolean(lesson)} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Материалы урока</DialogTitle>
+          <DialogDescription>
+            {lesson?.title} — ученики увидят их по ссылке урока
+          </DialogDescription>
+        </DialogHeader>
+
+        {error ? (
+          <p className="text-sm text-destructive">{error}</p>
+        ) : !items || !available ? (
+          <div className="flex flex-col gap-2">
+            {[0, 1].map((i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {items.length === 0 ? (
+              <p className="py-2 text-center text-sm text-muted-foreground">
+                Материалы не назначены
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {items.map((m) => (
+                  <li
+                    key={m.id}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <span className="block truncate text-sm font-medium text-foreground">
+                        {m.materialTitle}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">{m.subject}</span>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label="Снять материал"
+                      disabled={busy}
+                      onClick={() => void remove(m.materialId)}
+                    >
+                      <X aria-hidden />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="flex items-center gap-2">
+              <Select value={selected} onValueChange={setSelected}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Добавить материал" />
+                </SelectTrigger>
+                <SelectContent>
+                  {options.length === 0 ? (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      Нет доступных опубликованных материалов
+                    </div>
+                  ) : (
+                    options.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.title}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              <Button onClick={() => void add()} disabled={!selected || busy}>
+                Добавить
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function LessonRow({
   lesson,
   isAdmin,
   onEdit,
   onAttendance,
+  onMaterials,
   onRotate,
   onDelete,
 }: {
@@ -394,6 +546,7 @@ function LessonRow({
   isAdmin: boolean;
   onEdit: () => void;
   onAttendance: () => void;
+  onMaterials: () => void;
   onRotate: () => void;
   onDelete: () => void;
 }) {
@@ -437,6 +590,10 @@ function LessonRow({
                 <Users aria-hidden />
                 Журнал посещений
               </DropdownMenuItem>
+              <DropdownMenuItem onSelect={onMaterials}>
+                <BookOpen aria-hidden />
+                Материалы урока
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={onRotate}>
                 <RefreshCw aria-hidden />
                 Перевыпустить ссылку
@@ -470,6 +627,7 @@ export function LessonsListPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<LessonSummary | null>(null);
   const [attendanceFor, setAttendanceFor] = useState<LessonSummary | null>(null);
+  const [materialsFor, setMaterialsFor] = useState<LessonSummary | null>(null);
   const [rotateFor, setRotateFor] = useState<LessonSummary | null>(null);
   const [deleteFor, setDeleteFor] = useState<LessonSummary | null>(null);
   const [busy, setBusy] = useState(false);
@@ -561,6 +719,7 @@ export function LessonsListPage() {
                 setFormOpen(true);
               }}
               onAttendance={() => setAttendanceFor(lesson)}
+              onMaterials={() => setMaterialsFor(lesson)}
               onRotate={() => setRotateFor(lesson)}
               onDelete={() => setDeleteFor(lesson)}
             />
@@ -601,6 +760,7 @@ export function LessonsListPage() {
             onSaved={upsertLocal}
           />
           <AttendanceDialog lesson={attendanceFor} onClose={() => setAttendanceFor(null)} />
+          <LessonMaterialsDialog lesson={materialsFor} onClose={() => setMaterialsFor(null)} />
 
           <AlertDialog open={Boolean(rotateFor)} onOpenChange={(v) => !v && setRotateFor(null)}>
             <AlertDialogContent>
