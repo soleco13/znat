@@ -36,20 +36,9 @@ const STATUS_VARIANT: Record<MaterialStatus, "gray" | "yellow" | "green"> = {
 const NO_TOPIC = "__no_topic__";
 const ANY_STATUS = "__any__";
 
+// Э12.9: заглушка «недоступно роли ученик» убрана — роли `student` больше
+// нет, библиотеку листает только персонал (роут под `RequireRole`).
 export function MaterialsLibraryPage() {
-  const user = useAuthStore((s) => s.user);
-  if (user && user.role === "student") {
-    return (
-      <div>
-        <PageHeader title="Библиотека материалов" />
-        <EmptyState icon={Library} title="Недоступно для роли «ученик»" />
-      </div>
-    );
-  }
-  return <MaterialsLibraryContent />;
-}
-
-function MaterialsLibraryContent() {
   // Ревизия Э12.7: создают/правят материалы только admin/methodist.
   // Учитель — читатель: библиотека, просмотр материала, выбор на урок.
   const role = useAuthStore((s) => s.user?.role);

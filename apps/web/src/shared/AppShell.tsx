@@ -46,7 +46,6 @@ const ROLE_LABEL: Record<Role, string> = {
   admin: "Администратор",
   methodist: "Методист",
   teacher: "Учитель",
-  student: "Ученик",
 };
 
 function Wordmark({ compact = false }: { compact?: boolean }) {
@@ -64,8 +63,8 @@ function Wordmark({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function NavItems({ role, onNavigate }: { role: Role; onNavigate?: () => void }) {
-  const items = NAV.filter((n) => n.roles.includes(role));
+function NavItems({ role, onNavigate }: { role: Role | null; onNavigate?: () => void }) {
+  const items = role ? NAV.filter((n) => n.roles.includes(role)) : [];
   return (
     <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
       {items.map(({ to, label, icon: Icon, end }) => (
@@ -97,13 +96,13 @@ function SidebarContent({
   onToggleCollapse,
   onNavigate,
 }: {
-  role: Role;
+  role: Role | null;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
   onNavigate?: () => void;
 }) {
   if (collapsed) {
-    const items = NAV.filter((n) => n.roles.includes(role));
+    const items = role ? NAV.filter((n) => n.roles.includes(role)) : [];
     return (
       <div className="flex h-full flex-col items-center">
         <div className="flex h-header w-full items-center justify-center border-b border-border">
@@ -171,7 +170,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  const role: Role = user?.role ?? "student";
+  // Э12.9: роли `student` больше нет — до подгрузки профиля показываем
+  // оболочку без пунктов навигации, а не «как ученику».
+  const role: Role | null = user?.role ?? null;
 
   async function logout() {
     setLoggingOut(true);
@@ -225,7 +226,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="flex items-center gap-3">
               <div className="hidden text-right leading-tight sm:block">
                 <div className="text-sm font-semibold text-foreground">{user.fullName}</div>
-                <div className="text-xs text-muted-foreground">{ROLE_LABEL[role]}</div>
+                <div className="text-xs text-muted-foreground">{ROLE_LABEL[user.role]}</div>
               </div>
               <UserAvatar name={user.fullName} size={38} />
               <SimpleTooltip content="Выйти">

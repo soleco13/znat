@@ -36,31 +36,3 @@ export const userResponseSchema = z.object({
 });
 export type UserResponse = z.infer<typeof userResponseSchema>;
 
-export const createGroupRequestSchema = z.object({
-  name: z.string().min(1).max(200),
-  grade: z.number().int().min(1).max(11),
-  academicYear: z.string().min(1).max(20),
-});
-export type CreateGroupRequest = z.infer<typeof createGroupRequestSchema>;
-
-export const addGroupMembersRequestSchema = z.object({
-  userIds: z.array(z.string().uuid()).min(1),
-});
-export type AddGroupMembersRequest = z.infer<typeof addGroupMembersRequestSchema>;
-
-/** Ответ `GET /users/me/groups` (Э8.11 UI) — группа без списка участников. */
-export const groupResponseSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  grade: z.number().int(),
-  academicYear: z.string(),
-});
-export type GroupResponse = z.infer<typeof groupResponseSchema>;
-
-export const importUsersRowSchema = z.object({
-  email: z.string().email(),
-  fullName: z.string().min(1),
-  role: roleSchema,
-  password: z.string().min(8),
-});
-export type ImportUsersRow = z.infer<typeof importUsersRowSchema>;

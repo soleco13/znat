@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-export const roleSchema = z.enum(["admin", "methodist", "teacher", "student"]);
+/**
+ * Э12: учётная запись есть только у персонала. Ученик — не роль, а участник
+ * урока (`participantKindSchema` → `guest`), вошедший по ссылке с введённым
+ * именем; роль `student` удалена вместе с группами и аккаунтами учеников.
+ */
+export const roleSchema = z.enum(["admin", "methodist", "teacher"]);
 export type Role = z.infer<typeof roleSchema>;
 
 /**

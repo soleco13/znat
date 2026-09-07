@@ -56,7 +56,8 @@ const STUDENT = "66666666-6666-6666-6666-666666666666";
 
 const teacher: AccessTokenPayload = { sub: TEACHER, schoolId: SCHOOL, role: "teacher" };
 const otherTeacher: AccessTokenPayload = { sub: "99999999-9999-9999-9999-999999999999", schoolId: SCHOOL, role: "teacher" };
-const student: AccessTokenPayload = { sub: STUDENT, schoolId: SCHOOL, role: "student" };
+/** Э12.9: роли `student` в модели нет — «легаси»-JWT, выданный до деплоя (TTL access-токена ещё не истёк). */
+const student = { sub: STUDENT, schoolId: SCHOOL, role: "student" } as unknown as AccessTokenPayload;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -64,7 +65,6 @@ beforeEach(() => {
     id: LESSON,
     schoolId: SCHOOL,
     teacherId: TEACHER,
-    groupId: "group-1",
   });
   storageServiceMock.uploadFile.mockResolvedValue({ storageKey: `${SCHOOL}/src.pptx`, sizeBytes: 10 });
   storageServiceMock.deleteFile.mockResolvedValue(undefined);

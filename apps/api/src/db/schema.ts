@@ -24,7 +24,7 @@ const bytea = customType<{ data: Buffer }>({
   },
 });
 
-export const roleEnum = pgEnum("role", ["admin", "methodist", "teacher", "student"]);
+export const roleEnum = pgEnum("role", ["admin", "methodist", "teacher"]);
 /**
  * Э12.4 (§1.3 план-ТЗ) — вид участника урока в новой модели доступа.
  * `staff` — учитель/админ/методист с аккаунтом (`lesson_participants.user_id`),
@@ -78,29 +78,6 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const groups = pgTable("groups", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  schoolId: uuid("school_id")
-    .notNull()
-    .references(() => schools.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  grade: integer("grade").notNull(),
-  academicYear: text("academic_year").notNull(),
-});
-
-export const groupMembers = pgTable(
-  "group_members",
-  {
-    groupId: uuid("group_id")
-      .notNull()
-      .references(() => groups.id, { onDelete: "cascade" }),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-  },
-  (t) => [primaryKey({ columns: [t.groupId, t.userId] })],
-);
-
 export const lessons = pgTable(
   "lessons",
   {
@@ -108,15 +85,6 @@ export const lessons = pgTable(
     schoolId: uuid("school_id")
       .notNull()
       .references(() => schools.id, { onDelete: "cascade" }),
-    /**
-     * Э12: группа урока отменена (`groups`/`group_members` удаляются в
-     * рамках Э12.4). Колонка временно nullable — уроки, созданные в новой
-     * модели (только admin, без группы), её не заполняют. Старые проверки
-     * членства ученика по группе (`rooms`/`activities`/`canvas`/`decks`)
-     * трактуют NULL как «группы нет → не член» до перевода на гостевой
-     * доступ (Э12.4).
-     */
-    groupId: uuid("group_id").references(() => groups.id, { onDelete: "restrict" }),
     teacherId: uuid("teacher_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),

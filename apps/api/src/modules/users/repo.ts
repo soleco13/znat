@@ -1,6 +1,6 @@
 import { eq, and, ilike, or, count, inArray } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { users, groups, groupMembers } from "../../db/schema.js";
+import { users } from "../../db/schema.js";
 import type { Role } from "@school/shared";
 
 export async function insertUser(input: {
@@ -76,62 +76,3 @@ export async function listUsers(input: {
   return { rows, total: totalRows[0]?.total ?? 0 };
 }
 
-export async function insertGroup(input: {
-  schoolId: string;
-  name: string;
-  grade: number;
-  academicYear: string;
-}) {
-  const [row] = await db.insert(groups).values(input).returning();
-  return row;
-}
-
-export async function listGroups(schoolId: string) {
-  return db.select().from(groups).where(eq(groups.schoolId, schoolId));
-}
-
-export async function findGroupById(id: string, schoolId: string) {
-  const rows = await db
-    .select()
-    .from(groups)
-    .where(and(eq(groups.id, id), eq(groups.schoolId, schoolId)))
-    .limit(1);
-  return rows[0] ?? null;
-}
-
-export async function addGroupMembers(groupId: string, userIds: string[]) {
-  if (userIds.length === 0) return;
-  await db
-    .insert(groupMembers)
-    .values(userIds.map((userId) => ({ groupId, userId })))
-    .onConflictDoNothing();
-}
-
-/** Ученики группы (для панели прогресса Э8.8) — только активные, с именами. */
-export async function listGroupStudents(groupId: string): Promise<{ id: string; fullName: string }[]> {
-  return db
-    .select({ id: users.id, fullName: users.fullName })
-    .from(groupMembers)
-    .innerJoin(users, eq(users.id, groupMembers.userId))
-    .where(and(eq(groupMembers.groupId, groupId), eq(users.role, "student"), eq(users.isActive, true)))
-    .orderBy(users.fullName);
-}
-
-/** Группы, в которых состоит пользователь (Э8.11 UI: «мои домашние задания»). */
-export async function listGroupsForUser(schoolId: string, userId: string) {
-  return db
-    .select({ id: groups.id, schoolId: groups.schoolId, name: groups.name, grade: groups.grade, academicYear: groups.academicYear })
-    .from(groupMembers)
-    .innerJoin(groups, eq(groups.id, groupMembers.groupId))
-    .where(and(eq(groupMembers.userId, userId), eq(groups.schoolId, schoolId)))
-    .orderBy(groups.name);
-}
-
-export async function isGroupMember(groupId: string, userId: string): Promise<boolean> {
-  const rows = await db
-    .select({ userId: groupMembers.userId })
-    .from(groupMembers)
-    .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)))
-    .limit(1);
-  return rows.length > 0;
-}

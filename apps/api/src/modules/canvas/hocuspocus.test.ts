@@ -51,13 +51,11 @@ const LESSON_ID = "22222222-2222-2222-2222-222222222222";
 const TEACHER_ID = "33333333-3333-3333-3333-333333333333";
 const STUDENT_ID = "44444444-4444-4444-4444-444444444444";
 const OTHER_STUDENT_ID = "55555555-5555-5555-5555-555555555555";
-const GROUP_ID = "66666666-6666-6666-6666-666666666666";
 
 function baseLesson(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: LESSON_ID,
     schoolId: SCHOOL_ID,
-    groupId: GROUP_ID,
     teacherId: TEACHER_ID,
     title: "Урок",
     subject: "Математика",

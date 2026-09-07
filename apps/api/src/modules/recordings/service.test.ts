@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import type { AccessTokenPayload } from "@school/shared";
 
 const { repoMock, egressMock, lessonsMock, roomsMock, storageMock } = vi.hoisted(() => ({
   repoMock: {
@@ -57,7 +58,8 @@ const TEACHER = "33333333-3333-3333-3333-333333333333";
 const OTHER = "44444444-4444-4444-4444-444444444444";
 
 const teacherUser = { sub: TEACHER, schoolId: SCHOOL, role: "teacher" as const };
-const studentUser = { sub: OTHER, schoolId: SCHOOL, role: "student" as const };
+/** Э12.9: роли `student` в модели нет — это выданный до деплоя «легаси»-JWT, который ещё живёт TTL access-токена. */
+const studentUser = { sub: OTHER, schoolId: SCHOOL, role: "student" } as unknown as AccessTokenPayload;
 const adminUser = { sub: OTHER, schoolId: SCHOOL, role: "admin" as const };
 
 function row(over: Partial<Record<string, unknown>> = {}) {

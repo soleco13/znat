@@ -71,8 +71,11 @@ async function assertRecordingAccess(
   user: AccessTokenPayload,
   lessonId: string,
 ): Promise<void> {
-  if (user.role === "student") {
-    throw new AppError(403, "forbidden", "Записи уроков ученикам недоступны");
+  // Э12.9: роль `student` из модели убрана, но выданный до деплоя access-JWT
+  // живёт ещё 15 минут — проверяем по белому списку персонала, а не по
+  // отсутствующей роли, чтобы такой токен не получил доступ к записям.
+  if (user.role !== "admin" && user.role !== "methodist" && user.role !== "teacher") {
+    throw new AppError(403, "forbidden", "Записи уроков доступны только персоналу");
   }
   const lesson = await lessonsService.getLesson(user.schoolId, lessonId);
   if (user.role === "teacher" && lesson.teacherId !== user.sub) {

@@ -3,26 +3,14 @@ import {
   createUserRequestSchema,
   updateUserRequestSchema,
   listUsersQuerySchema,
-  createGroupRequestSchema,
-  addGroupMembersRequestSchema,
 } from "@school/shared";
-import { AppError } from "../../plugins/errors.js";
 import * as usersService from "./service.js";
 
 export default async function usersRoutes(app: FastifyInstance) {
   app.addHook("preHandler", app.authenticate);
 
-  // Э8.11 UI: любой авторизованный сам узнаёт свои группы (ученик — где
-  // состоит, учитель/методист/админ — все группы школы, той же асимметрией,
-  // что уже действует у GET /groups/:id/activities). НЕ под admin-гейтом
-  // ниже — единственный самообслуживающий роут в этом файле.
-  app.get("/users/me/groups", async (request, reply) => {
-    const rows = await usersService.listMyGroups(request.user.schoolId, request.user.sub, request.user.role);
-    return reply.send({ items: rows });
-  });
-
-  // Остальные роуты модуля — администрирование школы, только admin.
-  // Отдельная область видимости хука (app.register), чтобы не задеть роут выше.
+  // Все роуты модуля — администрирование школы, только admin (Э12: учётные
+  // записи есть только у персонала, групп/классов учеников больше нет).
   await app.register(async (adminApp) => {
     adminApp.addHook("preHandler", adminApp.requireRole("admin"));
 
@@ -44,35 +32,5 @@ export default async function usersRoutes(app: FastifyInstance) {
       return reply.send(user);
     });
 
-    adminApp.post("/users/import", async (request, reply) => {
-      const file = await request.file();
-      if (!file) {
-        throw new AppError(400, "no_file", "CSV-файл не передан");
-      }
-      const chunks: Buffer[] = [];
-      for await (const chunk of file.file) {
-        chunks.push(chunk as Buffer);
-      }
-      const content = Buffer.concat(chunks).toString("utf-8");
-      const result = await usersService.importUsersFromCsv(request.user.schoolId, content);
-      return reply.send(result);
-    });
-
-    adminApp.get("/groups", async (request, reply) => {
-      const rows = await usersService.listGroups(request.user.schoolId);
-      return reply.send({ items: rows });
-    });
-
-    adminApp.post("/groups", async (request, reply) => {
-      const body = createGroupRequestSchema.parse(request.body);
-      const group = await usersService.createGroup(request.user.schoolId, body);
-      return reply.status(201).send(group);
-    });
-
-    adminApp.post<{ Params: { id: string } }>("/groups/:id/members", async (request, reply) => {
-      const body = addGroupMembersRequestSchema.parse(request.body);
-      await usersService.addGroupMembers(request.user.schoolId, request.params.id, body.userIds);
-      return reply.status(204).send();
-    });
   });
 }

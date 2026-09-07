@@ -2,7 +2,6 @@ import type { CreateUserRequest, UpdateUserRequest, ListUsersQuery, Role } from 
 import { hashPassword } from "../auth/service.js";
 import { AppError } from "../../plugins/errors.js";
 import * as repo from "./repo.js";
-import { parseUsersCsv } from "./csv.js";
 
 export async function createUser(schoolId: string, input: CreateUserRequest) {
   const passwordHash = await hashPassword(input.password);
@@ -34,44 +33,6 @@ export async function listUsers(schoolId: string, query: ListUsersQuery) {
   return repo.listUsers({ schoolId, role: query.role, q: query.q, page: query.page, pageSize: query.pageSize });
 }
 
-export async function importUsersFromCsv(schoolId: string, csvContent: string) {
-  const rows = parseUsersCsv(csvContent);
-  const created: string[] = [];
-  const failed: { email: string; reason: string }[] = [];
-
-  for (const row of rows) {
-    try {
-      await createUser(schoolId, {
-        email: row.email,
-        fullName: row.fullName,
-        role: row.role,
-        password: row.password,
-      });
-      created.push(row.email);
-    } catch (err) {
-      failed.push({ email: row.email, reason: err instanceof AppError ? err.message : "unknown_error" });
-    }
-  }
-
-  return { created, failed };
-}
-
-export async function createGroup(schoolId: string, input: { name: string; grade: number; academicYear: string }) {
-  return repo.insertGroup({ schoolId, ...input });
-}
-
-export async function listGroups(schoolId: string) {
-  return repo.listGroups(schoolId);
-}
-
-export async function addGroupMembers(schoolId: string, groupId: string, userIds: string[]) {
-  const group = await repo.findGroupById(groupId, schoolId);
-  if (!group) {
-    throw new AppError(404, "not_found", "Группа не найдена");
-  }
-  await repo.addGroupMembers(groupId, userIds);
-}
-
 export async function getUserForAuth(schoolId: string, id: string) {
   return repo.findUserById(id, schoolId);
 }
@@ -89,40 +50,6 @@ export async function assertTeacher(schoolId: string, teacherId: string) {
     throw new AppError(400, "invalid_teacher", "Указанный пользователь не является учителем");
   }
   return user;
-}
-
-export async function getGroupOrThrow(schoolId: string, groupId: string) {
-  const group = await repo.findGroupById(groupId, schoolId);
-  if (!group) {
-    throw new AppError(404, "not_found", "Группа не найдена");
-  }
-  return group;
-}
-
-export async function isGroupMember(groupId: string, userId: string) {
-  return repo.isGroupMember(groupId, userId);
-}
-
-/**
- * Группы текущего пользователя (`GET /users/me/groups`) — точка входа для
- * UI «мои домашние задания» (Э8.11) и формы «задать на дом» (нужно знать,
- * КАКУЮ группу выбрать, прежде чем звать `GET /groups/:id/activities`).
- * У групп нет своего учителя-хозяина (решение Э8.11, см. `createHomeworkActivity`
- * в activities/service.ts — там та же асимметрия): ученик видит только
- * группы, в которых состоит (`group_members`), учитель/методист/админ —
- * все группы школы, ровно как они уже могут узнать список её домашних
- * заданий и назначать новые в любую группу.
- */
-export async function listMyGroups(schoolId: string, userId: string, role: Role) {
-  if (role === "student") {
-    return repo.listGroupsForUser(schoolId, userId);
-  }
-  return repo.listGroups(schoolId);
-}
-
-/** Активные ученики группы с именами — панель прогресса класса (Э8.8). */
-export async function listGroupStudents(groupId: string) {
-  return repo.listGroupStudents(groupId);
 }
 
 export type { Role };
