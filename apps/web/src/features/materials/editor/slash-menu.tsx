@@ -16,17 +16,20 @@ import {
   ArrowUpDown,
   AudioLines,
   Baseline,
+  ChevronDownSquare,
   CircleDot,
   Hash,
   Heading1,
   Heading2,
   Heading3,
+  Highlighter,
   Image as ImageIcon,
   LayoutTemplate,
   List,
   ListChecks,
   ListOrdered,
   Quote,
+  Rows3,
   SeparatorHorizontal,
   Sigma,
   SquareChevronDown,
@@ -119,6 +122,13 @@ const CONTENT_ITEMS: SlashItem[] = [
     run: (e, r) => insertBlockNode(e, r, "callout"),
   },
   {
+    title: "Спойлер",
+    group: "Контент",
+    icon: ChevronDownSquare,
+    keywords: "spoiler показать решение свернуть раскрыть",
+    run: (e, r) => insertBlockNode(e, r, "spoiler"),
+  },
+  {
     title: "Формула",
     group: "Контент",
     icon: Sigma,
@@ -177,6 +187,9 @@ const QUESTION_ITEMS: SlashItem[] = (
     ["cloze_text", "Пропуски — ввод текста", Baseline],
     ["matching", "Сопоставление", ArrowLeftRight],
     ["ordering", "Упорядочивание", ArrowUpDown],
+    ["categorize", "Категоризация — разложить по группам", Rows3],
+    ["highlight_text", "Выделить в тексте", Highlighter],
+    ["table_fill", "Заполнить таблицу", TableIcon],
   ] as [QuestionInteraction["type"], string, LucideIcon][]
 ).map(([type, title, icon]) => ({
   title,
@@ -187,8 +200,14 @@ const QUESTION_ITEMS: SlashItem[] = (
 }));
 
 export interface SlashOptions {
-  /** Открыть диалог-пикер конструкций (визуальные карточки). */
-  onOpenConstructs: (insert: (construct: MaterialConstruct) => void) => void;
+  /**
+   * Открыть диалог-пикер конструкций (Э13 доп. 3, запрос пользователя:
+   * «все шаблоны конструкций должны открываться в модальном окне, с
+   * фильтрацией и группировкой по предметам»). `initialQuery` — то, что
+   * методист уже успел напечатать после «/» до выбора этого пункта:
+   * предзаполняет поиск в модалке, чтобы не печатать второй раз.
+   */
+  onOpenConstructs: (insert: (construct: MaterialConstruct) => void, initialQuery: string) => void;
 }
 
 /** JSON-содержимое конструкции для вставки в документ Tiptap. */
@@ -211,32 +230,35 @@ export function insertConstructAt(editor: Editor, range: Range | null, construct
   chain.insertContent(constructContent(construct)).run();
 }
 
-function buildItems(options: SlashOptions): SlashItem[] {
-  const constructItems: SlashItem[] = MATERIAL_CONSTRUCTS.map((c) => ({
-    title: c.label,
-    group: "Конструкции урока",
-    icon: c.icon,
-    keywords: `${c.description} шаблон конструкция каркас`,
-    run: (editor: Editor, range: Range) => insertConstructAt(editor, range, c),
-  }));
+/**
+ * Ключевые слова каталога конструкций — метки/описания/предметы/триггеры
+ * ВСЕХ конструкций разом, чтобы пункт «Конструкции…» находился поиском по
+ * любому из них (напечатал «диктант» → пункт всплыл и откроет модалку с
+ * этим же текстом в её собственном поиске), но сами ~75 карточек не
+ * засоряют инлайн-список поштучно — только модалка их перечисляет.
+ */
+const CONSTRUCT_CATALOG_KEYWORDS = MATERIAL_CONSTRUCTS.map(
+  (c) => `${c.label} ${c.description} ${c.subject} ${c.triggers.join(" ")}`,
+).join(" ");
 
-  // Юзабилити-правка: сначала то, чем пишут абзац за абзацем (текст,
-  // заголовки, вопросы), конструкции-шаблоны урока — отдельной секцией
-  // ниже, а не первым, что видит методист при каждом нажатии «/».
+function buildItems(options: SlashOptions, query: string): SlashItem[] {
+  // Юзабилити: сначала то, чем пишут абзац за абзацем (текст, заголовки,
+  // вопросы), «Конструкции» — отдельным пунктом ниже, а не ~75 карточками
+  // вперемешку со всем остальным при каждом нажатии «/» (Э13 доп. 3,
+  // запрос пользователя — конструкции только через модалку).
   return [
     ...CONTENT_ITEMS,
     ...QUESTION_ITEMS,
     {
-      title: "Все конструкции — карточками…",
+      title: "Конструкции — открыть каталог…",
       group: "Конструкции урока",
       icon: LayoutTemplate,
-      keywords: "шаблон урок каркас список",
+      keywords: `шаблон урок каркас список конструкция ${CONSTRUCT_CATALOG_KEYWORDS}`,
       run: (editor, range) => {
         editor.chain().focus().deleteRange(range).run();
-        options.onOpenConstructs((construct) => insertConstructAt(editor, null, construct));
+        options.onOpenConstructs((construct) => insertConstructAt(editor, null, construct), query);
       },
     },
-    ...constructItems,
   ];
 }
 
@@ -344,7 +366,7 @@ export const SlashCommand = Extension.create<SlashOptions>({
         startOfLine: false,
         command: ({ editor, range, props }) => props.run(editor, range),
         items: ({ query }) => {
-          const all = buildItems(options);
+          const all = buildItems(options, query);
           const q = query.trim().toLowerCase();
           if (!q) return all;
           return all.filter(

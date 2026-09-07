@@ -69,6 +69,20 @@ export const calloutBlockSchema = z.object({
   html: z.string(),
 });
 
+/**
+ * Спойлер — свёрнутый по умолчанию блок («Показать решение», «Показать
+ * перевод»). НЕ ключ ответа (§ «Железные правила» CLAUDE.md касается
+ * только `interaction` вопросов) — просто содержимое, которое ученик
+ * раскрывает сам; `stripMaterialAnswerKeys` контентные блоки не трогает,
+ * спойлер уходит ученику как есть, включая `html`.
+ */
+export const spoilerBlockSchema = z.object({
+  type: z.literal("spoiler"),
+  id: z.string().min(1),
+  title: z.string().min(1),
+  html: z.string(),
+});
+
 export const embedBlockSchema = z.object({
   type: z.literal("embed"),
   id: z.string().min(1),
@@ -89,6 +103,7 @@ export const contentBlockSchema = z.discriminatedUnion("type", [
   formulaBlockSchema,
   tableBlockSchema,
   calloutBlockSchema,
+  spoilerBlockSchema,
   embedBlockSchema,
   pageBreakBlockSchema,
 ]);
@@ -210,6 +225,79 @@ export const orderingInteractionSchema = z.object({
   items: z.array(orderingItemSchema).min(2),
 });
 
+/**
+ * Тип 11 из §6.3 ТЗ (`categorize`) — за стоп-листом Э8 («НЕ делать типы
+ * 11–22»), добавлен по прямому запросу пользователя (Э13, доп.
+ * «внедряй всё» — интерактив не только по математике). §6.4 ТЗ уже
+ * называет формулу частичных баллов для него («для… `categorize`… `max(0,
+ * (верных − неверных) / всего)`»), так что это не самодеятельность —
+ * достройка того, что ТЗ уже описывало, но откладывало.
+ *
+ * Ключ ответа — `categoryId` на каждом элементе (белый список в
+ * `stripInteractionAnswerKey` ниже его вырезает). Не размещённый учеником
+ * элемент (`response.values[itemId] == null`) не засчитывается ни в
+ * верные, ни в неверные — тот же принцип, что у пропусков `cloze_*`.
+ */
+export const categorizeCategorySchema = z.object({ id: z.string().min(1), label: z.string().min(1) });
+export const categorizeItemSchema = z.object({
+  id: z.string().min(1),
+  html: z.string(),
+  categoryId: z.string().min(1),
+});
+export const categorizeInteractionSchema = z.object({
+  type: z.literal("categorize"),
+  shuffle: z.boolean().default(false),
+  categories: z.array(categorizeCategorySchema).min(2),
+  items: z.array(categorizeItemSchema).min(2),
+});
+
+/**
+ * Тип 14 из §6.3 ТЗ (`highlight_text`) — «выделить фрагменты в тексте
+ * (части речи, ошибки)». Как и `categorize`, за стоп-листом Э8, добавлен
+ * по прямому запросу пользователя (Э13, доп. 3 «внедряй всё»).
+ *
+ * Модель — КАЖДОЕ слово/фрагмент текста является отдельным кликабельным
+ * токеном (`tokens`, порядок = порядок в тексте), `correct` различает
+ * «это одно из искомых слов» (глагол, ошибка, …) от «это отвлекающее
+ * слово» — та же семантика, что `choiceOptionSchema.correct` у
+ * `multiple_choice`, только по словам текста, а не по вариантам ответа.
+ * Ключ ответа — `correct` на каждом токене; `stripInteractionAnswerKey`
+ * ниже его вырезает, оставляя только `id`/`text`.
+ */
+export const highlightTextTokenSchema = z.object({
+  id: z.string().min(1),
+  text: z.string().min(1),
+  correct: z.boolean(),
+});
+export const highlightTextInteractionSchema = z.object({
+  type: z.literal("highlight_text"),
+  tokens: z.array(highlightTextTokenSchema).min(2),
+});
+
+/**
+ * Тип 16 из §6.3 ТЗ (`table_fill`) — «заполнить ячейки таблицы». Таблица
+ * — сетка ячеек, каждая либо `static` (текст, не редактируется учеником),
+ * либо `input` (поле ответа с правилами сравнения — та же модель, что
+ * `cloze_text` гэп, `textMatchRuleSchema`). Ключ ответа — `answers` на
+ * `input`-ячейках; `stripInteractionAnswerKey` оставляет только `id`.
+ */
+export const tableFillCellSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("static"), text: z.string() }),
+  z.object({
+    kind: z.literal("input"),
+    id: z.string().min(1),
+    answers: z.array(textMatchRuleSchema).min(1),
+    caseSensitive: z.boolean().default(false),
+    trimWhitespace: z.boolean().default(true),
+    typoTolerance: z.number().int().min(0).default(0),
+  }),
+]);
+export type TableFillCell = z.infer<typeof tableFillCellSchema>;
+export const tableFillInteractionSchema = z.object({
+  type: z.literal("table_fill"),
+  rows: z.array(z.array(tableFillCellSchema).min(1)).min(1),
+});
+
 export const questionInteractionSchema = z.discriminatedUnion("type", [
   singleChoiceInteractionSchema,
   multipleChoiceInteractionSchema,
@@ -221,6 +309,9 @@ export const questionInteractionSchema = z.discriminatedUnion("type", [
   clozeTextInteractionSchema,
   matchingInteractionSchema,
   orderingInteractionSchema,
+  categorizeInteractionSchema,
+  highlightTextInteractionSchema,
+  tableFillInteractionSchema,
 ]);
 export type QuestionInteraction = z.infer<typeof questionInteractionSchema>;
 export type InteractionType = QuestionInteraction["type"];
@@ -516,6 +607,21 @@ export const orderingResponseSchema = z.object({
   type: z.literal("ordering"),
   order: z.array(z.string()),
 });
+export const categorizeResponseSchema = z.object({
+  type: z.literal("categorize"),
+  /** По ключу itemId — id выбранной категории или `null`, если ученик не разместил элемент. */
+  values: z.record(z.string(), z.string().nullable()),
+});
+export const highlightTextResponseSchema = z.object({
+  type: z.literal("highlight_text"),
+  /** id токенов, которые ученик отметил как искомые. */
+  selectedIds: z.array(z.string()),
+});
+export const tableFillResponseSchema = z.object({
+  type: z.literal("table_fill"),
+  /** По ключу id `input`-ячейки — введённый учеником текст. */
+  values: z.record(z.string(), z.string()),
+});
 
 export const questionResponseSchema = z.discriminatedUnion("type", [
   singleChoiceResponseSchema,
@@ -528,6 +634,9 @@ export const questionResponseSchema = z.discriminatedUnion("type", [
   clozeTextResponseSchema,
   matchingResponseSchema,
   orderingResponseSchema,
+  categorizeResponseSchema,
+  highlightTextResponseSchema,
+  tableFillResponseSchema,
 ]);
 export type QuestionResponse = z.infer<typeof questionResponseSchema>;
 
@@ -640,6 +749,26 @@ export function stripInteractionAnswerKey(interaction: QuestionInteraction, seed
         type: interaction.type,
         items: shuffled(interaction.items, seededRandom(seed)),
       };
+    case "categorize": {
+      const items = interaction.shuffle ? shuffled(interaction.items, seededRandom(seed)) : interaction.items;
+      return {
+        type: interaction.type,
+        categories: interaction.categories,
+        items: items.map((i) => ({ id: i.id, html: i.html })),
+      };
+    }
+    case "highlight_text":
+      return {
+        type: interaction.type,
+        tokens: interaction.tokens.map((t) => ({ id: t.id, text: t.text })),
+      };
+    case "table_fill":
+      return {
+        type: interaction.type,
+        rows: interaction.rows.map((row) =>
+          row.map((cell) => (cell.kind === "static" ? cell : { kind: cell.kind, id: cell.id })),
+        ),
+      };
   }
 }
 export type PublicQuestionInteraction = ReturnType<typeof stripInteractionAnswerKey>;
@@ -717,6 +846,15 @@ function questionHasCorrectAnswer(interaction: QuestionInteraction): boolean {
     case "ordering":
       // Порядок массива — сам ответ, «нет ответа» структурно невозможно (см. докстринг `orderingInteractionSchema`).
       return true;
+    case "categorize":
+      // `categoryId` — обязательное поле каждого элемента (схема), «нет ответа» структурно невозможно.
+      return true;
+    case "highlight_text":
+      return interaction.tokens.some((t) => t.correct);
+    case "table_fill": {
+      const inputCells = interaction.rows.flat().filter((c) => c.kind === "input");
+      return inputCells.length > 0 && inputCells.every((c) => c.answers.some((a) => a.value.trim() !== ""));
+    }
   }
 }
 
@@ -753,6 +891,7 @@ export function validateMaterialContent(material: Material): MaterialValidationI
     switch (block.type) {
       case "rich_text":
       case "callout":
+      case "spoiler":
         if (isEmptyHtml(block.html)) {
           issues.push({ blockId: block.id, code: "empty_content", message: "Текстовый блок пуст" });
         }

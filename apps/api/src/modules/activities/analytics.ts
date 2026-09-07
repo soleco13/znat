@@ -108,6 +108,9 @@ export function buildDistribution(
 
     case "matching":
     case "ordering":
+    case "categorize":
+    case "highlight_text":
+    case "table_fill":
       return summarize(interaction, responses);
   }
 }
@@ -199,6 +202,29 @@ export function formatResponseText(interaction: QuestionInteraction, response: Q
       const byId = new Map(interaction.items.map((i) => [i.id, stripHtml(i.html)]));
       if (r.order.length === 0) return "(нет ответа)";
       return r.order.map((id, i) => `${i + 1}. ${byId.get(id) ?? id}`).join("\n");
+    }
+    case "categorize": {
+      const r = response as Extract<QuestionResponse, { type: "categorize" }>;
+      const itemById = new Map(interaction.items.map((i) => [i.id, stripHtml(i.html)]));
+      const categoryById = new Map(interaction.categories.map((c) => [c.id, c.label]));
+      const placed = Object.entries(r.values).filter((entry): entry is [string, string] => entry[1] != null);
+      if (placed.length === 0) return "(нет ответа)";
+      return placed
+        .map(([itemId, categoryId]) => `${itemById.get(itemId) ?? itemId} → ${categoryById.get(categoryId) ?? categoryId}`)
+        .join("\n");
+    }
+    case "highlight_text": {
+      const r = response as Extract<QuestionResponse, { type: "highlight_text" }>;
+      const selected = new Set(r.selectedIds);
+      const words = interaction.tokens.map((t) => (selected.has(t.id) ? `[${stripHtml(t.text)}]` : stripHtml(t.text)));
+      return selected.size === 0 ? "(нет ответа)" : words.join(" ");
+    }
+    case "table_fill": {
+      const r = response as Extract<QuestionResponse, { type: "table_fill" }>;
+      const inputCells = interaction.rows.flat().filter((c) => c.kind === "input");
+      const filled = inputCells.filter((c) => r.values[c.id]);
+      if (filled.length === 0) return "(нет ответа)";
+      return filled.map((c, i) => `${i + 1}. ${r.values[c.id]}`).join("\n");
     }
   }
 }

@@ -52,6 +52,23 @@ export function formatCorrectAnswer(interaction: QuestionInteraction): string {
     case "ordering":
       // Порядок элементов В МАССИВЕ и есть правильный ответ (см. materials.ts).
       return interaction.items.map((i) => stripHtml(i.html)).join(" → ");
+    case "categorize": {
+      const categoryById = new Map(interaction.categories.map((c) => [c.id, c.label]));
+      return interaction.items
+        .map((i) => `${stripHtml(i.html)} → ${categoryById.get(i.categoryId) ?? i.categoryId}`)
+        .join("; ");
+    }
+    case "highlight_text":
+      return interaction.tokens
+        .filter((t) => t.correct)
+        .map((t) => stripHtml(t.text))
+        .join(", ") || "—";
+    case "table_fill":
+      return interaction.rows
+        .flat()
+        .filter((c) => c.kind === "input")
+        .map((c) => c.answers.filter((a) => a.match !== "regex").map((a) => a.value).join(" / "))
+        .join("; ") || "—";
   }
 }
 
@@ -116,6 +133,29 @@ export function formatResponse(
       const byId = new Map(interaction.items.map((i) => [i.id, stripHtml(i.html)]));
       if (r.order.length === 0) return "(нет ответа)";
       return r.order.map((id) => byId.get(id) ?? id).join(" → ");
+    }
+    case "categorize": {
+      const r = response as Extract<typeof response, { type: "categorize" }>;
+      const itemById = new Map(interaction.items.map((i) => [i.id, stripHtml(i.html)]));
+      const categoryById = new Map(interaction.categories.map((c) => [c.id, c.label]));
+      const placed = Object.entries(r.values).filter((entry): entry is [string, string] => entry[1] != null);
+      if (placed.length === 0) return "(нет ответа)";
+      return placed
+        .map(([itemId, categoryId]) => `${itemById.get(itemId) ?? itemId} → ${categoryById.get(categoryId) ?? categoryId}`)
+        .join("; ");
+    }
+    case "highlight_text": {
+      const r = response as Extract<typeof response, { type: "highlight_text" }>;
+      const selected = new Set(r.selectedIds);
+      const words = interaction.tokens.filter((t) => selected.has(t.id)).map((t) => stripHtml(t.text));
+      return words.length > 0 ? words.join(", ") : "(нет ответа)";
+    }
+    case "table_fill": {
+      const r = response as Extract<typeof response, { type: "table_fill" }>;
+      const inputCells = interaction.rows.flat().filter((c) => c.kind === "input");
+      const filled = inputCells.filter((c) => r.values[c.id]);
+      if (filled.length === 0) return "(нет ответа)";
+      return filled.map((c) => r.values[c.id]).join("; ");
     }
   }
 }

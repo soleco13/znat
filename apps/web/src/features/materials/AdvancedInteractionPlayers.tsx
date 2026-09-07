@@ -29,7 +29,8 @@ const INLINE_FIELD =
 
 /**
  * Плеер заданий, типы 6–10 (Э8.5, продолжение `QuestionPlayer.tsx` —
- * `open_answer`, `cloze_dropdown`, `cloze_text`, `matching`, `ordering`).
+ * `open_answer`, `cloze_dropdown`, `cloze_text`, `matching`, `ordering`) +
+ * тип 11 `categorize` (Э13, доп. «внедряй всё»).
  * §16 ТЗ («клавиатурная навигация во всех типах заданий») здесь весомее,
  * чем в Э8.4: `matching`/`ordering` — единственные два типа из всех 10, где
  * ПЛАН.md прямо называет `dnd-kit` инструментом. Drag-and-drop сам по себе
@@ -306,6 +307,97 @@ export function MatchingPlayer({
               {right.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.html.replace(/<[^>]+>/g, "")}
+                </option>
+              ))}
+            </select>
+          </label>
+        ))}
+      </fieldset>
+    </div>
+  );
+}
+
+/**
+ * Категоризация (тип 11, §6.3/§6.4 ТЗ, Э13 — достройка сверх стоп-листа
+ * Э8 по прямому запросу пользователя). Тот же приём, что `MatchingPlayer`
+ * выше: DnD-корзины ПЛЮС `<select>` на каждый элемент как гарантированно
+ * доступная с клавиатуры альтернатива (§16 ТЗ).
+ */
+export function CategorizePlayer({
+  categories,
+  items,
+  value,
+  onChange,
+  disabled,
+}: {
+  categories: { id: string; label: string }[];
+  items: { id: string; html: string }[];
+  value: Extract<QuestionResponse, { type: "categorize" }> | undefined;
+  onChange: (response: QuestionResponse) => void;
+  disabled: boolean;
+}) {
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  const values = value?.values ?? {};
+  const pool = items.filter((i) => values[i.id] == null);
+
+  function place(itemId: string, categoryId: string | null) {
+    onChange({ type: "categorize", values: { ...values, [itemId]: categoryId } });
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over) return;
+    const itemId = String(active.id);
+    const targetId = String(over.id);
+    place(itemId, targetId === POOL_ID ? null : targetId);
+  }
+
+  return (
+    <div>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <div className="flex flex-wrap gap-3">
+          {categories.map((cat) => (
+            <div key={cat.id} className="min-w-[10rem] flex-1">
+              <p className="mb-1 text-xs font-medium text-muted-foreground">{cat.label}</p>
+              <DroppableSlot id={cat.id}>
+                <div className="flex flex-wrap gap-1.5">
+                  {items
+                    .filter((i) => values[i.id] === cat.id)
+                    .map((i) => (
+                      <DraggableChip key={i.id} id={i.id} html={i.html} disabled={disabled} />
+                    ))}
+                </div>
+              </DroppableSlot>
+            </div>
+          ))}
+        </div>
+        <p className="mb-1 mt-4 text-xs text-muted-foreground">Не распределено:</p>
+        <DroppableSlot id={POOL_ID}>
+          <div className="flex flex-wrap gap-2">
+            {pool.map((i) => (
+              <DraggableChip key={i.id} id={i.id} html={i.html} disabled={disabled} />
+            ))}
+          </div>
+        </DroppableSlot>
+      </DndContext>
+
+      {/* Клавиатурная альтернатива drag-and-drop (§16 ТЗ) — тот же результат, гарантированно доступна с Tab/стрелками без допущений о курсоре перетаскивания. */}
+      <fieldset className="mt-4 flex flex-col gap-1.5">
+        <legend className="text-xs text-muted-foreground">Или выберите категорию списком:</legend>
+        {items.map((i) => (
+          <label key={i.id} className="flex items-center gap-2 text-sm">
+            <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(i.html) }} />
+            <select
+              aria-label={`Категория для ${i.id}`}
+              className={INLINE_FIELD}
+              value={values[i.id] ?? ""}
+              disabled={disabled}
+              onChange={(e) => place(i.id, e.target.value || null)}
+            >
+              <option value="">—</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
                 </option>
               ))}
             </select>

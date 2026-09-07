@@ -1,4 +1,4 @@
-import { useId, useRef, type ReactNode } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 import {
   DndContext,
   type DragEndEvent,
@@ -65,6 +65,12 @@ export function InteractionEditor({
       return <MatchingEditor interaction={interaction} onChange={onChange} />;
     case "ordering":
       return <OrderingEditor interaction={interaction} onChange={onChange} />;
+    case "categorize":
+      return <CategorizeEditor interaction={interaction} onChange={onChange} />;
+    case "highlight_text":
+      return <HighlightTextEditor interaction={interaction} onChange={onChange} />;
+    case "table_fill":
+      return <TableFillEditor interaction={interaction} onChange={onChange} />;
   }
 }
 
@@ -873,6 +879,384 @@ function MatchingEditor({
             .join(", ")}
         </p>
       )}
+    </div>
+  );
+}
+
+// ─── categorize (тип 11, §6.3 ТЗ, Э13 — достройка сверх стоп-листа Э8 по прямому запросу пользователя) ──
+
+function CategoryListEditor({
+  categories,
+  onChange,
+}: {
+  categories: { id: string; label: string }[];
+  onChange: (categories: { id: string; label: string }[]) => void;
+}) {
+  function addCategory() {
+    onChange([...categories, { id: crypto.randomUUID(), label: "" }]);
+  }
+  function removeCategory(id: string) {
+    if (categories.length <= 2) return;
+    onChange(categories.filter((c) => c.id !== id));
+  }
+  function updateCategory(id: string, label: string) {
+    onChange(categories.map((c) => (c.id === id ? { ...c, label } : c)));
+  }
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs text-muted-foreground">Категории (корзины)</span>
+      <ul className="flex flex-col gap-1.5">
+        {categories.map((c) => (
+          <li key={c.id} className="flex items-center gap-1.5">
+            <input
+              value={c.label}
+              onChange={(e) => updateCategory(c.id, e.target.value)}
+              placeholder="Название категории"
+              className="flex-1 rounded-md border border-border bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
+            />
+            <button
+              type="button"
+              onClick={() => removeCategory(c.id)}
+              disabled={categories.length <= 2}
+              aria-label="Удалить категорию"
+              className="rounded-md border border-border p-1 text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-30"
+            >
+              <X className="size-3.5" aria-hidden />
+            </button>
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        onClick={addCategory}
+        className="self-start inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+      >
+        <Plus className="size-3" aria-hidden /> Добавить категорию
+      </button>
+    </div>
+  );
+}
+
+/**
+ * `categoryId` — обязательное поле (схема), поэтому при удалении категории
+ * её элементы переезжают на первую оставшуюся — интерактив остаётся
+ * структурно валидным без «повисших» ссылок, а не превращается в задание
+ * без ключа ответа.
+ */
+function CategorizeEditor({
+  interaction,
+  onChange,
+}: {
+  interaction: Extract<QuestionInteraction, { type: "categorize" }>;
+  onChange: (interaction: QuestionInteraction) => void;
+}) {
+  function setCategories(categories: { id: string; label: string }[]) {
+    const ids = new Set(categories.map((c) => c.id));
+    const fallback = categories[0]?.id ?? "";
+    const items = interaction.items.map((i) => (ids.has(i.categoryId) ? i : { ...i, categoryId: fallback }));
+    onChange({ ...interaction, categories, items });
+  }
+
+  function addItem() {
+    onChange({
+      ...interaction,
+      items: [...interaction.items, { id: crypto.randomUUID(), html: "", categoryId: interaction.categories[0]!.id }],
+    });
+  }
+
+  function removeItem(id: string) {
+    if (interaction.items.length <= 2) return;
+    onChange({ ...interaction, items: interaction.items.filter((i) => i.id !== id) });
+  }
+
+  function updateItemHtml(id: string, html: string) {
+    onChange({ ...interaction, items: interaction.items.map((i) => (i.id === id ? { ...i, html } : i)) });
+  }
+
+  function updateItemCategory(id: string, categoryId: string) {
+    onChange({ ...interaction, items: interaction.items.map((i) => (i.id === id ? { ...i, categoryId } : i)) });
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <CategoryListEditor categories={interaction.categories} onChange={setCategories} />
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs text-muted-foreground">Элементы</span>
+        <ul className="flex flex-col gap-1.5">
+          {interaction.items.map((item) => (
+            <li key={item.id} className="flex items-center gap-1.5">
+              <input
+                value={item.html}
+                onChange={(e) => updateItemHtml(item.id, e.target.value)}
+                placeholder="Текст элемента"
+                className="flex-1 rounded-md border border-border bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
+              />
+              <select
+                value={item.categoryId}
+                onChange={(e) => updateItemCategory(item.id, e.target.value)}
+                className="rounded-md border border-border bg-card px-2 py-1.5 text-xs outline-none focus-visible:border-primary"
+              >
+                {interaction.categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label || "(без названия)"}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => removeItem(item.id)}
+                disabled={interaction.items.length <= 2}
+                aria-label="Удалить элемент"
+                className="rounded-md border border-border p-1 text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-30"
+              >
+                <X className="size-3.5" aria-hidden />
+              </button>
+            </li>
+          ))}
+        </ul>
+        <button
+          type="button"
+          onClick={addItem}
+          className="self-start inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+        >
+          <Plus className="size-3" aria-hidden /> Добавить элемент
+        </button>
+      </div>
+      <label className="flex items-center gap-2 text-xs text-muted-foreground">
+        <input
+          type="checkbox"
+          checked={interaction.shuffle}
+          onChange={(e) => onChange({ ...interaction, shuffle: e.target.checked })}
+        />
+        Перемешивать порядок элементов ученику
+      </label>
+    </div>
+  );
+}
+
+// ─── highlight_text (тип 14, §6.3 ТЗ, Э13 — достройка сверх стоп-листа Э8) ──
+
+/**
+ * Методист печатает предложение целиком в текстовое поле — «Разбить на
+ * слова» разбивает по пробелам и заводит по токену на слово (best-effort
+ * сохраняет `correct` у слов с тем же текстом на той же позиции, чтобы
+ * повторное разбиение не сбрасывало уже расставленные отметки). Дальше —
+ * клик по слову переключает «это одно из искомых» (зелёным), как у
+ * `ChoiceInline` в `question-view.tsx`.
+ */
+function HighlightTextEditor({
+  interaction,
+  onChange,
+}: {
+  interaction: Extract<QuestionInteraction, { type: "highlight_text" }>;
+  onChange: (interaction: QuestionInteraction) => void;
+}) {
+  const [draft, setDraft] = useState(interaction.tokens.map((t) => t.text).join(" "));
+
+  function regenerate() {
+    const words = draft.split(/\s+/).filter(Boolean);
+    if (words.length < 2) return;
+    const tokens = words.map((text, i) => {
+      const prev = interaction.tokens[i];
+      return { id: prev?.id ?? crypto.randomUUID(), text, correct: prev?.text === text ? prev.correct : false };
+    });
+    onChange({ ...interaction, tokens });
+  }
+
+  function toggleCorrect(id: string) {
+    onChange({
+      ...interaction,
+      tokens: interaction.tokens.map((t) => (t.id === id ? { ...t, correct: !t.correct } : t)),
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+        Текст (слова через пробел)
+        <div className="flex gap-1.5">
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={2}
+            className="flex-1 rounded-md border border-border bg-card px-2.5 py-1.5 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
+          />
+          <button
+            type="button"
+            onClick={regenerate}
+            className="self-start rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+          >
+            Разбить на слова
+          </button>
+        </div>
+      </label>
+      <div className="flex flex-wrap gap-1.5">
+        {interaction.tokens.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => toggleCorrect(t.id)}
+            className={`rounded-md border px-2 py-1 text-sm transition-colors ${
+              t.correct ? "border-success bg-success-light font-medium text-success" : "border-border hover:bg-secondary"
+            }`}
+          >
+            {t.text}
+          </button>
+        ))}
+      </div>
+      <p className="text-[11px] text-muted-foreground">Зелёным — слова, которые ученику нужно выделить.</p>
+    </div>
+  );
+}
+
+// ─── table_fill (тип 16, §6.3 ТЗ, Э13 — достройка сверх стоп-листа Э8) ──
+
+function TableFillEditor({
+  interaction,
+  onChange,
+}: {
+  interaction: Extract<QuestionInteraction, { type: "table_fill" }>;
+  onChange: (interaction: QuestionInteraction) => void;
+}) {
+  function setCell(ri: number, ci: number, cell: (typeof interaction.rows)[number][number]) {
+    onChange({
+      ...interaction,
+      rows: interaction.rows.map((row, r) => (r === ri ? row.map((c, c2) => (c2 === ci ? cell : c)) : row)),
+    });
+  }
+
+  function toggleKind(ri: number, ci: number) {
+    const cell = interaction.rows[ri]![ci]!;
+    setCell(
+      ri,
+      ci,
+      cell.kind === "static"
+        ? {
+            kind: "input",
+            id: crypto.randomUUID(),
+            answers: [{ value: "", match: "normalized" }],
+            caseSensitive: false,
+            trimWhitespace: true,
+            typoTolerance: 0,
+          }
+        : { kind: "static", text: "" },
+    );
+  }
+
+  function addRow() {
+    const cols = interaction.rows[0]?.length ?? 1;
+    onChange({
+      ...interaction,
+      rows: [...interaction.rows, Array.from({ length: cols }, () => ({ kind: "static" as const, text: "" }))],
+    });
+  }
+
+  function removeRow(ri: number) {
+    if (interaction.rows.length <= 1) return;
+    onChange({ ...interaction, rows: interaction.rows.filter((_, r) => r !== ri) });
+  }
+
+  function addColumn() {
+    onChange({ ...interaction, rows: interaction.rows.map((row) => [...row, { kind: "static" as const, text: "" }]) });
+  }
+
+  function removeColumn(ci: number) {
+    if ((interaction.rows[0]?.length ?? 0) <= 1) return;
+    onChange({ ...interaction, rows: interaction.rows.map((row) => row.filter((_, c) => c !== ci)) });
+  }
+
+  const cols = interaction.rows[0]?.length ?? 0;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="overflow-x-auto">
+        <table className="border-collapse text-xs">
+          <tbody>
+            {interaction.rows.map((row, ri) => (
+              <tr key={ri}>
+                {row.map((cell, ci) => (
+                  <td key={ci} className="border border-border p-1 align-top">
+                    <div className="flex flex-col gap-0.5">
+                      {cell.kind === "static" ? (
+                        <input
+                          value={cell.text}
+                          onChange={(e) => setCell(ri, ci, { kind: "static", text: e.target.value })}
+                          placeholder="текст"
+                          className="w-24 rounded border border-transparent bg-transparent px-1 py-0.5 outline-none focus-visible:border-primary"
+                        />
+                      ) : (
+                        <input
+                          value={cell.answers[0]?.value ?? ""}
+                          onChange={(e) =>
+                            setCell(ri, ci, {
+                              ...cell,
+                              answers: [{ value: e.target.value, match: cell.answers[0]?.match ?? "normalized" }],
+                            })
+                          }
+                          placeholder="правильный ответ"
+                          className="w-24 rounded border border-primary/40 bg-primary-light/30 px-1 py-0.5 outline-none"
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => toggleKind(ri, ci)}
+                        className="text-left text-[10px] text-muted-foreground hover:text-foreground"
+                      >
+                        {cell.kind === "static" ? "→ поле ответа" : "→ обычный текст"}
+                      </button>
+                    </div>
+                  </td>
+                ))}
+                <td className="p-1 align-top">
+                  <button
+                    type="button"
+                    onClick={() => removeRow(ri)}
+                    disabled={interaction.rows.length <= 1}
+                    aria-label="Удалить строку"
+                    className="rounded-md border border-border p-1 text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-30"
+                  >
+                    <X className="size-3" aria-hidden />
+                  </button>
+                </td>
+              </tr>
+            ))}
+            <tr>
+              {Array.from({ length: cols }, (_, ci) => (
+                <td key={ci} className="p-1 text-center">
+                  <button
+                    type="button"
+                    onClick={() => removeColumn(ci)}
+                    disabled={cols <= 1}
+                    aria-label="Удалить столбец"
+                    className="rounded-md border border-border p-1 text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-30"
+                  >
+                    <X className="size-3" aria-hidden />
+                  </button>
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={addRow}
+          className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+        >
+          <Plus className="size-3" aria-hidden /> Строка
+        </button>
+        <button
+          type="button"
+          onClick={addColumn}
+          className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+        >
+          <Plus className="size-3" aria-hidden /> Столбец
+        </button>
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        Голубым — поля ответа (сравнение по нормализованному тексту, как в текстовом вопросе).
+      </p>
     </div>
   );
 }

@@ -88,6 +88,16 @@ export function blockToNodes(block: MaterialBlock): JSONContent[] {
         },
       ];
     }
+    case "spoiler": {
+      const inner = (generateJSON(block.html?.trim() || "<p></p>", ext()).content ?? []) as JSONContent[];
+      return [
+        {
+          type: "spoiler",
+          attrs: { blockId: block.id, title: block.title },
+          content: inner.length > 0 ? inner : [{ type: "paragraph" }],
+        },
+      ];
+    }
     case "formula":
       return [{ type: "formulaBlock", attrs: { id: block.id, latex: block.latex } }];
     case "page_break":
@@ -169,6 +179,15 @@ function nodeToBlock(node: JSONContent): MaterialBlock | null {
         type: "callout",
         id: (node.attrs?.blockId as string) || newBlockId(),
         variant: (node.attrs?.variant as "note" | "warning" | "example") || "note",
+        html,
+      };
+    }
+    case "spoiler": {
+      const html = stripEditorAttrs(childrenHtml(node)) || "<p></p>";
+      return {
+        type: "spoiler",
+        id: (node.attrs?.blockId as string) || newBlockId(),
+        title: (node.attrs?.title as string) || "Показать решение",
         html,
       };
     }

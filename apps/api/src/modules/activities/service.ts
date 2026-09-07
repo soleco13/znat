@@ -679,6 +679,12 @@ function emptyResponseFor(type: QuestionResponse["type"]): QuestionResponse {
       return { type, pairs: [] };
     case "ordering":
       return { type, order: [] };
+    case "categorize":
+      return { type, values: {} };
+    case "highlight_text":
+      return { type, selectedIds: [] };
+    case "table_fill":
+      return { type, values: {} };
   }
 }
 

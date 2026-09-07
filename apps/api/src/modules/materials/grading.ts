@@ -1,19 +1,25 @@
 import type { GradeResult, QuestionInteraction, QuestionResponse, TextMatchRule } from "@school/shared";
 
 /**
- * Движок проверки (Э8.3, §6.3/§6.4 ТЗ). ЧИТАТЬ ПОСТРОЧНО (§ «Что не
- * делегировать вслепую» CLAUDE.md, дословно из ПЛАН.md: «единственное
- * место, где баг тихо портит оценки учеников, и никакой MCP этого не
- * поймает»). Каждый тип — отдельная функция, без общей «умной» абстракции
- * поверх дискриминированного объединения: одна ошибка в общей формуле
- * задела бы сразу все 10 типов молча, отдельные функции ошибаются
- * порознь и заметно (табличные тесты Э8.3 ниже проверяют каждую отдельно).
+ * Движок проверки (Э8.3, §6.3/§6.4 ТЗ; `categorize` — Э13, доп. «внедряй
+ * всё», достройка типа 11 сверх стоп-листа Э8 по прямому запросу
+ * пользователя). ЧИТАТЬ ПОСТРОЧНО (§ «Что не делегировать вслепую»
+ * CLAUDE.md, дословно из ПЛАН.md: «единственное место, где баг тихо портит
+ * оценки учеников, и никакой MCP этого не поймает»). Каждый тип —
+ * отдельная функция, без общей «умной» абстракции поверх дискриминированного
+ * объединения: одна ошибка в общей формуле задела бы сразу все типы молча,
+ * отдельные функции ошибаются порознь и заметно (табличные тесты Э8.3/Э13
+ * ниже проверяют каждую отдельно).
  *
- * §6.4 ТЗ, частичные баллы — ТОЛЬКО для `multiple_choice`, `matching`,
- * `cloze_dropdown`, `cloze_text` (в ТЗ ещё `categorize`, типа 11, здесь нет
- * — стоп-лист Э8). Формула дословно: `max(0, (верных − неверных) / всего)`.
- * `ordering` в этот список НЕ входит — там либо весь порядок верен, либо
- * нет (all-or-nothing), это явно следует из ОТСУТСТВИЯ `ordering` в
+ * §6.4 ТЗ, частичные баллы — для `multiple_choice`, `matching`,
+ * `cloze_dropdown`, `cloze_text`, `categorize`; `highlight_text` (по
+ * выбранным токенам, как у `multiple_choice`) и `table_fill` (по ячейкам,
+ * как у `cloze_text`) добавлены той же формулой — ТЗ типы 11–22 её не
+ * расписывает поштучно, но применяет тот же принцип «частичный балл там,
+ * где ответ — множество независимых элементов», а не самодеятельность.
+ * Формула дословно: `max(0, (верных − неверных) / всего)`. `ordering` в
+ * этот список НЕ входит — там либо весь порядок верен, либо нет
+ * (all-or-nothing), это явно следует из ОТСУТСТВИЯ `ordering` в
  * перечислении §6.4 ТЗ, не забывчивость.
  *
  * Несовпадение `interaction.type !== response.type` — это баг вызывающей
@@ -219,6 +225,51 @@ export function gradeResponse(interaction: QuestionInteraction, response: Questi
       const correctOrder = interaction.items.map((i) => i.id);
       const isCorrect = r.order.length === correctOrder.length && r.order.every((id, i) => id === correctOrder[i]);
       return fullOrZero(points, isCorrect);
+    }
+
+    case "categorize": {
+      // §6.4 ТЗ: `categorize` — в списке частичных баллов, та же формула, что multiple_choice/matching/cloze_*.
+      const r = response as Extract<QuestionResponse, { type: "categorize" }>;
+      let correctCount = 0;
+      let incorrectCount = 0;
+      for (const item of interaction.items) {
+        const placed = r.values[item.id];
+        if (placed == null) continue; // не размещён — не засчитываем ни в верные, ни в неверные (как незаполненный пропуск cloze_*)
+        if (placed === item.categoryId) correctCount++;
+        else incorrectCount++;
+      }
+      return partialCredit(points, correctCount, incorrectCount, interaction.items.length);
+    }
+
+    case "highlight_text": {
+      // Формула multiple_choice: correctCount/incorrectCount считаются по ВЫБРАННЫМ токенам, total — число искомых (correct: true) токенов.
+      const r = response as Extract<QuestionResponse, { type: "highlight_text" }>;
+      const correctIds = new Set(interaction.tokens.filter((t) => t.correct).map((t) => t.id));
+      const selected = new Set(r.selectedIds);
+      let correctCount = 0;
+      let incorrectCount = 0;
+      for (const id of selected) {
+        if (correctIds.has(id)) correctCount++;
+        else incorrectCount++;
+      }
+      return partialCredit(points, correctCount, incorrectCount, correctIds.size);
+    }
+
+    case "table_fill": {
+      const r = response as Extract<QuestionResponse, { type: "table_fill" }>;
+      const inputCells = interaction.rows.flat().filter((c) => c.kind === "input");
+      let correctCount = 0;
+      let incorrectCount = 0;
+      for (const cell of inputCells) {
+        const answer = r.values[cell.id];
+        if (answer == null || answer === "") continue; // ячейка не заполнена
+        const isCorrect = cell.answers.some((rule) =>
+          matchesTextRule(answer, rule, cell.caseSensitive, cell.trimWhitespace, cell.typoTolerance),
+        );
+        if (isCorrect) correctCount++;
+        else incorrectCount++;
+      }
+      return partialCredit(points, correctCount, incorrectCount, inputCells.length);
     }
   }
 }

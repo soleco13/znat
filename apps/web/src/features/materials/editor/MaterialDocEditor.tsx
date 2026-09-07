@@ -67,6 +67,7 @@ export function MaterialDocEditor({
   const [constructInsert, setConstructInsert] = useState<
     ((c: MaterialConstruct) => void) | null
   >(null);
+  const [constructQuery, setConstructQuery] = useState("");
 
   const materialRef = useRef(material);
   materialRef.current = material;
@@ -99,7 +100,10 @@ export function MaterialDocEditor({
         },
       }),
       SlashCommand.configure({
-        onOpenConstructs: (insert) => setConstructInsert(() => insert),
+        onOpenConstructs: (insert, initialQuery) => {
+          setConstructInsert(() => insert);
+          setConstructQuery(initialQuery);
+        },
       }),
       SuggestConstruct,
     ],
@@ -170,6 +174,7 @@ export function MaterialDocEditor({
         open={constructInsert !== null}
         onOpenChange={(o) => !o && setConstructInsert(null)}
         onPick={onPickConstruct}
+        initialQuery={constructQuery}
       />
     </div>
   );

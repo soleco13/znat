@@ -16,6 +16,7 @@ export const CONTENT_BLOCK_LABELS: Record<ContentBlock["type"], string> = {
   formula: "Формула",
   table: "Таблица",
   callout: "Врезка",
+  spoiler: "Спойлер",
   embed: "Встраивание",
   page_break: "Разрыв страницы",
 };
@@ -31,6 +32,9 @@ export const INTERACTION_LABELS: Record<QuestionInteraction["type"], string> = {
   cloze_text: "Пропуски — ввод текста",
   matching: "Сопоставление",
   ordering: "Упорядочивание",
+  categorize: "Категоризация — разложить по группам",
+  highlight_text: "Выделить в тексте",
+  table_fill: "Заполнить таблицу",
 };
 
 export function createBlock(key: ContentBlock["type"] | QuestionInteraction["type"]): MaterialBlock {
@@ -55,6 +59,8 @@ export function createContentBlock(type: ContentBlock["type"], id: string): Cont
       return { type, id, rows: [["", ""]] };
     case "callout":
       return { type, id, variant: "note", html: "" };
+    case "spoiler":
+      return { type, id, title: "Показать решение", html: "" };
     case "embed":
       return { type, id, provider: "geogebra", config: {} };
     case "page_break":
@@ -136,6 +142,40 @@ export function createInteraction(type: QuestionInteraction["type"]): QuestionIn
         items: [
           { id: crypto.randomUUID(), html: "" },
           { id: crypto.randomUUID(), html: "" },
+        ],
+      };
+    case "categorize": {
+      const catA = crypto.randomUUID();
+      const catB = crypto.randomUUID();
+      return {
+        type,
+        shuffle: false,
+        categories: [
+          { id: catA, label: "" },
+          { id: catB, label: "" },
+        ],
+        items: [
+          { id: crypto.randomUUID(), html: "", categoryId: catA },
+          { id: crypto.randomUUID(), html: "", categoryId: catB },
+        ],
+      };
+    }
+    case "highlight_text":
+      return {
+        type,
+        tokens: [
+          { id: crypto.randomUUID(), text: "слово", correct: false },
+          { id: crypto.randomUUID(), text: "слово", correct: true },
+        ],
+      };
+    case "table_fill":
+      return {
+        type,
+        rows: [
+          [
+            { kind: "static", text: "" },
+            { kind: "input", id: crypto.randomUUID(), answers: [{ value: "", match: "normalized" }], caseSensitive: false, trimWhitespace: true, typoTolerance: 0 },
+          ],
         ],
       };
   }

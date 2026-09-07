@@ -8,6 +8,7 @@ import { sanitizeHtml } from "@/shared/sanitize-html";
 import { Badge } from "@/shared/ui/badge";
 import { Input } from "@/shared/ui/input";
 import {
+  CategorizePlayer,
   ClozeDropdownPlayer,
   ClozeTextPlayer,
   MatchingPlayer,
@@ -191,7 +192,132 @@ function InteractionPlayer({
           disabled={disabled}
         />
       );
+    case "categorize":
+      return (
+        <CategorizePlayer
+          categories={interaction.categories}
+          items={interaction.items}
+          value={value?.type === "categorize" ? value : undefined}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      );
+    case "highlight_text":
+      return (
+        <HighlightTextPlayer
+          tokens={interaction.tokens}
+          value={value?.type === "highlight_text" ? value : undefined}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      );
+    case "table_fill":
+      return (
+        <TableFillPlayer
+          rows={interaction.rows}
+          value={value?.type === "table_fill" ? value : undefined}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      );
   }
+}
+
+function HighlightTextPlayer({
+  tokens,
+  value,
+  onChange,
+  disabled,
+}: {
+  tokens: { id: string; text: string }[];
+  value: Extract<QuestionResponse, { type: "highlight_text" }> | undefined;
+  onChange: (response: QuestionResponse) => void;
+  disabled: boolean;
+}) {
+  const selected = new Set(value?.selectedIds ?? []);
+
+  function toggle(id: string, checked: boolean) {
+    const next = new Set(selected);
+    if (checked) next.add(id);
+    else next.delete(id);
+    onChange({ type: "highlight_text", selectedIds: [...next] });
+  }
+
+  return (
+    <fieldset className="flex flex-wrap gap-x-1 gap-y-1.5 text-sm leading-8">
+      <legend className="sr-only">Выделите нужные слова</legend>
+      {tokens.map((t) => (
+        <label key={t.id} className="cursor-pointer">
+          <input
+            type="checkbox"
+            className="peer sr-only"
+            checked={selected.has(t.id)}
+            disabled={disabled}
+            onChange={(e) => toggle(t.id, e.target.checked)}
+          />
+          <span
+            className="rounded px-1.5 py-0.5 transition-colors hover:bg-secondary peer-checked:bg-primary/20 peer-checked:text-primary peer-checked:underline peer-checked:decoration-2 peer-checked:underline-offset-2 peer-disabled:cursor-not-allowed peer-disabled:opacity-60"
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(t.text) }}
+          />
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
+function TableFillPlayer({
+  rows,
+  value,
+  onChange,
+  disabled,
+}: {
+  rows: (
+    | { kind: "static"; text: string }
+    | { kind: "input"; id: string }
+  )[][];
+  value: Extract<QuestionResponse, { type: "table_fill" }> | undefined;
+  onChange: (response: QuestionResponse) => void;
+  disabled: boolean;
+}) {
+  const values = value?.values ?? {};
+
+  function setValue(id: string, v: string) {
+    onChange({ type: "table_fill", values: { ...values, [id]: v } });
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="border-collapse text-sm">
+        <tbody>
+          {rows.map((row, ri) => (
+            <tr key={ri}>
+              {row.map((cell, ci) =>
+                cell.kind === "static" ? (
+                  <td key={ci} className="border border-border px-2 py-1">
+                    <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(cell.text) }} />
+                  </td>
+                ) : (
+                  <td key={ci} className="border border-border px-2 py-1">
+                    <label htmlFor={`tf-${cell.id}`} className="sr-only">
+                      Ячейка {ri + 1}-{ci + 1}
+                    </label>
+                    <Input
+                      id={`tf-${cell.id}`}
+                      type="text"
+                      className="h-7 w-28"
+                      value={values[cell.id] ?? ""}
+                      disabled={disabled}
+                      onChange={(e) => setValue(cell.id, e.target.value)}
+                    />
+                  </td>
+                ),
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 function SingleChoicePlayer({

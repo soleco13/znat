@@ -414,6 +414,113 @@ describe("gradeResponse: ordering — all-or-nothing (не входит в сп�
   });
 });
 
+describe("gradeResponse: categorize — частичные баллы, как cloze_*/matching (§6.4 ТЗ, тип 11, Э13)", () => {
+  const interaction: QuestionInteraction = {
+    type: "categorize",
+    shuffle: false,
+    categories: [
+      { id: "metals", label: "Металлы" },
+      { id: "nonmetals", label: "Неметаллы" },
+    ],
+    items: [
+      { id: "i1", html: "Натрий", categoryId: "metals" },
+      { id: "i2", html: "Железо", categoryId: "metals" },
+      { id: "i3", html: "Кислород", categoryId: "nonmetals" },
+    ],
+  };
+
+  it("все элементы разложены верно — полный балл", () => {
+    const response: QuestionResponse = {
+      type: "categorize",
+      values: { i1: "metals", i2: "metals", i3: "nonmetals" },
+    };
+    expect(gradeResponse(interaction, response, POINTS).score).toBe(POINTS);
+  });
+
+  it("два верных, один неверный из трёх — (2-1)/3", () => {
+    const response: QuestionResponse = {
+      type: "categorize",
+      values: { i1: "metals", i2: "nonmetals", i3: "nonmetals" },
+    };
+    expect(gradeResponse(interaction, response, POINTS).score).toBeCloseTo((POINTS * 1) / 3);
+  });
+
+  it("один верный, один не размещён (null) — незаполненный не штрафуется: (1-0)/3", () => {
+    const response: QuestionResponse = {
+      type: "categorize",
+      values: { i1: "metals", i2: null, i3: "nonmetals" },
+    };
+    expect(gradeResponse(interaction, response, POINTS).score).toBeCloseTo((POINTS * 2) / 3);
+  });
+
+  it("все неверны — 0, не отрицательный балл", () => {
+    const response: QuestionResponse = {
+      type: "categorize",
+      values: { i1: "nonmetals", i2: "nonmetals", i3: "metals" },
+    };
+    expect(gradeResponse(interaction, response, POINTS).score).toBe(0);
+  });
+});
+
+describe("gradeResponse: highlight_text — частичные баллы, как multiple_choice (§6.3 ТЗ тип 14, Э13)", () => {
+  const interaction: QuestionInteraction = {
+    type: "highlight_text",
+    tokens: [
+      { id: "t1", text: "Дети", correct: false },
+      { id: "t2", text: "весело", correct: false },
+      { id: "t3", text: "играли", correct: true },
+      { id: "t4", text: "во", correct: false },
+      { id: "t5", text: "дворе", correct: false },
+    ],
+  };
+
+  it("выделен ровно верный токен — полный балл", () => {
+    const response: QuestionResponse = { type: "highlight_text", selectedIds: ["t3"] };
+    expect(gradeResponse(interaction, response, POINTS).score).toBe(POINTS);
+  });
+
+  it("выделен верный + один лишний — (1-1)/1 = 0", () => {
+    const response: QuestionResponse = { type: "highlight_text", selectedIds: ["t3", "t1"] };
+    expect(gradeResponse(interaction, response, POINTS).score).toBe(0);
+  });
+
+  it("ничего не выделено — 0", () => {
+    const response: QuestionResponse = { type: "highlight_text", selectedIds: [] };
+    expect(gradeResponse(interaction, response, POINTS).score).toBe(0);
+  });
+});
+
+describe("gradeResponse: table_fill — частичные баллы, как cloze_text (§6.3 ТЗ тип 16, Э13)", () => {
+  const interaction: QuestionInteraction = {
+    type: "table_fill",
+    rows: [
+      [
+        { kind: "static", text: "H₂O" },
+        { kind: "input", id: "c1", answers: [{ value: "вода", match: "normalized" }], caseSensitive: false, trimWhitespace: true, typoTolerance: 0 },
+      ],
+      [
+        { kind: "static", text: "NaCl" },
+        { kind: "input", id: "c2", answers: [{ value: "соль", match: "normalized" }], caseSensitive: false, trimWhitespace: true, typoTolerance: 0 },
+      ],
+    ],
+  };
+
+  it("обе ячейки верны — полный балл", () => {
+    const response: QuestionResponse = { type: "table_fill", values: { c1: "вода", c2: "соль" } };
+    expect(gradeResponse(interaction, response, POINTS).score).toBe(POINTS);
+  });
+
+  it("одна верна, одна неверна — (1-1)/2 = 0", () => {
+    const response: QuestionResponse = { type: "table_fill", values: { c1: "вода", c2: "сахар" } };
+    expect(gradeResponse(interaction, response, POINTS).score).toBe(0);
+  });
+
+  it("одна верна, одна не заполнена — незаполненная не штрафует: (1-0)/2", () => {
+    const response: QuestionResponse = { type: "table_fill", values: { c1: "вода", c2: "" } };
+    expect(gradeResponse(interaction, response, POINTS).score).toBeCloseTo(POINTS / 2);
+  });
+});
+
 describe("gradeResponse: несовпадение типов — программная ошибка вызывающей стороны", () => {
   it("бросает исключение, а не тихо возвращает 0", () => {
     const interaction: QuestionInteraction = { type: "true_false", correct: true };

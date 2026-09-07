@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  categorizeInteractionSchema,
   clozeDropdownInteractionSchema,
+  highlightTextInteractionSchema,
   listMaterialsQuerySchema,
   materialSchema,
   matchingInteractionSchema,
@@ -9,6 +11,7 @@ import {
   singleChoiceInteractionSchema,
   stripInteractionAnswerKey,
   stripMaterialAnswerKeys,
+  tableFillInteractionSchema,
   validateMaterialContent,
   type Material,
   type MaterialBlock,
@@ -216,6 +219,74 @@ describe("stripInteractionAnswerKey (§ «Железные правила» CLAU
     const b = stripInteractionAnswerKey(interaction, "attempt-2:q1") as { items: { id: string }[] };
 
     expect(a.items.map((i) => i.id)).not.toEqual(b.items.map((i) => i.id));
+  });
+
+  it("categorize: вырезает categoryId (ключ ответа) у каждого элемента, categories отдаёт как есть", () => {
+    const interaction = categorizeInteractionSchema.parse({
+      type: "categorize",
+      categories: [
+        { id: "c1", label: "Металлы" },
+        { id: "c2", label: "Неметаллы" },
+      ],
+      items: [
+        { id: "i1", html: "Натрий", categoryId: "c1" },
+        { id: "i2", html: "Кислород", categoryId: "c2" },
+      ],
+    });
+
+    const stripped = stripInteractionAnswerKey(interaction, "attempt-1:q1") as {
+      categories: { id: string; label: string }[];
+      items: Record<string, unknown>[];
+    };
+
+    expect(stripped.categories).toEqual([
+      { id: "c1", label: "Металлы" },
+      { id: "c2", label: "Неметаллы" },
+    ]);
+    for (const item of stripped.items) {
+      expect(item).not.toHaveProperty("categoryId");
+    }
+    expect(stripped.items.map((i) => i.id)).toEqual(["i1", "i2"]);
+  });
+
+  it("highlight_text: вырезает correct у каждого токена (§6.3 ТЗ тип 14)", () => {
+    const interaction = highlightTextInteractionSchema.parse({
+      type: "highlight_text",
+      tokens: [
+        { id: "t1", text: "Дети", correct: false },
+        { id: "t2", text: "играли", correct: true },
+      ],
+    });
+
+    const stripped = stripInteractionAnswerKey(interaction, "attempt-1:q1") as {
+      tokens: Record<string, unknown>[];
+    };
+
+    for (const t of stripped.tokens) {
+      expect(t).not.toHaveProperty("correct");
+    }
+    expect(stripped.tokens).toEqual([
+      { id: "t1", text: "Дети" },
+      { id: "t2", text: "играли" },
+    ]);
+  });
+
+  it("table_fill: вырезает answers у input-ячеек, static-ячейки отдаёт как есть (§6.3 ТЗ тип 16)", () => {
+    const interaction = tableFillInteractionSchema.parse({
+      type: "table_fill",
+      rows: [
+        [
+          { kind: "static", text: "H₂O" },
+          { kind: "input", id: "c1", answers: [{ value: "вода", match: "normalized" }] },
+        ],
+      ],
+    });
+
+    const stripped = stripInteractionAnswerKey(interaction, "attempt-1:q1") as {
+      rows: Record<string, unknown>[][];
+    };
+
+    expect(stripped.rows).toEqual([[{ kind: "static", text: "H₂O" }, { kind: "input", id: "c1" }]]);
   });
 });
 
@@ -635,6 +706,95 @@ describe("validateMaterialContent (Э9.9, §7.2 ТЗ: «Валидация» —
       ]),
     );
     expect(issues).toEqual([]);
+  });
+
+  it("categorize — всегда валиден (categoryId — обязательное поле каждого элемента)", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        questionBlock({
+          interaction: {
+            type: "categorize",
+            shuffle: false,
+            categories: [
+              { id: "c1", label: "A" },
+              { id: "c2", label: "B" },
+            ],
+            items: [
+              { id: "i1", html: "1", categoryId: "c1" },
+              { id: "i2", html: "2", categoryId: "c2" },
+            ],
+          },
+        }),
+      ]),
+    );
+    expect(issues).toEqual([]);
+  });
+
+  it("highlight_text — валиден, если есть хотя бы один искомый токен (§6.3 ТЗ тип 14)", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        questionBlock({
+          interaction: {
+            type: "highlight_text",
+            tokens: [
+              { id: "t1", text: "a", correct: false },
+              { id: "t2", text: "b", correct: true },
+            ],
+          },
+        }),
+      ]),
+    );
+    expect(issues).toEqual([]);
+  });
+
+  it("highlight_text — no_correct_answer, если ни один токен не отмечен искомым", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        questionBlock({
+          interaction: {
+            type: "highlight_text",
+            tokens: [
+              { id: "t1", text: "a", correct: false },
+              { id: "t2", text: "b", correct: false },
+            ],
+          },
+        }),
+      ]),
+    );
+    expect(issues.map((i) => i.code)).toContain("no_correct_answer");
+  });
+
+  it("table_fill — валиден, если у каждой input-ячейки есть непустой ответ (§6.3 ТЗ тип 16)", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        questionBlock({
+          interaction: {
+            type: "table_fill",
+            rows: [
+              [
+                { kind: "static", text: "H₂O" },
+                { kind: "input", id: "c1", answers: [{ value: "вода", match: "normalized" }], caseSensitive: false, trimWhitespace: true, typoTolerance: 0 },
+              ],
+            ],
+          },
+        }),
+      ]),
+    );
+    expect(issues).toEqual([]);
+  });
+
+  it("table_fill — no_correct_answer, если нет input-ячеек (только статичный текст)", () => {
+    const issues = validateMaterialContent(
+      materialWithBlocks([
+        questionBlock({
+          interaction: {
+            type: "table_fill",
+            rows: [[{ kind: "static", text: "H₂O" }]],
+          },
+        }),
+      ]),
+    );
+    expect(issues.map((i) => i.code)).toContain("no_correct_answer");
   });
 
   it("копит НЕСКОЛЬКО проблем на один материал, не останавливается на первой", () => {

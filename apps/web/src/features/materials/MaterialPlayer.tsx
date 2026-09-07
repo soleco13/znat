@@ -5,6 +5,7 @@ import type { MyActivity, QuestionResponse, SubmitActivityResult } from "@school
 
 import { sanitizeHtml } from "@/shared/sanitize-html";
 import { Alert, AlertDescription } from "@/shared/ui/alert";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/shared/ui/accordion";
 import { Button } from "@/shared/ui/button";
 import { QuestionPlayer } from "./QuestionPlayer.js";
 import { submitActivity } from "./activity-api.js";
@@ -215,6 +216,19 @@ export function ContentBlockView({ block }: { block: Exclude<Block, { type: "que
         <div className="rounded-lg border-l-4 border-primary/40 bg-primary/5 p-3 text-sm">
           <div className="prose" dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.html) }} />
         </div>
+      );
+    case "spoiler":
+      return (
+        <Accordion type="single" collapsible className="rounded-lg border border-border">
+          <AccordionItem value={block.id} className="border-none">
+            <AccordionTrigger className="px-3 py-2 text-sm font-medium hover:no-underline">
+              {block.title}
+            </AccordionTrigger>
+            <AccordionContent className="px-3 pb-3">
+              <div className="prose text-sm" dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.html) }} />
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       );
     case "table":
       return (

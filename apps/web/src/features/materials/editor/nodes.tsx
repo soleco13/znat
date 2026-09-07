@@ -324,6 +324,77 @@ export const CalloutBlock = Node.create({
   },
 });
 
+// ─── Спойлер — заголовок + Collapsible, содержимое редактируется как текст ─
+
+function SpoilerView({ node, updateAttributes, deleteNode }: NodeViewProps) {
+  const title = (node.attrs.title as string) || "Показать решение";
+  const [open, setOpen] = useState(true); // в редакторе всегда развёрнут — методисту нужно видеть, что пишет
+
+  return (
+    <NodeViewWrapper className="group/sp my-2">
+      <Collapsible open={open} onOpenChange={setOpen} className="rounded-lg border border-border bg-card/60">
+        <div
+          className="flex items-center justify-between gap-2 px-3 py-1.5"
+          contentEditable={false}
+        >
+          <CollapsibleTrigger className="flex flex-1 items-center gap-1.5 text-left text-sm font-medium text-foreground">
+            <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", !open && "-rotate-90")} aria-hidden />
+            <input
+              value={title}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => updateAttributes({ title: e.target.value })}
+              className="w-full min-w-0 bg-transparent text-sm font-medium text-foreground outline-none"
+              placeholder="Заголовок спойлера"
+            />
+          </CollapsibleTrigger>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={deleteNode}
+            aria-label="Удалить спойлер"
+            className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover/sp:opacity-100"
+          >
+            <Trash2 />
+          </Button>
+        </div>
+        <CollapsibleContent forceMount className={cn("border-t border-border px-3 py-2", !open && "hidden")}>
+          <NodeViewContent className="prose-editor text-sm" />
+        </CollapsibleContent>
+      </Collapsible>
+    </NodeViewWrapper>
+  );
+}
+
+export const SpoilerBlock = Node.create({
+  name: "spoiler",
+  group: "block",
+  content: "block+",
+  defining: true,
+  addAttributes() {
+    return {
+      blockId: {
+        default: null,
+        parseHTML: (e) => e.getAttribute("data-block-id"),
+        renderHTML: (a) => (a.blockId ? { "data-block-id": a.blockId } : {}),
+      },
+      title: {
+        default: "Показать решение",
+        parseHTML: (e) => e.getAttribute("data-title") ?? "Показать решение",
+        renderHTML: (a) => ({ "data-title": a.title }),
+      },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "div[data-spoiler]" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["div", mergeAttributes(HTMLAttributes, { "data-spoiler": "" }), 0];
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(SpoilerView);
+  },
+});
+
 // ─── Вопрос ─────────────────────────────────────────────────────────────
 
 function jsonAttr(dataName: string) {
