@@ -12,8 +12,13 @@ import { RoomControlButton } from "./RoomControlButton.js";
  */
 export function SelfCameraButton({
   maxResolution = VideoPresets.h720.resolution,
+  disabled = false,
+  disabledReason,
 }: {
   maxResolution?: VideoResolution;
+  /** Юзабилити-правка: без права `canPublishVideo` кнопка видна, но disabled с объяснением. */
+  disabled?: boolean;
+  disabledReason?: string;
 }) {
   const { localParticipant, isCameraEnabled } = useLocalParticipant();
   return (
@@ -27,6 +32,8 @@ export function SelfCameraButton({
         localParticipant.setCameraEnabled(!isCameraEnabled, { resolution: maxResolution })
       }
       caption="Камера"
+      disabled={disabled}
+      title={disabled ? disabledReason : undefined}
     />
   );
 }

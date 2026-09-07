@@ -6,6 +6,7 @@ import {
   sendChatMessageRequestSchema,
   setDrawForAllRequestSchema,
   setLessonModeRequestSchema,
+  setLessonStageRequestSchema,
   updateParticipantPermissionsRequestSchema,
 } from "@school/shared";
 import * as roomsService from "./service.js";
@@ -59,6 +60,22 @@ export default async function roomsRoutes(app: FastifyInstance) {
 
   // ─── Периметр «только персонал» ────────────────────────────────────────────
   const staff = { preHandler: app.authenticate };
+
+  // Э12 полировка — «сколько человек в уроке сейчас» для списка уроков
+  // (LessonsListPage). Статический путь, Fastify не спутает его с
+  // «/lessons/:id/...» ниже.
+  app.get<{ Querystring: { ids?: string } }>(
+    "/lessons/presence-counts",
+    staff,
+    async (request, reply) => {
+      const ids = (request.query.ids ?? "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const counts = await roomsService.getPresenceCounts(request.user.schoolId, ids);
+      return reply.send({ counts });
+    },
+  );
 
   app.patch<{ Params: { id: string; userId: string } }>(
     "/lessons/:id/participants/:userId/permissions",
@@ -114,6 +131,12 @@ export default async function roomsRoutes(app: FastifyInstance) {
   app.patch<{ Params: { id: string } }>("/lessons/:id/mode", staff, async (request, reply) => {
     const body = setLessonModeRequestSchema.parse(request.body);
     await roomsService.setLessonMode(request.user.schoolId, request.params.id, request.user, body.mode);
+    return reply.status(204).send();
+  });
+
+  app.patch<{ Params: { id: string } }>("/lessons/:id/stage", staff, async (request, reply) => {
+    const body = setLessonStageRequestSchema.parse(request.body);
+    await roomsService.setLessonStage(request.user.schoolId, request.params.id, request.user, body.stage);
     return reply.status(204).send();
   });
 

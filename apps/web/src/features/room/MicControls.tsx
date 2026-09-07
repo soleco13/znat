@@ -3,8 +3,19 @@ import { Mic, MicOff } from "lucide-react";
 
 import { RoomControlButton } from "./RoomControlButton.js";
 
-/** Кнопка «мьют себя» (Э2.5) — для любого участника с правом `canSpeak`. */
-export function SelfMicButton() {
+/**
+ * Кнопка «мьют себя» (Э2.5) — для любого участника с правом `canSpeak`.
+ * Юзабилити-правка: без права кнопка не пропадает совсем (человек не должен
+ * гадать, немой он или сломалось), а становится disabled с объяснением
+ * в подсказке — `disabledReason`, обычно «поднимите руку».
+ */
+export function SelfMicButton({
+  disabled = false,
+  disabledReason,
+}: {
+  disabled?: boolean;
+  disabledReason?: string;
+}) {
   const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
   const speaking = useIsSpeaking(localParticipant);
   return (
@@ -17,6 +28,8 @@ export function SelfMicButton() {
       speaking={speaking && isMicrophoneEnabled}
       onToggle={() => localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}
       caption="Микрофон"
+      disabled={disabled}
+      title={disabled ? disabledReason : undefined}
     />
   );
 }

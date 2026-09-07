@@ -47,6 +47,7 @@ vi.mock("./presence.js", async () => {
   const rooms = new Map<string, Map<string, unknown>>();
   const modes = new Map<string, string>();
   const modesBeforeShare = new Map<string, string>();
+  const stages = new Map<string, string>();
   const roomMap = (lessonId: string) => {
     let m = rooms.get(lessonId);
     if (!m) {
@@ -80,10 +81,16 @@ vi.mock("./presence.js", async () => {
       if (mode === null) modesBeforeShare.delete(lessonId);
       else modesBeforeShare.set(lessonId, mode);
     }),
+    // Э12 полировка: стейдж урока — тот же приём, что и режим выше.
+    getLessonStage: vi.fn(async (lessonId: string) => stages.get(lessonId) ?? "people"),
+    setLessonStage: vi.fn(async (lessonId: string, stage: string) => {
+      stages.set(lessonId, stage);
+    }),
     __clear: () => {
       rooms.clear();
       modes.clear();
       modesBeforeShare.clear();
+      stages.clear();
     },
   };
 });
@@ -477,6 +484,28 @@ describe("режим урока (Э6.4)", () => {
     await roomsService.setLessonMode(SCHOOL_ID, LESSON_ID, teacherToken(), "discussion");
     const result = await roomsService.join(guestActor(), LESSON_ID);
     expect(result.lessonMode).toBe("discussion");
+  });
+});
+
+describe("синхронный стейдж урока (Э12 полировка)", () => {
+  it("по умолчанию стейдж — «people» (плитки)", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+
+    const result = await roomsService.join(guestActor(), LESSON_ID);
+
+    expect(result.stage).toBe("people");
+  });
+
+  it("только учитель этого урока (или админ) может переключать стейдж — гость и чужой персонал получают 403", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+
+    await expect(
+      roomsService.setLessonStage(SCHOOL_ID, LESSON_ID, studentToken(), "board"),
+    ).rejects.toMatchObject({ statusCode: 403 });
+
+    await roomsService.setLessonStage(SCHOOL_ID, LESSON_ID, teacherToken(), "board");
+    const result = await roomsService.join(guestActor(), LESSON_ID);
+    expect(result.stage).toBe("board");
   });
 });
 

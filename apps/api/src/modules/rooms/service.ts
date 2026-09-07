@@ -3,6 +3,7 @@ import type {
   ChatMessage,
   JoinLessonResponse,
   LessonMode,
+  LessonStage,
   ListChatQuery,
   ParticipantSnapshot,
   ServerRoomMessage,
@@ -256,6 +257,31 @@ export async function countConnectedParticipants(lessonId: string): Promise<numb
   return presence.countConnected(lessonId);
 }
 
+/**
+ * Сколько человек сейчас в каждом из перечисленных уроков (Э12 полировка —
+ * список уроков в админке/учителя показывает присутствие, не только
+ * расписание). `lessonsService.getLesson` заодно проверяет, что урок
+ * действительно принадлежит школе запрашивающего — чужой id молча не
+ * попадает в ответ, без отдельной ошибки на весь список.
+ */
+export async function getPresenceCounts(
+  schoolId: string,
+  lessonIds: string[],
+): Promise<Record<string, number>> {
+  const result: Record<string, number> = {};
+  await Promise.all(
+    lessonIds.map(async (id) => {
+      try {
+        await lessonsService.getLesson(schoolId, id);
+      } catch {
+        return;
+      }
+      result[id] = await presence.countConnected(id);
+    }),
+  );
+  return result;
+}
+
 export async function getActiveLessonTrafficSnapshot(): Promise<
   { lessonId: string; mode: LessonMode; participantCount: number; estimatedMbit: number }[]
 > {
@@ -337,8 +363,15 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
   });
 
   const lessonMode = await presence.getLessonMode(lessonId);
+  const stage = await presence.getLessonStage(lessonId);
 
-  return { lessonMode, participants: await listParticipantsSnapshot(lessonId), self: snapshot, media };
+  return {
+    lessonMode,
+    stage,
+    participants: await listParticipantsSnapshot(lessonId),
+    self: snapshot,
+    media,
+  };
 }
 
 /** Явный выход (кнопка «Выйти»/POST leave) — без grace-периода на переподключение. */
@@ -445,6 +478,27 @@ export async function setLessonMode(
   }
   await presence.setLessonMode(lessonId, mode);
   emitRoomEvent(lessonId, { type: "lesson_mode", mode });
+}
+
+/**
+ * Учитель переключает стейдж урока (доска/плитки) — тот же результат
+ * должны увидеть все участники, не только он сам (Э12 полировка «синхрон
+ * открытия доски у всех»). Право то же, что у `setLessonMode` выше: только
+ * admin или сам учитель этого урока — не методист (наблюдатель) и не гость.
+ */
+export async function setLessonStage(
+  schoolId: string,
+  lessonId: string,
+  requester: AccessTokenPayload,
+  stage: LessonStage,
+): Promise<void> {
+  const lesson = await lessonsService.getLesson(schoolId, lessonId);
+  const isOwnerTeacher = requester.role === "teacher" && lesson.teacherId === requester.sub;
+  if (requester.role !== "admin" && !isOwnerTeacher) {
+    throw new AppError(403, "forbidden", "Только учитель урока может переключать стейдж");
+  }
+  await presence.setLessonStage(lessonId, stage);
+  emitRoomEvent(lessonId, { type: "stage_changed", stage });
 }
 
 /** Считает гостей-учеников (не персонал) с уже включённым микрофоном, кроме исключённого — для проверки лимита §5.2 ТЗ. */

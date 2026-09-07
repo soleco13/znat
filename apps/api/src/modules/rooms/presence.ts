@@ -1,8 +1,11 @@
-import type { LessonMode, ParticipantKind, ParticipantPermissions, Role } from "@school/shared";
+import type { LessonMode, LessonStage, ParticipantKind, ParticipantPermissions, Role } from "@school/shared";
 import { redis } from "../../db/redis.js";
 
 /** Э6.4, §5.2 ТЗ: продуктовый рычаг — экономит 3–4× трафика, переключение осознанное действие учителя. */
 const DEFAULT_LESSON_MODE: LessonMode = "lecture";
+
+/** Э12 полировка: пока никто не переключал доску — все на «плитках». */
+const DEFAULT_LESSON_STAGE: LessonStage = "people";
 
 export interface PresenceEntry {
   fullName: string;
@@ -96,6 +99,20 @@ export async function setLessonModeBeforeShare(lessonId: string, mode: LessonMod
   } else {
     await redis.set(modeBeforeShareKey(lessonId), mode);
   }
+}
+
+function stageKey(lessonId: string): string {
+  return `room:${lessonId}:stage`;
+}
+
+/** Стейдж урока (плитки/доска) — тот же характер хранения, что и режим урока выше: ephemeral, без TTL. */
+export async function getLessonStage(lessonId: string): Promise<LessonStage> {
+  const raw = await redis.get(stageKey(lessonId));
+  return (raw as LessonStage | null) ?? DEFAULT_LESSON_STAGE;
+}
+
+export async function setLessonStage(lessonId: string, stage: LessonStage): Promise<void> {
+  await redis.set(stageKey(lessonId), stage);
 }
 
 /** Отдельная функция без Redis-эффектов — детерминированное правило зачистки, легко тестируется. */

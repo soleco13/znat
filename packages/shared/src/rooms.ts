@@ -50,8 +50,22 @@ export type LessonMode = z.infer<typeof lessonModeSchema>;
 export const setLessonModeRequestSchema = z.object({ mode: lessonModeSchema });
 export type SetLessonModeRequest = z.infer<typeof setLessonModeRequestSchema>;
 
+/**
+ * Что показано на стейдже всем участникам урока (Э12 полировка: раньше
+ * `stageView` «доска/участники» был локальным стейтом каждого клиента —
+ * учитель открывал доску только у себя, остальные должны были нажимать
+ * сами). `activity` (выданное задание) сюда не входит — он уже синхронный
+ * отдельным сигналом `activity_started`.
+ */
+export const lessonStageSchema = z.enum(["people", "board"]);
+export type LessonStage = z.infer<typeof lessonStageSchema>;
+
+export const setLessonStageRequestSchema = z.object({ stage: lessonStageSchema });
+export type SetLessonStageRequest = z.infer<typeof setLessonStageRequestSchema>;
+
 export const joinLessonResponseSchema = z.object({
   lessonMode: lessonModeSchema,
+  stage: lessonStageSchema,
   participants: z.array(participantSnapshotSchema),
   self: participantSnapshotSchema,
   media: mediaConnectionSchema,
@@ -106,6 +120,8 @@ export const serverRoomMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("participant_pinned"), userId: z.string().uuid(), pinned: z.boolean() }),
   z.object({ type: z.literal("chat_message"), message: chatMessageSchema }),
   z.object({ type: z.literal("lesson_mode"), mode: lessonModeSchema }),
+  // Э12 полировка: учитель переключил доску/плитки — стейдж меняется у всех.
+  z.object({ type: z.literal("stage_changed"), stage: lessonStageSchema }),
   // Э4.4: прогресс конвертации презентации — по одному сообщению на каждую
   // смену статуса/шаг рендера. Канал `/ws` уже per-lesson, deckId хватает.
   z.object({ type: z.literal("deck_status"), deck: deckProgressEventSchema }),

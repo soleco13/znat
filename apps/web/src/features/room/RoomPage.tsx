@@ -117,6 +117,9 @@ export function RoomPage() {
   // экрана переключает стейдж сама (см. `LiveStage`).
   const [drawer, setDrawer] = useState<null | "tools" | "people" | "chat">(null);
   const [stageView, setStageView] = useState<"people" | "board" | "activity">("people");
+  // Э12 полировка: авторитетное «людям/доска» с сервера — держим отдельно от
+  // `stageView`, чтобы закрытие задания знало, куда вернуться (не всегда «people»).
+  const [sharedStage, setSharedStage] = useState<"people" | "board">("people");
   const [activeTool, setActiveTool] = useState<null | "deck" | "activity" | "recording" | "class">(
     null,
   );
@@ -196,6 +199,14 @@ export function RoomPage() {
         // §7.3 ТЗ: выданный материал сразу выходит на стейдж (плитки — в ленту).
         setStageView("activity");
         break;
+      case "stage_changed":
+        // Э12 полировка: доска/плитки теперь общие на весь класс. Пока идёт
+        // задание, стейдж «activity» этим сообщением не перебивается —
+        // сервер шлёт его независимо, но участник вернётся к нужному виду
+        // сам, когда закроет задание (см. onClose у ActivityStage/Board).
+        setSharedStage(message.stage);
+        setStageView((v) => (v === "activity" ? v : message.stage));
+        break;
       case "activity_reviewed":
         setReviewSignal((n) => n + 1);
         break;
@@ -223,6 +234,8 @@ export function RoomPage() {
         setParticipants(data.participants);
         setLessonMode(data.lessonMode);
         setMedia(data.media);
+        setSharedStage(data.stage);
+        setStageView((v) => (v === "activity" ? v : data.stage));
       })
       .catch(() => setJoinFailed(true));
   }, [lessonId]);
@@ -370,6 +383,21 @@ export function RoomPage() {
     }).catch(() => setError("Не удалось изменить режим урока"));
   }
 
+  /**
+   * Э12 полировка — учитель переключает доску/плитки для всего класса разом.
+   * Как и `changeLessonMode`: не выставляем стейдж локально сразу, ждём
+   * своего же эхо `stage_changed` по WS (тот же приём, что уже работает
+   * для режима урока) — так self и остальные участники обновляются
+   * одинаково, без риска разойтись с сервером.
+   */
+  async function changeLessonStage(stage: "people" | "board") {
+    if (!lessonId) return;
+    await apiFetch(`/lessons/${lessonId}/stage`, {
+      method: "PATCH",
+      body: JSON.stringify({ stage }),
+    }).catch(() => setError("Не удалось переключить стейдж"));
+  }
+
   /** Э3.8. */
   async function toggleDrawForAll(canDraw: boolean) {
     if (!lessonId) return;
@@ -512,8 +540,10 @@ export function RoomPage() {
 
   // §6.4 — «Инструменты»: список «иконка + короткое название». Клик по
   // строке открывает нужный инструмент в этой же панели (с кнопкой «назад»).
-  // «Доска» — не инструмент-панель, а переключатель стейджа, поэтому строка
-  // сразу переключает вид. Ученику доступны только доска и задание.
+  // «Доска» — не инструмент-панель, а переключатель стейджа для ВСЕГО урока
+  // (Э12 полировка), поэтому доступна только учителю/админу; ученик и
+  // методист просто видят её, когда её включает учитель. Ученику из строк
+  // ниже доступно только задание.
   const toolRows: {
     key: "board" | "deck" | "activity" | "recording" | "class";
     icon: typeof PenLine;
@@ -528,8 +558,8 @@ export function RoomPage() {
       icon: PenLine,
       label: "Доска",
       hint: stageView === "board" ? "открыта" : "рисование и слайды",
-      show: true,
-      onClick: () => setStageView((v) => (v === "board" ? "people" : "board")),
+      show: isTeacher,
+      onClick: () => changeLessonStage(stageView === "board" ? "people" : "board"),
       trailing:
         stageView === "board" ? (
           <Badge variant="green" className="shrink-0">
@@ -735,7 +765,7 @@ export function RoomPage() {
               activityId={activeActivityId}
               isTeacher={isTeacher}
               reviewSignal={reviewSignal}
-              onClose={() => setStageView("people")}
+              onClose={() => setStageView(sharedStage)}
             />
           </div>
           {media ? (
@@ -755,7 +785,7 @@ export function RoomPage() {
                 lessonId={lessonId}
                 canDraw={self?.permissions.canDraw ?? false}
                 decks={decks}
-                onClose={isTeacher ? () => setStageView("people") : undefined}
+                onClose={isTeacher ? () => changeLessonStage("people") : undefined}
               />
             </div>
           ) : null}
@@ -925,10 +955,22 @@ export function RoomPage() {
           {media && (isTeacher || self?.permissions.canShareScreen) ? (
             <SelfScreenShareButton priority={isTeacher} />
           ) : null}
-          {media && self?.permissions.canSpeak ? <SelfMicButton /> : null}
-          {media && isTeacher ? <SelfCameraButton /> : null}
-          {media && !isTeacher && self?.permissions.canPublishVideo ? (
-            <SelfCameraButton maxResolution={VideoPresets.h360.resolution} />
+          {media ? (
+            <SelfMicButton
+              disabled={!self?.permissions.canSpeak}
+              disabledReason="Микрофон выключил учитель — поднимите руку"
+            />
+          ) : null}
+          {media ? (
+            isTeacher ? (
+              <SelfCameraButton />
+            ) : (
+              <SelfCameraButton
+                maxResolution={VideoPresets.h360.resolution}
+                disabled={!self?.permissions.canPublishVideo}
+                disabledReason="Камеру включил учитель — поднимите руку"
+              />
+            )
           ) : null}
           <div className="flex flex-col items-center gap-1">
             <SimpleTooltip content="Выйти из урока" side="top">
