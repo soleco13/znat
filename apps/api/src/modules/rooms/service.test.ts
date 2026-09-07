@@ -9,8 +9,6 @@ const { lessonsServiceMock, usersServiceMock, repoMock, mediaServiceMock, canvas
   },
   lessonsServiceMock: {
     getLesson: vi.fn(),
-    startLesson: vi.fn(),
-    endLesson: vi.fn(),
     ensureLivekitRoom: vi.fn(),
     getLessonByLivekitRoom: vi.fn(),
   },
@@ -112,10 +110,7 @@ function baseLesson(overrides: Partial<Record<string, unknown>> = {}) {
     subject: "Математика",
     startsAt: new Date(),
     durationMin: 45,
-    status: "scheduled" as const,
     livekitRoom: null,
-    startedAt: null,
-    endedAt: null,
     settings: {},
     ...overrides,
   };
@@ -195,26 +190,13 @@ describe("join: контроль доступа", () => {
     ).rejects.toMatchObject({ statusCode: 403 });
   });
 
-  it("Э12: урок постоянный — войти можно независимо от статуса", async () => {
-    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson({ status: "ended" }));
+  it("Э12: урок постоянный — войти можно всегда, статуса урока больше нет", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
 
-    await expect(roomsService.join(guestActor(), LESSON_ID)).resolves.toMatchObject({
-      participants: expect.any(Array),
-    });
-  });
+    const result = await roomsService.join(guestActor(), LESSON_ID);
 
-  it("вход учителя переводит урок в live, вход ученика — нет", async () => {
-    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson({ status: "scheduled" }));
-    usersServiceMock.isGroupMember.mockResolvedValue(true);
-    lessonsServiceMock.startLesson.mockResolvedValue(baseLesson({ status: "live" }));
-
-    const studentJoin = await roomsService.join(guestActor(), LESSON_ID);
-    expect(studentJoin.lessonStatus).toBe("scheduled");
-    expect(lessonsServiceMock.startLesson).not.toHaveBeenCalled();
-
-    const teacherJoin = await roomsService.join(staffActor(), LESSON_ID);
-    expect(teacherJoin.lessonStatus).toBe("live");
-    expect(lessonsServiceMock.startLesson).toHaveBeenCalledWith(SCHOOL_ID, LESSON_ID);
+    expect(result).toMatchObject({ participants: expect.any(Array) });
+    expect(result).not.toHaveProperty("lessonStatus");
   });
 });
 
@@ -582,20 +564,7 @@ describe("оценка трафика платформы (Э6.5)", () => {
   });
 });
 
-describe("модерация чата и завершение урока", () => {
-  it("только учитель этого урока может завершить урок", async () => {
-    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson({ status: "live" }));
-
-    await expect(
-      roomsService.endLessonNow(SCHOOL_ID, LESSON_ID, studentToken()),
-    ).rejects.toMatchObject({ statusCode: 403 });
-
-    await roomsService.endLessonNow(SCHOOL_ID, LESSON_ID, teacherToken());
-    expect(lessonsServiceMock.endLesson).toHaveBeenCalledWith(SCHOOL_ID, LESSON_ID);
-    // Э3.2: финальный снимок доски — closeCanvasDocument закрывает /collab-подключения этого урока.
-    expect(canvasServiceMock.closeCanvasDocument).toHaveBeenCalledWith(LESSON_ID);
-  });
-
+describe("модерация чата", () => {
   it("только учитель этого урока может удалить сообщение чата", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
     repoMock.softDeleteChatMessage.mockResolvedValue({ id: "msg-1" });
@@ -629,21 +598,20 @@ describe("вебхуки LiveKit (Э2.7)", () => {
     expect(repoMock.closeOpenSession).not.toHaveBeenCalled();
   });
 
-  it("room_finished завершает ещё живой урок и рассылает lesson_status", async () => {
-    lessonsServiceMock.getLessonByLivekitRoom.mockResolvedValue(baseLesson({ status: "live" }));
+  it("room_finished освобождает ресурсы закрывшейся комнаты (Э12.9: урок постоянный, «завершать» нечего)", async () => {
+    lessonsServiceMock.getLessonByLivekitRoom.mockResolvedValue(baseLesson());
 
     await roomsService.handleRoomFinishedWebhook(LIVEKIT_ROOM);
 
-    expect(lessonsServiceMock.endLesson).toHaveBeenCalledWith(SCHOOL_ID, LESSON_ID);
+    // Э3.2: финальный снимок доски — closeCanvasDocument закрывает /collab-подключения этого урока.
     expect(canvasServiceMock.closeCanvasDocument).toHaveBeenCalledWith(LESSON_ID);
   });
 
-  it("room_finished не трогает урок, который уже не live (идемпотентность)", async () => {
-    lessonsServiceMock.getLessonByLivekitRoom.mockResolvedValue(baseLesson({ status: "ended" }));
+  it("room_finished молча ничего не делает, если комната не сопоставлена ни с одним уроком", async () => {
+    lessonsServiceMock.getLessonByLivekitRoom.mockResolvedValue(null);
 
-    await roomsService.handleRoomFinishedWebhook(LIVEKIT_ROOM);
+    await roomsService.handleRoomFinishedWebhook("unknown-room");
 
-    expect(lessonsServiceMock.endLesson).not.toHaveBeenCalled();
     expect(canvasServiceMock.closeCanvasDocument).not.toHaveBeenCalled();
   });
 

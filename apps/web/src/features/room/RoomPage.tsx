@@ -33,7 +33,6 @@ import type {
   JoinLessonResponse,
   LessonMode,
   LessonSummary,
-  LessonStatus,
   MediaConnection,
   ParticipantSnapshot,
   ServerRoomMessage,
@@ -137,7 +136,6 @@ export function RoomPage() {
   }, [drawer]);
 
   const [participants, setParticipants] = useState<ParticipantSnapshot[]>([]);
-  const [lessonStatus, setLessonStatus] = useState<LessonStatus | null>(null);
   const [lessonMode, setLessonMode] = useState<LessonMode>("lecture");
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [chatDraft, setChatDraft] = useState("");
@@ -194,9 +192,6 @@ export function RoomPage() {
       case "chat_message":
         setChat((prev) => [...prev, message.message]);
         break;
-      case "lesson_status":
-        setLessonStatus(message.status);
-        break;
       case "lesson_mode":
         setLessonMode(message.mode);
         break;
@@ -232,7 +227,6 @@ export function RoomPage() {
     apiFetch<JoinLessonResponse>(`/lessons/${lessonId}/join`, { method: "POST" })
       .then((data) => {
         setParticipants(data.participants);
-        setLessonStatus(data.lessonStatus);
         setLessonMode(data.lessonMode);
         setMedia(data.media);
       })

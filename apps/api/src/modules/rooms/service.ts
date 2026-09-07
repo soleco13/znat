@@ -3,7 +3,6 @@ import type {
   ChatMessage,
   JoinLessonResponse,
   LessonMode,
-  LessonStatus,
   ListChatQuery,
   ParticipantSnapshot,
   ServerRoomMessage,
@@ -275,6 +274,11 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
   activeLessons.set(lessonId, schoolId);
   clearEmptyRoomTimer(lessonId);
 
+  // Э12.9: раньше «новую» комнату распознавали по переходу урока
+  // scheduled→live. Статуса больше нет (урок постоянный), поэтому признак
+  // «комната только что открылась» — в ней ещё никого не было.
+  const roomWasEmpty = (await presence.countConnected(lessonId)) === 0;
+
   const existing = await presence.getParticipant(lessonId, participantId);
   const entry: PresenceEntry = existing
     ? { ...existing, connected: true, lastSeenAt: Date.now() }
@@ -300,18 +304,13 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
     });
   }
 
-  let lessonStatus: LessonStatus = lesson.status;
-  if (lessonStatus === "scheduled" && isStaff && actor.role !== "methodist") {
-    const updated = await lessonsService.startLesson(schoolId, lessonId);
-    lessonStatus = updated.status;
-    emitRoomEvent(lessonId, { type: "lesson_status", status: lessonStatus });
-
-    // Э6.5, §10.8 ТЗ: НОВАЯ комната (только что перешедшая scheduled→live)
-    // принудительно открывается в Лекции, если платформа уже перегружена —
-    // независимо от того, что могло быть выставлено в режиме этого урока
-    // раньше (ephemeral-ключ Redis без TTL, Э6.4). Уже идущие уроки этой
-    // проверкой не трогаются — переключить их обратно при превышении
-    // порога задача не просит (см. docs/CURRENT_STAGE.md, Э6.5).
+  if (roomWasEmpty && isStaff && actor.role !== "methodist") {
+    // Э6.5, §10.8 ТЗ: НОВАЯ комната (её открывает первым персонал, кроме
+    // методиста) принудительно стартует в Лекции, если платформа уже
+    // перегружена — независимо от того, что могло быть выставлено в режиме
+    // этого урока раньше (ephemeral-ключ Redis без TTL, Э6.4). Уже идущие
+    // уроки этой проверкой не трогаются — переключить их обратно при
+    // превышении порога задача не просит (см. docs/CURRENT_STAGE.md, Э6.5).
     const platformTrafficMbit = await estimatePlatformTrafficMbit(lessonId);
     if (platformTrafficMbit > PLATFORM_TRAFFIC_LIMIT_MBPS) {
       await presence.setLessonMode(lessonId, "lecture");
@@ -339,7 +338,7 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
 
   const lessonMode = await presence.getLessonMode(lessonId);
 
-  return { lessonStatus, lessonMode, participants: await listParticipantsSnapshot(lessonId), self: snapshot, media };
+  return { lessonMode, participants: await listParticipantsSnapshot(lessonId), self: snapshot, media };
 }
 
 /** Явный выход (кнопка «Выйти»/POST leave) — без grace-периода на переподключение. */
@@ -591,16 +590,17 @@ export async function handleParticipantLeftWebhook(livekitRoom: string, userId: 
  * LiveKit-вебхук `room_finished` (Э2.7) — авторитетный сигнал от самого
  * медиасервера, что комната реально закрылась (краш процесса, ручное
  * `deleteRoom`, истёкший `emptyTimeout`), независимо от нашего собственного
- * 15-минутного таймера пустой комнаты. Идемпотентно: если урок уже не
- * `live`, ничего не делает.
+ * 15-минутного таймера пустой комнаты.
+ *
+ * Э12.9: урок постоянный, «завершать» его больше нечем — вебхук освобождает
+ * ресурсы закрывшейся комнаты (таймер, Y.Doc, отметка активности) и на этом
+ * всё. Идемпотентно: повторный вызов на уже убранной комнате безвреден.
  */
 export async function handleRoomFinishedWebhook(livekitRoom: string): Promise<void> {
   const lesson = await lessonsService.getLessonByLivekitRoom(livekitRoom);
-  if (!lesson || lesson.status !== "live") return;
+  if (!lesson) return;
   clearEmptyRoomTimer(lesson.id);
-  await lessonsService.endLesson(lesson.schoolId, lesson.id);
   canvasService.closeCanvasDocument(lesson.id);
-  emitRoomEvent(lesson.id, { type: "lesson_status", status: "ended" });
   activeLessons.delete(lesson.id);
 }
 
@@ -746,19 +746,6 @@ export async function deleteChatMessage(
   if (!row) {
     throw new AppError(404, "not_found", "Сообщение не найдено");
   }
-}
-
-export async function endLessonNow(schoolId: string, lessonId: string, requester: AccessTokenPayload): Promise<void> {
-  const lesson = await lessonsService.getLesson(schoolId, lessonId);
-  const isOwnerTeacher = requester.role === "teacher" && lesson.teacherId === requester.sub;
-  if (requester.role !== "admin" && !isOwnerTeacher) {
-    throw new AppError(403, "forbidden", "Только учитель урока может завершить урок");
-  }
-  clearEmptyRoomTimer(lessonId);
-  await lessonsService.endLesson(schoolId, lessonId);
-  canvasService.closeCanvasDocument(lessonId);
-  emitRoomEvent(lessonId, { type: "lesson_status", status: "ended" });
-  activeLessons.delete(lessonId);
 }
 
 /** Правило зачистки без сайд-эффектов — вынесено для юнит-тестов. */

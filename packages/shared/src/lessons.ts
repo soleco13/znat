@@ -1,24 +1,6 @@
 import { z } from "zod";
-import { lessonStatusSchema, participantKindSchema } from "./roles.js";
+import { participantKindSchema } from "./roles.js";
 import { lessonModeSchema } from "./rooms.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ДЕЙСТВУЮЩАЯ модель (до Э12) — урок с группой, расписанием и статусом.
-// Помечено к удалению в Э12.3 (переработка модуля lessons), пока используется
-// бэкендом (`lessons/routes.ts`, `lessons/service.ts`) — держим ради зелёной
-// сборки на Э12.1.
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** @deprecated Э12.3 — урок создаёт только admin, без группы/предмета/расписания. См. `adminCreateLessonRequestSchema`. */
-export const createLessonRequestSchema = z.object({
-  title: z.string().min(1).max(200),
-  subject: z.string().min(1).max(100),
-  groupId: z.string().uuid(),
-  teacherId: z.string().uuid(),
-  startsAt: z.string().datetime(),
-  durationMin: z.number().int().min(5).max(240),
-});
-export type CreateLessonRequest = z.infer<typeof createLessonRequestSchema>;
 
 export const listLessonsQuerySchema = z.object({
   from: z.string().datetime().optional(),
@@ -28,20 +10,6 @@ export const listLessonsQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(200).default(50),
 });
 export type ListLessonsQuery = z.infer<typeof listLessonsQuerySchema>;
-
-/** @deprecated Э12.3 — см. `lessonSummarySchema`. */
-export const lessonResponseSchema = z.object({
-  id: z.string().uuid(),
-  schoolId: z.string().uuid(),
-  groupId: z.string().uuid(),
-  teacherId: z.string().uuid(),
-  title: z.string(),
-  subject: z.string(),
-  startsAt: z.string(),
-  durationMin: z.number(),
-  status: lessonStatusSchema,
-});
-export type LessonResponse = z.infer<typeof lessonResponseSchema>;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Э12 — постоянный урок без расписания и статуса (§0, §1.1 план-ТЗ).

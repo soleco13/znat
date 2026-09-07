@@ -99,20 +99,6 @@ export async function deleteLesson(id: string, schoolId: string): Promise<boolea
   return rows.length > 0;
 }
 
-/** @deprecated Э12.4 — статус-машина урока убирается. Пока нужна `rooms` (авто-завершение). */
-export async function updateLessonStatus(
-  id: string,
-  schoolId: string,
-  patch: { status: "scheduled" | "live" | "ended" | "cancelled"; startedAt?: Date; endedAt?: Date },
-) {
-  const [row] = await db
-    .update(lessons)
-    .set(patch)
-    .where(and(eq(lessons.id, id), eq(lessons.schoolId, schoolId)))
-    .returning();
-  return row ?? null;
-}
-
 /** Идемпотентно: WHERE livekit_room IS NULL — не перезаписывает уже назначенную комнату. */
 export async function setLivekitRoomIfEmpty(id: string, schoolId: string, livekitRoom: string) {
   const [row] = await db

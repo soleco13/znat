@@ -15,7 +15,7 @@ import * as roomsService from "./service.js";
  *  - Доступны и персоналу, и гостю-ученику одного урока (`requireLessonAccess`
  *    → `request.lessonActor`): вход/выход, поднять руку, чат.
  *  - Только персонал (`app.authenticate` + проверка роли в сервисе): режим
- *    урока, права участников, мьют, закрепление, завершение, модерация чата.
+ *    урока, права участников, мьют, закрепление, модерация чата.
  */
 export default async function roomsRoutes(app: FastifyInstance) {
   // ─── Периметр «персонал ∪ гость этого урока» ───────────────────────────────
@@ -59,11 +59,6 @@ export default async function roomsRoutes(app: FastifyInstance) {
 
   // ─── Периметр «только персонал» ────────────────────────────────────────────
   const staff = { preHandler: app.authenticate };
-
-  app.post<{ Params: { id: string } }>("/lessons/:id/end", staff, async (request, reply) => {
-    await roomsService.endLessonNow(request.user.schoolId, request.params.id, request.user);
-    return reply.status(204).send();
-  });
 
   app.patch<{ Params: { id: string; userId: string } }>(
     "/lessons/:id/participants/:userId/permissions",

@@ -32,12 +32,6 @@ export const roleEnum = pgEnum("role", ["admin", "methodist", "teacher", "studen
  * (`lesson_participants.guest_id` + `display_name`, `user_id` NULL).
  */
 export const participantKindEnum = pgEnum("participant_kind", ["staff", "guest"]);
-export const lessonStatusEnum = pgEnum("lesson_status", [
-  "scheduled",
-  "live",
-  "ended",
-  "cancelled",
-]);
 export const deckStatusEnum = pgEnum("deck_status", [
   "pending",
   "converting",
@@ -138,16 +132,12 @@ export const lessons = pgTable(
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull().defaultNow(),
     /** Э12: длительность урока отменена (постоянный урок). Дефолт — ради старого расчёта TTL токена. */
     durationMin: integer("duration_min").notNull().default(60),
-    /** @deprecated Э12 — урок постоянный, без статус-машины. Колонка ещё читается `rooms` до Э12.4. */
-    status: lessonStatusEnum("status").notNull().default("scheduled"),
     /** Токен прямой ссылки ученика `/j/:token` (Э12, §1.6 план-ТЗ). 24 случайных байта hex. Перевыпуск admin — старый мгновенно недействителен. */
     joinToken: text("join_token")
       .notNull()
       .unique()
       .default(sql`encode(gen_random_bytes(24), 'hex')`),
     livekitRoom: text("livekit_room"),
-    startedAt: timestamp("started_at", { withTimezone: true }),
-    endedAt: timestamp("ended_at", { withTimezone: true }),
     settings: jsonb("settings").notNull().default({}),
   },
   (t) => [index("lessons_school_starts_idx").on(t.schoolId, t.startsAt)],

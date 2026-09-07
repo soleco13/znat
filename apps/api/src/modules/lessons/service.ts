@@ -72,29 +72,6 @@ export async function getLessonByLivekitRoom(livekitRoom: string) {
   return repo.findLessonByLivekitRoom(livekitRoom);
 }
 
-/**
- * @deprecated Э12.4 — урок постоянный, статус-машины нет. Пока `rooms`
- * зовёт это при первом входе персонала и при авто-завершении пустой
- * комнаты; после перевода `rooms` на новую модель функция уходит вместе
- * с колонкой `lessons.status`.
- */
-export async function startLesson(schoolId: string, id: string) {
-  const lesson = await getLesson(schoolId, id);
-  if (lesson.status === "live") return lesson;
-  const row = await repo.updateLessonStatus(id, schoolId, { status: "live", startedAt: new Date() });
-  if (!row) throw new AppError(404, "not_found", "Урок не найден");
-  return row;
-}
-
-/** @deprecated Э12.4 — см. `startLesson`. */
-export async function endLesson(schoolId: string, id: string) {
-  const lesson = await getLesson(schoolId, id);
-  if (lesson.status === "ended") return lesson;
-  const row = await repo.updateLessonStatus(id, schoolId, { status: "ended", endedAt: new Date() });
-  if (!row) throw new AppError(404, "not_found", "Урок не найден");
-  return row;
-}
-
 // ─── Гостевой вход: разрешение токена (сам JWT/куки — Э12.4) ──────────────────
 
 /** Публичная инфо-карточка урока по токену (`GET /j/:token`). Ничего лишнего до входа. */

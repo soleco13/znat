@@ -3,9 +3,6 @@ import { z } from "zod";
 export const roleSchema = z.enum(["admin", "methodist", "teacher", "student"]);
 export type Role = z.infer<typeof roleSchema>;
 
-export const lessonStatusSchema = z.enum(["scheduled", "live", "ended", "cancelled"]);
-export type LessonStatus = z.infer<typeof lessonStatusSchema>;
-
 /**
  * Э12 (§1.3 план-ТЗ) — вид участника урока в новой модели доступа. Права на
  * уроке привязаны к этому, а не к `Role`: `staff` — учитель/админ/методист
