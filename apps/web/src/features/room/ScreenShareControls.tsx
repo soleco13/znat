@@ -1,15 +1,7 @@
-import { useMemo, useRef } from "react";
-import {
-  useLocalParticipant,
-  useSpeakingParticipants,
-  useTracks,
-  VideoTrack,
-} from "@livekit/components-react";
+import { useLocalParticipant, useTracks } from "@livekit/components-react";
 import { Track, VideoPreset } from "livekit-client";
 import { MonitorUp, MonitorX } from "lucide-react";
-import type { ParticipantSnapshot } from "@school/shared";
 
-import { toast } from "@/shared/ui/sonner";
 import { RoomControlButton } from "./RoomControlButton.js";
 
 /**
@@ -26,40 +18,6 @@ import { RoomControlButton } from "./RoomControlButton.js";
  * профиле «документ» — приоритет чёткости текста, это типовой случай урока.
  */
 const DOCUMENT_SCREEN_SHARE_PRESET = new VideoPreset(1920, 1080, 1_000_000, 5, "medium");
-
-/**
- * Доп. — авто-«картинка в картинке» на время демонстрации (запрос
- * пользователя: «как в Толке», но включается ТОЛЬКО на время демо, не
- * отдельной кнопкой в интерфейсе). Пока делится экраном, собственное окно
- * урока часто занято чужим приложением/окном — плавающее видео держит
- * собеседника (обычно ученика) на виду.
- *
- * Кого показывать: закреплённый участник (Э6.3 — это и есть штатный
- * способ учителя сказать «сейчас важен этот ученик»), иначе говорящий,
- * иначе первый по тому же порядку, что плитки в `RoomVideoGrid`
- * (сначала персонал, потом по времени входа). Только с включённой
- * камерой — без видео показать нечего.
- */
-function pickPipTarget<T>(
-  participants: ParticipantSnapshot[],
-  selfId: string | undefined,
-  cameraTrackByIdentity: Map<string, T>,
-  speakingIds: Set<string>,
-): T | null {
-  const candidates = participants.filter(
-    (p) => p.connected && p.userId !== selfId && cameraTrackByIdentity.has(p.userId),
-  );
-  if (candidates.length === 0) return null;
-  const pinned = candidates.find((p) => p.pinned);
-  if (pinned) return cameraTrackByIdentity.get(pinned.userId)!;
-  const speaking = candidates.find((p) => speakingIds.has(p.userId));
-  if (speaking) return cameraTrackByIdentity.get(speaking.userId)!;
-  const sorted = [...candidates].sort((a, b) => {
-    if (a.kind !== b.kind) return a.kind === "staff" ? -1 : 1;
-    return a.joinedAt.localeCompare(b.joinedAt);
-  });
-  return cameraTrackByIdentity.get(sorted[0]!.userId)!;
-}
 
 /**
  * Демонстрация экрана (Э7.1) — переключатель типа контента ДО старта:
@@ -89,13 +47,14 @@ function pickPipTarget<T>(
  */
 export function SelfScreenShareButton({
   priority = false,
-  participants = [],
-  selfId,
+  onScreenShareStarted,
 }: {
   priority?: boolean;
-  /** Для авто-PiP — кого показать во плавающем окне (закреплён/говорит/первый). */
-  participants?: ParticipantSnapshot[];
-  selfId?: string;
+  /** Доп. — авто-PiP (Толк-кнопка, `PictureInPictureButton`): вызывается
+   *  сразу после успешного старта демонстрации, из ТОГО ЖЕ клик-хендлера
+   *  (иначе браузер может отказать `requestPictureInPicture()` без
+   *  свежего user activation — см. докстринг `PictureInPictureButton`). */
+  onScreenShareStarted?: () => void;
 }) {
   const { localParticipant, isScreenShareEnabled } = useLocalParticipant();
   const othersSharing = useTracks([Track.Source.ScreenShare], { onlySubscribed: false }).some(
@@ -103,22 +62,9 @@ export function SelfScreenShareButton({
   );
   const blocked = !isScreenShareEnabled && othersSharing && !priority;
 
-  const cameraTracks = useTracks([Track.Source.Camera], { onlySubscribed: true });
-  const cameraTrackByIdentity = new Map(cameraTracks.map((t) => [t.participant.identity, t]));
-  const speakingIds = new Set(useSpeakingParticipants().map((p) => p.identity));
-  const pipTarget = useMemo(
-    () => pickPipTarget(participants, selfId, cameraTrackByIdentity, speakingIds),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [participants, selfId, cameraTracks, speakingIds],
-  );
-  const pipVideoRef = useRef<HTMLVideoElement>(null);
-
   async function toggle() {
     if (isScreenShareEnabled) {
       await localParticipant.setScreenShareEnabled(false);
-      if (document.pictureInPictureElement === pipVideoRef.current) {
-        await document.exitPictureInPicture().catch(() => undefined);
-      }
       return;
     }
     await localParticipant.setScreenShareEnabled(
@@ -130,49 +76,21 @@ export function SelfScreenShareButton({
       },
       { screenShareEncoding: DOCUMENT_SCREEN_SHARE_PRESET.encoding },
     );
-    // Запрос PiP — в этом же клик-хендлере (после await), не в отдельном
-    // эффекте: браузер требует user activation из реального жеста, а
-    // эффект сработал бы уже вне его. Нет собеседника с включённой
-    // камерой или браузер не поддерживает PiP — просто тихо пропускаем,
-    // демонстрация от этого не зависит (§1.2 ТЗ).
-    if (pipVideoRef.current && document.pictureInPictureEnabled) {
-      try {
-        await pipVideoRef.current.requestPictureInPicture();
-        toast.info("Включена картинка в картинке — виден собеседник, пока вы делитесь экраном");
-      } catch {
-        /* активация истекла/браузер не поддерживает — молча пропускаем */
-      }
-    }
+    onScreenShareStarted?.();
   }
 
   return (
-    <>
-      {/* Скрытый видеоэлемент — источник PiP. Не завязан на
-          `isScreenShareEnabled`: должен уже играть в момент клика (см.
-          комментарий в `toggle`), иначе `requestPictureInPicture()`
-          бросит исключение (пустой кадр). */}
-      {pipTarget ? (
-        <VideoTrack
-          ref={pipVideoRef}
-          trackRef={pipTarget}
-          muted
-          autoPlay
-          playsInline
-          className="pointer-events-none fixed bottom-0 right-0 -z-50 size-px opacity-0"
-        />
-      ) : null}
-      <RoomControlButton
-        tone="action"
-        active={isScreenShareEnabled}
-        activeIcon={MonitorX}
-        inactiveIcon={MonitorUp}
-        activeLabel="Остановить демонстрацию"
-        inactiveLabel="Демонстрация экрана"
-        onToggle={toggle}
-        disabled={blocked}
-        title={blocked ? "Кто-то уже демонстрирует экран" : undefined}
-        caption="Экран"
-      />
-    </>
+    <RoomControlButton
+      tone="action"
+      active={isScreenShareEnabled}
+      activeIcon={MonitorX}
+      inactiveIcon={MonitorUp}
+      activeLabel="Остановить демонстрацию"
+      inactiveLabel="Демонстрация экрана"
+      onToggle={toggle}
+      disabled={blocked}
+      title={blocked ? "Кто-то уже демонстрирует экран" : undefined}
+      caption="Экран"
+    />
   );
 }

@@ -66,6 +66,7 @@ import { playRecordingSound } from "./recording-sound.js";
 import { SelfCameraButton, VideoDegradeSuggestion } from "./CameraControls.js";
 import { ConnectionQualityIcon, PacketLossWarning } from "./ConnectionQuality.js";
 import { DeviceCheckScreen, type DeviceCheckResult } from "./DeviceCheckScreen.js";
+import { PictureInPictureButton, type PictureInPictureHandle } from "./PictureInPictureButton.js";
 import { RoomControlButton } from "./RoomControlButton.js";
 import { useRoomIdentity } from "./use-room-identity.js";
 import { MicStatusIcon, SelfMicButton } from "./MicControls.js";
@@ -160,6 +161,8 @@ export function RoomPage() {
   // раз при (пере)подключении, раньше самого первого `recording_status`
   // (см. `rooms/ws.ts`).
   const recordingActivePrevRef = useRef<boolean | null>(null);
+  // Авто-PiP на время демонстрации — см. `PictureInPictureButton`/`ScreenShareControls`.
+  const pipRef = useRef<PictureInPictureHandle>(null);
 
   const isTeacher = identity?.role === "teacher" || identity?.role === "admin";
 
@@ -961,7 +964,13 @@ export function RoomPage() {
             />
           ) : null}
           {media && (isTeacher || self?.permissions.canShareScreen) ? (
-            <SelfScreenShareButton priority={isTeacher} participants={participants} selfId={selfId} />
+            <SelfScreenShareButton
+              priority={isTeacher}
+              onScreenShareStarted={() => void pipRef.current?.requestPip()}
+            />
+          ) : null}
+          {media ? (
+            <PictureInPictureButton ref={pipRef} participants={participants} selfId={selfId} />
           ) : null}
           {media ? (
             <SelfMicButton
