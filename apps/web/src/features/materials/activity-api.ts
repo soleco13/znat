@@ -79,6 +79,18 @@ export function saveResponse(
   });
 }
 
+/**
+ * Ученик: сообщить, на каком слайде материала он сейчас (доп. Э13). Вызывается
+ * при смене слайда, debounced. Ошибку глотаем на месте вызова — позиция это
+ * удобство, не критичный путь.
+ */
+export function saveActivityPosition(activityId: string, blockId: string): Promise<void> {
+  return apiFetch<void>(`/activities/${activityId}/my/position`, {
+    method: "PUT",
+    body: JSON.stringify({ blockId }),
+  });
+}
+
 /** Ученик: сдать текущую попытку (Э8.12, §8 ТЗ). После этого черновики (`saveResponse`) больше не принимаются. */
 export function submitActivity(activityId: string): Promise<SubmitActivityResult> {
   return apiFetch<SubmitActivityResult>(`/activities/${activityId}/submit`, { method: "POST" });

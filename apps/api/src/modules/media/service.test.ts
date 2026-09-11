@@ -3,10 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createParticipantConnection,
   findOtherActiveScreenShares,
+  mediaTokenTtlSeconds,
   muteMicrophones,
   muteParticipant,
   muteScreenShare,
-  ttlSecondsUntilLessonGraceEnd,
   updateLivePermissions,
 } from "./service.js";
 
@@ -14,29 +14,24 @@ function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
 
-describe("ttlSecondsUntilLessonGraceEnd", () => {
-  it("длится до конца урока плюс 15-минутный грейс", () => {
-    const now = new Date("2026-08-23T10:00:00Z");
-    vi.setSystemTime(now);
-    const startsAt = new Date("2026-08-23T10:00:00Z");
-    const ttl = ttlSecondsUntilLessonGraceEnd(startsAt, 45);
-    expect(ttl).toBe((45 + 15) * 60);
-    vi.useRealTimers();
+describe("mediaTokenTtlSeconds (Э12: урок постоянный)", () => {
+  it("персоналу — щедрый фиксированный TTL «до выхода», не зависит от времени урока", () => {
+    expect(mediaTokenTtlSeconds("staff")).toBe(12 * 60 * 60);
   });
 
-  it("не уходит ниже минимального TTL, если урок уже должен был закончиться", () => {
-    const now = new Date("2026-08-23T12:00:00Z");
-    vi.setSystemTime(now);
-    const startsAt = new Date("2026-08-23T10:00:00Z");
-    const ttl = ttlSecondsUntilLessonGraceEnd(startsAt, 45);
-    expect(ttl).toBe(60);
-    vi.useRealTimers();
+  it("гостю — до конца его сессии (GUEST_SESSION_TTL_HOURS, по умолчанию 6 ч)", () => {
+    expect(mediaTokenTtlSeconds("guest")).toBe(6 * 60 * 60);
+  });
+
+  it("не схлопывается в минуту для урока, чей starts_at давно в прошлом", () => {
+    // регресс Э12: старая формула (starts_at + duration + грейс) отдавала бы
+    // здесь 60 с, и токен протухал через минуту после входа.
+    expect(mediaTokenTtlSeconds("staff")).toBeGreaterThan(60 * 60);
+    expect(mediaTokenTtlSeconds("guest")).toBeGreaterThan(60 * 60);
   });
 });
 
 describe("createParticipantConnection: источники трека по роли и правам (Э2 + Э5.1 + Э6.1 + Э7.1)", () => {
-  const startsAt = new Date();
-
   async function grantOf(
     canSpeak: boolean,
     kind: "staff" | "guest" = "guest",
@@ -49,12 +44,20 @@ describe("createParticipantConnection: источники трека по рол
       fullName: "Тест Тестов",
       kind,
       permissions: { canDraw: false, canSpeak, canShareScreen, canPublishVideo },
-      lessonStartsAt: startsAt,
-      lessonDurationMin: 45,
     });
-    const payload = decodeJwt(media.token) as { video?: Record<string, unknown>; attributes?: Record<string, string> };
-    return { grant: payload.video!, attributes: payload.attributes };
+    const payload = decodeJwt(media.token) as {
+      exp?: number;
+      video?: Record<string, unknown>;
+      attributes?: Record<string, string>;
+    };
+    return { grant: payload.video!, attributes: payload.attributes, exp: payload.exp };
   }
+
+  it("токен не протухает через минуту — exp минимум через час от выдачи (регресс Э12)", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    expect((await grantOf(false, "staff")).exp!).toBeGreaterThan(nowSec + 60 * 60);
+    expect((await grantOf(false, "guest")).exp!).toBeGreaterThan(nowSec + 60 * 60);
+  });
 
   it("canPublish повторяет право canSpeak участника-ученика", async () => {
     expect((await grantOf(true, "guest")).grant.canPublish).toBe(true);

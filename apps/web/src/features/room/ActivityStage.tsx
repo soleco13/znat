@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import type { ActivityStudentAttempt, MaterialBlock, QuestionResponse } from "@school/shared";
 import { stripMaterialAnswerKeys } from "@school/shared";
 
@@ -12,6 +12,9 @@ import { ActivityPlayer } from "../materials/ActivityPlayer.js";
 import { ActivityTeacherTabs } from "../materials/ActivityTeacherTabs.js";
 import { ContentBlockView } from "../materials/MaterialPlayer.js";
 import { QuestionPlayer } from "../materials/QuestionPlayer.js";
+import { SlideDeck } from "../materials/SlideDeck.js";
+import { MaterialAnnotationLayer } from "../materials/MaterialAnnotationLayer.js";
+import { useEditableAnnotations, useStudentAnnotationsPoll } from "../materials/useMaterialAnnotations.js";
 import { getStudentAttempt } from "../materials/activity-api.js";
 import { formatCorrectAnswer, formatResponse } from "../materials/answer-format.js";
 
@@ -42,16 +45,50 @@ export function ActivityStage({
           onClose={onClose}
         />
       ) : (
-        <>
-          <StageHeader title="Задание" onClose={onClose} />
-          <ScrollArea className="min-h-0 flex-1">
-            <div className="mx-auto max-w-[720px] p-4">
-              <ActivityPlayer activityId={activityId} />
-            </div>
-          </ScrollArea>
-        </>
+        <StudentActivityStage activityId={activityId} onClose={onClose} />
       )}
     </div>
+  );
+}
+
+/**
+ * Ученик решает свою копию задания. Поверх материала — слой пометок учителя
+ * (Э13): read-only, `pointer-events: none`, опрашивается раз в 3 сек, чтобы
+ * карандашные объяснения учителя появлялись сами, не мешая вводу ответов.
+ */
+function StudentActivityStage({
+  activityId,
+  onClose,
+}: {
+  activityId: string;
+  onClose?: () => void;
+}) {
+  const strokes = useStudentAnnotationsPoll(activityId, true);
+  return (
+    <>
+      <StageHeader
+        title="Задание"
+        onClose={onClose}
+        left={
+          strokes.length > 0 ? (
+            <Badge variant="blue" className="shrink-0">
+              <Pencil className="mr-1 size-3" aria-hidden />
+              пометки учителя
+            </Badge>
+          ) : undefined
+        }
+      />
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="mx-auto max-w-[720px] p-4">
+          {/* Слой пометок учителя уходит внутрь плеера (поверх текущего
+              слайда / всей колонки — см. `MaterialPlayer`/`SlideDeck`). */}
+          <ActivityPlayer
+            activityId={activityId}
+            annotationOverlay={<MaterialAnnotationLayer strokes={strokes} editable={false} />}
+          />
+        </div>
+      </ScrollArea>
+    </>
   );
 }
 
@@ -59,10 +96,12 @@ function StageHeader({
   title,
   onClose,
   left,
+  right,
 }: {
   title: string;
   onClose?: () => void;
   left?: React.ReactNode;
+  right?: React.ReactNode;
 }) {
   return (
     <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2">
@@ -70,11 +109,14 @@ function StageHeader({
         {left}
         <span className="truncate text-sm font-heavy text-foreground">{title}</span>
       </div>
-      {onClose ? (
-        <Button variant="ghost" size="sm" onClick={onClose}>
-          Свернуть
-        </Button>
-      ) : null}
+      <div className="flex shrink-0 items-center gap-1.5">
+        {right}
+        {onClose ? (
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            Свернуть
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -92,22 +134,14 @@ function TeacherActivityStage({
 
   if (selected) {
     return (
-      <>
-        <StageHeader
-          title={selected.name}
-          onClose={onClose}
-          left={
-            <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
-              <ArrowLeft aria-hidden />К классу
-            </Button>
-          }
-        />
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="mx-auto max-w-[720px] p-4">
-            <StudentAttemptView activityId={activityId} participantId={selected.id} />
-          </div>
-        </ScrollArea>
-      </>
+      <SelectedStudentView
+        key={selected.id}
+        activityId={activityId}
+        participantId={selected.id}
+        name={selected.name}
+        onBack={() => setSelected(null)}
+        onClose={onClose}
+      />
     );
   }
 
@@ -131,34 +165,121 @@ function TeacherActivityStage({
   );
 }
 
+/**
+ * Учитель открыл материал конкретного ученика. Режим «Разметка» (Э13):
+ * поверх материала — редактируемый слой пометок; пока он включён, опрос
+ * работы ученика приостановлен (перерисовка материала сбивала бы рисование),
+ * поля ответов ученика перекрыты слоем — учитель помечает, не отвечает.
+ */
+function SelectedStudentView({
+  activityId,
+  participantId,
+  name,
+  onBack,
+  onClose,
+}: {
+  activityId: string;
+  participantId: string;
+  name: string;
+  onBack: () => void;
+  onClose?: () => void;
+}) {
+  const [annotating, setAnnotating] = useState(false);
+  const { strokes, setStrokes, status, loaded } = useEditableAnnotations(activityId, participantId);
+  // Пока прошлые пометки не загрузились — не даём рисовать: первый штрих
+  // затёр бы их (сохраняем весь набор целиком).
+  const canEdit = annotating && loaded;
+
+  const overlay = canEdit ? (
+    <MaterialAnnotationLayer
+      strokes={strokes}
+      editable
+      onChange={setStrokes}
+      onExit={() => setAnnotating(false)}
+    />
+  ) : strokes.length > 0 ? (
+    <MaterialAnnotationLayer strokes={strokes} editable={false} />
+  ) : null;
+
+  return (
+    <>
+      <StageHeader
+        title={name}
+        onClose={onClose}
+        left={
+          <Button variant="ghost" size="sm" onClick={onBack}>
+            <ArrowLeft aria-hidden />К классу
+          </Button>
+        }
+        right={
+          <Button
+            variant={annotating ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => setAnnotating((v) => !v)}
+          >
+            <Pencil aria-hidden />
+            {annotating && !loaded ? "Загрузка…" : annotating && status === "saving" ? "Сохранение…" : "Разметка"}
+          </Button>
+        }
+      />
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="mx-auto max-w-[720px] p-4">
+          <StudentAttemptView
+            activityId={activityId}
+            participantId={participantId}
+            paused={annotating}
+            overlay={overlay}
+          />
+        </div>
+      </ScrollArea>
+    </>
+  );
+}
+
 /** Как часто учитель перезапрашивает работу открытого ученика — тот отвечает в реальном времени. */
 const ATTEMPT_POLL_MS = 5_000;
 
 function StudentAttemptView({
   activityId,
   participantId,
+  paused = false,
+  overlay,
 }: {
   activityId: string;
   participantId: string;
+  /** Э13: пока учитель размечает материал, перерисовку от опроса ставим на паузу. */
+  paused?: boolean;
+  /** Слой пометок учителя — поверх текущего слайда / всей колонки. */
+  overlay?: React.ReactNode;
 }) {
   const [attempt, setAttempt] = useState<ActivityStudentAttempt | null>(null);
   const [error, setError] = useState(false);
+  // Доп. Э13: слайд, на котором ученик СЕЙЧАС, фиксируем один раз при
+  // открытии — дальше учитель листает сам, не «прыгая» за учеником.
+  const [openAtBlockId, setOpenAtBlockId] = useState<string | null>(null);
+  const openAtSet = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
-    setAttempt(null);
-    setError(false);
     const load = () =>
       getStudentAttempt(activityId, participantId)
-        .then((d) => !cancelled && setAttempt(d))
+        .then((d) => {
+          if (cancelled) return;
+          setAttempt(d);
+          if (!openAtSet.current) {
+            openAtSet.current = true;
+            setOpenAtBlockId(d.currentBlockId);
+          }
+        })
         .catch(() => !cancelled && setError(true));
     void load();
+    if (paused) return () => { cancelled = true; };
     const t = setInterval(() => void load(), ATTEMPT_POLL_MS);
     return () => {
       cancelled = true;
       clearInterval(t);
     };
-  }, [activityId, participantId]);
+  }, [activityId, participantId, paused]);
 
   if (error) {
     return (
@@ -174,40 +295,67 @@ function StudentAttemptView({
     attempt.material.blocks.filter((b) => b.type === "question").map((b) => [b.id, b]),
   );
 
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-        <span>
-          Ответов: {attempt.answered}/{attempt.total}
-        </span>
-        {attempt.submittedAt ? (
-          <Badge variant="green">сдано</Badge>
-        ) : (
-          <Badge variant="gray">в работе</Badge>
-        )}
-        {attempt.lastActivityAt ? (
-          <span>изменено {new Date(attempt.lastActivityAt).toLocaleTimeString("ru-RU")}</span>
-        ) : null}
+  // `data-annot-block` только на самом вопросе — его высота совпадает с
+  // плеером ученика; строка «ответ/верный ответ» ниже — вне якоря (у ученика
+  // её нет), см. `MaterialAnnotationLayer` (Э13).
+  const renderBlock = (block: (typeof publicMaterial.blocks)[number]) =>
+    block.type === "question" ? (
+      <div className="space-y-1.5">
+        <div data-annot-block={block.id}>
+          <QuestionPlayer
+            block={block}
+            value={attempt.responses[block.id]}
+            onChange={() => undefined}
+            disabled
+          />
+        </div>
+        <StudentAnswerLine
+          full={questionById.get(block.id)}
+          response={attempt.responses[block.id]}
+        />
       </div>
+    ) : (
+      <div data-annot-block={block.id}>
+        <ContentBlockView block={block} />
+      </div>
+    );
 
-      {publicMaterial.blocks.map((block) =>
-        block.type === "question" ? (
-          <div key={block.id} className="space-y-1.5">
-            <QuestionPlayer
-              block={block}
-              value={attempt.responses[block.id]}
-              onChange={() => undefined}
-              disabled
-            />
-            <StudentAnswerLine
-              full={questionById.get(block.id)}
-              response={attempt.responses[block.id]}
-            />
-          </div>
-        ) : (
-          <ContentBlockView key={block.id} block={block} />
-        ),
+  const statusBar = (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+      <span>
+        Ответов: {attempt.answered}/{attempt.total}
+      </span>
+      {attempt.submittedAt ? (
+        <Badge variant="green">сдано</Badge>
+      ) : (
+        <Badge variant="gray">в работе</Badge>
       )}
+      {attempt.lastActivityAt ? (
+        <span>изменено {new Date(attempt.lastActivityAt).toLocaleTimeString("ru-RU")}</span>
+      ) : null}
+    </div>
+  );
+
+  if (attempt.material.settings.layout === "slides") {
+    return (
+      <SlideDeck
+        blocks={publicMaterial.blocks}
+        groups={attempt.material.groups}
+        renderBlock={renderBlock}
+        header={statusBar}
+        overlay={overlay}
+        initialBlockId={openAtBlockId}
+      />
+    );
+  }
+
+  return (
+    <div className="relative space-y-3">
+      {statusBar}
+      {publicMaterial.blocks.map((block) => (
+        <div key={block.id}>{renderBlock(block)}</div>
+      ))}
+      {overlay}
     </div>
   );
 }

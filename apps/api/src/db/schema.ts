@@ -516,6 +516,33 @@ export const responses = pgTable(
 );
 
 /**
+ * Э13 — пометки учителя поверх материала конкретного ученика на уроке
+ * (карандашом/маркером, чтобы объяснить/поправить). Одна строка = слой
+ * пометок для пары (задание, ученик). Одностороннее «учитель рисует —
+ * ученик видит с задержкой опроса», не совместный холст, поэтому обычный
+ * jsonb, а не Yjs-документ как `canvas_docs`. `participant_id` —
+ * «каноническая» строка участника (`lesson_participants.id`), как у
+ * `responses` (Э12.5).
+ */
+export const materialAnnotations = pgTable(
+  "material_annotations",
+  {
+    activityId: uuid("activity_id")
+      .notNull()
+      .references(() => activities.id, { onDelete: "cascade" }),
+    participantId: uuid("participant_id")
+      .notNull()
+      .references(() => lessonParticipants.id, { onDelete: "cascade" }),
+    /** `annotationStrokeSchema[]` из packages/shared — форма проверяется схемой на входе. */
+    strokes: jsonb("strokes").notNull().default([]),
+    /** Кто из персонала правил последним (`null` — строка учителя удалена). */
+    updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.activityId, t.participantId] })],
+);
+
+/**
  * Э10 — записи уроков (§6 ТЗ, §10.4). Одна строка = один запуск egress на
  * второй машине. В MVP таблица уже была намечена в §6 ТЗ («заводится, но
  * не наполняется»); Э10 её наполняет.

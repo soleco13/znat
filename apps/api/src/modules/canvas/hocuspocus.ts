@@ -18,6 +18,7 @@ import type { AccessTokenPayload, ParticipantKind } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
 import { verifyAccessToken } from "../auth/service.js";
 import { GUEST_COOKIE_NAME, verifyGuestToken } from "../guests/service.js";
+import { verifyRecorderToken } from "../recorder-auth/service.js";
 import * as lessonsService from "../lessons/service.js";
 import * as repo from "./repo.js";
 
@@ -110,7 +111,13 @@ async function assertStaffLessonAccess(
   throw new AppError(403, "forbidden", "Роль не допускается к участию в уроке");
 }
 
-type CanvasConnectionActor = { kind: ParticipantKind; participantId: string; role: string };
+type CanvasConnectionActor =
+  | { kind: ParticipantKind; participantId: string; role: string }
+  // Э10.6 — recorder шаблона записи: read-only, никогда не участник урока
+  // (не персонал, не гость), поэтому отдельный вариант союза, а не
+  // ParticipantKind (тот пронизывает presence/аналитику — recorder туда не
+  // должен попасть НИКАК, см. форс readOnly в authenticateCanvasConnection).
+  | { kind: "recorder"; participantId: string; role: "recorder" };
 
 /** Достаёт одну куку из заголовка `Cookie` без зависимости от Fastify-контекста (хук `onAuthenticate` вне request-жизненного цикла). */
 function readCookie(header: string | null | undefined, name: string): string | undefined {
@@ -143,6 +150,18 @@ async function resolveCanvasConnectionActor(
   // проверяется по куке ниже. Staff-токен — всегда JWT, с этим маркером не
   // совпадает.
   if (token && token !== GUEST_CANVAS_TOKEN_MARKER) {
+    // Э10.6: recorder-токен — подписан своим секретом, staff-верификация его
+    // просто отвергнет по подписи, поэтому пробуем recorder ПЕРВЫМ и без
+    // побочных эффектов на неудаче (verifyRecorderToken возвращает null, не
+    // бросает — см. docstring в recorder-auth/service.ts).
+    const recorder = await verifyRecorderToken(token);
+    if (recorder) {
+      if (recorder.lessonId !== lessonId) {
+        throw new AppError(403, "forbidden", "Recorder-токен относится к другому уроку");
+      }
+      return { kind: "recorder", participantId: `recorder:${recorder.recordingId}`, role: "recorder" };
+    }
+
     const user = await verifyAccessToken(token);
     await assertStaffLessonAccess(user, lessonId);
     return { kind: "staff", participantId: user.sub, role: user.role };
@@ -187,7 +206,11 @@ export async function authenticateCanvasConnection(
   const lessonId = parsedLessonId.data;
 
   const actor = await resolveCanvasConnectionActor(payload.token, payload.requestHeaders, lessonId);
-  payload.connectionConfig.readOnly = !computeCanDraw(actor.kind, lessonId, actor.participantId);
+  // Recorder — всегда readOnly, в обход computeCanDraw (тот отвечает за
+  // per-participant override рисования, к recorder'у неприменимо: он не
+  // participantId в presence и никогда не должен рисовать).
+  payload.connectionConfig.readOnly =
+    actor.kind === "recorder" ? true : !computeCanDraw(actor.kind, lessonId, actor.participantId);
   return { userId: actor.participantId, role: actor.role };
 }
 

@@ -25,6 +25,8 @@ const {
     listPendingManualGrading: vi.fn(),
     findResponseForGrading: vi.fn(),
     persistManualGrade: vi.fn(),
+    loadAnnotations: vi.fn(),
+    saveAnnotations: vi.fn(),
   },
   lessonsServiceMock: { getLesson: vi.fn() },
   materialsServiceMock: { getLatestMaterial: vi.fn(), getMaterialVersion: vi.fn(), gradeResponse: vi.fn() },
@@ -61,6 +63,11 @@ const {
   submitActivity,
   getGradingQueue,
   gradeManualResponse,
+  getStudentAnnotations,
+  saveStudentAnnotations,
+  getMyAnnotations,
+  saveMyPosition,
+  getRecorderView,
 } = await import("./service.js");
 
 const SCHOOL = "11111111-1111-1111-1111-111111111111";
@@ -111,7 +118,7 @@ const material: Material = {
   grades: [5],
   tags: [],
   groups: [],
-  settings: { shuffleBlocks: false, showFeedback: "after_submit", attemptsAllowed: 1 },
+  settings: { shuffleBlocks: false, showFeedback: "after_submit", attemptsAllowed: 1, layout: "slides" },
   blocks: [
     {
       type: "question",
@@ -189,6 +196,8 @@ beforeEach(() => {
   );
   roomsServiceMock.listLessonParticipants.mockResolvedValue([]);
   roomsServiceMock.getParticipantNames.mockResolvedValue(new Map());
+  repoMock.loadAnnotations.mockResolvedValue(null);
+  repoMock.saveAnnotations.mockResolvedValue(new Date("2026-09-04T09:45:00.000Z"));
   redisMock.set.mockResolvedValue("OK");
   redisMock.get.mockResolvedValue("2026-09-04T09:30:00.000Z");
   redisMock.mget.mockResolvedValue([]);
@@ -420,6 +429,30 @@ describe("getProgress (Э8.8 → Э12.5) — панель прогресса п�
   it("чужой учитель не видит прогресс — 403", async () => {
     await expect(getProgress(otherTeacher, ACTIVITY)).rejects.toMatchObject({ statusCode: 403 });
   });
+
+  describe("getRecorderView (Э10.6) — «лист с заданиями» в записи урока", () => {
+    it("материал без ключей + тот же агрегированный прогресс, что у getProgress", async () => {
+      repoMock.answeredStatsByActivity.mockResolvedValue([
+        { participantId: PARTICIPANT_A, answered: 2, lastAt: new Date().toISOString() },
+      ]);
+      redisMock.mget.mockResolvedValue(["2026-09-04T09:00:00.000Z", null, null]);
+
+      const view = await getRecorderView({ lessonId: LESSON, recordingId: "rec-1" }, ACTIVITY);
+
+      expect(view.activityId).toBe(ACTIVITY);
+      expect(view.materialTitle).toBe(twoQuestionMaterial.title);
+      // Ключ ответа не должен просочиться — тот же инвариант, что у getMyActivity.
+      expect(JSON.stringify(view.material)).not.toContain("correct");
+      expect(view.progress.total).toBe(2);
+      expect(view.progress.students).toHaveLength(3);
+    });
+
+    it("активность чужого урока — 404 (recorder не персонал, сверяем по lessonId из токена)", async () => {
+      await expect(
+        getRecorderView({ lessonId: OTHER_LESSON, recordingId: "rec-1" }, ACTIVITY),
+      ).rejects.toMatchObject({ statusCode: 404 });
+    });
+  });
 });
 
 describe("getAnalytics (Э8.9) — гистограмма ответов", () => {
@@ -493,6 +526,136 @@ describe("getStudentAttempt (§7.3 ТЗ) — работа одного учен�
     await expect(getStudentAttempt(otherTeacher, ACTIVITY, PARTICIPANT_A)).rejects.toMatchObject({
       statusCode: 403,
     });
+  });
+});
+
+describe("saveMyPosition / currentBlockId (доп. Э13 — материал слайдами)", () => {
+  it("ученик пишет позицию слайда в Redis с TTL", async () => {
+    await saveMyPosition(guestA, ACTIVITY, "block-42");
+    expect(redisMock.set).toHaveBeenCalledWith(
+      `activity:attempt-pos:${deriveAttemptId(ACTIVITY, PARTICIPANT_A, 1)}`,
+      "block-42",
+      "EX",
+      expect.any(Number),
+    );
+  });
+
+  it("персонал позицию не пишет — 403", async () => {
+    await expect(saveMyPosition(staffActor, ACTIVITY, "block-1")).rejects.toMatchObject({
+      statusCode: 403,
+    });
+  });
+
+  it("getStudentAttempt отдаёт currentBlockId из Redis", async () => {
+    roomsServiceMock.listLessonParticipants.mockResolvedValue([
+      { id: PARTICIPANT_A, kind: "guest", displayName: "Аня" },
+    ]);
+    repoMock.maxAttemptNumber.mockResolvedValue(1);
+    redisMock.get.mockResolvedValue("block-7");
+
+    const attempt = await getStudentAttempt(teacher, ACTIVITY, PARTICIPANT_A);
+    expect(attempt.currentBlockId).toBe("block-7");
+  });
+
+  it("getProgress отдаёт currentBlockId по каждому ученику", async () => {
+    materialsServiceMock.getMaterialVersion.mockResolvedValue({
+      materialId: MATERIAL,
+      versionId: VERSION,
+      version: 1,
+      material,
+    });
+    roomsServiceMock.listLessonParticipants.mockResolvedValue([
+      { id: PARTICIPANT_A, kind: "guest", displayName: "Аня" },
+    ]);
+    repoMock.answeredStatsByActivity.mockResolvedValue([]);
+    redisMock.mget.mockResolvedValue(["block-3"]);
+
+    const progress = await getProgress(teacher, ACTIVITY);
+    expect(progress.students[0]!.currentBlockId).toBe("block-3");
+  });
+});
+
+describe("пометки учителя поверх материала ученика (Э13)", () => {
+  const stroke = {
+    id: "s1",
+    tool: "pen" as const,
+    color: "#e5484d" as const,
+    size: 3,
+    w: 700,
+    anchor: "block-1",
+    pts: [10, 10, 40, 40],
+  };
+
+  beforeEach(() => {
+    roomsServiceMock.listLessonParticipants.mockResolvedValue([
+      { id: PARTICIPANT_A, kind: "guest", displayName: "Аня" },
+    ]);
+  });
+
+  it("учитель читает пометки ученика своего урока", async () => {
+    repoMock.loadAnnotations.mockResolvedValue({
+      strokes: [stroke],
+      updatedAt: new Date("2026-09-04T09:45:00.000Z"),
+    });
+    const res = await getStudentAnnotations(teacher, ACTIVITY, PARTICIPANT_A);
+    expect(res.strokes).toEqual([stroke]);
+    expect(res.updatedAt).toBe("2026-09-04T09:45:00.000Z");
+    expect(repoMock.loadAnnotations).toHaveBeenCalledWith(ACTIVITY, PARTICIPANT_A);
+  });
+
+  it("пометок ещё нет → пустой массив, updatedAt null", async () => {
+    repoMock.loadAnnotations.mockResolvedValue(null);
+    expect(await getStudentAnnotations(teacher, ACTIVITY, PARTICIPANT_A)).toEqual({
+      strokes: [],
+      updatedAt: null,
+    });
+  });
+
+  it("учитель сохраняет пометки — updatedBy = он сам", async () => {
+    await saveStudentAnnotations(teacher, ACTIVITY, PARTICIPANT_A, { strokes: [stroke] });
+    expect(repoMock.saveAnnotations).toHaveBeenCalledWith({
+      activityId: ACTIVITY,
+      participantId: PARTICIPANT_A,
+      strokes: [stroke],
+      updatedBy: TEACHER,
+    });
+  });
+
+  it("чужой учитель не может ни читать, ни писать пометки — 403", async () => {
+    await expect(getStudentAnnotations(otherTeacher, ACTIVITY, PARTICIPANT_A)).rejects.toMatchObject({
+      statusCode: 403,
+    });
+    await expect(
+      saveStudentAnnotations(otherTeacher, ACTIVITY, PARTICIPANT_A, { strokes: [] }),
+    ).rejects.toMatchObject({ statusCode: 403 });
+    expect(repoMock.saveAnnotations).not.toHaveBeenCalled();
+  });
+
+  it("участник не на этом уроке — 404", async () => {
+    await expect(getStudentAnnotations(teacher, ACTIVITY, PARTICIPANT_B)).rejects.toMatchObject({
+      statusCode: 404,
+    });
+  });
+
+  it("ученик читает СВОИ пометки (person = каноническая строка), писать не может", async () => {
+    repoMock.loadAnnotations.mockResolvedValue({
+      strokes: [stroke],
+      updatedAt: new Date("2026-09-04T09:45:00.000Z"),
+    });
+    const res = await getMyAnnotations(guestA, ACTIVITY);
+    expect(res.strokes).toEqual([stroke]);
+    // ensureParticipant(guestA) → PARTICIPANT_A (см. beforeEach верхнего уровня).
+    expect(repoMock.loadAnnotations).toHaveBeenCalledWith(ACTIVITY, PARTICIPANT_A);
+  });
+
+  it("персонал не проходит задание — getMyAnnotations для staff-actor 403", async () => {
+    await expect(getMyAnnotations(staffActor, ACTIVITY)).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("гость другого урока — 403", async () => {
+    await expect(
+      getMyAnnotations(guest(GUEST_A, "Аня", OTHER_LESSON), ACTIVITY),
+    ).rejects.toMatchObject({ statusCode: 403 });
   });
 });
 

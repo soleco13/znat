@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { ServerRoomMessage } from "@school/shared";
 import { verifyAccessToken } from "../auth/service.js";
 import { GUEST_COOKIE_NAME, verifyGuestToken } from "../guests/service.js";
+import { verifyRecorderToken } from "../recorder-auth/service.js";
 import * as recordingsService from "../recordings/service.js";
 import { roomEvents } from "./events.js";
 import * as roomsService from "./service.js";
@@ -13,6 +14,10 @@ const querySchema = z.object({
   // Э12.4: персонал передаёт access-токен в query; гость-ученик его не
   // имеет (httpOnly-кука) — тогда токен опускается и берётся кука.
   token: z.string().min(1).optional(),
+  // Э10.6: recorder шаблона записи — отдельный параметр, не смешивается с
+  // `token` (тот разбирается как staff access-токен, recorder подписан
+  // другим секретом и не участник урока — см. handleRecorderConnection).
+  recorderToken: z.string().min(1).optional(),
   lessonId: z.string().uuid(),
 });
 
@@ -54,7 +59,48 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
       socket.close(4000, "invalid_query");
       return;
     }
-    const { lessonId } = parsedQuery.data;
+    const { lessonId, recorderToken } = parsedQuery.data;
+
+    // Э10.6 — recorder шаблона записи: read-only слушатель `roomEvents`
+    // (стейдж/задания), НЕ участник урока. Сознательно в обход
+    // `attachSocket`/presence ниже — recorder не должен попасть в список
+    // участников, посещаемость или лимиты «кто на связи» (§1.2 ТЗ: сбой
+    // записи не должен влиять на сам урок, и наоборот — учёт присутствия не
+    // должен путать recorder с живым человеком).
+    if (recorderToken) {
+      const payload = await verifyRecorderToken(recorderToken);
+      if (!payload || payload.lessonId !== lessonId) {
+        socket.close(4001, "invalid_token");
+        return;
+      }
+
+      const send = (message: ServerRoomMessage) => {
+        if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(message));
+      };
+
+      // Стейдж сразу при подключении — если запись стартовала при уже
+      // открытой доске, recorder не должен ждать следующего stage_changed.
+      // «Активность уже идёт» так восстановить нечем (§ докстринг
+      // EgressPage.tsx) — тот же пробел, что и у живого участника,
+      // подключившегося без initial join().
+      send({ type: "stage_changed", stage: await roomsService.getCurrentLessonStage(lessonId) });
+
+      const onEvent = (message: ServerRoomMessage) => send(message);
+      roomEvents.on(lessonId, onEvent);
+
+      const pingTimer = setInterval(() => {
+        if (socket.readyState === socket.OPEN) socket.ping();
+      }, PING_INTERVAL_MS);
+
+      socket.on("close", () => {
+        clearInterval(pingTimer);
+        roomEvents.off(lessonId, onEvent);
+      });
+      socket.on("error", (err: Error) => {
+        request.log.warn({ err, lessonId }, "recorder ws error");
+      });
+      return;
+    }
 
     const userId = await resolveParticipantId(
       parsedQuery.data,

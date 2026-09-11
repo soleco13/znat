@@ -86,7 +86,7 @@ const VALID_CONTENT: Material = {
   grades: [8],
   tags: [],
   groups: [],
-  settings: { shuffleBlocks: false, showFeedback: "after_submit", attemptsAllowed: 1 },
+  settings: { shuffleBlocks: false, showFeedback: "after_submit", attemptsAllowed: 1, layout: "slides" },
   blocks: [],
 };
 

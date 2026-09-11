@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type {
   Material,
+  MaterialLayout,
   MaterialSettings,
   MaterialStatus,
   MaterialValidationIssue,
@@ -17,7 +18,7 @@ import type {
   QuestionResponse,
   ShowFeedback,
 } from "@school/shared";
-import { stripMaterialAnswerKeys } from "@school/shared";
+import { paginateMaterial, stripMaterialAnswerKeys } from "@school/shared";
 
 import { useAuthStore } from "@/shared/auth-store";
 import { Badge } from "@/shared/ui/badge";
@@ -47,6 +48,7 @@ import { SimpleTooltip } from "@/shared/ui/tooltip";
 import { toast } from "@/shared/ui/sonner";
 import { ContentBlockView } from "./MaterialPlayer.js";
 import { QuestionPlayer } from "./QuestionPlayer.js";
+import { SlideDeck } from "./SlideDeck.js";
 import { isPlaceholderMeta } from "./material-templates.js";
 import { MaterialDocEditor } from "./editor/MaterialDocEditor.js";
 import {
@@ -199,7 +201,12 @@ export function MaterialEditorPage() {
       ) : (
         <div className="mx-auto w-full max-w-[760px] pb-24">
           <SheetMeta material={material} onChange={patchMaterial} />
-          <MaterialDocEditor key={id} material={material} onChange={setMaterial} />
+          <MaterialDocEditor
+            key={`${id}:${material.settings.layout}`}
+            material={material}
+            onChange={setMaterial}
+            layout={material.settings.layout}
+          />
         </div>
       )}
     </div>
@@ -537,6 +544,12 @@ function SheetMeta({
             />
           </label>
         </MetaChip>
+        {material.settings.layout === "slides" ? (
+          <span className="inline-flex items-center gap-1.5 rounded-pill border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground">
+            <span className="font-medium text-text-3">Слайдов:</span>
+            <span className="text-foreground">{paginateMaterial(material).length}</span>
+          </span>
+        ) : null}
       </div>
     </div>
   );
@@ -574,32 +587,44 @@ function MetaChip({
 function PreviewSheet({ material, readOnly }: { material: Material; readOnly: boolean }) {
   const [responses, setResponses] = useState<Record<string, QuestionResponse>>({});
   const publicMaterial = stripMaterialAnswerKeys(material, "editor-preview");
+  const slides = material.settings.layout === "slides";
+
+  const renderBlock = (block: (typeof publicMaterial.blocks)[number]) =>
+    block.type === "question" ? (
+      <QuestionPlayer
+        block={block}
+        value={responses[block.id]}
+        onChange={(r) => setResponses((prev) => ({ ...prev, [block.id]: r }))}
+      />
+    ) : (
+      <ContentBlockView block={block} />
+    );
 
   return (
     <div className="mx-auto w-full max-w-[720px] pb-24">
       <div className="mb-4 rounded-lg border border-border bg-secondary/50 px-3 py-2 text-xs text-muted-foreground">
         {readOnly
           ? "Просмотр материала. Редактируют методист и администратор."
-          : "Так материал видит ученик. Ответы можно потыкать — они не сохраняются."}
+          : slides
+            ? "Так материал видит ученик — слайдами. Ответы можно потыкать, они не сохраняются."
+            : "Так материал видит ученик. Ответы можно потыкать — они не сохраняются."}
       </div>
       <h1 className="ds-page-title mb-4">{material.title}</h1>
-      <div className="flex flex-col gap-3">
-        {publicMaterial.blocks.map((block) =>
-          block.type === "question" ? (
-            <QuestionPlayer
-              key={block.id}
-              block={block}
-              value={responses[block.id]}
-              onChange={(r) => setResponses((prev) => ({ ...prev, [block.id]: r }))}
-            />
-          ) : (
-            <ContentBlockView key={block.id} block={block} />
-          ),
-        )}
-        {publicMaterial.blocks.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Материал пуст</p>
-        ) : null}
-      </div>
+      {publicMaterial.blocks.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Материал пуст</p>
+      ) : slides ? (
+        <SlideDeck
+          blocks={publicMaterial.blocks}
+          groups={material.groups}
+          renderBlock={renderBlock}
+        />
+      ) : (
+        <div className="flex flex-col gap-3">
+          {publicMaterial.blocks.map((block) => (
+            <div key={block.id}>{renderBlock(block)}</div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -842,6 +867,11 @@ const SHOW_FEEDBACK_LABELS: Record<ShowFeedback, string> = {
   after_deadline: "После дедлайна",
 };
 
+const LAYOUT_LABELS: Record<MaterialLayout, string> = {
+  slides: "Слайдами",
+  scroll: "Одной страницей",
+};
+
 function SettingsMenu({
   settings,
   onChange,
@@ -860,6 +890,24 @@ function SettingsMenu({
       </SimpleTooltip>
       <PopoverContent align="end" className="w-72 space-y-3">
         <p className="text-xs font-semibold text-muted-foreground">Настройки материала</p>
+        <label className="flex flex-col gap-1.5">
+          <FieldLabel>Как проходить</FieldLabel>
+          <Select
+            value={settings.layout}
+            onValueChange={(v) => onChange({ layout: v as MaterialLayout })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(LAYOUT_LABELS) as MaterialLayout[]).map((k) => (
+                <SelectItem key={k} value={k}>
+                  {LAYOUT_LABELS[k]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </label>
         <label className="flex items-center justify-between gap-2 text-sm">
           Перемешивать блоки
           <Switch

@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Doc, Map as YMap, Text as YText, applyUpdate, encodeStateAsUpdate } from "yjs";
 import type { Document as HocuspocusDocument } from "@hocuspocus/server";
 import type { AccessTokenPayload } from "@school/shared";
+// Э10.6: НЕ мокаем — чистый модуль без сторонних импортов (см. его докстринг),
+// секрет для теста уже в apps/api/vitest.config.ts (JWT_RECORDER_SECRET).
+import { signRecorderToken } from "../recorder-auth/service.js";
 
 const { authServiceMock, lessonsServiceMock, guestsServiceMock, repoMock } = vi.hoisted(() => ({
   authServiceMock: {
@@ -184,6 +187,42 @@ describe("authenticateCanvasConnection", () => {
     await expect(
       authenticateCanvasConnection({ token: "bad", documentName: LESSON_ID, connectionConfig: fakeConnectionConfig(), requestHeaders: new Headers() }),
     ).rejects.toThrow();
+  });
+
+  describe("Э10.6 — recorder шаблона записи", () => {
+    it("recorder-токен своего урока — read-only ВСЕГДА, в обход computeCanDraw", async () => {
+      const RECORDING_ID = "66666666-6666-6666-6666-666666666666";
+      const token = await signRecorderToken(LESSON_ID, RECORDING_ID);
+      const connectionConfig = fakeConnectionConfig();
+
+      const result = await authenticateCanvasConnection({
+        token,
+        documentName: LESSON_ID,
+        connectionConfig,
+        requestHeaders: new Headers(),
+      });
+
+      expect(result).toEqual({ userId: `recorder:${RECORDING_ID}`, role: "recorder" });
+      expect(connectionConfig.readOnly).toBe(true);
+      // Recorder не персонал — не идёт через assertStaffLessonAccess/lessonsService.
+      expect(lessonsServiceMock.getLesson).not.toHaveBeenCalled();
+    });
+
+    it("recorder-токен другого урока — 403", async () => {
+      const token = await signRecorderToken(
+        "99999999-9999-9999-9999-999999999999",
+        "66666666-6666-6666-6666-666666666666",
+      );
+
+      await expect(
+        authenticateCanvasConnection({
+          token,
+          documentName: LESSON_ID,
+          connectionConfig: fakeConnectionConfig(),
+          requestHeaders: new Headers(),
+        }),
+      ).rejects.toMatchObject({ statusCode: 403 });
+    });
   });
 });
 

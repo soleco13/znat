@@ -8,7 +8,11 @@ import {
   matchingInteractionSchema,
   multipleChoiceInteractionSchema,
   orderingInteractionSchema,
+  paginateMaterial,
   singleChoiceInteractionSchema,
+  slideIndexForBlock,
+  SLIDE_HARD_BLOCK_CAP,
+  SLIDE_SOFT_QUESTION_CAP,
   stripInteractionAnswerKey,
   stripMaterialAnswerKeys,
   tableFillInteractionSchema,
@@ -806,6 +810,96 @@ describe("validateMaterialContent (Э9.9, §7.2 ТЗ: «Валидация» —
     );
     expect(issues).toHaveLength(3);
     expect(issues.map((i) => i.code).sort()).toEqual(["empty_content", "empty_content", "zero_points"]);
+  });
+});
+
+describe("paginateMaterial (доп. Э13 — материал слайдами)", () => {
+  const rich = (id: string, html = "<p>текст</p>"): MaterialBlock => ({ type: "rich_text", id, html });
+  const q = (id: string): MaterialBlock => ({
+    type: "question",
+    id,
+    prompt: { html: "<p>?</p>" },
+    points: 1,
+    interaction: { type: "true_false", correct: true },
+  });
+  const pageBreak = (id: string): MaterialBlock => ({ type: "page_break", id });
+  const heading = (id: string): MaterialBlock => ({ type: "rich_text", id, html: "<h2>Раздел</h2>" });
+
+  it("материал без разрывов и потолков — один слайд", () => {
+    const slides = paginateMaterial({ blocks: [rich("b1"), rich("b2"), q("q1")] });
+    expect(slides).toHaveLength(1);
+    expect(slides[0]!.blockIds).toEqual(["b1", "b2", "q1"]);
+    expect(slides[0]!.id).toBe("b1");
+  });
+
+  it("page_break — граница слайда, сам не попадает ни на один слайд", () => {
+    const slides = paginateMaterial({
+      blocks: [rich("b1"), pageBreak("pb"), rich("b2")],
+    });
+    expect(slides.map((s) => s.blockIds)).toEqual([["b1"], ["b2"]]);
+  });
+
+  it("несколько подряд / ведущий / хвостовой page_break не плодят пустые слайды", () => {
+    const slides = paginateMaterial({
+      blocks: [pageBreak("p0"), rich("b1"), pageBreak("p1"), pageBreak("p2"), rich("b2"), pageBreak("p3")],
+    });
+    expect(slides.map((s) => s.blockIds)).toEqual([["b1"], ["b2"]]);
+  });
+
+  it("заголовок H2 начинает новый слайд", () => {
+    const slides = paginateMaterial({
+      blocks: [rich("b1"), heading("h1"), rich("b2")],
+    });
+    expect(slides.map((s) => s.blockIds)).toEqual([["b1"], ["h1", "b2"]]);
+  });
+
+  it("заголовок в самом начале не создаёт пустой слайд перед собой", () => {
+    const slides = paginateMaterial({ blocks: [heading("h1"), rich("b1")] });
+    expect(slides.map((s) => s.blockIds)).toEqual([["h1", "b1"]]);
+  });
+
+  it("мягкий потолок вопросов: (SOFT_CAP+1)-й вопрос уезжает на новый слайд", () => {
+    const qs = Array.from({ length: SLIDE_SOFT_QUESTION_CAP + 1 }, (_, i) => q(`q${i}`));
+    const slides = paginateMaterial({ blocks: qs });
+    expect(slides).toHaveLength(2);
+    expect(slides[0]!.blockIds).toHaveLength(SLIDE_SOFT_QUESTION_CAP);
+    expect(slides[1]!.blockIds).toEqual([`q${SLIDE_SOFT_QUESTION_CAP}`]);
+  });
+
+  it("жёсткий потолок блоков не превышается", () => {
+    const blocks = Array.from({ length: SLIDE_HARD_BLOCK_CAP + 3 }, (_, i) => rich(`b${i}`));
+    const slides = paginateMaterial({ blocks });
+    for (const s of slides) expect(s.blockIds.length).toBeLessThanOrEqual(SLIDE_HARD_BLOCK_CAP);
+    expect(slides.flatMap((s) => s.blockIds)).toEqual(blocks.map((b) => b.id));
+  });
+
+  it("группа-конструкция не рвётся между слайдами даже за жёстким потолком", () => {
+    const groupIds = Array.from({ length: SLIDE_HARD_BLOCK_CAP + 2 }, (_, i) => `g${i}`);
+    const slides = paginateMaterial({
+      blocks: [rich("before"), ...groupIds.map((id) => rich(id)), rich("after")],
+      groups: [{ blockIds: groupIds }],
+    });
+    const groupSlide = slides.find((s) => s.blockIds.includes("g0"))!;
+    expect(groupSlide.blockIds).toEqual(groupIds);
+  });
+
+  it("каждый блок попадает ровно на один слайд, порядок сохраняется", () => {
+    const blocks = [rich("b1"), q("q1"), heading("h1"), q("q2"), pageBreak("pb"), rich("b2")];
+    const slides = paginateMaterial({ blocks });
+    const flat = slides.flatMap((s) => s.blockIds);
+    expect(flat).toEqual(["b1", "q1", "h1", "q2", "b2"]);
+  });
+
+  it("пустой материал — ноль слайдов", () => {
+    expect(paginateMaterial({ blocks: [] })).toEqual([]);
+  });
+
+  it("slideIndexForBlock находит слайд по id блока, иначе 0", () => {
+    const slides = paginateMaterial({ blocks: [rich("b1"), heading("h1"), rich("b2")] });
+    expect(slideIndexForBlock(slides, "b1")).toBe(0);
+    expect(slideIndexForBlock(slides, "b2")).toBe(1);
+    expect(slideIndexForBlock(slides, "нет-такого")).toBe(0);
+    expect(slideIndexForBlock(slides, null)).toBe(0);
   });
 });
 

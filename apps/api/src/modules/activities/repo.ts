@@ -1,7 +1,13 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { activities, materials, materialVersions, responses } from "../../db/schema.js";
-import type { QuestionResponse } from "@school/shared";
+import {
+  activities,
+  materialAnnotations,
+  materials,
+  materialVersions,
+  responses,
+} from "../../db/schema.js";
+import type { AnnotationStroke, QuestionResponse } from "@school/shared";
 
 /**
  * Активность вместе с координатами материала (Э8.2: `activities` ссылается
@@ -80,6 +86,49 @@ export async function markReviewed(id: string): Promise<Date> {
     .where(eq(activities.id, id))
     .returning({ reviewedAt: activities.reviewedAt });
   return row!.reviewedAt!;
+}
+
+// ─── Э13: пометки учителя поверх материала ученика ─────────────────────────
+
+export async function loadAnnotations(
+  activityId: string,
+  participantId: string,
+): Promise<{ strokes: AnnotationStroke[]; updatedAt: Date } | null> {
+  const rows = await db
+    .select({ strokes: materialAnnotations.strokes, updatedAt: materialAnnotations.updatedAt })
+    .from(materialAnnotations)
+    .where(
+      and(
+        eq(materialAnnotations.activityId, activityId),
+        eq(materialAnnotations.participantId, participantId),
+      ),
+    )
+    .limit(1);
+  const row = rows[0];
+  return row ? { strokes: row.strokes as AnnotationStroke[], updatedAt: row.updatedAt } : null;
+}
+
+export async function saveAnnotations(input: {
+  activityId: string;
+  participantId: string;
+  strokes: AnnotationStroke[];
+  updatedBy: string;
+}): Promise<Date> {
+  const [row] = await db
+    .insert(materialAnnotations)
+    .values({
+      activityId: input.activityId,
+      participantId: input.participantId,
+      strokes: input.strokes,
+      updatedBy: input.updatedBy,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: [materialAnnotations.activityId, materialAnnotations.participantId],
+      set: { strokes: input.strokes, updatedBy: input.updatedBy, updatedAt: new Date() },
+    })
+    .returning({ updatedAt: materialAnnotations.updatedAt });
+  return row!.updatedAt;
 }
 
 /** Наибольший номер попытки этого участника по этой активности; 0 — попыток ещё не было. */

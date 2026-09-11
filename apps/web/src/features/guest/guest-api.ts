@@ -36,7 +36,10 @@ export async function enterGuestLesson(
  */
 export async function restoreGuestSession(): Promise<GuestSession | null> {
   try {
-    const session = await apiFetch<GuestSession>("/guest/session");
+    // `_retry: false` — на 401 не дёргаем staff-`/auth/refresh`: это гостевой
+    // эндпоинт, персональный токен ему не поможет, а лишний перезапрос
+    // раскручивал бы эффект `RequireRoomAccess` (Э13-правка).
+    const session = await apiFetch<GuestSession>("/guest/session", {}, false);
     setGuestMode(true);
     useGuestSessionStore.getState().setSession(session);
     return session;

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import type { PublicMaterial } from "./materials.js";
+import type { ActivityProgress } from "./activities.js";
 
 /**
  * Э10 — Запись уроков (§10.4 ТЗ). Формат — общий для фронта и бэка, без
@@ -94,3 +96,43 @@ export type StartRecordingResponse = z.infer<typeof startRecordingResponseSchema
 
 export const stopRecordingResponseSchema = recordingSummarySchema;
 export type StopRecordingResponse = z.infer<typeof stopRecordingResponseSchema>;
+
+/**
+ * Э10.6 — recorder-токен. Минтится ОДИН раз при старте RoomComposite Egress
+ * вместе с LiveKit access-токеном (`apps/api/recordings/service.ts`) и уходит
+ * headless-Chrome шаблону записи (`/egress`) через `customBaseUrl` — тот же
+ * приём, что `GUEST_CANVAS_TOKEN_MARKER`, но recorder не прячет токен за
+ * куку (страница `/egress` не публичная, читает свой же query-параметр).
+ *
+ * Даёт read-only доступ ровно к тому, что нужно для композитинга кадра
+ * записи — WS-сигналам стейджа урока, доске (Hocuspocus, read-only),
+ * агрегированному виду текущего задания (`RecorderActivityView` ниже).
+ * НЕ персонал: не проходит `app.authenticate`/`requireRole`, не видит
+ * ключи ответов, не попадает в presence/посещаемость урока.
+ */
+export const recorderTokenPayloadSchema = z.object({
+  typ: z.literal("recorder"),
+  lessonId: z.string().uuid(),
+  /**
+   * `recordings.id` (наш собственный UUID, не LiveKit `egressId`) — минтится
+   * ДО вызова `startRoomCompositeEgress`, потому что сам `egressId` LiveKit
+   * выдаёт только в ответ на этот вызов, а токен должен уйти внутрь его
+   * параметров (`customBaseUrl`). Токен привязан к одному запуску записи.
+   */
+  recordingId: z.string().uuid(),
+});
+export type RecorderTokenPayload = z.infer<typeof recorderTokenPayloadSchema>;
+
+/**
+ * Ответ `GET /activities/:id/recorder-view` — «лист с заданиями» в записи
+ * урока, когда стейдж = activity. Решение пользователя (2026-09-11):
+ * учительский вид мониторинга — материал БЕЗ ключей ответов
+ * (`stripMaterialAnswerKeys`) + агрегированный прогресс класса, ни одного
+ * личного ответа ученика и ни одного ключа.
+ */
+export interface RecorderActivityView {
+  activityId: string;
+  materialTitle: string;
+  material: PublicMaterial;
+  progress: ActivityProgress;
+}

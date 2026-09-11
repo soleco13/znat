@@ -3,12 +3,15 @@ import type {
   ChatMessage,
   JoinLessonResponse,
   LessonMode,
+  LessonSettings,
   LessonStage,
   ListChatQuery,
+  ParticipantPermissions,
   ParticipantSnapshot,
   ServerRoomMessage,
   UpdateParticipantPermissionsRequest,
 } from "@school/shared";
+import { lessonSettingsSchema } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
 import * as canvasService from "../canvas/service.js";
 import type { LessonActor } from "../guests/service.js";
@@ -288,6 +291,23 @@ export async function getActiveLessonTrafficSnapshot(): Promise<
   return Promise.all([...activeLessons.keys()].map((id) => getLessonTrafficInfo(id)));
 }
 
+/**
+ * Права гостя-ученика при входе в урок — из настроек урока (`lesson.settings`,
+ * §1.4 план-ТЗ). Учитель поверх этого может выдать/забрать право конкретному
+ * ученику живым грантом (`updateParticipantPermissions`). `settings` —
+ * внешняя граница (jsonb в БД), парсим схемой и не доверяем форме.
+ */
+function guestPermissionsFromSettings(rawSettings: unknown): ParticipantPermissions {
+  const parsed = lessonSettingsSchema.safeParse(rawSettings ?? {});
+  const s: LessonSettings = parsed.success ? parsed.data : lessonSettingsSchema.parse({});
+  return {
+    canDraw: s.studentsCanDraw,
+    canSpeak: s.studentsCanSpeak,
+    canShareScreen: s.studentsCanShareScreen,
+    canPublishVideo: s.studentsCanPublishVideo,
+  };
+}
+
 export async function join(actor: LessonActor, lessonId: string): Promise<JoinLessonResponse> {
   const lesson = await assertMembership(actor, lessonId);
   // Э12 (§0 план-ТЗ): урок постоянный, без статуса — войти можно всегда,
@@ -315,7 +335,17 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
         connected: true,
         handRaised: false,
         pinned: false,
-        permissions: presence.defaultPermissions(actor.kind),
+        // Персонал — всё разрешено по роли. Гость-ученик — по настройкам
+        // урока (`lesson.settings`, §1.4 план-ТЗ: «права гостя выводятся
+        // отсюда + из живых грантов учителя»). Раньше настройки урока сюда
+        // не доходили вовсе — гость всегда получал `defaultPermissions`
+        // (всё запрещено), а чекбоксы «ученики включают камеру/экран» в
+        // диалоге урока ни на что не влияли. Живой грант учителя
+        // (`togglePermission`) поверх этого работает как и работал.
+        permissions:
+          actor.kind === "staff"
+            ? presence.defaultPermissions("staff")
+            : guestPermissionsFromSettings(lesson.settings),
         joinedAt: new Date().toISOString(),
         lastSeenAt: Date.now(),
       };
@@ -358,8 +388,6 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
     fullName: entry.fullName,
     kind: entry.kind,
     permissions: entry.permissions,
-    lessonStartsAt: lesson.startsAt,
-    lessonDurationMin: lesson.durationMin,
   });
 
   const lessonMode = await presence.getLessonMode(lessonId);
@@ -486,6 +514,17 @@ export async function setLessonMode(
  * открытия доски у всех»). Право то же, что у `setLessonMode` выше: только
  * admin или сам учитель этого урока — не методист (наблюдатель) и не гость.
  */
+/**
+ * Э10.6 — текущий стейдж без похода в БД/авторизации персонала: recorder
+ * шаблона записи (`rooms/ws.ts`) шлёт его сразу при подключении, чтобы не
+ * ждать следующего `stage_changed`, если запись стартовала уже при открытой
+ * доске. Сам факт «какой сейчас стейдж» не секрет (см. `isLessonRecordingActive`
+ * — тот же принцип, recordings/service.ts).
+ */
+export async function getCurrentLessonStage(lessonId: string): Promise<LessonStage> {
+  return presence.getLessonStage(lessonId);
+}
+
 export async function setLessonStage(
   schoolId: string,
   lessonId: string,

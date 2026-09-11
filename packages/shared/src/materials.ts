@@ -348,12 +348,28 @@ export type MaterialBlock = z.infer<typeof materialBlockSchema>;
 export const showFeedbackSchema = z.enum(["never", "immediate", "after_submit", "after_deadline"]);
 export type ShowFeedback = z.infer<typeof showFeedbackSchema>;
 
+/**
+ * Как ученик проходит материал (запрос пользователя, доп. Э13):
+ *  - `slides` — материал разбит на слайды (по `page_break` + авторазбивка,
+ *    см. `paginateMaterial`), ученик переключается между ними; учитель на
+ *    уроке открывает материал ученика на том слайде, где ученик сейчас;
+ *  - `scroll` — прежнее поведение: одна страница с прокруткой.
+ *
+ * Дефолт — `slides` (новый принцип работы материалов). Материалы Э8–Э13 без
+ * этого поля читаются как `slides` — `page_break` у них обычно нет, значит
+ * работает авторазбивка; кому нужно прежнее — переключают в настройках.
+ */
+export const materialLayoutSchema = z.enum(["scroll", "slides"]);
+export type MaterialLayout = z.infer<typeof materialLayoutSchema>;
+
 export const materialSettingsSchema = z.object({
   shuffleBlocks: z.boolean().default(false),
   showFeedback: showFeedbackSchema.default("after_submit"),
   attemptsAllowed: z.number().int().positive().default(1),
   /** Доля от максимального балла (0..1) для «зачёта» — используется в отчётах Э8.9, не блокирует сдачу. */
   passingScore: z.number().min(0).max(1).optional(),
+  /** Слайды или прокрутка (доп. Э13). Дефолт — `slides`. */
+  layout: materialLayoutSchema.default("slides"),
 });
 export type MaterialSettings = z.infer<typeof materialSettingsSchema>;
 
@@ -908,4 +924,174 @@ export function validateMaterialContent(material: Material): MaterialValidationI
   }
 
   return issues;
+}
+
+// ─── Разбивка материала на слайды (§6.2 ТЗ — блок `page_break`; доп. Э13) ──
+//
+// Материал в хранении остаётся ПЛОСКИМ списком блоков (`materialSchema.blocks`
+// — от него зависят движок проверки, ответы, разбор, аналитика). «Слайды» —
+// это чистая функция поверх того же списка, единый источник правды для
+// плеера ученика, превью редактора, вида учителя на уроке и слоя пометок.
+// Ничего не персистится: слайд — производное от блоков + настроек.
+
+/** Мягкий потолок вопросов на авто-слайд: дальше следующий вопрос уезжает на новый слайд. */
+export const SLIDE_SOFT_QUESTION_CAP = 3;
+/** Жёсткий потолок блоков на авто-слайд. */
+export const SLIDE_HARD_BLOCK_CAP = 8;
+
+/**
+ * Единица разбивки — либо один блок, либо целая группа-конструкция
+ * (`materialBlockGroupSchema`, её нельзя рвать между слайдами), либо
+ * `page_break` (граница, сам не рендерится). Используется и `paginateMaterial`
+ * (единицы из блоков), и редактором (единицы из узлов ProseMirror) — правило
+ * разбивки одно, `assignSlides`.
+ */
+export interface SlideUnit {
+  /** `page_break`: чистая граница, на слайде не отображается. */
+  isPageBreak: boolean;
+  /** Заголовок H1/H2 в начале — начинает новый слайд, если текущий не пуст. */
+  breakBefore: boolean;
+  /** Вклад в жёсткий потолок блоков. */
+  blockCount: number;
+  /** Сколько в единице вопросов (для мягкого потолка). */
+  questionCount: number;
+}
+
+/**
+ * Раскладывает единицы по слайдам (0-based номер на каждую единицу).
+ * Границы: явный `page_break`; заголовок H1/H2; мягкий потолок вопросов;
+ * жёсткий потолок блоков. Группа-конструкция — одна единица, между слайдами
+ * не рвётся (даже если сама больше потолка — тогда просто занимает свой
+ * слайд целиком).
+ */
+export function assignSlides(units: readonly SlideUnit[]): number[] {
+  const out: number[] = [];
+  let slide = 0;
+  let blocksInSlide = 0;
+  let questionsInSlide = 0;
+  let slideHasContent = false;
+
+  const nextSlide = () => {
+    slide += 1;
+    blocksInSlide = 0;
+    questionsInSlide = 0;
+    slideHasContent = false;
+  };
+
+  for (const u of units) {
+    if (u.isPageBreak) {
+      out.push(slide);
+      if (slideHasContent) nextSlide();
+      continue;
+    }
+
+    let breakNow = false;
+    if (slideHasContent) {
+      if (u.breakBefore) breakNow = true;
+      else if (questionsInSlide >= SLIDE_SOFT_QUESTION_CAP && u.questionCount > 0) breakNow = true;
+      else if (blocksInSlide + u.blockCount > SLIDE_HARD_BLOCK_CAP) breakNow = true;
+    }
+    if (breakNow) nextSlide();
+
+    out.push(slide);
+    blocksInSlide += u.blockCount;
+    questionsInSlide += u.questionCount;
+    slideHasContent = true;
+  }
+
+  return out;
+}
+
+/** Один слайд материала — id первого блока служит стабильным ключом слайда. */
+export interface MaterialSlide {
+  id: string;
+  blockIds: string[];
+  index: number;
+}
+
+/** Блок H1/H2 — начало смыслового раздела, отбивается на новый слайд. */
+function isHeadingBlock(block: { type: string; html?: string }): boolean {
+  return block.type === "rich_text" && /^\s*<h[12][\s/>]/i.test(block.html ?? "");
+}
+
+/**
+ * Разбивает материал на слайды. Принимает и `Material`, и `PublicMaterial`
+ * (у второго `groups` уже вырезаны — тогда группы просто не защищаются от
+ * разрыва, что для превью без ключей ответов не важно).
+ */
+export function paginateMaterial(input: {
+  blocks: readonly { type: string; id: string; html?: string }[];
+  groups?: readonly { blockIds: readonly string[] }[];
+}): MaterialSlide[] {
+  const groupIdxByBlock = new Map<string, number>();
+  (input.groups ?? []).forEach((g, gi) => {
+    for (const id of g.blockIds) groupIdxByBlock.set(id, gi);
+  });
+
+  const units: SlideUnit[] = [];
+  const unitBlockIds: string[][] = [];
+  const blocks = input.blocks;
+
+  let i = 0;
+  while (i < blocks.length) {
+    const block = blocks[i]!;
+
+    if (block.type === "page_break") {
+      units.push({ isPageBreak: true, breakBefore: false, blockCount: 0, questionCount: 0 });
+      unitBlockIds.push([]);
+      i += 1;
+      continue;
+    }
+
+    const gi = groupIdxByBlock.get(block.id);
+    if (gi !== undefined) {
+      const ids: string[] = [];
+      let questionCount = 0;
+      const first = block;
+      while (i < blocks.length && groupIdxByBlock.get(blocks[i]!.id) === gi) {
+        const b = blocks[i]!;
+        ids.push(b.id);
+        if (b.type === "question") questionCount += 1;
+        i += 1;
+      }
+      units.push({
+        isPageBreak: false,
+        breakBefore: isHeadingBlock(first),
+        blockCount: ids.length,
+        questionCount,
+      });
+      unitBlockIds.push(ids);
+      continue;
+    }
+
+    units.push({
+      isPageBreak: false,
+      breakBefore: isHeadingBlock(block),
+      blockCount: 1,
+      questionCount: block.type === "question" ? 1 : 0,
+    });
+    unitBlockIds.push([block.id]);
+    i += 1;
+  }
+
+  const slideOf = assignSlides(units);
+  const bySlide = new Map<number, string[]>();
+  slideOf.forEach((s, ui) => {
+    const ids = unitBlockIds[ui]!;
+    if (ids.length === 0) return;
+    const arr = bySlide.get(s) ?? [];
+    arr.push(...ids);
+    bySlide.set(s, arr);
+  });
+
+  return [...bySlide.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([, blockIds], index) => ({ id: blockIds[0]!, blockIds, index }));
+}
+
+/** Индекс слайда, на котором лежит блок (или 0, если не найден). */
+export function slideIndexForBlock(slides: readonly MaterialSlide[], blockId: string | null): number {
+  if (!blockId) return 0;
+  const found = slides.findIndex((s) => s.blockIds.includes(blockId));
+  return found >= 0 ? found : 0;
 }

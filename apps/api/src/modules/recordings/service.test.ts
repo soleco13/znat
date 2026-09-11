@@ -47,6 +47,10 @@ vi.mock("../../plugins/env.js", () => ({
     RECORDING_RETENTION_DAYS: 90,
     RECORDING_URL_TTL_SEC: 3600,
     RECORDING_EGRESS_TEMPLATE_URL: undefined,
+    // Э10.6 — не мокаем recorder-auth/service.js целиком (он «чужой»
+    // модуль, но чистый: без сторонних импортов, см. его докстринг), просто
+    // даём ему настоящий секрет, чтобы signRecorderToken не молчал на пустом.
+    JWT_RECORDER_SECRET: "test-recorder-secret-at-least-32-characters",
   },
 }));
 
@@ -124,6 +128,16 @@ describe("startLessonRecording (Э10.3, §10.4 ТЗ)", () => {
     expect(inserted.storageKey).toMatch(/\.mp4$/);
     expect(inserted.egressId).toBe("EG_1");
     expect(res.status).toBe("starting");
+  });
+
+  it("Э10.6: передаёт lessonId и recorder-токен в шаблон записи", async () => {
+    await service.startLessonRecording(teacherUser, LESSON);
+    const call = egressMock.startRoomRecording.mock.calls[0]![0] as {
+      templateQuery?: Record<string, string>;
+    };
+    expect(call.templateQuery?.lessonId).toBe(LESSON);
+    expect(typeof call.templateQuery?.recorderToken).toBe("string");
+    expect(call.templateQuery?.recorderToken?.split(".")).toHaveLength(3); // JWT-форма
   });
 
   it("не поднимает второй egress, если запись урока уже идёт", async () => {

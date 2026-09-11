@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/shared/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/shared/ui/accordion";
 import { Button } from "@/shared/ui/button";
 import { QuestionPlayer } from "./QuestionPlayer.js";
+import { SlideDeck } from "./SlideDeck.js";
 import { submitActivity } from "./activity-api.js";
 import { getAssetUrl } from "./materials-api.js";
 import { useActivityAutosave, type AutosaveStatus } from "./useActivityAutosave.js";
@@ -24,11 +25,20 @@ export function MaterialPlayer({
   autosaveActivityId = null,
   onResponseChange,
   disabled = false,
+  slideOverlay,
+  initialSlideBlockId = null,
+  onSlideChange,
 }: {
   activity: MyActivity;
   autosaveActivityId?: string | null;
   onResponseChange?: (questionId: string, response: QuestionResponse) => void;
   disabled?: boolean;
+  /** Слой пометок учителя — рендерится поверх текущего слайда / всей колонки. */
+  slideOverlay?: React.ReactNode;
+  /** Открыть на слайде с этим блоком (доп. Э13). */
+  initialSlideBlockId?: string | null;
+  /** Смена слайда — id первого блока слайда (для отправки позиции на сервер). */
+  onSlideChange?: (firstBlockId: string, index: number) => void;
 }) {
   const [responses, setResponses] = useState<Record<string, QuestionResponse>>(
     () => ({ ...activity.savedResponses }),
@@ -63,30 +73,58 @@ export function MaterialPlayer({
 
   const locked = disabled || submittedAt !== null;
 
-  return (
-    <div className="space-y-5">
-      <MaterialHeader
-        activity={activity}
-        autosaveStatus={autosaveActivityId ? autosave.status : null}
+  // `data-annot-block` — якорь для слоя пометок учителя (Э13): у учителя и
+  // ученика материал рендерится разной вёрсткой, Y-координаты штрихов
+  // привязаны к верху блока, а не к верху контента.
+  const blockNode = (block: Block) => (
+    <div data-annot-block={block.id}>
+      <BlockView
+        block={block}
+        response={responses[block.id]}
+        onChange={handleChange}
+        disabled={locked}
       />
+    </div>
+  );
+
+  const header = (
+    <MaterialHeader
+      activity={activity}
+      autosaveStatus={autosaveActivityId ? autosave.status : null}
+    />
+  );
+  const submitBar = autosaveActivityId ? (
+    <SubmitBar
+      submittedAt={submittedAt}
+      result={submitResult}
+      submitting={submitting}
+      error={submitError}
+      onSubmit={handleSubmit}
+    />
+  ) : null;
+
+  if (activity.material.settings.layout === "slides") {
+    return (
+      <SlideDeck
+        blocks={activity.material.blocks}
+        renderBlock={blockNode}
+        header={header}
+        footer={submitBar ?? undefined}
+        overlay={slideOverlay}
+        initialBlockId={initialSlideBlockId}
+        onSlideChange={onSlideChange}
+      />
+    );
+  }
+
+  return (
+    <div className="relative space-y-5">
+      {header}
       {activity.material.blocks.map((block) => (
-        <BlockView
-          key={block.id}
-          block={block}
-          response={responses[block.id]}
-          onChange={handleChange}
-          disabled={locked}
-        />
+        <div key={block.id}>{blockNode(block)}</div>
       ))}
-      {autosaveActivityId && (
-        <SubmitBar
-          submittedAt={submittedAt}
-          result={submitResult}
-          submitting={submitting}
-          error={submitError}
-          onSubmit={handleSubmit}
-        />
-      )}
+      {submitBar}
+      {slideOverlay}
     </div>
   );
 }

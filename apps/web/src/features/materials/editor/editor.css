@@ -147,3 +147,23 @@
   font-size: 14px;
   line-height: 1.5;
 }
+
+/* Метки границ слайдов (доп. Э13) — тонкая линия + подпись «Слайд N».
+   Первый маркер (в самом верху документа) без отступа сверху. */
+.slide-marker {
+  position: relative;
+  margin: 1.5rem 0 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--c-border-solid);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-primary);
+  user-select: none;
+}
+.ProseMirror > .slide-marker:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}

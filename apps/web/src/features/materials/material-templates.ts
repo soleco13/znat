@@ -1522,7 +1522,7 @@ export function buildBlankMaterial(meta: {
     grades: meta.grades,
     topic: meta.topic?.trim() || undefined,
     tags: [],
-    settings: { shuffleBlocks: false, showFeedback: "after_submit", attemptsAllowed: 1 },
+    settings: { shuffleBlocks: false, showFeedback: "after_submit", attemptsAllowed: 1, layout: "slides" },
     blocks: [],
     groups: [],
   };

@@ -20,7 +20,7 @@ function materialWith(blocks: Material["blocks"]): Material {
     grades: [8],
     tags: [],
     groups: [],
-    settings: { shuffleBlocks: false, showFeedback: "after_submit", attemptsAllowed: 1 },
+    settings: { shuffleBlocks: false, showFeedback: "after_submit", attemptsAllowed: 1, layout: "slides" },
     blocks,
   };
 }

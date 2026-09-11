@@ -113,6 +113,11 @@ const SETTINGS_FIELDS: { key: keyof LessonSettings; label: string; hint: string 
   { key: "autoRecord", label: "Автозапись урока", hint: "Начинать запись при первом входе персонала" },
   { key: "studentsCanDraw", label: "Ученики рисуют на доске", hint: "Без отдельного разрешения учителя" },
   {
+    key: "studentsCanSpeak",
+    label: "Ученики включают микрофон",
+    hint: "Все сразу, без разрешения учителя (лимит «не более 4» при этом не действует)",
+  },
+  {
     key: "studentsCanPublishVideo",
     label: "Ученики включают камеру",
     hint: "Максимум 360p, без отдельного разрешения",

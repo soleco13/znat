@@ -12,6 +12,7 @@ import errorsPlugin from "./plugins/errors.js";
 import authenticatePlugin from "./plugins/authenticate.js";
 import rbacPlugin from "./plugins/rbac.js";
 import lessonAccessPlugin from "./plugins/lesson-access.js";
+import recorderAccessPlugin from "./plugins/recorder-access.js";
 import metricsPlugin from "./plugins/metrics.js";
 import { initErrorReporting } from "./plugins/sentry.js";
 import authRoutes from "./modules/auth/routes.js";
@@ -62,6 +63,7 @@ export function buildServer() {
   app.register(authenticatePlugin);
   app.register(rbacPlugin);
   app.register(lessonAccessPlugin);
+  app.register(recorderAccessPlugin);
   app.register(metricsPlugin);
 
   app.get("/health", async () => ({ status: "ok" }));

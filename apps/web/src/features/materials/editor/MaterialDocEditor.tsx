@@ -15,7 +15,7 @@ import {
   Type,
   Underline,
 } from "lucide-react";
-import type { Material } from "@school/shared";
+import type { Material, MaterialLayout } from "@school/shared";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -31,6 +31,7 @@ import { baseExtensions } from "./extensions.js";
 import { ConstructPickerDialog } from "./construct-picker.js";
 import { docToMaterial, materialToDoc } from "./serialize.js";
 import { SlashCommand } from "./slash-menu.js";
+import { SlideMarkers } from "./slide-markers.js";
 import { SuggestConstruct } from "./suggest-construct.js";
 import "./editor.css";
 
@@ -60,9 +61,12 @@ const SAVE_DEBOUNCE_MS = 600;
 export function MaterialDocEditor({
   material,
   onChange,
+  layout,
 }: {
   material: Material;
   onChange: (m: Material) => void;
+  /** `slides` — показывать метки границ слайдов прямо в полотне (доп. Э13). */
+  layout: MaterialLayout;
 }) {
   const [constructInsert, setConstructInsert] = useState<
     ((c: MaterialConstruct) => void) | null
@@ -106,6 +110,7 @@ export function MaterialDocEditor({
         },
       }),
       SuggestConstruct,
+      ...(layout === "slides" ? [SlideMarkers] : []),
     ],
     content: materialToDoc(material),
     editorProps: {

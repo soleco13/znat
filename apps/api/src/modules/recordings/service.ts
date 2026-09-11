@@ -12,6 +12,7 @@ import { AppError } from "../../plugins/errors.js";
 import { env } from "../../plugins/env.js";
 import * as lessonsService from "../lessons/service.js";
 import * as roomsService from "../rooms/service.js";
+import { signRecorderToken } from "../recorder-auth/service.js";
 import { getSignedFileUrl, deleteFile } from "../storage/service.js";
 import type { EgressInfo } from "livekit-server-sdk";
 import * as egress from "./egress-client.js";
@@ -108,6 +109,11 @@ export async function startLessonRecording(
 
   const id = randomUUID();
   const storageKey = `recordings/${user.schoolId}/${lessonId}/${id}.mp4`;
+  // Recorder-токен минтится ДО старта egress: `id` (наш recordingId) уже
+  // известен, а сам `egressId` LiveKit выдаёт только в ответ на этот вызов —
+  // токен должен уйти внутрь его параметров (customBaseUrl), см. схему в
+  // packages/shared/src/recordings.ts.
+  const recorderToken = await signRecorderToken(lessonId, id);
 
   let started: egress.StartedRecording;
   try {
@@ -115,6 +121,7 @@ export async function startLessonRecording(
       roomName: livekitRoom,
       storageKey,
       absoluteFilepath: absoluteFilepath(storageKey),
+      templateQuery: { lessonId, recorderToken },
     });
   } catch {
     throw new AppError(502, "egress_unavailable", "Сервис записи не ответил, попробуйте ещё раз");

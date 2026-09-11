@@ -144,6 +144,8 @@ export function Board({
   canDraw,
   decks = [],
   onClose,
+  connectionToken,
+  readOnlyChrome = false,
 }: {
   lessonId: string;
   canDraw: boolean;
@@ -151,6 +153,20 @@ export function Board({
   decks?: Deck[];
   /** Э12.7 §6.5: «Скрыть доску» в шапке доски (у учителя) — возврат к плиткам. */
   onClose?: () => void;
+  /**
+   * Э10.6 — шаблон записи (`/egress`) вне `RequireAuth`: там нет ни
+   * `useAuthStore`, ни гостевой сессии, подключаться нечем. Recorder-токен
+   * приходит извне и идёт в Hocuspocus вместо access-токена/гостевого
+   * маркера. Для обычного урока не передаётся — поведение не меняется.
+   */
+  connectionToken?: string;
+  /**
+   * Э10.6 — шаблон записи: без панели страниц/меню «Ещё»/кнопки «Скрыть
+   * доску» (recorder ни с чем из этого не взаимодействует, а в кадр записи
+   * чужая UI-хром попадать не должна). Сам Excalidraw уже read-only через
+   * `canDraw={false}` → `viewModeEnabled`; это только про наш тулбар поверх.
+   */
+  readOnlyChrome?: boolean;
 }) {
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null);
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -190,7 +206,7 @@ export function Board({
     // литералом-маркером (`HocuspocusProvider` не шлёт auth-сообщение при
     // пустом токене), доступ проверяется по httpOnly-куке `guest_session`
     // в `canvas/hocuspocus.ts#resolveCanvasConnectionActor`.
-    const token = accessToken ?? (isGuest ? GUEST_CANVAS_TOKEN_MARKER : null);
+    const token = connectionToken ?? accessToken ?? (isGuest ? GUEST_CANVAS_TOKEN_MARKER : null);
     if (!token) return;
 
     const doc = new Y.Doc();
@@ -210,7 +226,7 @@ export function Board({
       nextProvider.destroy();
       doc.destroy();
     };
-  }, [lessonId, accessToken, isGuest]);
+  }, [lessonId, accessToken, isGuest, connectionToken]);
 
   useEffect(() => {
     if (!ydoc || !provider) return;
@@ -943,7 +959,7 @@ export function Board({
           kind={activeMeta?.kind ?? "blank"}
           slide={activeMeta?.slide ?? null}
         />
-        {boardChrome}
+        {!readOnlyChrome && boardChrome}
         {(importNote || uploadError || pageElementCount >= PAGE_ELEMENT_WARN_AT) && (
           <div className="pointer-events-none absolute inset-x-3 top-16 z-10 flex flex-col items-center gap-1 text-center">
             {importNote && (

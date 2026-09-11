@@ -28,10 +28,20 @@ export const lessonSettingsSchema = z.object({
   autoRecord: z.boolean().default(false),
   /** Ученикам разрешено рисовать на доске без индивидуального гранта учителя. */
   studentsCanDraw: z.boolean().default(false),
+  /**
+   * Ученики могут включать микрофон без индивидуального гранта учителя.
+   * По умолчанию ВЫКЛ: §5.2 ТЗ — «не более 4 включённых микрофонов учеников
+   * одновременно», а лимит проверяется только при выдаче права
+   * (`updatePermissions#countActiveStudentMics`), не при входе. Пока лимит
+   * не переехал на вебхук track_published (как демонстрация экрана, Э7.2),
+   * массовая выдача canSpeak на входе его обходит. Учитель может включить
+   * этот флаг для конкретного урока осознанно.
+   */
+  studentsCanSpeak: z.boolean().default(false),
   /** Ученики могут публиковать камеру (максимум 360p, §5.2 ТЗ) без индивидуального гранта. */
-  studentsCanPublishVideo: z.boolean().default(false),
+  studentsCanPublishVideo: z.boolean().default(true),
   /** Ученики могут демонстрировать экран без индивидуального гранта. */
-  studentsCanShareScreen: z.boolean().default(false),
+  studentsCanShareScreen: z.boolean().default(true),
 });
 export type LessonSettings = z.infer<typeof lessonSettingsSchema>;
 

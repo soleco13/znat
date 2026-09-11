@@ -936,7 +936,7 @@ const material: Material = {
   grades: [5, 6, 7, 8, 9],
   topic: "Обзор конструкций и типов заданий редактора материалов",
   tags: ["витрина", "конструкции", "демонстрация"],
-  settings: { shuffleBlocks: false, showFeedback: "after_submit", attemptsAllowed: 5 },
+  settings: { shuffleBlocks: false, showFeedback: "after_submit", attemptsAllowed: 5, layout: "slides" },
   blocks,
   groups: [],
 };

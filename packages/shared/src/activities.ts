@@ -78,6 +78,19 @@ export interface SaveResponseResult {
   savedAt: string;
 }
 
+/**
+ * Тело `PUT /activities/:id/my/position` (доп. Э13 — материал слайдами).
+ * Ученик сообщает, на каком слайде он сейчас (id первого блока слайда —
+ * переживает перенарезку, в отличие от индекса). Хранится как «кеш, который
+ * можно потерять» (Redis, TTL) — потеря просто открывает учителю материал с
+ * первого слайда. `blockId` не обязан существовать в материале: клиент и
+ * сервер к нему толерантны (устаревшую позицию плеер сам сдвинет на 0).
+ */
+export const saveActivityPositionRequestSchema = z.object({
+  blockId: z.string().min(1).max(64),
+});
+export type SaveActivityPositionRequest = z.infer<typeof saveActivityPositionRequestSchema>;
+
 // ─── Панель прогресса класса (Э8.8, §7.3 ТЗ) ──────────────────────────────
 
 /**
@@ -99,6 +112,8 @@ export interface StudentProgress {
   total: number;
   /** ISO-момент последнего сохранения ответа, либо null. */
   lastActivityAt: string | null;
+  /** Доп. Э13: id блока-начала слайда, на котором ученик сейчас (или null). */
+  currentBlockId: string | null;
 }
 
 /** Ответ `GET /activities/:id/progress` — живая картина класса для учителя. */
@@ -127,6 +142,12 @@ export interface ActivityStudentAttempt {
   total: number;
   material: Material;
   responses: Record<string, QuestionResponse>;
+  /**
+   * Доп. Э13: id блока-начала слайда, на котором ученик работает прямо
+   * сейчас (или null — не сообщал / позиция утекла из кеша). Учитель
+   * открывает материал ученика с этого слайда.
+   */
+  currentBlockId: string | null;
 }
 
 // ─── Аналитика по вопросу (Э8.9, §7.3 ТЗ: «17 из 24 выбрали B») ────────────
@@ -208,6 +229,12 @@ export interface MyActivity {
   savedResponses: Record<string, SavedResponse["response"]>;
   /** ISO-момент сабмита ЭТОЙ попытки (Э8.12), либо `null` — ещё не сдана, черновики можно менять. */
   submittedAt: string | null;
+  /**
+   * Доп. Э13: id блока-начала слайда, на котором ученик остановился в прошлый
+   * раз (или null) — плеер открывает материал на этом слайде. «Кеш» с TTL:
+   * потеря просто открывает с первого слайда.
+   */
+  currentBlockId: string | null;
 }
 
 // ─── Сабмит (§8 ТЗ: `POST /activities/:id/submit`) ─────────────────────────

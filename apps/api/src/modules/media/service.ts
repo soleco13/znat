@@ -2,22 +2,34 @@ import { AccessToken, RoomServiceClient, TrackSource } from "livekit-server-sdk"
 import type { MediaConnection, ParticipantKind, ParticipantPermissions } from "@school/shared";
 import { env } from "../../plugins/env.js";
 
-const GRACE_AFTER_END_MS = 15 * 60 * 1000;
-const MIN_TTL_SECONDS = 60;
-
 // `LIVEKIT_URL` — серверный адрес (ws://.../wss://...), SDK сам меняет схему на http(s)
 // при твёрп-запросах (проверено по исходнику livekit-server-sdk/src/TwirpRPC.ts).
 const roomService = new RoomServiceClient(env.LIVEKIT_URL, env.LIVEKIT_API_KEY, env.LIVEKIT_API_SECRET);
 
 /**
- * TTL = время до конца урока + 15 минут (§8.4 ТЗ). Читать построчно (§1.2
- * CLAUDE.md) — токен даёт доступ к аудио, ошибка здесь тихо не проявится.
+ * TTL токена LiveKit. Читать построчно (§1.2 CLAUDE.md) — токен протухнет
+ * посреди урока, и это проявится не сразу: соединение живёт, но первая же
+ * переподписка/реконнект/ICE-restart с истёкшим `exp` рвёт публикацию
+ * камеры/микрофона/демонстрации.
+ *
+ * До Э12 считался от `starts_at + duration + 15-минутный грейс` (§8.4 ТЗ,
+ * уроки с расписанием). Э12 сделал урок ПОСТОЯННЫМ: он создаётся один раз,
+ * `starts_at` = момент создания и почти всегда в прошлом, поэтому старая
+ * формула схлопывалась в минимум (60 с) — токен жил минуту после входа.
+ *
+ * §Безопасность ТЗ (обновлено под Э12): «TTL токена соответствует TTL
+ * сессии (гость) или живёт до выхода (персонал)»:
+ *  - гость — до конца его сессии (`GUEST_SESSION_TTL_HOURS`); истекла сессия
+ *    — перезаход по ссылке, новый токен;
+ *  - персонал — refresh медиа-токена не предусмотрен, поэтому один щедрый
+ *    TTL, покрывающий любой реальный урок «до выхода».
  */
-export function ttlSecondsUntilLessonGraceEnd(lessonStartsAt: Date, lessonDurationMin: number): number {
-  const scheduledEndMs = lessonStartsAt.getTime() + lessonDurationMin * 60_000;
-  const expiresAtMs = scheduledEndMs + GRACE_AFTER_END_MS;
-  const secondsLeft = Math.floor((expiresAtMs - Date.now()) / 1000);
-  return Math.max(MIN_TTL_SECONDS, secondsLeft);
+const STAFF_MEDIA_TOKEN_TTL_SECONDS = 12 * 60 * 60;
+
+export function mediaTokenTtlSeconds(kind: ParticipantKind): number {
+  return kind === "staff"
+    ? STAFF_MEDIA_TOKEN_TTL_SECONDS
+    : env.GUEST_SESSION_TTL_HOURS * 60 * 60;
 }
 
 /**
@@ -68,13 +80,11 @@ export async function createParticipantConnection(params: {
   fullName: string;
   kind: ParticipantKind;
   permissions: ParticipantPermissions;
-  lessonStartsAt: Date;
-  lessonDurationMin: number;
 }): Promise<MediaConnection> {
   const at = new AccessToken(env.LIVEKIT_API_KEY, env.LIVEKIT_API_SECRET, {
     identity: params.userId,
     name: params.fullName,
-    ttl: ttlSecondsUntilLessonGraceEnd(params.lessonStartsAt, params.lessonDurationMin),
+    ttl: mediaTokenTtlSeconds(params.kind),
     // Э6.1 / Э12.4: вид участника (`staff | guest`) как LiveKit-атрибут —
     // клиенту (`TeacherVideoTile`) нужно отличить камеру персонала от камеры
     // ученика с granted canPublishVideo без похода за отдельным WS

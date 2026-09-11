@@ -55,6 +55,13 @@ const envSchema = z.object({
    * (CLAUDE.md) — обычно `${PUBLIC_ORIGIN}/egress`.
    */
   RECORDING_EGRESS_TEMPLATE_URL: z.string().url().optional(),
+  /**
+   * Э10.6 — подпись recorder-токена (шаблон записи `/egress`: WS-стейдж,
+   * read-only доска, агрегированный вид задания). Отдельный секрет от
+   * `JWT_GUEST_SECRET`/`JWT_ACCESS_SECRET` — компрометация одного класса
+   * токенов не должна давать другой (тот же принцип, что у гостевого).
+   */
+  JWT_RECORDER_SECRET: z.string().min(32),
 });
 
 export const env = envSchema.parse(process.env);

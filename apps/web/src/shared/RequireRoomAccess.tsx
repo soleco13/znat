@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { GraduationCap } from "lucide-react";
 
-import { refreshAccessToken } from "./api-client.js";
+import { refreshAccessToken, setGuestMode } from "./api-client.js";
 import { useAuthStore } from "./auth-store.js";
 import { useGuestSessionStore } from "@/features/guest/guest-session-store";
 import { restoreGuestSession } from "@/features/guest/guest-api";
@@ -23,24 +23,46 @@ export function RequireRoomAccess({ children }: { children: ReactNode }) {
   const guestSession = useGuestSessionStore((s) => s.session);
 
   const hasGuest = guestSession?.lessonId === id;
-  const [access, setAccess] = useState<Access>(
-    accessToken || hasGuest ? "allowed" : "checking",
-  );
+  // Гостевая сессия ИМЕННО этого урока — приоритетнее staff-сессии в том же
+  // браузере (см. `use-room-identity.ts`): человек открыл ссылку ученика,
+  // он тут ученик. `guestMode` в api-клиенте выставляем под выбранный путь,
+  // чтобы staff-Bearer не «перебил» гостевую куку на сервере.
+  const [access, setAccess] = useState<Access>(hasGuest ? "allowed" : "checking");
 
   useEffect(() => {
-    if (accessToken || hasGuest) {
-      setAccess("allowed");
-      return;
-    }
     let cancelled = false;
     (async () => {
-      if (await refreshAccessToken()) {
-        if (!cancelled) setAccess("allowed");
+      // 1. Гостевая сессия ЭТОГО урока уже в сторе — человек тут ученик, точка.
+      if (hasGuest) {
+        setGuestMode(true);
+        setAccess("allowed");
         return;
       }
+      // 2. Уже есть staff-токен в памяти — он сотрудник (гостевую для этого
+      //    урока мы бы поймали шагом 1). БЕЗ сетевых проб: `refreshAccessToken`
+      //    меняет `accessToken` → эффект перезапустился бы по кругу.
+      if (accessToken) {
+        setGuestMode(false);
+        setAccess("allowed");
+        return;
+      }
+      // 3. Ни того, ни другого (перезагрузка / прямой переход по URL). Сперва
+      //    пробуем восстановить гостя ЭТОГО урока — только потом staff-путь
+      //    (иначе `refreshAccessToken` по staff-куке увёл бы гостя в staff).
       const restored = await restoreGuestSession();
       if (cancelled) return;
-      setAccess(restored && restored.lessonId === id ? "allowed" : "denied");
+      if (restored && restored.lessonId === id) {
+        setAccess("allowed");
+        return;
+      }
+      // `restoreGuestSession` мог поднять гостевую сессию ДРУГОГО урока — она
+      // к этой комнате не относится, убираем, чтобы `useRoomIdentity` не
+      // принял её за личность здесь.
+      useGuestSessionStore.getState().clearSession();
+      setGuestMode(false);
+      const ok = await refreshAccessToken();
+      if (cancelled) return;
+      setAccess(ok ? "allowed" : "denied");
     })();
     return () => {
       cancelled = true;

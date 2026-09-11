@@ -50,6 +50,9 @@ import {
   type GradingQueueItem,
   type GradeManualResponseRequest,
   type GradeManualResponseResult,
+  type MaterialAnnotationsResponse,
+  type SaveAnnotationsRequest,
+  type RecorderActivityView,
 } from "@school/shared";
 import { buildDistribution, formatResponseText } from "./analytics.js";
 import { AppError } from "../../plugins/errors.js";
@@ -167,6 +170,21 @@ async function loadActivityForActor(actor: LessonActor, activityId: string): Pro
   return activity;
 }
 
+/**
+ * Активность, привязанная к уроку по `lessonId`, а не по школе — для
+ * recorder'а (Э10.6): у него нет `schoolId` (это не персонал), только
+ * `lessonId` из подписанного recorder-токена. Чужой урок — 404, тот же
+ * приём, что и `loadActivityForSchool` (наружу не подтверждаем, что
+ * активность вообще существует).
+ */
+async function loadActivityForLesson(activityId: string, lessonId: string): Promise<ActivityRow> {
+  const row = await repo.findActivityById(activityId);
+  if (!row || row.lessonId !== lessonId) {
+    throw new AppError(404, "activity_not_found", "Задание не найдено");
+  }
+  return row;
+}
+
 /** Только гость-ученик проходит задание (персонал его запускает/разбирает). */
 function assertGuest(actor: LessonActor): asserts actor is Extract<LessonActor, { kind: "guest" }> {
   if (actor.kind !== "guest") {
@@ -240,7 +258,10 @@ export async function getMyActivity(actor: LessonActor, activityId: string): Pro
   const savedResponses: MyActivity["savedResponses"] = {};
   for (const r of saved) savedResponses[r.questionId] = r.response;
 
-  const submittedAt = await repo.attemptSubmittedAt(attemptId);
+  const [submittedAt, currentBlockId] = await Promise.all([
+    repo.attemptSubmittedAt(attemptId),
+    redis.get(attemptPositionKey(attemptId)),
+  ]);
 
   return {
     activityId,
@@ -252,6 +273,7 @@ export async function getMyActivity(actor: LessonActor, activityId: string): Pro
     material: publicMaterial,
     savedResponses,
     submittedAt: submittedAt ? submittedAt.toISOString() : null,
+    currentBlockId: currentBlockId ?? null,
   };
 }
 
@@ -336,6 +358,50 @@ function attemptStartKey(attemptId: string): string {
   return `activity:attempt-start:${attemptId}`;
 }
 
+/** Ключ «на каком слайде ученик» (доп. Э13) — кеш, потеря = открыть с первого слайда. */
+function attemptPositionKey(attemptId: string): string {
+  return `activity:attempt-pos:${attemptId}`;
+}
+
+/** TTL позиции слайда — как у метки старта попытки: попытка живёт не дольше. */
+const ATTEMPT_POSITION_TTL_SECONDS = ATTEMPT_START_TTL_SECONDS;
+
+/**
+ * Ученик сообщает, на каком слайде материала он сейчас (доп. Э13, материал
+ * слайдами). `blockId` — id первого блока слайда (переживает перенарезку).
+ * Хранится в Redis с TTL — «кеш, который можно потерять» (§ Железные
+ * правила): потеря просто открывает учителю материал с первого слайда.
+ */
+export async function saveMyPosition(
+  actor: LessonActor,
+  activityId: string,
+  blockId: string,
+): Promise<void> {
+  assertGuest(actor);
+  const activity = await loadActivityForActor(actor, activityId);
+  const participant = await roomsService.ensureParticipant(actor, activity.lessonId);
+  const { attemptId } = await resolveAttempt(activityId, participant.id);
+  await redis.set(attemptPositionKey(attemptId), blockId, "EX", ATTEMPT_POSITION_TTL_SECONDS);
+}
+
+/** Позиции слайда перечисленных участников (по первой попытке — как `openedParticipantIds`). */
+async function participantPositions(
+  activityId: string,
+  participantIds: string[],
+): Promise<Map<string, string>> {
+  if (participantIds.length === 0) return new Map();
+  const keys = participantIds.map((pid) =>
+    attemptPositionKey(deriveAttemptId(activityId, pid, 1)),
+  );
+  const values = await redis.mget(keys);
+  const positions = new Map<string, string>();
+  participantIds.forEach((pid, i) => {
+    const v = values[i];
+    if (v != null) positions.set(pid, v);
+  });
+  return positions;
+}
+
 /** Момент старта попытки — точка отсчёта таймера. Пишется один раз (NX), переживает перезагрузку; потеря Redis = таймер стартует заново (deadline в БД абсолютный, не страдает). */
 async function ensureAttemptStart(attemptId: string): Promise<string> {
   const key = attemptStartKey(attemptId);
@@ -349,18 +415,13 @@ async function ensureAttemptStart(attemptId: string): Promise<string> {
 const STUCK_AFTER_MS = 3 * 60 * 1000;
 
 /**
- * Живая картина класса по заданию (Э8.8, §7.3 ТЗ) — учителю. Не пуш, а
- * опрос: учитель тянет этот эндпоинт раз в несколько секунд (панель
- * прогресса). Э12.5: ростер — участники-ученики урока (`lesson_participants`,
- * введённые имена), а не список группы.
+ * Общий подсчёт «живой картины класса» — используется и `getProgress`
+ * (учителю), и `getRecorderView` (recorder шаблона записи, Э10.6). Сама
+ * агрегация не содержит проверки прав — вызывающий обязан авторизовать
+ * ДО вызова (см. оба места ниже).
  */
-export async function getProgress(
-  user: AccessTokenPayload,
-  activityId: string,
-): Promise<ActivityProgress> {
-  const activity = await loadActivityForSchool(activityId, user.schoolId);
-  await assertActivityOwner(user, activity);
-
+async function computeActivityProgress(activity: ActivityRow): Promise<ActivityProgress> {
+  const activityId = activity.id;
   const [roster, stats, loaded] = await Promise.all([
     roomsService.listLessonParticipants(activity.lessonId),
     repo.answeredStatsByActivity(activityId),
@@ -370,10 +431,16 @@ export async function getProgress(
   const total = loaded.material.blocks.filter((b) => b.type === "question").length;
   const statByParticipant = new Map(stats.map((s) => [s.participantId, s]));
 
-  const opened = await openedParticipantIds(
-    activityId,
-    students.map((p) => p.id),
-  );
+  const [opened, positions] = await Promise.all([
+    openedParticipantIds(
+      activityId,
+      students.map((p) => p.id),
+    ),
+    participantPositions(
+      activityId,
+      students.map((p) => p.id),
+    ),
+  ]);
 
   const now = Date.now();
   const rows: StudentProgress[] = students.map((p) => {
@@ -402,10 +469,52 @@ export async function getProgress(
       answered,
       total,
       lastActivityAt: lastAt ? new Date(lastAt).toISOString() : null,
+      currentBlockId: positions.get(p.id) ?? null,
     };
   });
 
   return { activityId, total, students: rows };
+}
+
+/**
+ * Живая картина класса по заданию (Э8.8, §7.3 ТЗ) — учителю. Не пуш, а
+ * опрос: учитель тянет этот эндпоинт раз в несколько секунд (панель
+ * прогресса). Э12.5: ростер — участники-ученики урока (`lesson_participants`,
+ * введённые имена), а не список группы.
+ */
+export async function getProgress(
+  user: AccessTokenPayload,
+  activityId: string,
+): Promise<ActivityProgress> {
+  const activity = await loadActivityForSchool(activityId, user.schoolId);
+  await assertActivityOwner(user, activity);
+  return computeActivityProgress(activity);
+}
+
+/**
+ * Э10.6 — «лист с заданиями» в записи урока (шаблон `/egress`, только
+ * recorder-токен, см. plugins/recorder-access.ts). Решение пользователя
+ * (2026-09-11): учительский вид мониторинга — материал БЕЗ ключей ответов
+ * (`stripMaterialAnswerKeys`, тот же приём, что `getMyActivity`/§8.1 ТЗ) +
+ * агрегированный прогресс (`computeActivityProgress`, как у `getProgress`).
+ * НИ ОДНОГО личного ответа/ключа — читать построчно (CLAUDE.md: «ключи
+ * ответов никогда не уходят на клиент до сабмита», recorder — тоже клиент).
+ */
+export async function getRecorderView(
+  recorder: { lessonId: string; recordingId: string },
+  activityId: string,
+): Promise<RecorderActivityView> {
+  const activity = await loadActivityForLesson(activityId, recorder.lessonId);
+
+  const [loaded, progress] = await Promise.all([
+    materialsService.getMaterialVersion(activity.materialVersionId),
+    computeActivityProgress(activity),
+  ]);
+  // Сид — recordingId, не attemptId (у recorder'а нет попытки): детерминизм
+  // перемешивания вариантов ученику здесь не нужен, важно лишь, что ключей нет.
+  const material = stripMaterialAnswerKeys(loaded.material, recorder.recordingId);
+
+  return { activityId, materialTitle: loaded.material.title, material, progress };
 }
 
 /**
@@ -434,11 +543,12 @@ export async function getStudentAttempt(
   const attemptNumber = Math.max(await repo.maxAttemptNumber(activityId, participantId), 1);
   const attemptId = deriveAttemptId(activityId, participantId, attemptNumber);
 
-  const [loaded, saved, submittedAt, stats] = await Promise.all([
+  const [loaded, saved, submittedAt, stats, currentBlockId] = await Promise.all([
     materialsService.getMaterialVersion(activity.materialVersionId),
     repo.findResponsesByAttempt(attemptId),
     repo.attemptSubmittedAt(attemptId),
     repo.answeredStatsByActivity(activityId),
+    redis.get(attemptPositionKey(attemptId)),
   ]);
 
   const responses: Record<string, QuestionResponse> = {};
@@ -458,7 +568,80 @@ export async function getStudentAttempt(
     total,
     material: loaded.material,
     responses,
+    currentBlockId: currentBlockId ?? null,
   };
+}
+
+// ─── Э13: пометки учителя поверх материала ученика ────────────────────────
+//
+// Учитель на уроке открывает материал конкретного ученика, берёт «карандаш»,
+// помечает/объясняет и выходит — ученик продолжает работу, видя пометки.
+// Одностороннее: учитель пишет (`saveStudentAnnotations`), ученик читает с
+// задержкой опроса (`getMyAnnotations`, тот же приём, что опрос прогресса
+// Э8.8). Не совместный холст — поэтому обычный JSON, не Y.Doc (в отличие от
+// доски урока). Область «логика прав доступа» CLAUDE.md — читать построчно:
+// учитель правит пометки ЛЮБОГО ученика своего урока, ученик читает ТОЛЬКО
+// свои (личность = каноническая строка участника, как у ответов Э12.5).
+
+/** Учитель/админ: пометки, которые он оставил ученику по этому заданию. */
+export async function getStudentAnnotations(
+  user: AccessTokenPayload,
+  activityId: string,
+  participantId: string,
+): Promise<MaterialAnnotationsResponse> {
+  const activity = await loadActivityForSchool(activityId, user.schoolId);
+  await assertActivityOwner(user, activity);
+  await assertParticipantOnRoster(activity.lessonId, participantId);
+
+  const row = await repo.loadAnnotations(activityId, participantId);
+  return {
+    strokes: row?.strokes ?? [],
+    updatedAt: row ? row.updatedAt.toISOString() : null,
+  };
+}
+
+/** Учитель/админ: сохранить пометки ученику (автосейв с фронта, debounced). */
+export async function saveStudentAnnotations(
+  user: AccessTokenPayload,
+  activityId: string,
+  participantId: string,
+  body: SaveAnnotationsRequest,
+): Promise<MaterialAnnotationsResponse> {
+  const activity = await loadActivityForSchool(activityId, user.schoolId);
+  await assertActivityOwner(user, activity);
+  await assertParticipantOnRoster(activity.lessonId, participantId);
+
+  const updatedAt = await repo.saveAnnotations({
+    activityId,
+    participantId,
+    strokes: body.strokes,
+    updatedBy: user.sub,
+  });
+  return { strokes: body.strokes, updatedAt: updatedAt.toISOString() };
+}
+
+/** Ученик: пометки, которые учитель оставил ЕМУ по этому заданию (read-only). */
+export async function getMyAnnotations(
+  actor: LessonActor,
+  activityId: string,
+): Promise<MaterialAnnotationsResponse> {
+  assertGuest(actor);
+  const activity = await loadActivityForActor(actor, activityId);
+  const participant = await roomsService.ensureParticipant(actor, activity.lessonId);
+
+  const row = await repo.loadAnnotations(activityId, participant.id);
+  return {
+    strokes: row?.strokes ?? [],
+    updatedAt: row ? row.updatedAt.toISOString() : null,
+  };
+}
+
+/** Тот же приём, что `getStudentAttempt`: `participantId` обязан быть учеником этого урока. */
+async function assertParticipantOnRoster(lessonId: string, participantId: string): Promise<void> {
+  const roster = await roomsService.listLessonParticipants(lessonId);
+  if (!roster.some((p) => p.id === participantId && p.kind === "guest")) {
+    throw new AppError(404, "participant_not_found", "Ученик не найден на этом уроке");
+  }
 }
 
 /**

@@ -507,6 +507,12 @@ describe("синхронный стейдж урока (Э12 полировка)
     const result = await roomsService.join(guestActor(), LESSON_ID);
     expect(result.stage).toBe("board");
   });
+
+  it("Э10.6: getCurrentLessonStage отдаёт текущий стейдж (recorder читает его сразу при подключении к WS)", async () => {
+    expect(await roomsService.getCurrentLessonStage(LESSON_ID)).toBe("people");
+    await roomsService.setLessonStage(SCHOOL_ID, LESSON_ID, teacherToken(), "board");
+    expect(await roomsService.getCurrentLessonStage(LESSON_ID)).toBe("board");
+  });
 });
 
 describe("оценка трафика платформы (Э6.5)", () => {

@@ -70,6 +70,15 @@ export interface StartRecordingParams {
   storageKey: string;
   /** Абсолютный путь к файлу для egress = `${STORAGE_ROOT}/${storageKey}`. */
   absoluteFilepath: string;
+  /**
+   * Э10.6 — доп. query-параметры кастомного шаблона (`lessonId`, recorder-
+   * токен), сверх `layout`/`url`/`token`, которые egress допишет сам. Из
+   * исходника LiveKit (`pkg/pipeline/source/web.go`, проверено через
+   * Context7): базовый URL парсится, СУЩЕСТВУЮЩИЕ query-параметры
+   * сохраняются, egress лишь `Set()`-ит поверх `layout`/`url`/`token`. Имена
+   * не должны пересекаться с этими тремя.
+   */
+  templateQuery?: Record<string, string>;
 }
 
 export interface StartedRecording {
@@ -96,11 +105,26 @@ export async function startRoomRecording(params: StartRecordingParams): Promise<
 
   const info = await egressClient.startRoomCompositeEgress(params.roomName, output, {
     layout: env.RECORDING_EGRESS_TEMPLATE_URL ? "speaker" : "",
-    customBaseUrl: env.RECORDING_EGRESS_TEMPLATE_URL ?? "",
+    customBaseUrl: buildTemplateUrl(env.RECORDING_EGRESS_TEMPLATE_URL, params.templateQuery),
     encodingOptions: RECORDING_ENCODING_PRESET,
   });
 
   return { egressId: info.egressId, status: mapEgressStatus(info.status) };
+}
+
+/**
+ * Э10.6 — дописывает `lessonId`/recorder-токен в query кастомного шаблона
+ * ДО того, как egress допишет поверх `layout`/`url`/`token` (сохранит их,
+ * см. докстринг `templateQuery`). Пусто/нет базового URL → пусто, как и раньше.
+ */
+function buildTemplateUrl(base: string | undefined, query: Record<string, string> | undefined): string {
+  if (!base) return "";
+  if (!query || Object.keys(query).length === 0) return base;
+  const url = new URL(base);
+  for (const [key, value] of Object.entries(query)) {
+    url.searchParams.set(key, value);
+  }
+  return url.toString();
 }
 
 export async function stopRecording(egressId: string): Promise<RecordingStatus> {

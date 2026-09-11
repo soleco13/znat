@@ -14,10 +14,15 @@ export class ApiError extends Error {
 
 /**
  * Э12.6 — режим гостя-ученика: аккаунта и refresh-токена нет, личность
- * держится httpOnly-кукой `guest_session`. В этом режиме на 401 не пытаемся
- * обновить персональный access-токен (`POST /auth/refresh` гостю всегда
- * вернёт 401 и зря дёрнет `clearAuth`). Взводится при восстановлении/входе
- * гостевой сессии, снимается при выходе из урока.
+ * держится httpOnly-кукой `guest_session`. В этом режиме:
+ *  - НЕ шлём `Authorization: Bearer` даже если в этой вкладке остался
+ *    staff-access-токен (иначе сервер по Bearer сделал бы staff-actor —
+ *    `plugins/lesson-access.ts` отдаёт Bearer безусловный приоритет над
+ *    гостевой кукой — и ученик оказался бы «сотрудником»);
+ *  - на 401 не пытаемся обновить персональный access-токен (`/auth/refresh`
+ *    гостю всегда вернёт 401 и зря дёрнет `clearAuth`).
+ * Взводится при восстановлении/входе гостевой сессии, снимается при выходе
+ * из урока и при заходе сотрудником (`RequireRoomAccess`).
  */
 let guestMode = false;
 export function setGuestMode(on: boolean): void {
@@ -52,7 +57,7 @@ export async function apiFetch<T>(
   options: RequestInit = {},
   _retry = true,
 ): Promise<T> {
-  const accessToken = useAuthStore.getState().accessToken;
+  const accessToken = guestMode ? null : useAuthStore.getState().accessToken;
   const headers = new Headers(options.headers);
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
   if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {

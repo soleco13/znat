@@ -4,6 +4,8 @@ import {
   createActivityRequestSchema,
   gradeManualResponseRequestSchema,
   pushAnswerToBoardRequestSchema,
+  saveActivityPositionRequestSchema,
+  saveAnnotationsRequestSchema,
   saveResponseRequestSchema,
 } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
@@ -75,6 +77,68 @@ export default async function activitiesRoutes(app: FastifyInstance) {
     },
   );
 
+  // Э13: пометки учителя поверх материала конкретного ученика.
+  //  - учитель читает/пишет пометки ЛЮБОГО ученика своего урока;
+  //  - ученик читает ТОЛЬКО свои (`/my-annotations`), писать не может.
+  app.get<{ Params: { id: string; participantId: string } }>(
+    "/activities/:id/participants/:participantId/annotations",
+    staffOnly,
+    async (request, reply) => {
+      const activityId = uuidParam.parse(request.params.id);
+      const participantId = uuidParam.parse(request.params.participantId);
+      const result = await activitiesService.getStudentAnnotations(
+        request.user,
+        activityId,
+        participantId,
+      );
+      return reply.send(result);
+    },
+  );
+
+  app.put<{ Params: { id: string; participantId: string } }>(
+    "/activities/:id/participants/:participantId/annotations",
+    staffOnly,
+    async (request, reply) => {
+      const activityId = uuidParam.parse(request.params.id);
+      const participantId = uuidParam.parse(request.params.participantId);
+      const body = saveAnnotationsRequestSchema.parse(request.body);
+      const result = await activitiesService.saveStudentAnnotations(
+        request.user,
+        activityId,
+        participantId,
+        body,
+      );
+      return reply.send(result);
+    },
+  );
+
+  app.get<{ Params: { id: string } }>(
+    "/activities/:id/my-annotations",
+    { preHandler: app.resolveLessonActor },
+    async (request, reply) => {
+      const parsed = uuidParam.safeParse(request.params.id);
+      if (!parsed.success) throw new AppError(400, "bad_activity_id", "Некорректный идентификатор задания");
+      const result = await activitiesService.getMyAnnotations(request.lessonActor, parsed.data);
+      return reply.send(result);
+    },
+  );
+
+  // Э10.6: «лист с заданиями» в записи урока — только recorder-токен
+  // шаблона /egress (plugins/recorder-access.ts), не персонал и не гость.
+  app.get<{ Params: { id: string } }>(
+    "/activities/:id/recorder-view",
+    { preHandler: app.authenticateRecorder },
+    async (request, reply) => {
+      const parsed = uuidParam.safeParse(request.params.id);
+      if (!parsed.success) throw new AppError(400, "bad_activity_id", "Некорректный идентификатор задания");
+      const view = await activitiesService.getRecorderView(
+        { lessonId: request.recorderActor.lessonId, recordingId: request.recorderActor.recordingId },
+        parsed.data,
+      );
+      return reply.send(view);
+    },
+  );
+
   // Э8.9: агрегированная аналитика по вопросам — учителю (гистограмма ответов).
   app.get<{ Params: { id: string } }>(
     "/activities/:id/analytics",
@@ -110,6 +174,20 @@ export default async function activitiesRoutes(app: FastifyInstance) {
       const body = saveResponseRequestSchema.parse(request.body);
       const result = await activitiesService.saveResponse(request.lessonActor, parsed.data, body);
       return reply.send(result);
+    },
+  );
+
+  // Доп. Э13 (материал слайдами): ученик сообщает, на каком слайде он сейчас
+  // — чтобы учитель открыл его материал ровно на этом месте. Кеш с TTL.
+  app.put<{ Params: { id: string } }>(
+    "/activities/:id/my/position",
+    { preHandler: app.resolveLessonActor },
+    async (request, reply) => {
+      const parsed = uuidParam.safeParse(request.params.id);
+      if (!parsed.success) throw new AppError(400, "bad_activity_id", "Некорректный идентификатор задания");
+      const body = saveActivityPositionRequestSchema.parse(request.body);
+      await activitiesService.saveMyPosition(request.lessonActor, parsed.data, body.blockId);
+      return reply.status(204).send();
     },
   );
 

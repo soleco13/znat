@@ -114,7 +114,7 @@ export function RoomPage() {
 
   // Э12.7 §6.3/§6.4 — каркас урока: левый выдвижной блок (один, три режима)
   // и что показано на стейдже (плитки участников / доска). Демонстрация
-  // экрана переключает стейдж сама (см. `LiveStage`).
+  // экрана переключает стейдж сама (см. `StageContent`).
   const [drawer, setDrawer] = useState<null | "tools" | "people" | "chat">(null);
   const [stageView, setStageView] = useState<"people" | "board" | "activity">("people");
   // Э12 полировка: авторитетное «людям/доска» с сервера — держим отдельно от
@@ -758,48 +758,30 @@ export function RoomPage() {
       {media && self?.permissions.canSpeak ? <PacketLossWarning /> : null}
       {media && (isTeacher || self?.permissions.canPublishVideo) ? <VideoDegradeSuggestion /> : null}
 
-      {stageView === "activity" && activeActivityId ? (
-        <div className="flex min-h-0 flex-1 flex-col gap-3 sm:flex-row">
-          <div className="min-h-0 flex-1">
-            <ActivityStage
-              activityId={activeActivityId}
-              isTeacher={isTeacher}
-              reviewSignal={reviewSignal}
-              onClose={() => setStageView(sharedStage)}
-            />
-          </div>
-          {media ? (
-            <RoomVideoGrid
-              participants={participants}
-              selfId={selfId}
-              mode={lessonMode}
-              variant="rail"
-            />
-          ) : null}
+      {media ? (
+        <StageContent
+          view={stageView}
+          activityId={activeActivityId}
+          participants={participants}
+          selfId={selfId}
+          mode={lessonMode}
+          lessonId={lessonId}
+          canDraw={self?.permissions.canDraw ?? false}
+          decks={decks}
+          isTeacher={isTeacher}
+          reviewSignal={reviewSignal}
+          onActivityClose={() => setStageView(sharedStage)}
+          onBoardClose={isTeacher ? () => changeLessonStage("people") : undefined}
+        />
+      ) : stageView === "board" && lessonId ? (
+        <div className="min-h-0 flex-1">
+          <Board
+            lessonId={lessonId}
+            canDraw={self?.permissions.canDraw ?? false}
+            decks={decks}
+            onClose={isTeacher ? () => changeLessonStage("people") : undefined}
+          />
         </div>
-      ) : stageView === "board" ? (
-        <div className="flex min-h-0 flex-1 flex-col gap-3 sm:flex-row">
-          {lessonId ? (
-            <div className="min-h-0 flex-1">
-              <Board
-                lessonId={lessonId}
-                canDraw={self?.permissions.canDraw ?? false}
-                decks={decks}
-                onClose={isTeacher ? () => changeLessonStage("people") : undefined}
-              />
-            </div>
-          ) : null}
-          {media ? (
-            <RoomVideoGrid
-              participants={participants}
-              selfId={selfId}
-              mode={lessonMode}
-              variant="rail"
-            />
-          ) : null}
-        </div>
-      ) : media ? (
-        <LiveStage participants={participants} selfId={selfId} mode={lessonMode} />
       ) : joinFailed ? (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 text-sm">
           <span className="text-foreground">Не удалось войти в урок</span>
@@ -1063,33 +1045,77 @@ export function RoomPage() {
 }
 
 /**
- * Э12.7 §6.2 — контент стейджа при активном LiveKit: демонстрация экрана
- * (если кто-то её ведёт) на весь стейдж + плитки участников лентой; иначе —
- * адаптивная сетка плиток. Внутри `<LiveKitRoom>` — использует `useTracks`.
+ * Э12.7 §6.2 — контент стейджа при активном LiveKit. Рендерится только
+ * внутри `<LiveKitRoom>` (использует `useTracks`). Один компонент на все
+ * виды стейджа (плитки / доска / задание), потому что демонстрацию экрана
+ * нужно учитывать в каждом из них:
+ *
+ *  - активная демонстрация экрана — это то, на что смотрит урок (§5.3 ТЗ,
+ *    Э7.3 сам переводит режим в «Лекцию»): показываем её на стейдже поверх
+ *    плиток И доски. Иначе демонстрацию, начатую при открытой доске, не
+ *    видел бы никто — регресс каркаса RoomShell (Э12.7), где `ScreenShareTile`
+ *    жил только в ветке плиток;
+ *  - явно выданное задание (`view === "activity"`) демонстрацией НЕ
+ *    перебиваем — это отдельное осознанное действие учителя «показать
+ *    работу классу», оно приоритетнее;
+ *  - плитки участников: в ветке демонстрации/доски/задания — узкой лентой
+ *    справа (`variant="rail"`), иначе — адаптивной сеткой на весь стейдж.
  */
-function LiveStage({
+function StageContent({
+  view,
+  activityId,
   participants,
   selfId,
   mode,
+  lessonId,
+  canDraw,
+  decks,
+  isTeacher,
+  reviewSignal,
+  onActivityClose,
+  onBoardClose,
 }: {
+  view: "people" | "board" | "activity";
+  activityId: string | null;
   participants: ParticipantSnapshot[];
   selfId: string | undefined;
   mode: LessonMode;
+  lessonId: string | undefined;
+  canDraw: boolean;
+  decks: Deck[];
+  isTeacher: boolean;
+  reviewSignal: number;
+  onActivityClose: () => void;
+  onBoardClose: (() => void) | undefined;
 }) {
-  const screen = useTracks([Track.Source.ScreenShare], { onlySubscribed: true });
-  if (screen.length > 0) {
-    return (
-      <div className="flex min-h-0 flex-1 flex-col gap-3 sm:flex-row">
-        <div className="min-h-0 flex-1">
-          <ScreenShareTile />
-        </div>
-        <RoomVideoGrid participants={participants} selfId={selfId} mode={mode} variant="rail" />
-      </div>
-    );
-  }
-  return (
-    <div className="min-h-0 flex-1">
+  const screenSharing =
+    useTracks([Track.Source.ScreenShare], { onlySubscribed: true }).length > 0;
+
+  const main =
+    view === "activity" && activityId ? (
+      <ActivityStage
+        activityId={activityId}
+        isTeacher={isTeacher}
+        reviewSignal={reviewSignal}
+        onClose={onActivityClose}
+      />
+    ) : screenSharing ? (
+      <ScreenShareTile />
+    ) : view === "board" && lessonId ? (
+      <Board lessonId={lessonId} canDraw={canDraw} decks={decks} onClose={onBoardClose} />
+    ) : (
       <RoomVideoGrid participants={participants} selfId={selfId} mode={mode} />
+    );
+
+  const railed =
+    (view === "activity" && activityId) || screenSharing || (view === "board" && lessonId);
+
+  if (!railed) return <div className="min-h-0 flex-1">{main}</div>;
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-3 sm:flex-row">
+      <div className="min-h-0 flex-1">{main}</div>
+      <RoomVideoGrid participants={participants} selfId={selfId} mode={mode} variant="rail" />
     </div>
   );
 }

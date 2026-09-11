@@ -14,12 +14,18 @@ const MAX_BACKOFF_MS = 16_000;
  * Э12.6 — `mode`: персонал передаёт access-токен в query, гость-ученик его
  * не имеет (httpOnly-кука `guest_session` уходит с рукопожатием сама,
  * см. `rooms/ws.ts`) — тогда параметр `token` опускаем.
+ *
+ * Э10.6 — `mode: "recorder"`: шаблон записи (`/egress`), вне `RequireAuth`
+ * (нет `useAuthStore`). Токен приходит явным параметром `recorderToken`, не
+ * из стора — recorder read-only и не участник урока (`rooms/ws.ts`
+ * заводит для него отдельную ветку, в обход presence).
  */
 export function useRoomSocket(
   lessonId: string,
   onMessage: (message: ServerRoomMessage) => void,
   enabled = true,
-  mode: "staff" | "guest" = "staff",
+  mode: "staff" | "guest" | "recorder" = "staff",
+  recorderToken?: string,
 ) {
   const [status, setStatus] = useState<SocketStatus>("connecting");
   const onMessageRef = useRef(onMessage);
@@ -42,6 +48,13 @@ export function useRoomSocket(
           return;
         }
         tokenParam = `&token=${encodeURIComponent(token)}`;
+      } else if (mode === "recorder") {
+        if (!recorderToken) {
+          setStatus("reconnecting");
+          reconnectTimer = setTimeout(connect, 1000);
+          return;
+        }
+        tokenParam = `&recorderToken=${encodeURIComponent(recorderToken)}`;
       }
       const protocol = location.protocol === "https:" ? "wss:" : "ws:";
       const url = `${protocol}//${location.host}/ws?lessonId=${encodeURIComponent(lessonId)}${tokenParam}`;
@@ -75,7 +88,7 @@ export function useRoomSocket(
       if (reconnectTimer) clearTimeout(reconnectTimer);
       socket?.close();
     };
-  }, [lessonId, enabled, mode]);
+  }, [lessonId, enabled, mode, recorderToken]);
 
   return status;
 }
