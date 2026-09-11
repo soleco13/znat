@@ -473,7 +473,7 @@ export function DeviceCheckScreen({
               pressed={camActive}
               onPressedChange={toggleCam}
               aria-label={camActive ? "Выключить камеру" : "Включить камеру"}
-              className="absolute right-3 top-3"
+              className="absolute right-3 top-3 size-11"
             >
               {camActive ? <Camera aria-hidden /> : <CameraOff aria-hidden />}
             </Toggle>
@@ -493,7 +493,7 @@ export function DeviceCheckScreen({
             ) : camDevices.length > 0 ? (
               <div className="absolute inset-x-3 bottom-3">
                 <Select value={camId} onValueChange={handleCamDeviceChange}>
-                  <SelectTrigger className="h-9 border-0 bg-card/90 text-xs shadow-sm backdrop-blur">
+                  <SelectTrigger className="h-10 border-0 bg-card/90 text-xs shadow-sm backdrop-blur">
                     <SelectValue placeholder="Камера" />
                   </SelectTrigger>
                   <SelectContent>
@@ -531,7 +531,7 @@ export function DeviceCheckScreen({
                   pressed={micActive}
                   onPressedChange={toggleMic}
                   aria-label={micActive ? "Выключить микрофон" : "Включить микрофон"}
-                  className="shrink-0"
+                  className="size-11 shrink-0"
                 >
                   {micActive ? <Mic aria-hidden /> : <MicOff aria-hidden />}
                 </Toggle>
@@ -559,7 +559,7 @@ export function DeviceCheckScreen({
                       onValueChange={handleMicDeviceChange}
                       disabled={!micActive || micDevices.length < 2}
                     >
-                      <SelectTrigger className="h-9 text-xs">
+                      <SelectTrigger className="h-10 text-xs">
                         <SelectValue placeholder="Микрофон" />
                       </SelectTrigger>
                       <SelectContent>
@@ -607,7 +607,7 @@ export function DeviceCheckScreen({
                 onValueChange={(v) => setSpkId(v)}
                 disabled={spkDevices.length === 0}
               >
-                <SelectTrigger className="h-9 text-xs">
+                <SelectTrigger className="h-10 text-xs">
                   <SelectValue
                     placeholder={
                       spkDevices.length ? "Динамики" : "Список появится после доступа к микрофону"

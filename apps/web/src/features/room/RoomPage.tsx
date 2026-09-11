@@ -905,10 +905,22 @@ export function RoomPage() {
 
       <RecordingConsentBanner active={recordingActive} />
 
-      {/* §6.2/§6.4 — левый выдвижной блок + стейдж */}
+      {/* §6.2/§6.4 — левый выдвижной блок + стейдж. Брейкпоинт inline-сайдбара —
+          `md` (768px), не `sm`: компактные планшеты-портрет (iPad mini ~744px
+          и похожие) тоже должны получать оверлей поверх стейджа, а не
+          сжатую боковую панель — там для сетки видео/доски просто не
+          остаётся места. */}
       <div className="relative flex min-h-0 flex-1">
         {drawer ? (
-          <aside className="absolute inset-y-0 left-0 z-20 flex w-full max-w-[360px] flex-col border-r border-border bg-card sm:relative sm:w-[340px]">
+          <button
+            type="button"
+            aria-label="Закрыть панель"
+            onClick={() => setDrawer(null)}
+            className="fixed inset-0 z-10 bg-black/30 md:hidden"
+          />
+        ) : null}
+        {drawer ? (
+          <aside className="absolute inset-y-0 left-0 z-20 flex w-full max-w-[360px] flex-col border-r border-border bg-card md:relative md:w-[340px]">
             {drawer === "tools" ? toolsPanel : null}
             {drawer === "people" ? (
               <div className="flex h-full min-h-0 flex-col">

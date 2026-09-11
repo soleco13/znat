@@ -121,38 +121,53 @@ export function RoomVideoGrid({
     const safePage = Math.min(page, pages - 1);
     const shown = tiles.slice(safePage * RAIL_PAGE, safePage * RAIL_PAGE + RAIL_PAGE);
     return (
-      <div className="flex w-32 shrink-0 flex-col gap-2 sm:w-40 lg:w-44">
-        {tiles.length > RAIL_PAGE ? (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 w-full"
-            onClick={() => setPage((n) => Math.max(0, n - 1))}
-            disabled={safePage === 0}
-            aria-label="Предыдущие участники"
-          >
-            <ChevronUp aria-hidden />
-          </Button>
-        ) : null}
-        <div className="flex min-h-0 flex-1 flex-col gap-2">{shown.map(renderTile)}</div>
-        {tiles.length > RAIL_PAGE ? (
-          <div className="flex items-center gap-2">
+      <>
+        {/* На мобиле рядом с доской/демонстрацией/заданием родитель
+            (`StageContent`) складывает главный блок и ленту в колонку
+            (`flex-col sm:flex-row`) — фиксированная ширина `w-32` там дала
+            бы узкую колонку тайлов посреди экрана. Вместо этого — лента
+            горизонтальная, во всю ширину, без пейджинга (нативный скролл
+            вместо кнопок ▲/▼, которым здесь просто нет удобного места). */}
+        <div className="flex w-full shrink-0 gap-2 overflow-x-auto pb-0.5 sm:hidden">
+          {tiles.map((p) => (
+            <div key={p.userId} className="w-20 shrink-0">
+              {renderTile(p)}
+            </div>
+          ))}
+        </div>
+        <div className="hidden w-32 shrink-0 flex-col gap-2 sm:flex sm:w-40 lg:w-44">
+          {tiles.length > RAIL_PAGE ? (
             <Button
               variant="outline"
               size="sm"
-              className="h-7 flex-1"
-              onClick={() => setPage((n) => Math.min(pages - 1, n + 1))}
-              disabled={safePage >= pages - 1}
-              aria-label="Следующие участники"
+              className="h-7 w-full"
+              onClick={() => setPage((n) => Math.max(0, n - 1))}
+              disabled={safePage === 0}
+              aria-label="Предыдущие участники"
             >
-              <ChevronDown aria-hidden />
+              <ChevronUp aria-hidden />
             </Button>
-            <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
-              {safePage + 1}/{pages}
-            </span>
-          </div>
-        ) : null}
-      </div>
+          ) : null}
+          <div className="flex min-h-0 flex-1 flex-col gap-2">{shown.map(renderTile)}</div>
+          {tiles.length > RAIL_PAGE ? (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 flex-1"
+                onClick={() => setPage((n) => Math.min(pages - 1, n + 1))}
+                disabled={safePage >= pages - 1}
+                aria-label="Следующие участники"
+              >
+                <ChevronDown aria-hidden />
+              </Button>
+              <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+                {safePage + 1}/{pages}
+              </span>
+            </div>
+          ) : null}
+        </div>
+      </>
     );
   }
 

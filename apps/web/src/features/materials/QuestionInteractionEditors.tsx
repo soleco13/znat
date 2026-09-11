@@ -1270,8 +1270,10 @@ function OrderingEditor({
   interaction: Extract<QuestionInteraction, { type: "ordering" }>;
   onChange: (interaction: QuestionInteraction) => void;
 }) {
+  // `activationConstraint` — короткое смещение перед стартом драга, иначе
+  // на тач-устройстве обычный скролл-жест сам запускает перетаскивание.
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const ids = interaction.items.map((i) => i.id);
@@ -1360,7 +1362,7 @@ function SortableOrderingEditorItem({
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`flex items-center gap-1.5 ${isDragging ? "opacity-50" : ""}`}
     >
-      <span {...attributes} {...listeners} className="flex cursor-grab select-none items-center px-1 text-muted-foreground" aria-hidden="true">
+      <span {...attributes} {...listeners} className="touch-none flex cursor-grab select-none items-center p-2 text-muted-foreground" aria-hidden="true">
         <GripVertical className="size-4" />
       </span>
       <input
@@ -1375,7 +1377,7 @@ function SortableOrderingEditorItem({
           disabled={index === 0}
           onClick={() => onMove(-1)}
           aria-label="Переместить выше"
-          className="rounded border border-border p-0.5 text-muted-foreground transition-colors hover:bg-secondary disabled:opacity-30"
+          className="rounded border border-border p-1.5 text-muted-foreground transition-colors hover:bg-secondary disabled:opacity-30"
         >
           <ChevronUp className="size-3.5" aria-hidden />
         </button>
@@ -1384,7 +1386,7 @@ function SortableOrderingEditorItem({
           disabled={index === total - 1}
           onClick={() => onMove(1)}
           aria-label="Переместить ниже"
-          className="rounded border border-border p-0.5 text-muted-foreground transition-colors hover:bg-secondary disabled:opacity-30"
+          className="rounded border border-border p-1.5 text-muted-foreground transition-colors hover:bg-secondary disabled:opacity-30"
         >
           <ChevronDown className="size-3.5" aria-hidden />
         </button>

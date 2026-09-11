@@ -57,7 +57,9 @@ export function RoomControlButton({
           onPressedChange={onToggle}
           disabled={disabled}
           aria-label={label}
-          className={cn("relative", speaking && "ring-2 ring-success ring-offset-1")}
+          // Тач-таргет крупнее дефолтных 40px (size-10) — телефон/планшет,
+          // не только мышь.
+          className={cn("relative size-11", speaking && "ring-2 ring-success ring-offset-1")}
         >
           <Icon aria-hidden />
         </Toggle>

@@ -202,7 +202,9 @@ function DraggableChip({ id, html, disabled }: { id: string; html: string; disab
       {...listeners}
       {...attributes}
       style={{ transform: CSS.Translate.toString(transform) }}
-      className={`cursor-grab rounded-md border border-border bg-card px-2 py-1 text-sm shadow-xs ${isDragging ? "opacity-50" : ""}`}
+      // `touch-none` — иначе на телефоне/планшете начатый драг конфликтует с
+      // нативным скроллом страницы (dnd-kit сам не выставляет touch-action).
+      className={`touch-none cursor-grab rounded-md border border-border bg-card px-2.5 py-2 text-sm shadow-xs ${isDragging ? "opacity-50" : ""}`}
       dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }}
     />
   );
@@ -235,7 +237,12 @@ export function MatchingPlayer({
   onChange: (response: QuestionResponse) => void;
   disabled: boolean;
 }) {
-  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  // `activationConstraint` — короткое смещение перед стартом драга, иначе
+  // на тач-устройстве обычный скролл-жест сам запускает перетаскивание.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
   const pairs = value?.pairs ?? [];
   const assignmentByLeft = new Map(pairs);
   const assignedRightIds = new Set(pairs.map(([, r]) => r));
@@ -270,7 +277,7 @@ export function MatchingPlayer({
             return (
               <div key={l.id} className="flex items-center gap-2">
                 <span
-                  className="w-32 shrink-0 text-sm"
+                  className="w-24 shrink-0 text-sm sm:w-32"
                   dangerouslySetInnerHTML={{ __html: sanitizeHtml(l.html) }}
                 />
                 <DroppableSlot id={l.id}>
@@ -336,7 +343,12 @@ export function CategorizePlayer({
   onChange: (response: QuestionResponse) => void;
   disabled: boolean;
 }) {
-  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  // `activationConstraint` — короткое смещение перед стартом драга, иначе
+  // на тач-устройстве обычный скролл-жест сам запускает перетаскивание.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
   const values = value?.values ?? {};
   const pool = items.filter((i) => values[i.id] == null);
 
@@ -433,7 +445,9 @@ function SortableOrderingItem({
       <span
         {...attributes}
         {...listeners}
-        className="cursor-grab select-none text-muted-foreground"
+        // `touch-none` — та же причина, что у `DraggableChip`: без него
+        // тач-драг ручки конфликтует со скроллом списка.
+        className="touch-none cursor-grab select-none p-2 text-muted-foreground"
         aria-hidden="true"
       >
         <GripVertical className="size-4" />
@@ -445,7 +459,7 @@ function SortableOrderingItem({
         disabled={disabled || isFirst}
         onClick={() => onMove(-1)}
         aria-label="Переместить выше"
-        className="rounded-md border border-border p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30"
+        className="rounded-md border border-border p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30"
       >
         <ChevronUp className="size-3.5" />
       </button>
@@ -454,7 +468,7 @@ function SortableOrderingItem({
         disabled={disabled || isLast}
         onClick={() => onMove(1)}
         aria-label="Переместить ниже"
-        className="rounded-md border border-border p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30"
+        className="rounded-md border border-border p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30"
       >
         <ChevronDown className="size-3.5" />
       </button>
@@ -473,7 +487,12 @@ export function OrderingPlayer({
   onChange: (response: QuestionResponse) => void;
   disabled: boolean;
 }) {
-  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  // `activationConstraint` — короткое смещение перед стартом драга, иначе
+  // на тач-устройстве обычный скролл-жест сам запускает перетаскивание.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
   // Порядок в ответе может отставать от items (первый рендер) — если ответа ещё нет, стартуем с порядка, в котором сервер уже отдал items (перемешан на сервере, Э8.1).
   const [order, setOrder] = useState<string[]>(value?.order ?? items.map((i) => i.id));
   const byId = new Map(items.map((i) => [i.id, i]));

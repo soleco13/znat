@@ -74,9 +74,10 @@ function HintDisclosure({ html }: { html: string }) {
   );
 }
 
-/** Общий класс для строки-варианта с нативным input внутри. */
+/** Общий класс для строки-варианта с нативным input внутри. Высота строки —
+ *  под тач-таргет (телефон/планшет), не только под 16px нативный контрол. */
 const OPTION_ROW =
-  "flex cursor-pointer items-center gap-2.5 rounded-md border border-transparent px-2 py-1.5 text-sm transition-colors hover:bg-secondary has-[:checked]:border-primary/40 has-[:checked]:bg-accent has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60";
+  "flex cursor-pointer items-center gap-2.5 rounded-md border border-transparent px-2 py-2.5 text-sm transition-colors hover:bg-secondary active:bg-secondary has-[:checked]:border-primary/40 has-[:checked]:bg-accent has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60";
 const NATIVE_CONTROL = "size-4 shrink-0 accent-[hsl(var(--primary))]";
 
 function InteractionPlayer({
@@ -256,7 +257,7 @@ function HighlightTextPlayer({
             onChange={(e) => toggle(t.id, e.target.checked)}
           />
           <span
-            className="rounded px-1.5 py-0.5 transition-colors hover:bg-secondary peer-checked:bg-primary/20 peer-checked:text-primary peer-checked:underline peer-checked:decoration-2 peer-checked:underline-offset-2 peer-disabled:cursor-not-allowed peer-disabled:opacity-60"
+            className="rounded px-2 py-1 transition-colors hover:bg-secondary peer-checked:bg-primary/20 peer-checked:text-primary peer-checked:underline peer-checked:decoration-2 peer-checked:underline-offset-2 peer-disabled:cursor-not-allowed peer-disabled:opacity-60"
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(t.text) }}
           />
         </label>
@@ -304,7 +305,7 @@ function TableFillPlayer({
                     <Input
                       id={`tf-${cell.id}`}
                       type="text"
-                      className="h-7 w-28"
+                      className="h-9 w-32"
                       value={values[cell.id] ?? ""}
                       disabled={disabled}
                       onChange={(e) => setValue(cell.id, e.target.value)}

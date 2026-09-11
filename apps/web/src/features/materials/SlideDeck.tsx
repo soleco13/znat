@@ -112,18 +112,24 @@ export function SlideDeck<T extends SlideDeckBlock>({
     <div className="flex flex-col gap-3">
       {header}
 
-      <div className="flex flex-wrap items-center gap-1" aria-hidden>
+      <div className="flex flex-wrap items-center" aria-hidden>
         {slides.map((s, i) => (
+          // Видимая полоска тонкая и элегантная, но кликабельная зона вокруг
+          // неё — с паддингом (телефон/планшет, не только мышь).
           <button
             key={s.id}
             type="button"
             onClick={() => setIndex(i)}
-            className={cn(
-              "h-1.5 rounded-full transition-all",
-              i === index ? "w-6 bg-primary" : "w-3 bg-border hover:bg-muted-foreground/40",
-            )}
+            className="flex items-center justify-center p-2"
             aria-label={`Слайд ${i + 1}`}
-          />
+          >
+            <span
+              className={cn(
+                "h-1.5 rounded-full transition-all",
+                i === index ? "w-6 bg-primary" : "w-3 bg-border hover:bg-muted-foreground/40",
+              )}
+            />
+          </button>
         ))}
       </div>
 
@@ -141,6 +147,7 @@ export function SlideDeck<T extends SlideDeckBlock>({
         <Button
           variant="outline"
           size="sm"
+          className="h-10"
           onClick={() => go(-1)}
           disabled={index === 0}
         >
@@ -153,6 +160,7 @@ export function SlideDeck<T extends SlideDeckBlock>({
         <Button
           variant="outline"
           size="sm"
+          className="h-10"
           onClick={() => go(1)}
           disabled={isLast}
         >

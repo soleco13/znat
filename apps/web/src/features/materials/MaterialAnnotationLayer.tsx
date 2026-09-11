@@ -142,7 +142,9 @@ export function MaterialAnnotationLayer({
   }, [onChange, strokes, blockTops]);
 
   function onPointerDown(e: React.PointerEvent) {
-    if (!editable) return;
+    // Второй палец pinch-жеста на планшете — не первый (`isPrimary`) указатель:
+    // игнорируем, иначе он начинает свой собственный паразитный штрих.
+    if (!editable || !e.isPrimary) return;
     e.preventDefault();
     try {
       svgRef.current?.setPointerCapture(e.pointerId);
@@ -159,7 +161,7 @@ export function MaterialAnnotationLayer({
   }
 
   function onPointerMove(e: React.PointerEvent) {
-    if (!editable) return;
+    if (!editable || !e.isPrimary) return;
     const [x, y] = pointAt(e);
     if (erasing) {
       if (e.buttons === 1) eraseAt(x, y);
@@ -248,7 +250,7 @@ export function MaterialAnnotationLayer({
 
       {editable ? (
         <div className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-3">
-          <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-border bg-card/95 px-2 py-1.5 shadow-lg backdrop-blur">
+          <div className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-border bg-card/95 px-2 py-1.5 shadow-lg backdrop-blur">
             <ToolButton label="Карандаш" active={tool === "pen" && !erasing} onClick={() => { setTool("pen"); setErasing(false); }}>
               <Pencil className="size-4" aria-hidden />
             </ToolButton>
@@ -266,7 +268,7 @@ export function MaterialAnnotationLayer({
                 aria-label={`Цвет ${c}`}
                 onClick={() => { setColor(c); setErasing(false); }}
                 className={cn(
-                  "size-6 rounded-full border-2 transition-transform",
+                  "size-7 rounded-full border-2 transition-transform",
                   color === c && !erasing ? "scale-110 border-foreground" : "border-transparent",
                 )}
                 style={{ backgroundColor: c }}
@@ -329,7 +331,7 @@ function ToolButton({
         aria-label={label}
         aria-pressed={active}
         className={cn(
-          "flex size-8 items-center justify-center rounded-full transition-colors disabled:opacity-40",
+          "flex size-9 items-center justify-center rounded-full transition-colors disabled:opacity-40",
           active ? "bg-primary-light text-primary" : "text-muted-foreground hover:bg-secondary",
         )}
       >

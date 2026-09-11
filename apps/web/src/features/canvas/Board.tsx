@@ -756,7 +756,8 @@ export function Board({
               disabled={!isTeacher}
               aria-current={pageId === activePageId}
               className={cn(
-                "flex size-7 shrink-0 items-center justify-center rounded-md text-sm font-medium transition-colors",
+                // size-8, не size-7 — тач-таргет на телефоне/планшете.
+                "flex size-8 shrink-0 items-center justify-center rounded-md text-sm font-medium transition-colors",
                 pageId === activePageId
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground",
@@ -778,6 +779,7 @@ export function Board({
             <Button
               variant="ghost"
               size="icon-sm"
+              className="size-9"
               onClick={addPage}
               disabled={nonSlidePages.length >= MAX_BOARD_PAGES}
               aria-label="Добавить лист"
@@ -791,7 +793,7 @@ export function Board({
             <Button
               variant="ghost"
               size="icon-sm"
-              className="text-destructive hover:bg-destructive/10"
+              className="size-9 text-destructive hover:bg-destructive/10"
               onClick={() => deletePage(activePageId)}
               aria-label="Удалить страницу"
             >
@@ -809,6 +811,7 @@ export function Board({
               <Button
                 variant="ghost"
                 size="icon-sm"
+                className="size-9"
                 onClick={() => undoState.manager.undo()}
                 disabled={!undoState.canUndo}
                 aria-label="Отменить"
@@ -820,6 +823,7 @@ export function Board({
               <Button
                 variant="ghost"
                 size="icon-sm"
+                className="size-9"
                 onClick={() => undoState.manager.redo()}
                 disabled={!undoState.canRedo}
                 aria-label="Повторить"
@@ -831,7 +835,7 @@ export function Board({
         )}
         {canDraw && (
           <SimpleTooltip content="Фото на доску">
-            <Button asChild variant="ghost" size="icon-sm" className="cursor-pointer">
+            <Button asChild variant="ghost" size="icon-sm" className="size-9 cursor-pointer">
               <label aria-label="Фото на доску">
                 <ImagePlus aria-hidden />
                 <input
@@ -853,7 +857,7 @@ export function Board({
         {(isTeacher || !isTeacher) && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="Ещё">
+              <Button variant="ghost" size="icon-sm" className="size-9" aria-label="Ещё">
                 <MoreHorizontal />
               </Button>
             </DropdownMenuTrigger>
@@ -919,7 +923,7 @@ export function Board({
           <>
             <Separator orientation="vertical" className="mx-0.5 h-5" />
             <SimpleTooltip content="Скрыть доску">
-              <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Скрыть доску">
+              <Button variant="ghost" size="icon-sm" className="size-9" onClick={onClose} aria-label="Скрыть доску">
                 <X />
               </Button>
             </SimpleTooltip>
