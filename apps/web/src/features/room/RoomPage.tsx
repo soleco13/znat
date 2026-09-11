@@ -64,7 +64,7 @@ import { ActivityStage } from "./ActivityStage.js";
 import { RecordingConsentBanner, RecordingPanel } from "../recordings/RecordingPanel.js";
 import { playRecordingSound } from "./recording-sound.js";
 import { SelfCameraButton, VideoDegradeSuggestion } from "./CameraControls.js";
-import { ConnectionQualityDot, PacketLossWarning } from "./ConnectionQuality.js";
+import { ConnectionQualityIcon, PacketLossWarning } from "./ConnectionQuality.js";
 import { DeviceCheckScreen, type DeviceCheckResult } from "./DeviceCheckScreen.js";
 import { RoomControlButton } from "./RoomControlButton.js";
 import { useRoomIdentity } from "./use-room-identity.js";
@@ -476,7 +476,7 @@ export function RoomPage() {
               <Pin className="size-3.5 text-primary" aria-label="Закреплён в сетке видео" />
             ) : null}
             {media ? <MicStatusIcon userId={p.userId} /> : null}
-            {media ? <ConnectionQualityDot userId={p.userId} /> : null}
+            {media ? <ConnectionQualityIcon userId={p.userId} /> : null}
           </div>
 
           {isTeacher && p.userId !== selfId ? (

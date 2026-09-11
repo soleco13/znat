@@ -5,13 +5,14 @@ import {
   useTracks,
   VideoTrack,
 } from "@livekit/components-react";
-import { Track } from "livekit-client";
+import { ConnectionQuality, Track } from "livekit-client";
 import { ChevronDown, ChevronUp, Hand, MicOff, Pin } from "lucide-react";
 import type { LessonMode, ParticipantSnapshot } from "@school/shared";
 
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/shared/ui/avatar";
 import { Button } from "@/shared/ui/button";
+import { QUALITY_COLOR, QUALITY_ICON, QUALITY_LABEL } from "./ConnectionQuality.js";
 import { useAdaptiveGrid } from "./use-adaptive-grid.js";
 
 const GAP = 8;
@@ -49,6 +50,13 @@ export function RoomVideoGrid({
   const roomParticipants = useParticipants();
   const micOffIds = new Set(
     roomParticipants.filter((p) => !p.isMicrophoneEnabled).map((p) => p.identity),
+  );
+  // Как в Толке — значок качества связи прямо на плитке, не только в
+  // списке участников (см. `ConnectionQualityIcon` — тот же источник
+  // данных, но там свой `useParticipants()` на строку; здесь участники уже
+  // получены один раз выше, повторный хук на каждую плитку не нужен).
+  const qualityByIdentity = new Map(
+    roomParticipants.map((p) => [p.identity, p.connectionQuality]),
   );
 
   const tiles = participants
@@ -101,6 +109,16 @@ export function RoomVideoGrid({
 
         <span className="absolute inset-x-1.5 bottom-1.5 flex">
           <span className="inline-flex min-w-0 items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] font-medium text-white backdrop-blur">
+            {(() => {
+              const quality = qualityByIdentity.get(p.userId) ?? ConnectionQuality.Unknown;
+              const QualityIcon = QUALITY_ICON[quality];
+              return (
+                <QualityIcon
+                  aria-label={QUALITY_LABEL[quality]}
+                  className={cn("size-3 shrink-0", QUALITY_COLOR[quality])}
+                />
+              );
+            })()}
             {micOffIds.has(p.userId) ? (
               <MicOff className="size-3 shrink-0 text-white/70" aria-label="Микрофон выключен" />
             ) : null}
