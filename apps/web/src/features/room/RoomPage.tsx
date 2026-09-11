@@ -66,7 +66,7 @@ import { playRecordingSound } from "./recording-sound.js";
 import { SelfCameraButton, VideoDegradeSuggestion } from "./CameraControls.js";
 import { ConnectionQualityIcon, PacketLossWarning } from "./ConnectionQuality.js";
 import { DeviceCheckScreen, type DeviceCheckResult } from "./DeviceCheckScreen.js";
-import { PictureInPictureButton, type PictureInPictureHandle } from "./PictureInPictureButton.js";
+import { ScreenShareAutoPip, type ScreenShareAutoPipHandle } from "./ScreenShareAutoPip.js";
 import { RoomControlButton } from "./RoomControlButton.js";
 import { useRoomIdentity } from "./use-room-identity.js";
 import { MicStatusIcon, SelfMicButton } from "./MicControls.js";
@@ -161,8 +161,8 @@ export function RoomPage() {
   // раз при (пере)подключении, раньше самого первого `recording_status`
   // (см. `rooms/ws.ts`).
   const recordingActivePrevRef = useRef<boolean | null>(null);
-  // Авто-PiP на время демонстрации — см. `PictureInPictureButton`/`ScreenShareControls`.
-  const pipRef = useRef<PictureInPictureHandle>(null);
+  // Авто-PiP на время демонстрации — см. `ScreenShareAutoPip`/`ScreenShareControls`.
+  const pipRef = useRef<ScreenShareAutoPipHandle>(null);
 
   const isTeacher = identity?.role === "teacher" || identity?.role === "admin";
 
@@ -966,11 +966,8 @@ export function RoomPage() {
           {media && (isTeacher || self?.permissions.canShareScreen) ? (
             <SelfScreenShareButton
               priority={isTeacher}
-              onScreenShareStarted={() => void pipRef.current?.requestPip()}
+              onScreenShareStarted={() => void pipRef.current?.open()}
             />
-          ) : null}
-          {media ? (
-            <PictureInPictureButton ref={pipRef} participants={participants} selfId={selfId} />
           ) : null}
           {media ? (
             <SelfMicButton
@@ -1072,6 +1069,7 @@ export function RoomPage() {
         <ApplyAudioOutput deviceId={spkDeviceId} />
         <MicSync enabled={self?.permissions.canSpeak ?? false} />
         <VideoSubscriptionManager participants={participants} mode={lessonMode} />
+        <ScreenShareAutoPip ref={pipRef} participants={participants} selfId={selfId} />
         {content}
         <RoomAudioRenderer />
       </LiveKitRoom>
