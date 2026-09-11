@@ -62,6 +62,7 @@ import { listLessonActivities } from "../materials/activity-api.js";
 import { LessonActivityPanel } from "../materials/LessonActivityPanel.js";
 import { ActivityStage } from "./ActivityStage.js";
 import { RecordingConsentBanner, RecordingPanel } from "../recordings/RecordingPanel.js";
+import { playRecordingSound } from "./recording-sound.js";
 import { SelfCameraButton, VideoDegradeSuggestion } from "./CameraControls.js";
 import { ConnectionQualityDot, PacketLossWarning } from "./ConnectionQuality.js";
 import { DeviceCheckScreen, type DeviceCheckResult } from "./DeviceCheckScreen.js";
@@ -151,12 +152,21 @@ export function RoomPage() {
   const [lessonTitle, setLessonTitle] = useState<string | null>(null);
   const [lessonJoinPath, setLessonJoinPath] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  // Э10-звук: baseline «прошлое состояние записи» на текущее подключение
+  // сокета. `null` — ещё не знаем (только что подключились) — в этом
+  // случае `recording_status` может быть просто синхронизацией уже идущей
+  // записи для вошедшего участника, а не реальным стартом/стопом, и звук
+  // играть не нужно. Сбрасывается на каждый `presence` — тот шлётся ровно
+  // раз при (пере)подключении, раньше самого первого `recording_status`
+  // (см. `rooms/ws.ts`).
+  const recordingActivePrevRef = useRef<boolean | null>(null);
 
   const isTeacher = identity?.role === "teacher" || identity?.role === "admin";
 
   const handleMessage = useCallback((message: ServerRoomMessage) => {
     switch (message.type) {
       case "presence":
+        recordingActivePrevRef.current = null;
         setParticipants(message.participants);
         break;
       case "participant_joined":
@@ -210,9 +220,13 @@ export function RoomPage() {
       case "activity_reviewed":
         setReviewSignal((n) => n + 1);
         break;
-      case "recording_status":
+      case "recording_status": {
+        const prev = recordingActivePrevRef.current;
+        if (prev !== null && prev !== message.active) playRecordingSound(message.active);
+        recordingActivePrevRef.current = message.active;
         setRecordingActive(message.active);
         break;
+      }
       case "error":
         setError(message.message);
         break;
