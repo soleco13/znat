@@ -961,7 +961,7 @@ export function RoomPage() {
             />
           ) : null}
           {media && (isTeacher || self?.permissions.canShareScreen) ? (
-            <SelfScreenShareButton priority={isTeacher} />
+            <SelfScreenShareButton priority={isTeacher} participants={participants} selfId={selfId} />
           ) : null}
           {media ? (
             <SelfMicButton
