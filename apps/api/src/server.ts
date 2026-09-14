@@ -28,6 +28,7 @@ import decksRoutes from "./modules/decks/routes.js";
 import activitiesRoutes from "./modules/activities/routes.js";
 import materialsRoutes from "./modules/materials/routes.js";
 import recordingsRoutes from "./modules/recordings/routes.js";
+import schoolSettingsRoutes from "./modules/school-settings/routes.js";
 import {
   startRecordingRetentionSweep,
   stopRecordingRetentionSweep,
@@ -85,6 +86,7 @@ export function buildServer() {
       api.register(activitiesRoutes);
       api.register(materialsRoutes);
       api.register(recordingsRoutes);
+      api.register(schoolSettingsRoutes);
       api.register(assetsRoutes);
     },
     { prefix: "/api/v1" },

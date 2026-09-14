@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import type {
   ChatMessage,
+  ClientMediaSettings,
   Deck,
   DeckProgressEvent,
   JoinLessonResponse,
@@ -64,6 +65,7 @@ import { ActivityStage } from "./ActivityStage.js";
 import { RecordingConsentBanner, RecordingPanel } from "../recordings/RecordingPanel.js";
 import { playRecordingSound } from "./recording-sound.js";
 import { SelfCameraButton, VideoDegradeSuggestion } from "./CameraControls.js";
+import { toVideoResolution } from "./media-quality.js";
 import { ConnectionQualityIcon, PacketLossWarning } from "./ConnectionQuality.js";
 import { DeviceCheckScreen, type DeviceCheckResult } from "./DeviceCheckScreen.js";
 import { ScreenShareAutoPip, type ScreenShareAutoPipHandle } from "./ScreenShareAutoPip.js";
@@ -144,6 +146,7 @@ export function RoomPage() {
   const [error, setError] = useState<string | null>(null);
   const [joinFailed, setJoinFailed] = useState(false);
   const [media, setMedia] = useState<MediaConnection | null>(null);
+  const [clientMediaSettings, setClientMediaSettings] = useState<ClientMediaSettings | null>(null);
   const [deviceCheckDone, setDeviceCheckDone] = useState(false);
   const [micDeviceId, setMicDeviceId] = useState<string | null>(null);
   const [camDeviceId, setCamDeviceId] = useState<string | null>(null);
@@ -251,6 +254,7 @@ export function RoomPage() {
         setParticipants(data.participants);
         setLessonMode(data.lessonMode);
         setMedia(data.media);
+        setClientMediaSettings(data.clientMediaSettings);
         setSharedStage(data.stage);
         setStageView((v) => (v === "activity" ? v : data.stage));
       })
@@ -963,7 +967,9 @@ export function RoomPage() {
               caption="Рука"
             />
           ) : null}
-          {media && (isTeacher || self?.permissions.canShareScreen) ? (
+          {media &&
+          (isTeacher || self?.permissions.canShareScreen) &&
+          clientMediaSettings?.screenShareEnabled !== false ? (
             <SelfScreenShareButton
               priority={isTeacher}
               onScreenShareStarted={() => void pipRef.current?.open()}
@@ -978,7 +984,13 @@ export function RoomPage() {
           ) : null}
           {media ? (
             isTeacher ? (
-              <SelfCameraButton />
+              <SelfCameraButton
+                maxResolution={
+                  clientMediaSettings
+                    ? toVideoResolution(clientMediaSettings.cameraResolution, clientMediaSettings.cameraFps)
+                    : undefined
+                }
+              />
             ) : (
               <SelfCameraButton
                 maxResolution={VideoPresets.h360.resolution}
@@ -1053,14 +1065,25 @@ export function RoomPage() {
         connectOptions={{ autoSubscribe: false }}
         audio={
           self?.permissions.canSpeak && joinMicEnabled
-            ? { deviceId: micDeviceId ?? undefined }
+            ? {
+                deviceId: micDeviceId ?? undefined,
+                // Параметры школы (§10.10 ТЗ) — мягкий дефолт «высокое
+                // качество звука» (стерео); участник не переопределяет
+                // явно, но выбор устройства (deviceId) остаётся его.
+                channelCount: clientMediaSettings?.micHighQuality ? 2 : undefined,
+              }
             : false
         }
         // Э5.1/Э5.4/Э6.1 — см. историю в git; логика неизменна. joinCamEnabled —
         // Э11: с каким состоянием камеры участник нажал «Присоединиться».
         video={
           isTeacher && joinCamEnabled
-            ? { resolution: VideoPresets.h720.resolution, deviceId: camDeviceId ?? undefined }
+            ? {
+                resolution: clientMediaSettings
+                  ? toVideoResolution(clientMediaSettings.cameraResolution, clientMediaSettings.cameraFps)
+                  : VideoPresets.h720.resolution,
+                deviceId: camDeviceId ?? undefined,
+              }
             : false
         }
         // Разрыв аудио не показываем баннером — состояние видно на самой
@@ -1070,15 +1093,17 @@ export function RoomPage() {
         <ApplyAudioOutput deviceId={spkDeviceId} />
         <MicSync enabled={self?.permissions.canSpeak ?? false} />
         <VideoSubscriptionManager participants={participants} mode={lessonMode} />
-        <ScreenShareAutoPip
-          ref={pipRef}
-          participants={participants}
-          selfId={selfId}
-          isTeacher={isTeacher}
-          handRaised={self?.handRaised ?? false}
-          onToggleHand={toggleHand}
-          onLeave={leaveRoom}
-        />
+        {clientMediaSettings?.pipEnabled !== false ? (
+          <ScreenShareAutoPip
+            ref={pipRef}
+            participants={participants}
+            selfId={selfId}
+            isTeacher={isTeacher}
+            handRaised={self?.handRaised ?? false}
+            onToggleHand={toggleHand}
+            onLeave={leaveRoom}
+          />
+        ) : null}
         {content}
         <RoomAudioRenderer />
       </LiveKitRoom>

@@ -17,6 +17,7 @@ import * as canvasService from "../canvas/service.js";
 import type { LessonActor } from "../guests/service.js";
 import * as lessonsService from "../lessons/service.js";
 import * as mediaService from "../media/service.js";
+import * as schoolSettingsService from "../school-settings/service.js";
 import * as presence from "./presence.js";
 import type { PresenceEntry } from "./presence.js";
 import * as repo from "./repo.js";
@@ -392,6 +393,9 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
 
   const lessonMode = await presence.getLessonMode(lessonId);
   const stage = await presence.getLessonStage(lessonId);
+  // Параметры школы (§10.10 ТЗ, запрос 2026-09-14) — мягкие дефолты
+  // качества медиа + флаги демонстрации/PiP, и staff, и гостю.
+  const clientMediaSettings = await schoolSettingsService.getClientMediaSettings(schoolId);
 
   return {
     lessonMode,
@@ -399,6 +403,7 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
     participants: await listParticipantsSnapshot(lessonId),
     self: snapshot,
     media,
+    clientMediaSettings,
   };
 }
 

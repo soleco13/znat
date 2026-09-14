@@ -2,15 +2,21 @@ import { createHash } from "node:crypto";
 import { SignJWT } from "jose";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { lessonsServiceMock } = vi.hoisted(() => ({
+const { lessonsServiceMock, schoolSettingsServiceMock } = vi.hoisted(() => ({
   lessonsServiceMock: {
     resolveJoinToken: vi.fn(),
     getLessonForGuestSession: vi.fn(),
     parseLessonSettings: vi.fn((raw: unknown) => raw ?? {}),
   },
+  schoolSettingsServiceMock: {
+    // Параметры школы (запрос 2026-09-14): `guestAccessEnabled` по
+    // умолчанию true — сам флаг проверяется отдельным кейсом ниже.
+    getSchoolSettings: vi.fn().mockResolvedValue({ guestAccessEnabled: true }),
+  },
 }));
 
 vi.mock("../lessons/service.js", () => lessonsServiceMock);
+vi.mock("../school-settings/service.js", () => schoolSettingsServiceMock);
 
 const {
   enterAsGuest,
@@ -76,6 +82,13 @@ describe("enterAsGuest → гостевой JWT (реальная подпись
     const b = await enterAsGuest(JOIN_TOKEN, "Аня");
 
     expect(a.payload.guestId).not.toBe(b.payload.guestId);
+  });
+
+  it("guestAccessEnabled=false у школы — отказ 403, сессия не минтится (параметры школы, запрос 2026-09-14)", async () => {
+    lessonsServiceMock.resolveJoinToken.mockResolvedValue(lessonRow());
+    schoolSettingsServiceMock.getSchoolSettings.mockResolvedValueOnce({ guestAccessEnabled: false });
+
+    await expect(enterAsGuest(JOIN_TOKEN, "Аня")).rejects.toMatchObject({ statusCode: 403 });
   });
 });
 

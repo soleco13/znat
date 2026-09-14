@@ -15,6 +15,7 @@ import { AppError } from "../../plugins/errors.js";
 import { env } from "../../plugins/env.js";
 import * as lessonsService from "../lessons/service.js";
 import * as roomsService from "../rooms/service.js";
+import * as schoolSettingsService from "../school-settings/service.js";
 import * as usersService from "../users/service.js";
 import { signRecorderToken } from "../recorder-auth/service.js";
 import { getSignedFileUrl, deleteFile, getDiskUsage } from "../storage/service.js";
@@ -106,6 +107,13 @@ export async function startLessonRecording(
   }
   await assertRecordingAccess(user, lessonId);
 
+  // Параметры школы (§10.10 ТЗ, запрос 2026-09-14): admin может выключить
+  // запись для своей школы поверх инфраструктурного RECORDING_ENABLED.
+  const settings = await schoolSettingsService.getSchoolSettings(user.schoolId);
+  if (!settings.recordingEnabled) {
+    throw new AppError(403, "recording_disabled_by_school", "Запись уроков отключена администратором школы");
+  }
+
   const existing = await repo.findActiveRecordingForLesson(lessonId, user.schoolId);
   if (existing) return toSummary(existing);
 
@@ -130,6 +138,7 @@ export async function startLessonRecording(
       // быть admin, а прежний матчинг по роли в Board.tsx тогда молча не
       // находил никого и запись оставалась на независимом дефолтном виде.
       templateQuery: { lessonId, recorderToken, followUserId: user.sub },
+      qualityPreset: settings.recordingQuality,
     });
   } catch {
     throw new AppError(502, "egress_unavailable", "Сервис записи не ответил, попробуйте ещё раз");

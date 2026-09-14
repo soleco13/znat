@@ -10,6 +10,7 @@ import { MaterialsEditorLandingPage } from "./features/materials/MaterialsEditor
 import { MaterialsLibraryPage } from "./features/materials/MaterialsLibraryPage.js";
 import { EgressPage } from "./features/recordings/EgressPage.js";
 import { RecordingViewerPage } from "./features/recordings/RecordingViewerPage.js";
+import { SettingsPage } from "./features/settings/SettingsPage.js";
 import { RoomPage } from "./features/room/RoomPage.js";
 import { AppShell } from "./shared/AppShell.js";
 import { ErrorBoundary } from "./shared/ErrorBoundary.js";
@@ -68,6 +69,10 @@ export function App() {
         <Route
           path="/admin/recordings/:id"
           element={<Shell roles={["admin"]}><RecordingViewerPage /></Shell>}
+        />
+        <Route
+          path="/admin/settings"
+          element={<Shell roles={["admin"]}><SettingsPage /></Shell>}
         />
         {/* Э10.2 — layout-шаблон записи. Открывается headless-Chrome внутри
             LiveKit Egress на второй машине; без нашей сессии, вне каркаса. */}

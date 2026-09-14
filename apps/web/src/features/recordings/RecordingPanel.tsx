@@ -98,6 +98,8 @@ export function RecordingPanel({
     } catch (e) {
       if (e instanceof ApiError && e.status === 503) {
         setDisabled(true);
+      } else if (e instanceof ApiError && e.status === 403) {
+        setError(e.message);
       } else {
         setError("Не удалось начать запись");
       }

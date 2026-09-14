@@ -6,7 +6,7 @@ import {
   EncodingOptionsPreset,
   type EgressInfo,
 } from "livekit-server-sdk";
-import type { RecordingStatus } from "@school/shared";
+import type { RecordingQualityPreset, RecordingStatus } from "@school/shared";
 import { env } from "../../plugins/env.js";
 
 /**
@@ -53,9 +53,19 @@ export function mapEgressStatus(status: EgressStatus | undefined): RecordingStat
 
 /**
  * H.264 720p @ ~1.5 Мбит/с (§10.10 ТЗ, строка про лавинообразный рост
- * хранилища). Дефолтный пресет LiveKit `H264_720P_30` — ровно это.
+ * хранилища) — дефолт. Параметры школы (запрос 2026-09-14) добавляют
+ * админский выбор из двух готовых пресетов LiveKit — НЕ произвольных
+ * resolution/fps (риск тот же, что уже был с `cpu_cost` в egress.local.yaml,
+ * см. memory: невалидная комбинация тихо не подтверждается egress). На
+ * этом тестовом стенде (2 CPU, `cpu_cost.room_composite_cpu_cost=1.5`) выбор
+ * 1080p — сознательный компромисс админа: сам пресет не завязан на
+ * `cpu_cost` (тот статичный на деплой, не на разрешение), но реальной CPU/
+ * битрейт-нагрузки на запись при 1080p будет больше.
  */
-const RECORDING_ENCODING_PRESET = EncodingOptionsPreset.H264_720P_30;
+const RECORDING_ENCODING_PRESETS: Record<RecordingQualityPreset, EncodingOptionsPreset> = {
+  "720p30": EncodingOptionsPreset.H264_720P_30,
+  "1080p30": EncodingOptionsPreset.H264_1080P_30,
+};
 
 export interface StartRecordingParams {
   /** Комната урока в LiveKit (`lessons.livekit_room`, напр. `lesson-<uuid>`). */
@@ -79,6 +89,8 @@ export interface StartRecordingParams {
    * не должны пересекаться с этими тремя.
    */
   templateQuery?: Record<string, string>;
+  /** Параметры школы — пресет качества записи. По умолчанию `720p30`. */
+  qualityPreset?: RecordingQualityPreset;
 }
 
 export interface StartedRecording {
@@ -106,7 +118,7 @@ export async function startRoomRecording(params: StartRecordingParams): Promise<
   const info = await egressClient.startRoomCompositeEgress(params.roomName, output, {
     layout: env.RECORDING_EGRESS_TEMPLATE_URL ? "speaker" : "",
     customBaseUrl: buildTemplateUrl(env.RECORDING_EGRESS_TEMPLATE_URL, params.templateQuery),
-    encodingOptions: RECORDING_ENCODING_PRESET,
+    encodingOptions: RECORDING_ENCODING_PRESETS[params.qualityPreset ?? "720p30"],
   });
 
   return { egressId: info.egressId, status: mapEgressStatus(info.status) };

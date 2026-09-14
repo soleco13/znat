@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { AccessTokenPayload } from "@school/shared";
 
-const { repoMock, egressMock, lessonsMock, roomsMock, storageMock } = vi.hoisted(() => ({
+const { repoMock, egressMock, lessonsMock, roomsMock, storageMock, schoolSettingsMock } = vi.hoisted(() => ({
   repoMock: {
     insertRecording: vi.fn(),
     findRecordingById: vi.fn(),
@@ -33,6 +33,23 @@ const { repoMock, egressMock, lessonsMock, roomsMock, storageMock } = vi.hoisted
     getSignedFileUrl: vi.fn(),
     deleteFile: vi.fn(),
   },
+  schoolSettingsMock: {
+    // Параметры школы (запрос 2026-09-14): `recordingEnabled` по умолчанию
+    // true в тестах — сам флаг проверяется отдельными кейсами через
+    // `.mockResolvedValueOnce`.
+    getSchoolSettings: vi.fn().mockResolvedValue({
+      guestAccessEnabled: true,
+      recordingEnabled: true,
+      screenShareEnabled: true,
+      pipEnabled: true,
+      cameraResolution: "720p",
+      cameraFps: 24,
+      micHighQuality: false,
+      screenShareResolution: "1080p",
+      screenShareFps: 15,
+      recordingQuality: "720p30",
+    }),
+  },
 }));
 
 vi.mock("./repo.js", () => repoMock);
@@ -40,6 +57,7 @@ vi.mock("./egress-client.js", () => egressMock);
 vi.mock("../lessons/service.js", () => lessonsMock);
 vi.mock("../rooms/service.js", () => roomsMock);
 vi.mock("../storage/service.js", () => storageMock);
+vi.mock("../school-settings/service.js", () => schoolSettingsMock);
 vi.mock("../../plugins/env.js", () => ({
   env: {
     STORAGE_ROOT: "/data/assets",
@@ -106,6 +124,12 @@ describe("startLessonRecording (Э10.3, §10.4 ТЗ)", () => {
     vi.resetModules();
   });
 
+  it("403, если запись выключена параметрами школы (запрос 2026-09-14)", async () => {
+    schoolSettingsMock.getSchoolSettings.mockResolvedValueOnce({ recordingEnabled: false });
+    await expect(service.startLessonRecording(teacherUser, LESSON)).rejects.toMatchObject({ statusCode: 403 });
+    expect(egressMock.startRoomRecording).not.toHaveBeenCalled();
+  });
+
   it("ученику — отказ (§10.10 ТЗ: записи ученикам недоступны)", async () => {
     await expect(service.startLessonRecording(studentUser, LESSON)).rejects.toMatchObject({ statusCode: 403 });
     expect(egressMock.startRoomRecording).not.toHaveBeenCalled();
@@ -122,6 +146,7 @@ describe("startLessonRecording (Э10.3, §10.4 ТЗ)", () => {
       expect.objectContaining({
         roomName: `lesson-${LESSON}`,
         absoluteFilepath: expect.stringContaining("/data/assets/recordings/"),
+        qualityPreset: "720p30",
       }),
     );
     const inserted = repoMock.insertRecording.mock.calls[0]![0] as Record<string, unknown>;

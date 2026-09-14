@@ -2,7 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AccessTokenPayload } from "@school/shared";
 import type { LessonActor } from "../guests/service.js";
 
-const { lessonsServiceMock, usersServiceMock, repoMock, mediaServiceMock, canvasServiceMock } = vi.hoisted(() => ({
+const {
+  lessonsServiceMock,
+  usersServiceMock,
+  repoMock,
+  mediaServiceMock,
+  canvasServiceMock,
+  schoolSettingsServiceMock,
+} = vi.hoisted(() => ({
   canvasServiceMock: {
     closeCanvasDocument: vi.fn(),
     setDrawPermission: vi.fn(),
@@ -32,6 +39,19 @@ const { lessonsServiceMock, usersServiceMock, repoMock, mediaServiceMock, canvas
     findOtherActiveScreenShares: vi.fn().mockResolvedValue([]),
     muteScreenShare: vi.fn(),
   },
+  schoolSettingsServiceMock: {
+    // Параметры школы (запрос 2026-09-14) — `join()` подмешивает мягкие
+    // дефолты качества в ответ; тестам не важны конкретные значения.
+    getClientMediaSettings: vi.fn().mockResolvedValue({
+      screenShareEnabled: true,
+      pipEnabled: true,
+      cameraResolution: "720p",
+      cameraFps: 24,
+      micHighQuality: false,
+      screenShareResolution: "1080p",
+      screenShareFps: 15,
+    }),
+  },
 }));
 
 vi.mock("../lessons/service.js", () => lessonsServiceMock);
@@ -39,6 +59,7 @@ vi.mock("../users/service.js", () => usersServiceMock);
 vi.mock("./repo.js", () => repoMock);
 vi.mock("../media/service.js", () => mediaServiceMock);
 vi.mock("../canvas/service.js", () => canvasServiceMock);
+vi.mock("../school-settings/service.js", () => schoolSettingsServiceMock);
 
 // presence.ts общается с реальным Redis — подменяем на in-memory реализацию,
 // оставляя чистые функции (defaultPermissions, isStaleEntry) настоящими.

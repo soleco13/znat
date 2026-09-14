@@ -10,6 +10,7 @@ import {
 import { env } from "../../plugins/env.js";
 import { AppError } from "../../plugins/errors.js";
 import * as lessonsService from "../lessons/service.js";
+import * as schoolSettingsService from "../school-settings/service.js";
 
 /**
  * Э12.4 — гостевой вход учеников (§1.6 план-ТЗ). Читать построчно
@@ -82,6 +83,14 @@ export interface GuestSessionIssued {
  */
 export async function enterAsGuest(joinToken: string, name: string): Promise<GuestSessionIssued> {
   const lesson = await lessonsService.resolveJoinToken(joinToken);
+  // Параметры школы (§10.10 ТЗ, запрос 2026-09-14): admin может закрыть вход
+  // без аккаунта целиком. Карточку урока (`getPublicLessonInfo`) не гейтим —
+  // без активного входа она безвредна, а гейт здесь достаточен, чтобы
+  // сессию реально нельзя было получить.
+  const settings = await schoolSettingsService.getSchoolSettings(lesson.schoolId);
+  if (!settings.guestAccessEnabled) {
+    throw new AppError(403, "guest_access_disabled", "Вход без аккаунта отключён администратором школы");
+  }
   const ttlSeconds = env.GUEST_SESSION_TTL_HOURS * 3600;
   const issuedAtSec = Math.floor(Date.now() / 1000);
   const expiresAt = new Date((issuedAtSec + ttlSeconds) * 1000);

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { roleSchema, participantKindSchema } from "./roles.js";
 import { mediaConnectionSchema } from "./media.js";
 import { deckProgressEventSchema } from "./decks.js";
+import { clientMediaSettingsSchema } from "./school-settings.js";
 
 export const participantPermissionsSchema = z.object({
   canDraw: z.boolean(),
@@ -69,6 +70,8 @@ export const joinLessonResponseSchema = z.object({
   participants: z.array(participantSnapshotSchema),
   self: participantSnapshotSchema,
   media: mediaConnectionSchema,
+  /** Параметры школы (§10.10 ТЗ, запрос 2026-09-14) — мягкие дефолты качества + флаги демонстрации/PiP. */
+  clientMediaSettings: clientMediaSettingsSchema,
 });
 export type JoinLessonResponse = z.infer<typeof joinLessonResponseSchema>;
 

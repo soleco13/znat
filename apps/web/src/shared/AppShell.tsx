@@ -9,6 +9,7 @@ import {
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
+  Settings,
   SquarePen,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -42,6 +43,7 @@ const NAV: NavItem[] = [
     end: true,
   },
   { to: "/materials/edit", label: "Редактор", icon: SquarePen, roles: ["admin", "methodist"] },
+  { to: "/admin/settings", label: "Параметры", icon: Settings, roles: ["admin"] },
 ];
 
 const ROLE_LABEL: Record<Role, string> = {
