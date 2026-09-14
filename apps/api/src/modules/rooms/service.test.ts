@@ -47,9 +47,11 @@ const {
       pipEnabled: true,
       cameraResolution: "720p",
       cameraFps: 24,
+      cameraBitrateKbps: 1700,
       micHighQuality: false,
       screenShareResolution: "1080p",
       screenShareFps: 15,
+      screenShareBitrateKbps: 2500,
     }),
   },
 }));

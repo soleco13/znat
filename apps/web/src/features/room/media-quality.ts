@@ -3,10 +3,11 @@ import type { Framerate, MediaQualityPreset } from "@school/shared";
 
 /**
  * Параметры школы (§10.10 ТЗ, запрос 2026-09-14) — мягкие дефолты качества
- * камеры/демонстрации. `MediaQualityPreset` даёт только разрешение, fps —
- * отдельное поле, поэтому берём ширину/высоту готового `VideoPresets.*`, а
- * `frameRate` подставляем свой (у пресетов LiveKit fps зашит вместе с
- * разрешением, нам нужно порознь). 480p у LiveKit нет — ближайший `h540`.
+ * камеры/демонстрации, включая явный битрейт (запрос «более гибкие
+ * настройки ... выставить битрейт»). `MediaQualityPreset` даёт только
+ * разрешение, fps/битрейт — отдельные поля из настроек школы, поэтому
+ * берём ширину/высоту готового `VideoPresets.*`, остальное — своё.
+ * 480p у LiveKit нет — ближайший `h540`.
  */
 const RESOLUTION_BASE: Record<MediaQualityPreset, VideoResolution> = {
   "360p": VideoPresets.h360.resolution,
@@ -20,30 +21,29 @@ export function toVideoResolution(preset: MediaQualityPreset, fps: Framerate): V
 }
 
 /**
- * Битрейт демонстрации экрана по (разрешение × fps) — те же цифры, что
- * `livekit-client`'s `ScreenSharePresets` там, где combo совпадает
- * (360p/15→400k, 720p/15→1.5M, 720p/30→2M, 1080p/15→2.5M, 1080p/30→5M —
- * сверено с исходником, не выдумано), остальные клетки (480p — которого у
- * `ScreenSharePresets` нет вовсе, у нас там `h540`; 24fps — которого там
- * тоже нет) досчитаны интерполяцией по пикселям/fps от тех же опорных
- * точек, ЗАРАНЕЕ округлённые числа (не формула в рантайме) — можно свериться
- * глазами, в отличие от риска с egress `cpu_cost` (см. memory: там была
- * динамическая нестыковка конфигов, тут просто таблица битрейтов кодека,
- * жёсткого отказа WebRTC на «неправильное» значение не бывает).
+ * `VideoEncoding` (публикация камеры) — `maxBitrate` у LiveKit в бит/с,
+ * настройки школы хранят Кбит/с (человекопонятнее в UI) — конвертация тут,
+ * в одном месте.
  */
-const SCREEN_SHARE_BITRATE: Record<MediaQualityPreset, Record<Framerate, number>> = {
-  "360p": { 15: 400_000, 24: 450_000, 30: 500_000 },
-  "480p": { 15: 800_000, 24: 1_000_000, 30: 1_100_000 },
-  "720p": { 15: 1_500_000, 24: 1_800_000, 30: 2_000_000 },
-  "1080p": { 15: 2_500_000, 24: 4_000_000, 30: 5_000_000 },
-};
+export function toVideoEncoding(fps: Framerate, bitrateKbps: number): { maxBitrate: number; maxFramerate: number } {
+  return { maxBitrate: bitrateKbps * 1000, maxFramerate: fps };
+}
 
 /**
- * Демонстрация экрана — свой `VideoPreset` (не готовый `ScreenSharePresets`,
- * там нет 480p/24fps), приоритет `"medium"` как у `ScreenSharePresets` и
- * прежнего `DOCUMENT_SCREEN_SHARE_PRESET` в `ScreenShareControls.tsx`.
+ * Демонстрация экрана — свой `VideoPreset` с битрейтом ИЗ настроек школы
+ * (не из таблицы-заглушки — запрос 2026-09-14 «выставить битрейт»),
+ * приоритет `"medium"` как у `ScreenSharePresets`/прежнего
+ * `DOCUMENT_SCREEN_SHARE_PRESET`. `simulcast: false` при публикации
+ * (задаётся в `ScreenShareControls.tsx`, не здесь) — см. коммит-фикс
+ * «публикация демонстрации виснет на первой попытке»: пусть даже
+ * произвольный битрейт, лишние вычисляемые слои симулкаста не нужны и
+ * были источником зависания негоциации.
  */
-export function toScreenShareEncoding(preset: MediaQualityPreset, fps: Framerate): VideoPreset {
+export function toScreenShareEncoding(
+  preset: MediaQualityPreset,
+  fps: Framerate,
+  bitrateKbps: number,
+): VideoPreset {
   const { width, height } = RESOLUTION_BASE[preset];
-  return new VideoPreset(width, height, SCREEN_SHARE_BITRATE[preset][fps], fps, "medium");
+  return new VideoPreset(width, height, bitrateKbps * 1000, fps, "medium");
 }

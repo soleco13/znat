@@ -10,13 +10,18 @@ import { z } from "zod";
  * - feature-флаги (`*Enabled`) — жёсткие: сервер реально не даёт выполнить
  *   действие (гостя не пускает, запись не стартует).
  * - качество медиа (`camera*`/`mic*`/`screenShare*`) — МЯГКИЕ дефолты:
- *   значение, которое клиент подставляет при выборе разрешения/fps
- *   (`VideoPresets` в `RoomPage`/`CameraControls`/`ScreenShareControls`),
- *   участник может выбрать своё устройство/качество поверх. Сервер это не
- *   проверяет и не отклоняет — иначе пришлось бы трогать выдачу LiveKit-
- *   токенов и WebRTC-негошиэйшн (CLAUDE.md: «не делегировать вслепую»).
- * - `recordingQuality` — пресет для egress (`egress-client.ts`), тоже
- *   жёсткий (это параметр запуска записи, не участник его выбирает).
+ *   значение, которое клиент подставляет при публикации (`RoomPage.tsx`/
+ *   `CameraControls.tsx`/`ScreenShareControls.tsx`), участник может
+ *   выбрать своё устройство поверх, но не битрейт/fps — это решает школа.
+ * - `recording*` — параметры запуска записи (`egress-client.ts`), тоже
+ *   жёсткие, задаёт только школа.
+ *
+ * Битрейты — везде в Кбит/с (человекопонятная единица, как в большинстве
+ * панелей стриминга): клиентский `VideoEncoding.maxBitrate` у LiveKit в
+ * бит/с — конвертация `×1000` в `media-quality.ts`; серверный egress
+ * `EncodingOptions.videoBitrate`/`audioBitrate` у LiveKit УЖЕ в Кбит/с
+ * (дефолты протобафа: video 4500, audio 128 — только в Кбит/с это разумные
+ * числа), конвертировать не нужно.
  */
 
 export const mediaQualityPresetSchema = z.enum(["360p", "480p", "720p", "1080p"]);
@@ -25,8 +30,8 @@ export type MediaQualityPreset = z.infer<typeof mediaQualityPresetSchema>;
 export const framerateSchema = z.union([z.literal(15), z.literal(24), z.literal(30)]);
 export type Framerate = z.infer<typeof framerateSchema>;
 
-export const recordingQualityPresetSchema = z.enum(["720p30", "1080p30"]);
-export type RecordingQualityPreset = z.infer<typeof recordingQualityPresetSchema>;
+/** Разумный диапазон битрейта видео (Кбит/с) — ниже 100 картинка не читается, выше 8000 нет смысла для урока/документа. */
+const videoBitrateKbpsSchema = z.number().int().min(100).max(8000);
 
 export const schoolSettingsSchema = z.object({
   /** Вход ученика по прямой ссылке без аккаунта (Э12.6, `/j/:token`). */
@@ -38,28 +43,25 @@ export const schoolSettingsSchema = z.object({
   /** «Картинка в картинке» (Document PiP) — чисто клиентская фича, кнопка скрыта, если выключено. */
   pipEnabled: z.boolean().default(true),
 
-  /** Мягкий дефолт разрешения камеры при публикации (участник может сменить). */
+  /** Мягкий дефолт разрешения камеры при публикации (участник может сменить устройство, не качество). */
   cameraResolution: mediaQualityPresetSchema.default("720p"),
   cameraFps: framerateSchema.default(24),
+  /** Битрейт видео камеры — по умолчанию как у `VideoPresets.h720` (1700 Кбит/с). */
+  cameraBitrateKbps: videoBitrateKbpsSchema.default(1700),
   /** Высокое качество звука (стерео/больший битрейт Opus) — мягкий дефолт микрофона. */
   micHighQuality: z.boolean().default(false),
-  /**
-   * Мягкий дефолт разрешения/fps демонстрации экрана — применяется в
-   * `ScreenShareControls.tsx` через `toScreenShareEncoding` (`apps/web/src/
-   * features/room/media-quality.ts`, запрос 2026-09-14 «параметры
-   * демонстрации тоже регулировать»): свой битрейт под каждую комбинацию
-   * (таблица, сверена с официальными `livekit-client` `ScreenSharePresets`
-   * там, где они есть — 360p/15, 720p/15, 720p/30, 1080p/15, 1080p/30;
-   * остальные клетки интерполированы и захардкожены заранее, не формула в
-   * рантайме). Дефолт из ТЗ (1080p@5fps, §7.1) остаётся запасным значением
-   * на время, пока настройки школы ещё не загружены (см. `RoomPage.tsx`
-   * `clientMediaSettings`).
-   */
+
+  /** Мягкий дефолт разрешения/fps/битрейта демонстрации экрана — применяется в `ScreenShareControls.tsx`. */
   screenShareResolution: mediaQualityPresetSchema.default("1080p"),
   screenShareFps: framerateSchema.default(15),
+  /** По умолчанию как у `ScreenSharePresets.h1080fps15` (2500 Кбит/с). */
+  screenShareBitrateKbps: videoBitrateKbpsSchema.default(2500),
 
-  /** Пресет качества записи урока (RoomComposite egress) — см. `egress-client.ts`. */
-  recordingQuality: recordingQualityPresetSchema.default("720p30"),
+  /** Разрешение/fps/битрейт видеозаписи урока (RoomComposite egress) — см. `egress-client.ts`. */
+  recordingResolution: mediaQualityPresetSchema.default("720p"),
+  recordingFps: framerateSchema.default(30),
+  /** §10.10 ТЗ: «~1.5 Мбит/с — дефолт, меньше места на диске». */
+  recordingBitrateKbps: videoBitrateKbpsSchema.default(1500),
 });
 export type SchoolSettings = z.infer<typeof schoolSettingsSchema>;
 
@@ -73,16 +75,18 @@ export type UpdateSchoolSettingsRequest = z.infer<typeof updateSchoolSettingsReq
 /**
  * Подмножество настроек, нужное клиенту в уроке (мягкие дефолты качества +
  * флаги демонстрации/PiP) — уходит в `JoinLessonResponse` (и staff, и
- * гостю). Флаги вроде `guestAccessEnabled`/`recordingEnabled` туда не
- * нужны — они проверяются раньше, на входе/старте записи.
+ * гостю). Флаги вроде `guestAccessEnabled`/`recordingEnabled` и `recording*`
+ * туда не нужны — они проверяются/используются раньше, на входе/старте записи.
  */
 export const clientMediaSettingsSchema = schoolSettingsSchema.pick({
   screenShareEnabled: true,
   pipEnabled: true,
   cameraResolution: true,
   cameraFps: true,
+  cameraBitrateKbps: true,
   micHighQuality: true,
   screenShareResolution: true,
   screenShareFps: true,
+  screenShareBitrateKbps: true,
 });
 export type ClientMediaSettings = z.infer<typeof clientMediaSettingsSchema>;

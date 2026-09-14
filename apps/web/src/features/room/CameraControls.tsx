@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocalParticipant } from "@livekit/components-react";
-import { Track, VideoPresets, type VideoResolution } from "livekit-client";
+import { Track, VideoPresets, type VideoEncoding, type VideoResolution } from "livekit-client";
 import { AlertTriangle, Video, VideoOff } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
@@ -13,10 +13,13 @@ import { useSelfCameraUiStore } from "./self-camera-ui-store.js";
  */
 export function SelfCameraButton({
   maxResolution = VideoPresets.h720.resolution,
+  encoding,
   disabled = false,
   disabledReason,
 }: {
   maxResolution?: VideoResolution;
+  /** Параметры школы (запрос 2026-09-14) — битрейт камеры, `toVideoEncoding` в `RoomPage.tsx`. Без него — дефолт LiveKit по разрешению. */
+  encoding?: VideoEncoding;
   /** Юзабилити-правка: без права `canPublishVideo` кнопка видна, но disabled с объяснением. */
   disabled?: boolean;
   disabledReason?: string;
@@ -50,7 +53,7 @@ export function SelfCameraButton({
       onToggle={() => {
         const next = !desiredOn;
         setDesiredOn(next);
-        localParticipant.setCameraEnabled(next, { resolution: maxResolution }).catch(() => {
+        localParticipant.setCameraEnabled(next, { resolution: maxResolution }, { videoEncoding: encoding }).catch(() => {
           // Не получилось — откатываем намерение к тому, что реально есть.
           setDesiredOn(localParticipant.isCameraEnabled);
         });

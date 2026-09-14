@@ -138,7 +138,11 @@ export async function startLessonRecording(
       // быть admin, а прежний матчинг по роли в Board.tsx тогда молча не
       // находил никого и запись оставалась на независимом дефолтном виде.
       templateQuery: { lessonId, recorderToken, followUserId: user.sub },
-      qualityPreset: settings.recordingQuality,
+      quality: {
+        resolution: settings.recordingResolution,
+        fps: settings.recordingFps,
+        bitrateKbps: settings.recordingBitrateKbps,
+      },
     });
   } catch {
     throw new AppError(502, "egress_unavailable", "Сервис записи не ответил, попробуйте ещё раз");

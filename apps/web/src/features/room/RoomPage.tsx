@@ -65,7 +65,7 @@ import { ActivityStage } from "./ActivityStage.js";
 import { RecordingConsentBanner, RecordingPanel } from "../recordings/RecordingPanel.js";
 import { playRecordingSound } from "./recording-sound.js";
 import { SelfCameraButton, VideoDegradeSuggestion } from "./CameraControls.js";
-import { toScreenShareEncoding, toVideoResolution } from "./media-quality.js";
+import { toScreenShareEncoding, toVideoEncoding, toVideoResolution } from "./media-quality.js";
 import { ConnectionQualityIcon, PacketLossWarning } from "./ConnectionQuality.js";
 import { DeviceCheckScreen, type DeviceCheckResult } from "./DeviceCheckScreen.js";
 import { ScreenShareAutoPip, type ScreenShareAutoPipHandle } from "./ScreenShareAutoPip.js";
@@ -82,12 +82,37 @@ import { VideoSubscriptionManager } from "./VideoSubscriptions.js";
 
 // Э5.1/Э5.2 — см. подробные комментарии ниже у <LiveKitRoom>. 720p + simulcast,
 // adaptiveStream/dynacast включены явно (в livekit-client по умолчанию off).
-const ROOM_OPTIONS: RoomOptions = {
+// Дефолт на время, пока `clientMediaSettings` ещё не загружены (см. `buildRoomOptions`).
+const FALLBACK_ROOM_OPTIONS: RoomOptions = {
   videoCaptureDefaults: { resolution: VideoPresets.h720.resolution },
   publishDefaults: { simulcast: true },
   adaptiveStream: true,
   dynacast: true,
 };
+
+/**
+ * Параметры школы (запрос 2026-09-14 «выставить битрейт») — битрейт камеры
+ * задаётся только тут: `video={...}` у `<LiveKitRoom>` (ниже) принимает
+ * лишь `VideoCaptureOptions` (разрешение/устройство), не битрейт —
+ * `publishDefaults.videoEncoding` в `RoomOptions` это единственное место,
+ * откуда его можно применить к ПЕРВОЙ публикации камеры при входе (ручной
+ * повторный тогл — `CameraControls.tsx`, туда битрейт тоже передаётся
+ * отдельно). Вызывается ПОСЛЕ `if (!media) return` (см. ниже) — на этот
+ * момент `clientMediaSettings` уже загружены тем же ответом `join()`, что
+ * и `media`.
+ */
+function buildRoomOptions(settings: ClientMediaSettings | null): RoomOptions {
+  if (!settings) return FALLBACK_ROOM_OPTIONS;
+  return {
+    videoCaptureDefaults: { resolution: toVideoResolution(settings.cameraResolution, settings.cameraFps) },
+    publishDefaults: {
+      simulcast: true,
+      videoEncoding: toVideoEncoding(settings.cameraFps, settings.cameraBitrateKbps),
+    },
+    adaptiveStream: true,
+    dynacast: true,
+  };
+}
 
 const STATUS_LABEL: Record<SocketStatusLike, string> = {
   connecting: "Подключение…",
@@ -977,6 +1002,7 @@ export function RoomPage() {
                   ? toScreenShareEncoding(
                       clientMediaSettings.screenShareResolution,
                       clientMediaSettings.screenShareFps,
+                      clientMediaSettings.screenShareBitrateKbps,
                     )
                   : undefined
               }
@@ -996,6 +1022,11 @@ export function RoomPage() {
                 maxResolution={
                   clientMediaSettings
                     ? toVideoResolution(clientMediaSettings.cameraResolution, clientMediaSettings.cameraFps)
+                    : undefined
+                }
+                encoding={
+                  clientMediaSettings
+                    ? toVideoEncoding(clientMediaSettings.cameraFps, clientMediaSettings.cameraBitrateKbps)
                     : undefined
                 }
               />
@@ -1067,7 +1098,7 @@ export function RoomPage() {
         serverUrl={media.url}
         token={media.token}
         connect
-        options={ROOM_OPTIONS}
+        options={buildRoomOptions(clientMediaSettings)}
         // Э6.2, §5.2 ТЗ: автоподписка LiveKit выключена намеренно — подпиской
         // управляет `VideoSubscriptionManager` ниже, единственное место.
         connectOptions={{ autoSubscribe: false }}

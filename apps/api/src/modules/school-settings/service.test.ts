@@ -30,7 +30,8 @@ describe("getSchoolSettings (параметры школы, запрос 2026-09
       screenShareEnabled: true,
       pipEnabled: true,
       cameraResolution: "720p",
-      recordingQuality: "720p30",
+      recordingResolution: "720p",
+      recordingBitrateKbps: 1500,
     });
   });
 

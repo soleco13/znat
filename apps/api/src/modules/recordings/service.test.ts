@@ -44,10 +44,14 @@ const { repoMock, egressMock, lessonsMock, roomsMock, storageMock, schoolSetting
       pipEnabled: true,
       cameraResolution: "720p",
       cameraFps: 24,
+      cameraBitrateKbps: 1700,
       micHighQuality: false,
       screenShareResolution: "1080p",
       screenShareFps: 15,
-      recordingQuality: "720p30",
+      screenShareBitrateKbps: 2500,
+      recordingResolution: "720p",
+      recordingFps: 30,
+      recordingBitrateKbps: 1500,
     }),
   },
 }));
@@ -146,7 +150,7 @@ describe("startLessonRecording (Э10.3, §10.4 ТЗ)", () => {
       expect.objectContaining({
         roomName: `lesson-${LESSON}`,
         absoluteFilepath: expect.stringContaining("/data/assets/recordings/"),
-        qualityPreset: "720p30",
+        quality: { resolution: "720p", fps: 30, bitrateKbps: 1500 },
       }),
     );
     const inserted = repoMock.insertRecording.mock.calls[0]![0] as Record<string, unknown>;

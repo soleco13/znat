@@ -3,10 +3,10 @@ import {
   EncodedFileOutput,
   EncodedFileType,
   EgressStatus,
-  EncodingOptionsPreset,
+  EncodingOptions,
   type EgressInfo,
 } from "livekit-server-sdk";
-import type { RecordingQualityPreset, RecordingStatus } from "@school/shared";
+import type { Framerate, MediaQualityPreset, RecordingStatus } from "@school/shared";
 import { env } from "../../plugins/env.js";
 
 /**
@@ -51,21 +51,32 @@ export function mapEgressStatus(status: EgressStatus | undefined): RecordingStat
   }
 }
 
-/**
- * H.264 720p @ ~1.5 Мбит/с (§10.10 ТЗ, строка про лавинообразный рост
- * хранилища) — дефолт. Параметры школы (запрос 2026-09-14) добавляют
- * админский выбор из двух готовых пресетов LiveKit — НЕ произвольных
- * resolution/fps (риск тот же, что уже был с `cpu_cost` в egress.local.yaml,
- * см. memory: невалидная комбинация тихо не подтверждается egress). На
- * этом тестовом стенде (2 CPU, `cpu_cost.room_composite_cpu_cost=1.5`) выбор
- * 1080p — сознательный компромисс админа: сам пресет не завязан на
- * `cpu_cost` (тот статичный на деплой, не на разрешение), но реальной CPU/
- * битрейт-нагрузки на запись при 1080p будет больше.
- */
-const RECORDING_ENCODING_PRESETS: Record<RecordingQualityPreset, EncodingOptionsPreset> = {
-  "720p30": EncodingOptionsPreset.H264_720P_30,
-  "1080p30": EncodingOptionsPreset.H264_1080P_30,
+/** Ширина/высота под пресет — та же шкала, что фронтенд (`media-quality.ts`), для консистентности «720p» и там, и тут. */
+const RECORDING_RESOLUTION: Record<MediaQualityPreset, { width: number; height: number }> = {
+  "360p": { width: 640, height: 360 },
+  "480p": { width: 960, height: 540 },
+  "720p": { width: 1280, height: 720 },
+  "1080p": { width: 1920, height: 1080 },
 };
+
+/**
+ * Свой `EncodingOptions` (не пресет `EncodingOptionsPreset` — запрос
+ * 2026-09-14 «более гибкие настройки ... выставить битрейт»). Дефолт школы
+ * — 720p/30fps/1500 Кбит/с (§10.10 ТЗ: «~1.5 Мбит/с — меньше места на
+ * диске»). `cpu_cost.room_composite_cpu_cost` в `egress.local.yaml` — свой,
+ * СТАТИЧНЫЙ на деплой параметр (не зависит от resolution/bitrate здесь, см.
+ * memory про уже пойманный баг с ним) — произвольное разрешение тут само по
+ * себе не должно повторить ту проблему, но на слабом хосте (2 CPU) высокое
+ * разрешение/битрейт реально грузит CPU записи сильнее.
+ */
+function buildEncodingOptions(
+  resolution: MediaQualityPreset,
+  fps: Framerate,
+  bitrateKbps: number,
+): EncodingOptions {
+  const { width, height } = RECORDING_RESOLUTION[resolution];
+  return new EncodingOptions({ width, height, framerate: fps, videoBitrate: bitrateKbps });
+}
 
 export interface StartRecordingParams {
   /** Комната урока в LiveKit (`lessons.livekit_room`, напр. `lesson-<uuid>`). */
@@ -89,8 +100,8 @@ export interface StartRecordingParams {
    * не должны пересекаться с этими тремя.
    */
   templateQuery?: Record<string, string>;
-  /** Параметры школы — пресет качества записи. По умолчанию `720p30`. */
-  qualityPreset?: RecordingQualityPreset;
+  /** Параметры школы — разрешение/fps/битрейт записи. По умолчанию 720p/30fps/1500 Кбит/с. */
+  quality?: { resolution: MediaQualityPreset; fps: Framerate; bitrateKbps: number };
 }
 
 export interface StartedRecording {
@@ -118,7 +129,9 @@ export async function startRoomRecording(params: StartRecordingParams): Promise<
   const info = await egressClient.startRoomCompositeEgress(params.roomName, output, {
     layout: env.RECORDING_EGRESS_TEMPLATE_URL ? "speaker" : "",
     customBaseUrl: buildTemplateUrl(env.RECORDING_EGRESS_TEMPLATE_URL, params.templateQuery),
-    encodingOptions: RECORDING_ENCODING_PRESETS[params.qualityPreset ?? "720p30"],
+    encodingOptions: params.quality
+      ? buildEncodingOptions(params.quality.resolution, params.quality.fps, params.quality.bitrateKbps)
+      : buildEncodingOptions("720p", 30, 1500),
   });
 
   return { egressId: info.egressId, status: mapEgressStatus(info.status) };

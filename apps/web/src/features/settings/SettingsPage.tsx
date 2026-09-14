@@ -1,18 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Camera,
   Disc,
   Film,
+  Gauge,
   LinkIcon,
   Mic,
   MonitorUp,
   PictureInPicture2,
-  Settings as SettingsIcon,
 } from "lucide-react";
 import type {
   Framerate,
   MediaQualityPreset,
-  RecordingQualityPreset,
   SchoolSettings,
   UpdateSchoolSettingsRequest,
 } from "@school/shared";
@@ -21,6 +20,7 @@ import { useAsync } from "@/shared/hooks/use-async";
 import { ApiError } from "@/shared/api-client";
 import { Card } from "@/shared/ui/card";
 import { ErrorState } from "@/shared/ui/error-state";
+import { Input } from "@/shared/ui/input";
 import { PageHeader } from "@/shared/ui/page-header";
 import {
   Select,
@@ -36,9 +36,11 @@ import { getSchoolSettings, updateSchoolSettings } from "./settings-api.js";
 
 /**
  * Пользовательский запрос (2026-09-14, §10.10 ТЗ): страница администратора
- * «Параметры» — feature-флаги школы + мягкие дефолты качества медиа.
- * Применяется сразу по изменению (без отдельной кнопки «Сохранить») —
- * тот же паттерн, что переключатели в других местах приложения.
+ * «Параметры» — feature-флаги школы + мягкие дефолты качества медиа,
+ * включая явный битрейт (запрос «более гибкие настройки ... выставить
+ * битрейт») для камеры, демонстрации и записи урока.
+ * Переключатели/селекты применяются сразу по изменению; битрейт (текстовое
+ * поле) — по потере фокуса/Enter, чтобы не слать PATCH на каждую цифру.
  */
 
 const MEDIA_QUALITY_OPTIONS: Array<{ value: MediaQualityPreset; label: string }> = [
@@ -54,10 +56,8 @@ const FPS_OPTIONS: Array<{ value: Framerate; label: string }> = [
   { value: 30, label: "30 кадр/с" },
 ];
 
-const RECORDING_QUALITY_OPTIONS: Array<{ value: RecordingQualityPreset; label: string; hint: string }> = [
-  { value: "720p30", label: "720p, 30 кадр/с", hint: "~1.5 Мбит/с — дефолт, меньше места на диске" },
-  { value: "1080p30", label: "1080p, 30 кадр/с", hint: "выше нагрузка на CPU записи и больше файлы" },
-];
+const BITRATE_MIN = 100;
+const BITRATE_MAX = 8000;
 
 function Row({
   icon: Icon,
@@ -92,6 +92,52 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="ds-label mb-1">{title}</h2>
       <div className="divide-y divide-border">{children}</div>
     </Card>
+  );
+}
+
+/** Числовое поле битрейта (Кбит/с) — коммитит по blur/Enter, не по каждому нажатию клавиши. */
+function BitrateInput({
+  value,
+  disabled,
+  onCommit,
+}: {
+  value: number;
+  disabled?: boolean;
+  onCommit: (kbps: number) => void;
+}) {
+  const [local, setLocal] = useState(String(value));
+  useEffect(() => setLocal(String(value)), [value]);
+
+  function commit() {
+    const n = Math.round(Number(local));
+    if (Number.isFinite(n) && n >= BITRATE_MIN && n <= BITRATE_MAX) {
+      if (n !== value) onCommit(n);
+      else setLocal(String(value));
+    } else {
+      toast.error(`Битрейт — число от ${BITRATE_MIN} до ${BITRATE_MAX} Кбит/с`);
+      setLocal(String(value));
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <Input
+        type="number"
+        inputMode="numeric"
+        min={BITRATE_MIN}
+        max={BITRATE_MAX}
+        step={50}
+        className="w-24 text-right"
+        value={local}
+        disabled={disabled}
+        onChange={(e) => setLocal(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+        }}
+      />
+      <span className="text-sm text-muted-foreground">Кбит/с</span>
+    </div>
   );
 }
 
@@ -214,6 +260,13 @@ export function SettingsPage() {
                 </SelectContent>
               </Select>
             </Row>
+            <Row icon={Gauge} title="Битрейт камеры" description="Сколько данных в секунду уходит на видео учителя">
+              <BitrateInput
+                value={data.cameraBitrateKbps}
+                disabled={savingKey === "cameraBitrateKbps"}
+                onCommit={(kbps) => void patch("cameraBitrateKbps", { cameraBitrateKbps: kbps })}
+              />
+            </Row>
             <Row icon={Mic} title="Высокое качество звука" description="Стерео-захват микрофона вместо моно">
               <Switch
                 checked={data.micHighQuality}
@@ -272,26 +325,33 @@ export function SettingsPage() {
                 </SelectContent>
               </Select>
             </Row>
+            <Row icon={Gauge} title="Битрейт демонстрации" description="Сколько данных в секунду уходит на показ экрана">
+              <BitrateInput
+                value={data.screenShareBitrateKbps}
+                disabled={savingKey === "screenShareBitrateKbps"}
+                onCommit={(kbps) => void patch("screenShareBitrateKbps", { screenShareBitrateKbps: kbps })}
+              />
+            </Row>
           </Section>
 
           <Section title="Запись урока">
-            <Row
-              icon={SettingsIcon}
-              title="Качество записи"
-              description="Пресет для видеозаписи урока (LiveKit Egress)"
-            >
+            <p className="pb-3 text-xs text-muted-foreground">
+              Разрешение/fps/битрейт видеозаписи урока (LiveKit Egress) — выше значения нагружают CPU записи
+              сильнее и дают больший файл.
+            </p>
+            <Row icon={Camera} title="Разрешение записи" description="Разрешение видеофайла урока">
               <Select
-                value={data.recordingQuality}
-                disabled={savingKey === "recordingQuality"}
+                value={data.recordingResolution}
+                disabled={savingKey === "recordingResolution"}
                 onValueChange={(v) =>
-                  void patch("recordingQuality", { recordingQuality: v as RecordingQualityPreset })
+                  void patch("recordingResolution", { recordingResolution: v as MediaQualityPreset })
                 }
               >
-                <SelectTrigger className="w-56">
+                <SelectTrigger className="w-32">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {RECORDING_QUALITY_OPTIONS.map((opt) => (
+                  {MEDIA_QUALITY_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {opt.label}
                     </SelectItem>
@@ -299,9 +359,31 @@ export function SettingsPage() {
                 </SelectContent>
               </Select>
             </Row>
-            <p className="pt-3 text-xs text-muted-foreground">
-              {RECORDING_QUALITY_OPTIONS.find((o) => o.value === data.recordingQuality)?.hint}
-            </p>
+            <Row icon={Film} title="Частота кадров записи" description="Кадров в секунду в видеофайле урока">
+              <Select
+                value={String(data.recordingFps)}
+                disabled={savingKey === "recordingFps"}
+                onValueChange={(v) => void patch("recordingFps", { recordingFps: Number(v) as Framerate })}
+              >
+                <SelectTrigger className="w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FPS_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={String(opt.value)}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Row>
+            <Row icon={Gauge} title="Битрейт записи" description="Сколько данных в секунду уходит на видеофайл урока">
+              <BitrateInput
+                value={data.recordingBitrateKbps}
+                disabled={savingKey === "recordingBitrateKbps"}
+                onCommit={(kbps) => void patch("recordingBitrateKbps", { recordingBitrateKbps: kbps })}
+              />
+            </Row>
           </Section>
         </div>
       )}
