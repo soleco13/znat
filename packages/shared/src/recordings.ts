@@ -162,6 +162,15 @@ export const adminRecordingsListResponseSchema = z.object({
 export type AdminRecordingsListResponse = z.infer<typeof adminRecordingsListResponseSchema>;
 
 /**
+ * Пользовательский запрос (2026-09-14): страница просмотра одной записи —
+ * тот же денормализованный вид, что элемент списка `adminRecordingSummarySchema`,
+ * но по одному `id`, со свежим presigned `url` (список мог быть загружен
+ * давно, TTL ссылки короче времени жизни страницы).
+ */
+export const adminRecordingDetailResponseSchema = adminRecordingSummarySchema;
+export type AdminRecordingDetailResponse = z.infer<typeof adminRecordingDetailResponseSchema>;
+
+/**
  * Место на диске под хранилище (`STORAGE_ROOT`, см. `storage/service.ts`).
  * Это место ВСЕГО тома (там же живут материалы/слайды/канвас-загрузки, не
  * только записи) — `recordingsBytes` отдельно показывает, сколько из

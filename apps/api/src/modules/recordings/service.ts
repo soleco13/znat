@@ -251,14 +251,24 @@ export async function listAllRecordings(
     offset: (page - 1) * pageSize,
   });
 
+  const items = await denormalizeRecordings(user.schoolId, rows);
+
+  return { items, total };
+}
+
+/** Докладывает `lessonTitle`/`teacherName` к строкам записей — общий шаг для списка и одной записи. */
+async function denormalizeRecordings(
+  schoolId: string,
+  rows: RecordingRow[],
+): Promise<AdminRecordingsListResponse["items"]> {
   const lessonTitles = await lessonsService.getLessonTitles(
-    user.schoolId,
+    schoolId,
     rows.map((r) => r.lessonId),
   );
   const teacherIds = [...lessonTitles.values()].map((l) => l.teacherId);
-  const teacherNames = await usersService.getUserNames(user.schoolId, teacherIds);
+  const teacherNames = await usersService.getUserNames(schoolId, teacherIds);
 
-  const items = rows.map((row) => {
+  return rows.map((row) => {
     const lesson = lessonTitles.get(row.lessonId);
     const teacherName = lesson ? teacherNames.get(lesson.teacherId)?.fullName : undefined;
     return {
@@ -267,8 +277,24 @@ export async function listAllRecordings(
       teacherName: teacherName ?? "—",
     };
   });
+}
 
-  return { items, total };
+/**
+ * Одна запись по `id` — для страницы просмотра (§10.10 ТЗ, пользовательский
+ * запрос 2026-09-14). Тот же денормализованный вид, что элемент списка, со
+ * свежим presigned `url` (страницу могли открыть спустя время после списка).
+ */
+export async function getRecordingDetail(
+  user: AccessTokenPayload,
+  recordingId: string,
+): Promise<AdminRecordingsListResponse["items"][number]> {
+  if (user.role !== "admin") {
+    throw new AppError(403, "forbidden", "Страница записей доступна только администратору");
+  }
+  const row = await repo.findRecordingById(recordingId, user.schoolId);
+  if (!row) throw new AppError(404, "not_found", "Запись не найдена");
+  const [item] = await denormalizeRecordings(user.schoolId, [row]);
+  return item!;
 }
 
 /** Место на диске (§10.10 ТЗ — «сколько места есть/занято») + отдельно сколько из занятого — именно записи. */

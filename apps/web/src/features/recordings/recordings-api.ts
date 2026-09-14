@@ -1,4 +1,5 @@
 import type {
+  AdminRecordingDetailResponse,
   AdminRecordingsListResponse,
   LessonRecordingsResponse,
   RecordingExternalLinkResponse,
@@ -45,6 +46,11 @@ export function listAllRecordings(
   return apiFetch<AdminRecordingsListResponse>(
     `/admin/recordings?page=${page}&pageSize=${pageSize}`,
   );
+}
+
+/** Одна запись по `id` — для страницы просмотра, со свежим presigned `url`. */
+export function getRecording(recordingId: string): Promise<AdminRecordingDetailResponse> {
+  return apiFetch<AdminRecordingDetailResponse>(`/admin/recordings/${recordingId}`);
 }
 
 /** Место на диске хранилища + сколько из занятого — именно записи уроков. */

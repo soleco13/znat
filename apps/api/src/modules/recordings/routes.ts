@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import {
+  adminRecordingDetailResponseSchema,
   adminRecordingsListResponseSchema,
   lessonRecordingsResponseSchema,
   recordingExternalLinkResponseSchema,
@@ -80,6 +81,13 @@ export default async function recordingsRoutes(app: FastifyInstance) {
     adminApp.get("/admin/recordings/storage-usage", async (request, reply) => {
       const usage = await recordingsService.getStorageUsage(request.user);
       return reply.send(storageUsageResponseSchema.parse(usage));
+    });
+
+    // Страница просмотра одной записи (§10.10 ТЗ, запрос 2026-09-14).
+    adminApp.get<{ Params: { id: string } }>("/admin/recordings/:id", async (request, reply) => {
+      const recordingId = parseRecordingId(request.params.id);
+      const item = await recordingsService.getRecordingDetail(request.user, recordingId);
+      return reply.send(adminRecordingDetailResponseSchema.parse(item));
     });
 
     adminApp.get<{ Params: { id: string } }>(

@@ -17,6 +17,7 @@ import {
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
+import { formatBytes, formatDate, formatDuration } from "./format.js";
 import {
   getLessonRecordings,
   startLessonRecording,
@@ -42,26 +43,6 @@ const STATUS_VARIANT: Record<RecordingStatus, "blue" | "green" | "yellow" | "red
   aborted: "gray",
   deleted: "gray",
 };
-
-function formatDuration(sec: number | null): string {
-  if (sec == null) return "—";
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
-  return h > 0
-    ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
-    : `${m}:${String(s).padStart(2, "0")}`;
-}
-
-function formatSize(bytes: number | null): string {
-  if (bytes == null) return "—";
-  const mb = bytes / (1024 * 1024);
-  return mb >= 1024 ? `${(mb / 1024).toFixed(1)} ГБ` : `${mb.toFixed(0)} МБ`;
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" });
-}
 
 export function RecordingPanel({
   lessonId,
@@ -190,7 +171,7 @@ export function RecordingPanel({
               <span className="min-w-0 text-muted-foreground">
                 <span className="text-foreground">{formatDate(r.startedAt)}</span>{" "}
                 <Badge variant={STATUS_VARIANT[r.status]}>{STATUS_LABEL[r.status]}</Badge>{" "}
-                · {formatDuration(r.durationSec)} · {formatSize(r.sizeBytes)}
+                · {formatDuration(r.durationSec)} · {formatBytes(r.sizeBytes)}
                 {r.expiresAt ? (
                   <span className="text-text-3"> · хранится до {formatDate(r.expiresAt)}</span>
                 ) : null}

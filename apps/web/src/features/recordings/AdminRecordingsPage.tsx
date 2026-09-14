@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Download, HardDrive, Link2, Trash2, Video } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Download, Eye, HardDrive, Link2, Search, Trash2, Video, X } from "lucide-react";
 import type { AdminRecordingSummary, RecordingStatus } from "@school/shared";
 
 import { useAsync } from "@/shared/hooks/use-async";
@@ -17,13 +18,30 @@ import {
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
+import { Checkbox } from "@/shared/ui/checkbox";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { ErrorState } from "@/shared/ui/error-state";
+import { Input } from "@/shared/ui/input";
 import { PageHeader } from "@/shared/ui/page-header";
 import { Progress } from "@/shared/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { toast } from "@/shared/ui/sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
+import {
+  formatBytes,
+  formatDate,
+  formatDuration,
+  isDeletable,
+  STATUS_LABEL,
+  STATUS_VARIANT,
+} from "./format.js";
 import {
   adminDeleteRecording,
   createExternalDownloadLink,
@@ -39,48 +57,18 @@ import {
  * проверка на сервере в каждом эндпоинте — `recordings/service.ts`).
  */
 
-const STATUS_LABEL: Record<RecordingStatus, string> = {
-  starting: "запускается",
-  recording: "идёт запись",
-  processing: "обрабатывается",
-  ready: "готова",
-  failed: "сбой",
-  aborted: "прервана",
-  deleted: "удалена",
-};
-
-const STATUS_VARIANT: Record<RecordingStatus, "blue" | "green" | "yellow" | "red" | "gray"> = {
-  starting: "yellow",
-  recording: "red",
-  processing: "yellow",
-  ready: "green",
-  failed: "red",
-  aborted: "gray",
-  deleted: "gray",
-};
-
 const PAGE_SIZE = 20;
 
-function formatBytes(bytes: number): string {
-  const gb = bytes / (1024 * 1024 * 1024);
-  if (gb >= 1) return `${gb.toFixed(1)} ГБ`;
-  const mb = bytes / (1024 * 1024);
-  return `${mb.toFixed(0)} МБ`;
-}
-
-function formatDuration(sec: number | null): string {
-  if (sec == null) return "—";
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
-  return h > 0
-    ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
-    : `${m}:${String(s).padStart(2, "0")}`;
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" });
-}
+const STATUS_FILTER_OPTIONS: Array<{ value: RecordingStatus | "all"; label: string }> = [
+  { value: "all", label: "Любой статус" },
+  { value: "ready", label: STATUS_LABEL.ready },
+  { value: "recording", label: STATUS_LABEL.recording },
+  { value: "processing", label: STATUS_LABEL.processing },
+  { value: "starting", label: STATUS_LABEL.starting },
+  { value: "failed", label: STATUS_LABEL.failed },
+  { value: "aborted", label: STATUS_LABEL.aborted },
+  { value: "deleted", label: STATUS_LABEL.deleted },
+];
 
 function StorageUsageCard() {
   const { data, error, loading, reload, refreshing } = useAsync(() => getStorageUsage(), []);
@@ -116,15 +104,63 @@ function StorageUsageCard() {
   );
 }
 
+/** Архив школы за один запрос (§10.10 ТЗ — «одним списком»); поиск/фильтр/пагинация — на клиенте. */
+const FETCH_SIZE = 100;
+
 export function AdminRecordingsPage() {
-  const [page, setPage] = useState(1);
+  const navigate = useNavigate();
   const { data, error, loading, refreshing, reload, setData } = useAsync(
-    () => listAllRecordings(page, PAGE_SIZE),
-    [page],
+    () => listAllRecordings(1, FETCH_SIZE),
+    [],
   );
-  const [deleteFor, setDeleteFor] = useState<AdminRecordingSummary | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<RecordingStatus | "all">("all");
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleteTargets, setDeleteTargets] = useState<AdminRecordingSummary[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [linkBusyId, setLinkBusyId] = useState<string | null>(null);
+
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    const q = search.trim().toLowerCase();
+    return data.items.filter((r) => {
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (!q) return true;
+      return r.lessonTitle.toLowerCase().includes(q) || r.teacherName.toLowerCase().includes(q);
+    });
+  }, [data, search, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pageSelectableIds = pageItems.filter((r) => isDeletable(r.status)).map((r) => r.id);
+  const allPageSelected =
+    pageSelectableIds.length > 0 && pageSelectableIds.every((id) => selected.has(id));
+
+  function resetToFirstPage() {
+    setPage(1);
+    setSelected(new Set());
+  }
+
+  function toggleSelected(id: string, on: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function toggleAllOnPage(on: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const id of pageSelectableIds) {
+        if (on) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  }
 
   async function copyExternalLink(recording: AdminRecordingSummary) {
     setLinkBusyId(recording.id);
@@ -140,28 +176,37 @@ export function AdminRecordingsPage() {
   }
 
   async function confirmDelete() {
-    if (!deleteFor || !data) return;
+    if (!deleteTargets || deleteTargets.length === 0 || !data) return;
     setBusy(true);
-    try {
-      await adminDeleteRecording(deleteFor.id);
-      setData({
-        ...data,
-        items: data.items.map((r) =>
-          r.id === deleteFor.id
-            ? { ...r, status: "deleted" as const, url: null, sizeBytes: null }
-            : r,
-        ),
-      });
-      toast.success("Запись удалена из хранилища");
-      setDeleteFor(null);
-    } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : "Не удалось удалить запись");
-    } finally {
-      setBusy(false);
+    const ids = new Set(deleteTargets.map((r) => r.id));
+    const failed: string[] = [];
+    for (const target of deleteTargets) {
+      try {
+        await adminDeleteRecording(target.id);
+      } catch {
+        failed.push(target.lessonTitle);
+        ids.delete(target.id);
+      }
     }
+    setData({
+      ...data,
+      items: data.items.map((r) =>
+        ids.has(r.id) ? { ...r, status: "deleted" as const, url: null, sizeBytes: null } : r,
+      ),
+    });
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) next.delete(id);
+      return next;
+    });
+    if (failed.length > 0) {
+      toast.error(`Не удалось удалить: ${failed.join(", ")}`);
+    } else {
+      toast.success(deleteTargets.length > 1 ? `Удалено записей: ${ids.size}` : "Запись удалена из хранилища");
+    }
+    setBusy(false);
+    setDeleteTargets(null);
   }
-
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -180,79 +225,185 @@ export function AdminRecordingsPage() {
       ) : error ? (
         <ErrorState description={error} onRetry={reload} retrying={refreshing} />
       ) : data && data.items.length > 0 ? (
-        <Card className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Урок</TableHead>
-                <TableHead>Учитель</TableHead>
-                <TableHead>Начало</TableHead>
-                <TableHead>Длительность</TableHead>
-                <TableHead>Размер</TableHead>
-                <TableHead>Статус</TableHead>
-                <TableHead className="text-right">Действия</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.items.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell className="max-w-[220px] truncate font-medium text-foreground">
-                    {r.lessonTitle}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{r.teacherName}</TableCell>
-                  <TableCell className="text-muted-foreground">{formatDate(r.startedAt)}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDuration(r.durationSec)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {r.sizeBytes != null ? formatBytes(r.sizeBytes) : "—"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={STATUS_VARIANT[r.status]}>{STATUS_LABEL[r.status]}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1.5">
-                      {r.url ? (
-                        <Button asChild variant="ghost" size="icon-sm" aria-label="Скачать">
-                          <a href={r.url} target="_blank" rel="noreferrer">
-                            <Download aria-hidden />
-                          </a>
-                        </Button>
-                      ) : null}
-                      {r.status === "ready" ? (
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label="Скопировать внешнюю ссылку"
-                          onClick={() => void copyExternalLink(r)}
-                          loading={linkBusyId === r.id}
-                        >
-                          <Link2 aria-hidden />
-                        </Button>
-                      ) : null}
-                      {r.status !== "deleted" && r.status !== "starting" && r.status !== "recording" ? (
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label="Удалить запись"
-                          className="text-destructive hover:bg-destructive/10"
-                          onClick={() => setDeleteFor(r)}
-                        >
-                          <Trash2 aria-hidden />
-                        </Button>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
+        <>
+          <div className="mb-3 flex flex-col gap-2.5 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  resetToFirstPage();
+                }}
+                placeholder="Поиск по уроку или учителю…"
+                className="pl-9 pr-9"
+              />
+              {search ? (
+                <button
+                  type="button"
+                  aria-label="Очистить поиск"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setSearch("");
+                    resetToFirstPage();
+                  }}
+                >
+                  <X className="size-4" aria-hidden />
+                </button>
+              ) : null}
+            </div>
+            <Select
+              value={statusFilter}
+              onValueChange={(v) => {
+                setStatusFilter(v as RecordingStatus | "all");
+                resetToFirstPage();
+              }}
+            >
+              <SelectTrigger className="sm:w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_FILTER_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selected.size > 0 ? (
+            <div className="mb-3 flex items-center justify-between rounded-md border border-primary/20 bg-primary-light px-3.5 py-2 text-sm">
+              <span className="font-medium text-primary">Выбрано: {selected.size}</span>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
+                  Снять выбор
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() =>
+                    setDeleteTargets(data.items.filter((r) => selected.has(r.id)))
+                  }
+                >
+                  <Trash2 aria-hidden />
+                  Удалить выбранные
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
+          {pageItems.length === 0 ? (
+            <EmptyState
+              icon={Search}
+              title="Ничего не найдено"
+              description="Попробуйте изменить поиск или фильтр по статусу."
+            />
+          ) : (
+            <Card className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={allPageSelected}
+                        disabled={pageSelectableIds.length === 0}
+                        onCheckedChange={(v) => toggleAllOnPage(v === true)}
+                        aria-label="Выбрать все на странице"
+                      />
+                    </TableHead>
+                    <TableHead>Урок</TableHead>
+                    <TableHead>Учитель</TableHead>
+                    <TableHead>Начало</TableHead>
+                    <TableHead>Длительность</TableHead>
+                    <TableHead>Размер</TableHead>
+                    <TableHead>Статус</TableHead>
+                    <TableHead className="text-right">Действия</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pageItems.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selected.has(r.id)}
+                          disabled={!isDeletable(r.status)}
+                          onCheckedChange={(v) => toggleSelected(r.id, v === true)}
+                          aria-label={`Выбрать «${r.lessonTitle}»`}
+                        />
+                      </TableCell>
+                      <TableCell className="max-w-[220px] truncate font-medium text-foreground">
+                        {r.lessonTitle}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{r.teacherName}</TableCell>
+                      <TableCell className="text-muted-foreground">{formatDate(r.startedAt)}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatDuration(r.durationSec)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatBytes(r.sizeBytes)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={STATUS_VARIANT[r.status]}>{STATUS_LABEL[r.status]}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1.5">
+                          {r.status === "ready" ? (
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label="Смотреть"
+                              onClick={() => navigate(`/admin/recordings/${r.id}`)}
+                            >
+                              <Eye aria-hidden />
+                            </Button>
+                          ) : null}
+                          {r.url ? (
+                            <Button asChild variant="ghost" size="icon-sm" aria-label="Скачать">
+                              <a href={r.url} target="_blank" rel="noreferrer">
+                                <Download aria-hidden />
+                              </a>
+                            </Button>
+                          ) : null}
+                          {r.status === "ready" ? (
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label="Скопировать внешнюю ссылку"
+                              onClick={() => void copyExternalLink(r)}
+                              loading={linkBusyId === r.id}
+                            >
+                              <Link2 aria-hidden />
+                            </Button>
+                          ) : null}
+                          {isDeletable(r.status) ? (
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label="Удалить запись"
+                              className="text-destructive hover:bg-destructive/10"
+                              onClick={() => setDeleteTargets([r])}
+                            >
+                              <Trash2 aria-hidden />
+                            </Button>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+        </>
       ) : (
         <EmptyState icon={Video} title="Записей пока нет" description="Записи уроков появятся здесь." />
       )}
 
-      {data && totalPages > 1 ? (
+      {totalPages > 1 ? (
         <div className="mt-4 flex items-center justify-center gap-3">
           <Button
             variant="outline"
@@ -276,13 +427,17 @@ export function AdminRecordingsPage() {
         </div>
       ) : null}
 
-      <AlertDialog open={Boolean(deleteFor)} onOpenChange={(v) => !v && setDeleteFor(null)}>
+      <AlertDialog open={Boolean(deleteTargets)} onOpenChange={(v) => !v && setDeleteTargets(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Удалить запись «{deleteFor?.lessonTitle}»?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {deleteTargets && deleteTargets.length > 1
+                ? `Удалить ${deleteTargets.length} записи?`
+                : `Удалить запись «${deleteTargets?.[0]?.lessonTitle}»?`}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Файл будет удалён из хранилища немедленно и безвозвратно, до истечения обычного срока
-              хранения. Действие необратимо.
+              Файл{deleteTargets && deleteTargets.length > 1 ? "ы" : ""} будет удалён из хранилища
+              немедленно и безвозвратно, до истечения обычного срока хранения. Действие необратимо.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
