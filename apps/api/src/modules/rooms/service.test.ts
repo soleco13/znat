@@ -71,6 +71,7 @@ vi.mock("./presence.js", async () => {
   const modes = new Map<string, string>();
   const modesBeforeShare = new Map<string, string>();
   const stages = new Map<string, string>();
+  const screenShareLocks = new Map<string, string>();
   const roomMap = (lessonId: string) => {
     let m = rooms.get(lessonId);
     if (!m) {
@@ -109,17 +110,32 @@ vi.mock("./presence.js", async () => {
     setLessonStage: vi.fn(async (lessonId: string, stage: string) => {
       stages.set(lessonId, stage);
     }),
+    // Пользовательский баг (2026-09-14): лок демонстрации — тот же in-memory приём.
+    claimScreenShare: vi.fn(async (lessonId: string, participantId: string) => {
+      if (screenShareLocks.has(lessonId)) return false;
+      screenShareLocks.set(lessonId, participantId);
+      return true;
+    }),
+    forceClaimScreenShare: vi.fn(async (lessonId: string, participantId: string) => {
+      screenShareLocks.set(lessonId, participantId);
+    }),
+    getScreenShareHolder: vi.fn(async (lessonId: string) => screenShareLocks.get(lessonId) ?? null),
+    releaseScreenShare: vi.fn(async (lessonId: string, participantId: string) => {
+      if (screenShareLocks.get(lessonId) === participantId) screenShareLocks.delete(lessonId);
+    }),
     __clear: () => {
       rooms.clear();
       modes.clear();
       modesBeforeShare.clear();
       stages.clear();
+      screenShareLocks.clear();
     },
   };
 });
 
 const roomsService = await import("./service.js");
 const presence = (await import("./presence.js")) as unknown as { __clear: () => void };
+const { roomEvents } = await import("./events.js");
 
 const SCHOOL_ID = "11111111-1111-1111-1111-111111111111";
 const LESSON_ID = "22222222-2222-2222-2222-222222222222";
@@ -723,6 +739,111 @@ describe("вебхуки LiveKit (Э2.7)", () => {
 
       const snapshot = await roomsService.join(staffActor(), LESSON_ID);
       expect(snapshot.lessonMode).toBe("lecture");
+    });
+  });
+
+  /**
+   * Пользовательский баг (2026-09-14): «2 участника почти одновременно жмут
+   * демонстрацию → вся сетка ломается». Раньше конфликт разруливался ТОЛЬКО
+   * вебхуком `track_published`, УЖЕ ПОСЛЕ публикации обоих треков — окно
+   * гонки. `claimScreenShare` — превентивный атомарный лок (`SET NX` в
+   * Redis, здесь — in-memory мок с тем же контрактом): клиент публикует
+   * трек, только если получил `granted: true`.
+   */
+  describe("claimScreenShare / releaseScreenShareClaim — превентивный лок демонстрации", () => {
+    beforeEach(() => {
+      lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    });
+
+    it("первый ученик получает лок", async () => {
+      const res = await roomsService.claimScreenShare(guestActor(STUDENT_ID), LESSON_ID);
+      expect(res).toEqual({ granted: true, holderName: null });
+    });
+
+    it("второй ученик — отказ, пока лок держит первый (имя первого — из presence)", async () => {
+      await roomsService.join(guestActor(STUDENT_ID), LESSON_ID);
+      await roomsService.claimScreenShare(guestActor(STUDENT_ID), LESSON_ID);
+
+      const res = await roomsService.claimScreenShare(guestActor(OTHER_STUDENT_ID), LESSON_ID);
+
+      expect(res.granted).toBe(false);
+      expect(res.holderName).toBe("Ученик");
+    });
+
+    it("учитель безусловно перехватывает лок у ученика — прежний держатель получает screen_share_preempted", async () => {
+      await roomsService.claimScreenShare(guestActor(STUDENT_ID), LESSON_ID);
+      const received: unknown[] = [];
+      roomEvents.once(LESSON_ID, (msg) => received.push(msg));
+
+      const res = await roomsService.claimScreenShare(staffActor(), LESSON_ID);
+
+      expect(res).toEqual({ granted: true, holderName: null });
+      expect(received).toEqual([{ type: "screen_share_preempted", userId: STUDENT_ID }]);
+    });
+
+    const ADMIN_ID = "66666666-6666-6666-6666-666666666666";
+
+    it("админ перехватывает лок у учителя — тоже преемпшн (приоритет не завязан на «не-staff»)", async () => {
+      await roomsService.claimScreenShare(staffActor(), LESSON_ID); // TEACHER_ID
+      const received: unknown[] = [];
+      roomEvents.once(LESSON_ID, (msg) => received.push(msg));
+
+      const res = await roomsService.claimScreenShare(
+        staffActor({ participantId: ADMIN_ID, role: "admin" }),
+        LESSON_ID,
+      );
+
+      expect(res).toEqual({ granted: true, holderName: null });
+      expect(received).toEqual([{ type: "screen_share_preempted", userId: TEACHER_ID }]);
+    });
+
+    it("staff перехватывает свой же лок (повторный клик) — без preempted самому себе", async () => {
+      await roomsService.claimScreenShare(staffActor(), LESSON_ID);
+      const received: unknown[] = [];
+      roomEvents.once(LESSON_ID, (msg) => received.push(msg));
+
+      const res = await roomsService.claimScreenShare(staffActor(), LESSON_ID);
+
+      expect(res.granted).toBe(true);
+      expect(received).toEqual([]);
+    });
+
+    it("после release лок свободен — следующий claim снова granted:true", async () => {
+      await roomsService.claimScreenShare(guestActor(STUDENT_ID), LESSON_ID);
+
+      await roomsService.releaseScreenShareClaim(guestActor(STUDENT_ID), LESSON_ID);
+      const res = await roomsService.claimScreenShare(guestActor(OTHER_STUDENT_ID), LESSON_ID);
+
+      expect(res).toEqual({ granted: true, holderName: null });
+    });
+
+    it("release чужого лока не освобождает его (compare-and-delete) — держатель не менялся", async () => {
+      await roomsService.claimScreenShare(guestActor(STUDENT_ID), LESSON_ID);
+
+      await roomsService.releaseScreenShareClaim(guestActor(OTHER_STUDENT_ID), LESSON_ID);
+      const res = await roomsService.claimScreenShare(guestActor(OTHER_STUDENT_ID), LESSON_ID);
+
+      expect(res.granted).toBe(false);
+    });
+
+    it("leave() освобождает лок, который держал уходящий участник", async () => {
+      await roomsService.join(guestActor(STUDENT_ID), LESSON_ID);
+      await roomsService.claimScreenShare(guestActor(STUDENT_ID), LESSON_ID);
+
+      await roomsService.leave(guestActor(STUDENT_ID), LESSON_ID);
+      const res = await roomsService.claimScreenShare(guestActor(OTHER_STUDENT_ID), LESSON_ID);
+
+      expect(res.granted).toBe(true);
+    });
+
+    it("handleScreenShareStoppedWebhook освобождает лок держателя (подстраховка на обрыв связи)", async () => {
+      lessonsServiceMock.getLessonByLivekitRoom.mockResolvedValue(baseLesson());
+      await roomsService.claimScreenShare(guestActor(STUDENT_ID), LESSON_ID);
+
+      await roomsService.handleScreenShareStoppedWebhook(`lesson-${LESSON_ID}`, STUDENT_ID);
+      const res = await roomsService.claimScreenShare(guestActor(OTHER_STUDENT_ID), LESSON_ID);
+
+      expect(res.granted).toBe(true);
     });
   });
 });

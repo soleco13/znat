@@ -191,6 +191,12 @@ export function RoomPage() {
   const recordingActivePrevRef = useRef<boolean | null>(null);
   // Авто-PiP на время демонстрации — см. `ScreenShareAutoPip`/`ScreenShareControls`.
   const pipRef = useRef<ScreenShareAutoPipHandle>(null);
+  // Пользовательский баг (2026-09-14): учитель/админ перехватил лок демонстрации
+  // (`rooms/service.ts#claimScreenShare`) — прежний держатель обязан сам
+  // остановить СВОЙ трек (`ScreenShareControls.tsx`, эффект на этот счётчик).
+  const [screenSharePreempted, setScreenSharePreempted] = useState(0);
+  const selfIdRef = useRef(selfId);
+  selfIdRef.current = selfId;
 
   const isTeacher = identity?.role === "teacher" || identity?.role === "admin";
 
@@ -258,6 +264,9 @@ export function RoomPage() {
         setRecordingActive(message.active);
         break;
       }
+      case "screen_share_preempted":
+        if (message.userId === selfIdRef.current) setScreenSharePreempted((n) => n + 1);
+        break;
       case "error":
         setError(message.message);
         break;
@@ -993,9 +1002,12 @@ export function RoomPage() {
             />
           ) : null}
           {media &&
+          lessonId &&
           (isTeacher || self?.permissions.canShareScreen) &&
           clientMediaSettings?.screenShareEnabled !== false ? (
             <SelfScreenShareButton
+              lessonId={lessonId}
+              preemptedSignal={screenSharePreempted}
               priority={isTeacher}
               encoding={
                 clientMediaSettings
@@ -1137,6 +1149,7 @@ export function RoomPage() {
             ref={pipRef}
             participants={participants}
             selfId={selfId}
+            lessonId={lessonId}
             isTeacher={isTeacher}
             handRaised={self?.handRaised ?? false}
             onToggleHand={toggleHand}

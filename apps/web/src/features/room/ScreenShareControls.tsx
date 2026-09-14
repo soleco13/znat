@@ -1,7 +1,10 @@
+import { useEffect, useRef } from "react";
 import { useLocalParticipant, useTracks } from "@livekit/components-react";
 import { Track, VideoPreset } from "livekit-client";
+import type { ClaimScreenShareResponse } from "@school/shared";
 import { MonitorUp, MonitorX } from "lucide-react";
 
+import { apiFetch } from "@/shared/api-client";
 import { RoomControlButton } from "./RoomControlButton.js";
 import { toast } from "@/shared/ui/sonner";
 
@@ -21,40 +24,45 @@ import { toast } from "@/shared/ui/sonner";
 const DOCUMENT_SCREEN_SHARE_PRESET = new VideoPreset(1920, 1080, 1_000_000, 5, "medium");
 
 /**
- * Демонстрация экрана (Э7.1) — переключатель типа контента ДО старта:
- * «Документ» (1080p@5fps, `contentHint: "detail"` — приоритет чёткости
- * текста над плавностью) или «Видео» (720p@15fps, `contentHint: "motion"`).
- * Аудио вкладки НЕ запрашивается (`audio: false`) — стоп-лист Э7: «не
- * делать шаринг вкладки со звуком в MVP». `screenShareEncoding`, не
- * `videoEncoding` — прочитано в типах `TrackPublishDefaults`
- * (`options.d.ts`): `videoEncoding` — это параметры именно КАМЕРЫ,
- * демонстрация экрана кодируется отдельным полем.
+ * Демонстрация экрана (Э7.1). Аудио вкладки НЕ запрашивается (`audio:
+ * false`) — стоп-лист Э7: «не делать шаринг вкладки со звуком в MVP».
+ * `screenShareEncoding`, не `videoEncoding` — прочитано в типах
+ * `TrackPublishDefaults` (`options.d.ts`): `videoEncoding` — это параметры
+ * именно КАМЕРЫ, демонстрация экрана кодируется отдельным полем.
  *
  * Право `canShareScreen` одно на учителя (по умолчанию,
  * `presence.ts#defaultPermissions`) и ученика по разрешению (Э7.4) — кнопка
  * одна и та же для обеих ролей, видимость решает вызывающая сторона
  * (`RoomPage.tsx`).
  *
- * Максимум 1 демонстрация одновременно и приоритет учителю (Э7.2) решает
- * СЕРВЕР по вебхуку `track_published` уже ПОСЛЕ публикации
- * (`rooms/service.ts#handleScreenShareStartedWebhook`) — раньше отменить
- * WebRTC-негоциацию с сервера нельзя, только погасить трек сразу после.
- * `disabled` здесь — не защита, а подсказка: не-учителю, пока кто-то уже
- * делится, кнопка недоступна, чтобы не заставлять его увидеть свою
- * демонстрацию и тут же потерять её. `priority` (учитель — эта проверка
- * его не касается, сервер и так пропустит его демонстрацию вперёд) решает
- * вызывающая сторона (`RoomPage.tsx`, знает `isTeacher`), как и
- * `maxResolution` у `SelfCameraButton`.
+ * **Максимум 1 демонстрация одновременно — пользовательский баг (2026-09-14):
+ * «2 участника почти одновременно жмут демонстрацию → оба трека реально
+ * публикуются → вся сетка ломается».** Раньше сервер гасил лишнюю ТОЛЬКО
+ * ПОСЛЕ публикации (вебхук `track_published`) — окно гонки между «оба уже
+ * летят» и «лишний погашен» давало на клиенте на миг 2 живых трека разом.
+ * Теперь клиент СНАЧАЛА спрашивает разрешение (`POST /lessons/:id/
+ * screen-share/claim`, атомарный Redis-лок на сервере) и публикует трек
+ * ТОЛЬКО при `granted: true` — гонки между двумя claim'ами больше нет.
+ * Не-учитель: отказ, если лок уже занят (кто угодно). Учитель/админ
+ * (`priority`): безусловный перехват — прежний держатель лока получает WS
+ * `screen_share_preempted` (`preemptedSignal` проп ниже) и обязан сам
+ * остановить СВОЙ трек локально, сервер не может выключить чужую
+ * демонстрацию без участия его браузера.
  */
 export function SelfScreenShareButton({
+  lessonId,
   priority = false,
   encoding = DOCUMENT_SCREEN_SHARE_PRESET,
+  /** Меняется (растёт) при получении WS `screen_share_preempted`, адресованного этому участнику — см. `RoomPage.tsx`. */
+  preemptedSignal,
   onScreenShareStarted,
   onScreenShareStopped,
 }: {
+  lessonId: string;
   priority?: boolean;
   /** Параметры школы (запрос 2026-09-14) — разрешение/битрейт/fps демонстрации, считается `toScreenShareEncoding` в `RoomPage.tsx`. По умолчанию — профиль «документ» (см. `DOCUMENT_SCREEN_SHARE_PRESET`). */
   encoding?: VideoPreset;
+  preemptedSignal?: number;
   /** Доп. — авто-PiP (Толк-кнопка, `PictureInPictureButton`): вызывается
    *  сразу после успешного старта демонстрации, из ТОГО ЖЕ клик-хендлера
    *  (иначе браузер может отказать `requestPictureInPicture()` без
@@ -69,7 +77,36 @@ export function SelfScreenShareButton({
   const othersSharing = useTracks([Track.Source.ScreenShare], { onlySubscribed: false }).some(
     (t) => t.participant.identity !== localParticipant.identity,
   );
+  // Мягкая UI-подсказка (без похода на сервер) — реальный гейт ниже, claim().
   const blocked = !isScreenShareEnabled && othersSharing && !priority;
+
+  const isScreenShareEnabledRef = useRef(isScreenShareEnabled);
+  isScreenShareEnabledRef.current = isScreenShareEnabled;
+
+  // Учитель/админ перехватил лок — прежний держатель обязан сам погасить
+  // СВОЙ трек (сервер не может это сделать за него).
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    if (!isScreenShareEnabledRef.current) return;
+    onScreenShareStopped?.();
+    void localParticipant.setScreenShareEnabled(false);
+    toast.info("Демонстрацию перехватил учитель/администратор");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preemptedSignal]);
+
+  async function claim(): Promise<ClaimScreenShareResponse> {
+    return apiFetch<ClaimScreenShareResponse>(`/lessons/${lessonId}/screen-share/claim`, {
+      method: "POST",
+    });
+  }
+
+  function release() {
+    void apiFetch(`/lessons/${lessonId}/screen-share/release`, { method: "POST" }).catch(() => undefined);
+  }
 
   async function publishOnce(): Promise<void> {
     await localParticipant.setScreenShareEnabled(
@@ -115,6 +152,18 @@ export function SelfScreenShareButton({
     if (isScreenShareEnabled) {
       onScreenShareStopped?.();
       await localParticipant.setScreenShareEnabled(false);
+      release();
+      return;
+    }
+    const claimResult = await claim().catch(
+      (): ClaimScreenShareResponse => ({ granted: true, holderName: null }), // сеть легла — не блокируем демонстрацию из-за этого, старый вебхук-гейт подстрахует
+    );
+    if (!claimResult.granted) {
+      toast.error(
+        claimResult.holderName
+          ? `Демонстрирует ${claimResult.holderName} — дождитесь окончания`
+          : "Кто-то уже демонстрирует экран",
+      );
       return;
     }
     try {
@@ -127,10 +176,12 @@ export function SelfScreenShareButton({
       }
       if (outcome === "timeout") {
         toast.error("Не удалось начать демонстрацию — попробуйте ещё раз");
+        release();
         return;
       }
       onScreenShareStarted?.();
     } catch (e) {
+      release();
       toast.error(e instanceof Error ? `Не удалось начать демонстрацию: ${e.message}` : "Не удалось начать демонстрацию экрана");
     }
   }

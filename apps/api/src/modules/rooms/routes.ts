@@ -48,6 +48,27 @@ export default async function roomsRoutes(app: FastifyInstance) {
     return reply.send({ items: messages });
   });
 
+  // Пользовательский баг (2026-09-14): «2 демонстрации разом ломают сетку»
+  // — клиент теперь СНАЧАЛА спрашивает разрешение здесь, публикует трек
+  // только при `granted: true` (см. докстринг `roomsService.claimScreenShare`).
+  app.post<{ Params: { id: string } }>(
+    "/lessons/:id/screen-share/claim",
+    lessonAccess,
+    async (request, reply) => {
+      const result = await roomsService.claimScreenShare(request.lessonActor, request.params.id);
+      return reply.send(result);
+    },
+  );
+
+  app.post<{ Params: { id: string } }>(
+    "/lessons/:id/screen-share/release",
+    lessonAccess,
+    async (request, reply) => {
+      await roomsService.releaseScreenShareClaim(request.lessonActor, request.params.id);
+      return reply.status(204).send();
+    },
+  );
+
   app.post<{ Params: { id: string } }>("/lessons/:id/chat", lessonAccess, async (request, reply) => {
     const body = sendChatMessageRequestSchema.parse(request.body);
     const message = await roomsService.sendChatMessage(

@@ -4,6 +4,7 @@ import { useLocalParticipant } from "@livekit/components-react";
 import { Hand, LogOut, MonitorX } from "lucide-react";
 import type { ParticipantSnapshot } from "@school/shared";
 
+import { apiFetch } from "@/shared/api-client";
 import { SimpleTooltip } from "@/shared/ui/tooltip";
 import { SelfCameraButton } from "./CameraControls.js";
 import { RoomControlButton } from "./RoomControlButton.js";
@@ -99,12 +100,14 @@ export const ScreenShareAutoPip = forwardRef<
   {
     participants: ParticipantSnapshot[];
     selfId: string | undefined;
+    /** Параметры школы (запрос 2026-09-14, лок демонстрации) — освободить лок сразу по клику «Стоп» из PiP-тулбара, не дожидаясь вебхука. */
+    lessonId: string | undefined;
     isTeacher: boolean;
     handRaised: boolean;
     onToggleHand: () => void;
     onLeave: () => void;
   }
->(function ScreenShareAutoPip({ participants, selfId, isTeacher, handRaised, onToggleHand, onLeave }, ref) {
+>(function ScreenShareAutoPip({ participants, selfId, lessonId, isTeacher, handRaised, onToggleHand, onLeave }, ref) {
   const { localParticipant, isScreenShareEnabled } = useLocalParticipant();
   const pipWindowRef = useRef<Window | null>(null);
   const [container, setContainer] = useState<HTMLElement | null>(null);
@@ -220,6 +223,7 @@ export const ScreenShareAutoPip = forwardRef<
           inactiveLabel="Остановить демонстрацию"
           onToggle={() => {
             void localParticipant.setScreenShareEnabled(false);
+            if (lessonId) void apiFetch(`/lessons/${lessonId}/screen-share/release`, { method: "POST" }).catch(() => undefined);
             pipWindowRef.current?.close();
           }}
           caption="Стоп"

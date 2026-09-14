@@ -1,6 +1,7 @@
 import type {
   AccessTokenPayload,
   ChatMessage,
+  ClaimScreenShareResponse,
   JoinLessonResponse,
   LessonMode,
   LessonSettings,
@@ -411,8 +412,55 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
 export async function leave(actor: LessonActor, lessonId: string): Promise<void> {
   await presence.removeParticipant(lessonId, actor.participantId);
   await repo.closeOpenSession(lessonId, actor.participantId);
+  await presence.releaseScreenShare(lessonId, actor.participantId);
   emitRoomEvent(lessonId, { type: "participant_left", userId: actor.participantId });
   await scheduleAutoEndIfEmpty(actor.schoolId, lessonId);
+}
+
+/**
+ * Пользовательский баг (2026-09-14): «2 демонстрации разом ломают сетку камер».
+ * Раньше клиент публиковал трек сразу, а сервер разруливал конфликт УЖЕ
+ * ПОСЛЕ публикации, вебхуком (`handleScreenShareStartedWebhook`) — окно
+ * гонки между «оба трека уже летят» и «вебхук погасил лишний» давало на
+ * клиенте на миг 2 живых демонстрации разом (что-то в рендере/подписке на
+ * них ломалось). Теперь клиент СНАЧАЛА спрашивает разрешение здесь и
+ * публикует трек, только если `granted: true` — гонки между двумя claim'ами
+ * не бывает, `SET NX` в Redis атомарен.
+ *
+ * Не-персонал (гость/ученик): отказ, если лок уже занят кем угодно —
+ * значит кто-то уже делится, показываем чьё имя.
+ * Персонал (учитель/админ): безусловный перехват (приоритет, Э7.2, как и
+ * раньше) — если лок был занят другим участником, тот получает
+ * `screen_share_preempted` по WS и обязан сам остановить свой трек
+ * локально (см. `RoomPage.tsx`) — сервер его трек не публикует и не может
+ * заставить браузер прекратить захват экрана без участия клиента.
+ */
+export async function claimScreenShare(
+  actor: LessonActor,
+  lessonId: string,
+): Promise<ClaimScreenShareResponse> {
+  await assertMembership(actor, lessonId);
+
+  if (actor.kind === "staff") {
+    const previousHolder = await presence.getScreenShareHolder(lessonId);
+    await presence.forceClaimScreenShare(lessonId, actor.participantId);
+    if (previousHolder && previousHolder !== actor.participantId) {
+      emitRoomEvent(lessonId, { type: "screen_share_preempted", userId: previousHolder });
+    }
+    return { granted: true, holderName: null };
+  }
+
+  const granted = await presence.claimScreenShare(lessonId, actor.participantId);
+  if (granted) return { granted: true, holderName: null };
+
+  const holderId = await presence.getScreenShareHolder(lessonId);
+  const holder = holderId ? await presence.getParticipant(lessonId, holderId) : null;
+  return { granted: false, holderName: holder?.fullName ?? null };
+}
+
+/** Явный отказ от лока — по клику «Стоп» (до/без ожидания вебхука `track_unpublished`, тот освободит и сам — подстраховка на разрыв связи). */
+export async function releaseScreenShareClaim(actor: LessonActor, lessonId: string): Promise<void> {
+  await presence.releaseScreenShare(lessonId, actor.participantId);
 }
 
 /**
@@ -682,6 +730,8 @@ export async function handleParticipantLeftWebhook(livekitRoom: string, userId: 
   const lesson = await lessonsService.getLessonByLivekitRoom(livekitRoom);
   if (!lesson) return;
   await repo.closeOpenSession(lesson.id, userId);
+  // Подстраховка на разрыв связи без явного leave()/track_unpublished (см. releaseScreenShare выше).
+  await presence.releaseScreenShare(lesson.id, userId);
 }
 
 /**
@@ -767,9 +817,15 @@ export async function handleScreenShareStartedWebhook(livekitRoom: string, userI
  * же, переподключившаяся) ещё идёт. Если сохранённого режима нет (`null`)
  * — режим уже был `lecture` до демонстрации, восстанавливать нечего.
  */
-export async function handleScreenShareStoppedWebhook(livekitRoom: string): Promise<void> {
+export async function handleScreenShareStoppedWebhook(livekitRoom: string, userId?: string): Promise<void> {
   const lesson = await lessonsService.getLessonByLivekitRoom(livekitRoom);
   if (!lesson) return;
+
+  // Подстраховка на случай, если клиент не успел/не смог сам вызвать
+  // release (обрыв связи, закрытая вкладка) — реальное состояние LiveKit
+  // надёжнее клиентского вызова. `releaseScreenShare` — compare-and-delete,
+  // чужой уже перехваченный лок не тронет.
+  if (userId) await presence.releaseScreenShare(lesson.id, userId);
 
   const stillSharing = await mediaService.findOtherActiveScreenShares(livekitRoom);
   if (stillSharing.length > 0) return;

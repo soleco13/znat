@@ -141,6 +141,25 @@ export const serverRoomMessageSchema = z.discriminatedUnion("type", [
   // учеников (которым сам список записей недоступен). Шлётся при
   // старте/остановке записи и при подключении сокета к идущему уроку.
   z.object({ type: z.literal("recording_status"), active: z.boolean() }),
+  // Пользовательский баг (2026-09-14): учитель/админ перехватил лок демонстрации
+  // (POST /lessons/:id/screen-share/claim) у уже делившегося участника — тот
+  // должен сам остановить СВОЙ трек локально (`userId` === его же id).
+  z.object({ type: z.literal("screen_share_preempted"), userId: z.string().uuid() }),
   z.object({ type: z.literal("error"), message: z.string() }),
 ]);
 export type ServerRoomMessage = z.infer<typeof serverRoomMessageSchema>;
+
+/**
+ * Пользовательский баг (2026-09-14): «2 демонстрации разом ломают сетку» —
+ * клиент СНАЧАЛА просит разрешение (атомарный Redis-лок,
+ * `presence.ts#claimScreenShare`), и только при `granted: true` реально
+ * публикует трек (`setScreenShareEnabled`). Раньше сервер гасил лишнюю
+ * демонстрацию уже ПОСЛЕ публикации (вебхуком) — окно гонки между двумя
+ * почти одновременными нажатиями давало на миг 2 живых трека.
+ */
+export const claimScreenShareResponseSchema = z.object({
+  granted: z.boolean(),
+  /** Кто уже делится, если отказано (`granted: false`) — для сообщения пользователю. */
+  holderName: z.string().nullable(),
+});
+export type ClaimScreenShareResponse = z.infer<typeof claimScreenShareResponseSchema>;

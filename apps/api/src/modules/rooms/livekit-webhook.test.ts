@@ -156,7 +156,10 @@ describe("POST /webhooks/livekit (Э2.7)", () => {
     const res = await post(app, body, await signedAuthHeader(body));
 
     expect(res.statusCode).toBe(200);
-    expect(roomsServiceMock.handleScreenShareStoppedWebhook).toHaveBeenCalledWith("lesson-abc");
+    expect(roomsServiceMock.handleScreenShareStoppedWebhook).toHaveBeenCalledWith(
+      "lesson-abc",
+      "11111111-1111-1111-1111-111111111111",
+    );
     await app.close();
   });
 

@@ -45,7 +45,7 @@ export default async function livekitWebhookRoutes(app: FastifyInstance) {
         // Э7.2/Э7.3: приоритет учителю на демонстрацию экрана + автопереход в Лекцию.
         await roomsService.handleScreenShareStartedWebhook(roomName, userId);
       } else if (event.event === "track_unpublished" && roomName && event.track?.source === TrackSource.SCREEN_SHARE) {
-        await roomsService.handleScreenShareStoppedWebhook(roomName);
+        await roomsService.handleScreenShareStoppedWebhook(roomName, userId);
       } else if (
         (event.event === "egress_started" ||
           event.event === "egress_updated" ||
