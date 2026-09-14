@@ -3,6 +3,7 @@ import { Track, VideoPreset } from "livekit-client";
 import { MonitorUp, MonitorX } from "lucide-react";
 
 import { RoomControlButton } from "./RoomControlButton.js";
+import { toast } from "@/shared/ui/sonner";
 
 /**
  * Э7.1, §5.2 ТЗ: «1080p@5fps для документов» — дефолт, когда параметры
@@ -76,16 +77,31 @@ export function SelfScreenShareButton({
       await localParticipant.setScreenShareEnabled(false);
       return;
     }
-    await localParticipant.setScreenShareEnabled(
-      true,
-      {
-        audio: false,
-        resolution: encoding.resolution,
-        contentHint: "detail",
-      },
-      { screenShareEncoding: encoding.encoding },
-    );
-    onScreenShareStarted?.();
+    try {
+      await localParticipant.setScreenShareEnabled(
+        true,
+        {
+          audio: false,
+          resolution: encoding.resolution,
+          contentHint: "detail",
+        },
+        {
+          screenShareEncoding: encoding.encoding,
+          // Параметры школы (запрос 2026-09-14) сделали разрешение/fps
+          // демонстрации настраиваемыми — админ задаёт ОДНО фиксированное
+          // качество на школу, адаптивные слои (simulcast) под него не
+          // нужны, а комплексный расчёт нескольких слоёв под нестандартную
+          // пару resolution/fps — источник тихого зависания публикации
+          // (баг, пойманный по факту: «publish time out» в логах LiveKit
+          // при 720p/30fps, у дефолтного 1080p/5fps не проявлялся). Один
+          // слой — надёжный путь публикации независимо от выбранных цифр.
+          simulcast: false,
+        },
+      );
+      onScreenShareStarted?.();
+    } catch (e) {
+      toast.error(e instanceof Error ? `Не удалось начать демонстрацию: ${e.message}` : "Не удалось начать демонстрацию экрана");
+    }
   }
 
   return (
