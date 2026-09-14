@@ -60,8 +60,17 @@ export const schoolSettingsSchema = z.object({
   /** Разрешение/fps/битрейт видеозаписи урока (RoomComposite egress) — см. `egress-client.ts`. */
   recordingResolution: mediaQualityPresetSchema.default("720p"),
   recordingFps: framerateSchema.default(30),
-  /** §10.10 ТЗ: «~1.5 Мбит/с — дефолт, меньше места на диске». */
-  recordingBitrateKbps: videoBitrateKbpsSchema.default(1500),
+  /**
+   * §10.10 ТЗ изначально просил «~1.5 Мбит/с — меньше места на диске», но
+   * это бьёт по чёткости: запись — это КОМПОЗИТНЫЙ кадр (демонстрация +
+   * лента камер, см. `EgressPage.tsx`), а не одна демонстрация — тому же
+   * разрешению там нужно БОЛЬШЕ бит/пиксель, чем чистому потоку демонстрации
+   * (`screenShareBitrateKbps`, дефолт 2500 — только под демонстрацию, без
+   * камер поверх). При 1500 Кбит/с на 720p текст документа в записи уже
+   * заметно бьётся в блочность на глаз (жалоба пользователя 2026-09-14:
+   * «на конференции чётко, на записи всё пиксельное») — поднято до 3000.
+   */
+  recordingBitrateKbps: videoBitrateKbpsSchema.default(3000),
 });
 export type SchoolSettings = z.infer<typeof schoolSettingsSchema>;
 

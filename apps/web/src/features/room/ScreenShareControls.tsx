@@ -71,6 +71,46 @@ export function SelfScreenShareButton({
   );
   const blocked = !isScreenShareEnabled && othersSharing && !priority;
 
+  async function publishOnce(): Promise<void> {
+    await localParticipant.setScreenShareEnabled(
+      true,
+      {
+        audio: false,
+        resolution: encoding.resolution,
+        contentHint: "detail",
+      },
+      {
+        screenShareEncoding: encoding.encoding,
+        // Параметры школы (запрос 2026-09-14) сделали разрешение/fps
+        // демонстрации настраиваемыми — админ задаёт ОДНО фиксированное
+        // качество на школу, адаптивные слои (simulcast) под него не
+        // нужны, а комплексный расчёт нескольких слоёв под нестандартную
+        // пару resolution/fps — источник тихого зависания публикации
+        // (баг, пойманный по факту: «publish time out» в логах LiveKit
+        // при 720p/30fps, у дефолтного 1080p/5fps не проявлялся). Один
+        // слой — надёжный путь публикации независимо от выбранных цифр.
+        simulcast: false,
+      },
+    );
+  }
+
+  /**
+   * `setScreenShareEnabled` иногда НЕ отклоняется, а зависает без ответа
+   * (сервер LiveKit видит это как «publish time out», ~10с — пойманное по
+   * логам поведение, первопричина внутри WebRTC-негоциации клиента не
+   * установлена точно, что-то похожее на гонку/коллизию рядом с моментом
+   * входа в комнату). Обычный try/catch тут бессилен — нечему бросить
+   * исключение, промис просто не резолвится. Оборачиваем в таймаут и, если
+   * не успели за 6с, гасим зависшую попытку и пробуем ОДИН раз ещё —
+   * эмпирически вторая попытка стабильно проходит быстро (собственно то,
+   * что и обходил пользователь руками — «включить второй раз»).
+   */
+  async function publishWithTimeout(): Promise<"ok" | "timeout"> {
+    const timeout = new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), 6000));
+    const result = await Promise.race([publishOnce().then(() => "ok" as const), timeout]);
+    return result;
+  }
+
   async function toggle() {
     if (isScreenShareEnabled) {
       onScreenShareStopped?.();
@@ -78,26 +118,17 @@ export function SelfScreenShareButton({
       return;
     }
     try {
-      await localParticipant.setScreenShareEnabled(
-        true,
-        {
-          audio: false,
-          resolution: encoding.resolution,
-          contentHint: "detail",
-        },
-        {
-          screenShareEncoding: encoding.encoding,
-          // Параметры школы (запрос 2026-09-14) сделали разрешение/fps
-          // демонстрации настраиваемыми — админ задаёт ОДНО фиксированное
-          // качество на школу, адаптивные слои (simulcast) под него не
-          // нужны, а комплексный расчёт нескольких слоёв под нестандартную
-          // пару resolution/fps — источник тихого зависания публикации
-          // (баг, пойманный по факту: «publish time out» в логах LiveKit
-          // при 720p/30fps, у дефолтного 1080p/5fps не проявлялся). Один
-          // слой — надёжный путь публикации независимо от выбранных цифр.
-          simulcast: false,
-        },
-      );
+      let outcome = await publishWithTimeout();
+      if (outcome === "timeout") {
+        // Зависшая попытка публикации сама трек не остановит — гасим явно
+        // перед повтором, иначе второй вызов будет конкурировать с первым.
+        await localParticipant.setScreenShareEnabled(false).catch(() => undefined);
+        outcome = await publishWithTimeout();
+      }
+      if (outcome === "timeout") {
+        toast.error("Не удалось начать демонстрацию — попробуйте ещё раз");
+        return;
+      }
       onScreenShareStarted?.();
     } catch (e) {
       toast.error(e instanceof Error ? `Не удалось начать демонстрацию: ${e.message}` : "Не удалось начать демонстрацию экрана");

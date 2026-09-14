@@ -31,7 +31,7 @@ describe("getSchoolSettings (параметры школы, запрос 2026-09
       pipEnabled: true,
       cameraResolution: "720p",
       recordingResolution: "720p",
-      recordingBitrateKbps: 1500,
+      recordingBitrateKbps: 3000,
     });
   });
 
