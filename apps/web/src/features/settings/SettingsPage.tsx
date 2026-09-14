@@ -223,6 +223,57 @@ export function SettingsPage() {
             </Row>
           </Section>
 
+          <Section title="Качество демонстрации экрана">
+            <Row
+              icon={MonitorUp}
+              title="Разрешение демонстрации"
+              description="Дефолт для показа экрана/документа на уроке"
+            >
+              <Select
+                value={data.screenShareResolution}
+                disabled={savingKey === "screenShareResolution"}
+                onValueChange={(v) =>
+                  void patch("screenShareResolution", { screenShareResolution: v as MediaQualityPreset })
+                }
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MEDIA_QUALITY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Row>
+            <Row
+              icon={Film}
+              title="Частота кадров демонстрации"
+              description="Ниже — резче текст документа, выше — плавнее видео/анимация"
+            >
+              <Select
+                value={String(data.screenShareFps)}
+                disabled={savingKey === "screenShareFps"}
+                onValueChange={(v) =>
+                  void patch("screenShareFps", { screenShareFps: Number(v) as Framerate })
+                }
+              >
+                <SelectTrigger className="w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FPS_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={String(opt.value)}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Row>
+          </Section>
+
           <Section title="Запись урока">
             <Row
               icon={SettingsIcon}

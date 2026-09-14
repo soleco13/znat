@@ -5,17 +5,17 @@ import { MonitorUp, MonitorX } from "lucide-react";
 import { RoomControlButton } from "./RoomControlButton.js";
 
 /**
- * Э7.1, §5.2 ТЗ: «1080p@5fps для документов». `ScreenSharePresets`
- * (установленный `livekit-client@2.22.0`) не содержит готового пресета на
- * 5 fps (есть только `h1080fps15`/`h1080fps30`) — собственный `VideoPreset`
- * по тому же образцу. Битрейт 1 Мбит/с — ОЦЕНКА, не факт из ТЗ/LiveKit:
- * `h1080fps15` берёт 2.5 Мбит/с на 15 fps, при втрое меньшем fps (5)
+ * Э7.1, §5.2 ТЗ: «1080p@5fps для документов» — дефолт, когда параметры
+ * школы (§10.10 ТЗ, запрос 2026-09-14) ещё не загружены или явно не заданы.
+ * Битрейт 1 Мбит/с — ОЦЕНКА, не факт из ТЗ/LiveKit: `ScreenSharePresets.
+ * h1080fps15` берёт 2.5 Мбит/с на 15 fps, при втрое меньшем fps (5)
  * пропорционально вышло бы ~0.83 Мбит/с, округлено чуть вверх ради чёткости
  * текста документа (низкий fps не должен экономить на резкости кадра).
  *
  * Э12.7 UX: выбор «документ / видео» из панели убран (ученики и пожилые
- * учителя не должны выбирать fps/битрейт). Демонстрация всегда стартует в
- * профиле «документ» — приоритет чёткости текста, это типовой случай урока.
+ * учителя не должны выбирать fps/битрейт вручную на КАЖДОМ показе) — но
+ * админ школы теперь может задать разрешение/fps ОДИН раз в «Параметрах»
+ * (`toScreenShareEncoding`, `media-quality.ts`), а не за каждым учителем.
  */
 const DOCUMENT_SCREEN_SHARE_PRESET = new VideoPreset(1920, 1080, 1_000_000, 5, "medium");
 
@@ -47,10 +47,13 @@ const DOCUMENT_SCREEN_SHARE_PRESET = new VideoPreset(1920, 1080, 1_000_000, 5, "
  */
 export function SelfScreenShareButton({
   priority = false,
+  encoding = DOCUMENT_SCREEN_SHARE_PRESET,
   onScreenShareStarted,
   onScreenShareStopped,
 }: {
   priority?: boolean;
+  /** Параметры школы (запрос 2026-09-14) — разрешение/битрейт/fps демонстрации, считается `toScreenShareEncoding` в `RoomPage.tsx`. По умолчанию — профиль «документ» (см. `DOCUMENT_SCREEN_SHARE_PRESET`). */
+  encoding?: VideoPreset;
   /** Доп. — авто-PiP (Толк-кнопка, `PictureInPictureButton`): вызывается
    *  сразу после успешного старта демонстрации, из ТОГО ЖЕ клик-хендлера
    *  (иначе браузер может отказать `requestPictureInPicture()` без
@@ -77,10 +80,10 @@ export function SelfScreenShareButton({
       true,
       {
         audio: false,
-        resolution: DOCUMENT_SCREEN_SHARE_PRESET.resolution,
+        resolution: encoding.resolution,
         contentHint: "detail",
       },
-      { screenShareEncoding: DOCUMENT_SCREEN_SHARE_PRESET.encoding },
+      { screenShareEncoding: encoding.encoding },
     );
     onScreenShareStarted?.();
   }

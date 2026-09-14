@@ -65,7 +65,7 @@ import { ActivityStage } from "./ActivityStage.js";
 import { RecordingConsentBanner, RecordingPanel } from "../recordings/RecordingPanel.js";
 import { playRecordingSound } from "./recording-sound.js";
 import { SelfCameraButton, VideoDegradeSuggestion } from "./CameraControls.js";
-import { toVideoResolution } from "./media-quality.js";
+import { toScreenShareEncoding, toVideoResolution } from "./media-quality.js";
 import { ConnectionQualityIcon, PacketLossWarning } from "./ConnectionQuality.js";
 import { DeviceCheckScreen, type DeviceCheckResult } from "./DeviceCheckScreen.js";
 import { ScreenShareAutoPip, type ScreenShareAutoPipHandle } from "./ScreenShareAutoPip.js";
@@ -972,6 +972,14 @@ export function RoomPage() {
           clientMediaSettings?.screenShareEnabled !== false ? (
             <SelfScreenShareButton
               priority={isTeacher}
+              encoding={
+                clientMediaSettings
+                  ? toScreenShareEncoding(
+                      clientMediaSettings.screenShareResolution,
+                      clientMediaSettings.screenShareFps,
+                    )
+                  : undefined
+              }
               onScreenShareStarted={() => void pipRef.current?.open()}
               onScreenShareStopped={() => pipRef.current?.close()}
             />
