@@ -48,6 +48,7 @@ const DOCUMENT_SCREEN_SHARE_PRESET = new VideoPreset(1920, 1080, 1_000_000, 5, "
 export function SelfScreenShareButton({
   priority = false,
   onScreenShareStarted,
+  onScreenShareStopped,
 }: {
   priority?: boolean;
   /** Доп. — авто-PiP (Толк-кнопка, `PictureInPictureButton`): вызывается
@@ -55,6 +56,10 @@ export function SelfScreenShareButton({
    *  (иначе браузер может отказать `requestPictureInPicture()` без
    *  свежего user activation — см. докстринг `PictureInPictureButton`). */
   onScreenShareStarted?: () => void;
+  /** Закрыть PiP-окно сразу по клику «Стоп» из ГЛАВНОЙ панели (не только
+   *  из тулбара внутри самого PiP, см. `ScreenShareAutoPip`) — не ждать
+   *  `isScreenShareEnabled` из LiveKit-негоциации. */
+  onScreenShareStopped?: () => void;
 }) {
   const { localParticipant, isScreenShareEnabled } = useLocalParticipant();
   const othersSharing = useTracks([Track.Source.ScreenShare], { onlySubscribed: false }).some(
@@ -64,6 +69,7 @@ export function SelfScreenShareButton({
 
   async function toggle() {
     if (isScreenShareEnabled) {
+      onScreenShareStopped?.();
       await localParticipant.setScreenShareEnabled(false);
       return;
     }

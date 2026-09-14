@@ -72,6 +72,15 @@ export async function getLessonByLivekitRoom(livekitRoom: string) {
   return repo.findLessonByLivekitRoom(livekitRoom);
 }
 
+/** Заголовок урока + teacherId пачкой по id — для админ-списка записей (recordings/service.ts). */
+export async function getLessonTitles(
+  schoolId: string,
+  lessonIds: string[],
+): Promise<Map<string, { title: string; teacherId: string }>> {
+  const rows = await repo.listLessonTitlesByIds([...new Set(lessonIds)], schoolId);
+  return new Map(rows.map((r) => [r.id, { title: r.title, teacherId: r.teacherId }]));
+}
+
 // ─── Гостевой вход: разрешение токена (сам JWT/куки — Э12.4) ──────────────────
 
 /** Публичная инфо-карточка урока по токену (`GET /j/:token`). Ничего лишнего до входа. */

@@ -9,6 +9,7 @@
 
 FROM node:22-bookworm-slim AS base
 RUN corepack enable
+ENV CI=true
 WORKDIR /app
 
 # --- установка зависимостей workspace (frozen) -------------------------------

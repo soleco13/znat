@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import { Loader2, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Toggle } from "@/shared/ui/toggle";
@@ -23,6 +23,7 @@ export function RoomControlButton({
   disabled,
   tone = "media",
   speaking = false,
+  loading = false,
   title,
   caption,
 }: {
@@ -37,6 +38,8 @@ export function RoomControlButton({
   disabled?: boolean;
   tone?: "media" | "action";
   speaking?: boolean;
+  /** Идёт получение устройства/потока (напр. камера ещё грузится после клика) — иконка сменяется на спиннер, но кнопка остаётся кликабельной. */
+  loading?: boolean;
   /** Переопределяет текст подсказки (напр. причину, по которой кнопка недоступна). */
   title?: string;
   /** Короткая постоянная подпись под кнопкой (не зависит от состояния — само состояние видно на кнопке). */
@@ -61,7 +64,7 @@ export function RoomControlButton({
           // не только мышь.
           className={cn("relative size-11", speaking && "ring-2 ring-success ring-offset-1")}
         >
-          <Icon aria-hidden />
+          {loading ? <Loader2 className="animate-spin" aria-hidden /> : <Icon aria-hidden />}
         </Toggle>
       </span>
     </SimpleTooltip>

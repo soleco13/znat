@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, lt, sql, sum } from "drizzle-orm";
 import type { RecordingStatus } from "@school/shared";
 import { ACTIVE_RECORDING_STATUSES } from "@school/shared";
 import { db } from "../../db/client.js";
@@ -35,6 +35,41 @@ export async function findRecordingByEgressId(egressId: string): Promise<Recordi
     .where(eq(recordings.egressId, egressId))
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * Э10-admin — весь архив записей школы (не одного урока) для страницы
+ * администратора «Записи» (§10.10 ТЗ: место на диске / внешние ссылки /
+ * удаление). `deleted`-строки остаются в списке (журнал), но без файла —
+ * фронт показывает их статус, кнопки скачать/удалить для них неактивны.
+ */
+export async function listRecordingsForSchool(
+  schoolId: string,
+  input: { limit: number; offset: number },
+): Promise<{ rows: RecordingRow[]; total: number }> {
+  const [rows, totalRows] = await Promise.all([
+    db
+      .select()
+      .from(recordings)
+      .where(eq(recordings.schoolId, schoolId))
+      .orderBy(desc(recordings.startedAt))
+      .limit(input.limit)
+      .offset(input.offset),
+    db
+      .select({ value: count() })
+      .from(recordings)
+      .where(eq(recordings.schoolId, schoolId)),
+  ]);
+  return { rows, total: Number(totalRows[0]?.value ?? 0) };
+}
+
+/** Суммарный размер файлов записей школы, реально занимающих место сейчас (§10.10 ТЗ — «сколько занято»). */
+export async function sumRecordingsSizeForSchool(schoolId: string): Promise<number> {
+  const [row] = await db
+    .select({ value: sum(recordings.sizeBytes) })
+    .from(recordings)
+    .where(and(eq(recordings.schoolId, schoolId), eq(recordings.status, "ready")));
+  return Number(row?.value ?? 0);
 }
 
 export async function listRecordingsForLesson(

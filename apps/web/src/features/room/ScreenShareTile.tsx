@@ -13,6 +13,16 @@ import { Track } from "livekit-client";
  * `TeacherVideoTile`) — демонстрация экрана и есть то, на что сейчас
  * смотрит урок (Э7.3 переводит режим в Лекцию на время демонстрации,
  * §5.3 ТЗ: «доска/слайд на весь экран»).
+ *
+ * Без полей по краям и без обрезки (2026-09-11, после жалоб пользователя на
+ * оба крайних варианта подряд): рамка/фон висят не на «коробке во весь
+ * стейдж», внутри которой при несовпадении пропорций и появлялись полосы
+ * (сначала чёрные, потом — светлые), а на САМОМ видео. Элемент `<video>`
+ * сохраняет свои пропорции внутри `max-w/max-h`, поэтому граница обнимает
+ * картинку вплотную: полей внутри рамки нет в принципе, а содержимое не
+ * обрезается (`object-contain`, не `cover` — демонстрация часто документ
+ * или таблица, где обрезанный край теряет данные). Масштабируется
+ * адаптивно под любой размер стейджа/экрана.
  */
 export function ScreenShareTile() {
   const tracks = useTracks([Track.Source.ScreenShare], { onlySubscribed: true });
@@ -20,8 +30,11 @@ export function ScreenShareTile() {
   if (!track) return null;
 
   return (
-    <div className="flex h-full items-center justify-center overflow-hidden rounded-xl border border-border bg-black shadow-sm">
-      <VideoTrack trackRef={track} className="max-h-full max-w-full object-contain" />
+    <div className="flex h-full w-full items-center justify-center">
+      <VideoTrack
+        trackRef={track}
+        className="max-h-full max-w-full rounded-xl border border-border object-contain shadow-sm"
+      />
     </div>
   );
 }

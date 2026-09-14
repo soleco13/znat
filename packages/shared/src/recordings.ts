@@ -72,7 +72,10 @@ export type RecordingSummary = z.infer<typeof recordingSummarySchema>;
  * (проверяется на сервере, не здесь).
  */
 export const recordingWithDownloadSchema = recordingSummarySchema.extend({
-  url: z.string().url().nullable(),
+  // Не `.url()`: `getSignedFileUrl` (storage/service.ts) отдаёт путь вида
+  // `/files/<key>?exp=...&sig=...` относительно текущего origin — так же,
+  // как для материалов/канваса/слайдов, а не абсолютный URL.
+  url: z.string().nullable(),
   /** Момент протухания `url`. `null`, если `url === null`. */
   urlExpiresAt: z.string().datetime().nullable(),
 });
@@ -136,3 +139,50 @@ export interface RecorderActivityView {
   material: PublicMaterial;
   progress: ActivityProgress;
 }
+
+/**
+ * Пользовательский запрос (2026-09-12): страница администратора для
+ * управления видеозаписями всей школы — сколько занято места на диске,
+ * список всех записей (не только одного урока), внешняя ссылка на
+ * скачивание, ручное удаление. `lessonTitle`/`teacherName` — денормализованы
+ * сервером (`recordings/service.ts`, батч через `lessonsService`/
+ * `usersService` — без прямого импорта чужих таблиц, CLAUDE.md), чтобы
+ * страница не делала по запросу на каждую запись.
+ */
+export const adminRecordingSummarySchema = recordingWithDownloadSchema.extend({
+  lessonTitle: z.string(),
+  teacherName: z.string(),
+});
+export type AdminRecordingSummary = z.infer<typeof adminRecordingSummarySchema>;
+
+export const adminRecordingsListResponseSchema = z.object({
+  items: z.array(adminRecordingSummarySchema),
+  total: z.number().int().nonnegative(),
+});
+export type AdminRecordingsListResponse = z.infer<typeof adminRecordingsListResponseSchema>;
+
+/**
+ * Место на диске под хранилище (`STORAGE_ROOT`, см. `storage/service.ts`).
+ * Это место ВСЕГО тома (там же живут материалы/слайды/канвас-загрузки, не
+ * только записи) — `recordingsBytes` отдельно показывает, сколько из
+ * занятого — именно записи уроков, для которых и открыта эта страница.
+ */
+export const storageUsageResponseSchema = z.object({
+  totalBytes: z.number().nonnegative(),
+  usedBytes: z.number().nonnegative(),
+  freeBytes: z.number().nonnegative(),
+  recordingsBytes: z.number().nonnegative(),
+});
+export type StorageUsageResponse = z.infer<typeof storageUsageResponseSchema>;
+
+/**
+ * Внешняя ссылка на скачивание — абсолютный URL (с `PUBLIC_ORIGIN`), в
+ * отличие от `recordingWithDownloadSchema.url` (относительный путь для
+ * фронта того же origin). TTL длиннее обычного — ссылку админ отправляет
+ * за пределы приложения не мгновенно.
+ */
+export const recordingExternalLinkResponseSchema = z.object({
+  url: z.string().url(),
+  expiresAt: z.string().datetime(),
+});
+export type RecordingExternalLinkResponse = z.infer<typeof recordingExternalLinkResponseSchema>;

@@ -1,6 +1,9 @@
 import type {
+  AdminRecordingsListResponse,
   LessonRecordingsResponse,
+  RecordingExternalLinkResponse,
   RecordingSummary,
+  StorageUsageResponse,
 } from "@school/shared";
 import { apiFetch } from "../../shared/api-client.js";
 
@@ -30,4 +33,37 @@ export function stopLessonRecording(
   return apiFetch<RecordingSummary>(`/lessons/${lessonId}/recordings/${recordingId}/stop`, {
     method: "POST",
   });
+}
+
+// ─── Страница администратора «Записи» (§10.10 ТЗ) — весь архив школы ─────────
+
+/** Только `admin` — весь архив школы одним списком, не по урокам. */
+export function listAllRecordings(
+  page: number,
+  pageSize: number,
+): Promise<AdminRecordingsListResponse> {
+  return apiFetch<AdminRecordingsListResponse>(
+    `/admin/recordings?page=${page}&pageSize=${pageSize}`,
+  );
+}
+
+/** Место на диске хранилища + сколько из занятого — именно записи уроков. */
+export function getStorageUsage(): Promise<StorageUsageResponse> {
+  return apiFetch<StorageUsageResponse>("/admin/recordings/storage-usage");
+}
+
+/** Абсолютная ссылка на скачивание для отправки за пределы приложения (дольше TTL, чем обычная). */
+export function createExternalDownloadLink(
+  recordingId: string,
+  ttlSeconds?: number,
+): Promise<RecordingExternalLinkResponse> {
+  const qs = ttlSeconds ? `?ttlSeconds=${ttlSeconds}` : "";
+  return apiFetch<RecordingExternalLinkResponse>(
+    `/admin/recordings/${recordingId}/external-link${qs}`,
+  );
+}
+
+/** Удалить запись из хранилища немедленно (не дожидаясь ретеншна). Активную запись нужно сначала остановить. */
+export function adminDeleteRecording(recordingId: string): Promise<void> {
+  return apiFetch<void>(`/admin/recordings/${recordingId}`, { method: "DELETE" });
 }

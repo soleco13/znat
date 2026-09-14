@@ -2,6 +2,7 @@
 
 FROM node:22-bookworm-slim AS base
 RUN corepack enable
+ENV CI=true
 WORKDIR /app
 
 FROM base AS deps
@@ -16,7 +17,9 @@ COPY tsconfig.base.json ./
 COPY packages/shared packages/shared
 COPY apps/api apps/api
 COPY apps/web apps/web
+ENV NODE_OPTIONS="--max-old-space-size=6144"
 RUN pnpm --filter @school/shared run build \
+    && pnpm --filter @school/shared exec tsc -p tsconfig.json \
     && pnpm --filter @school/web run build \
     && pnpm --filter @school/api run build
 
@@ -37,6 +40,12 @@ COPY --from=build /app/apps/api/drizzle ./apps/api/drizzle
 COPY --from=build /app/packages/shared ./packages/shared
 COPY --from=build /app/apps/web/dist ./apps/web/dist
 COPY apps/api/package.json ./apps/api/package.json
+
+# @school/shared ships main:"./src/index.ts" for tsx/vite (dev, bundler resolution).
+# Plain node in this runtime image can't resolve the .js-suffixed relative
+# imports inside that .ts source, so point this copy's main at the compiled
+# dist produced above instead — repo source (dev workflow) is untouched.
+RUN node -e "const p='./packages/shared/package.json';const j=require(p);j.main='./dist/index.js';require('fs').writeFileSync(p,JSON.stringify(j));"
 
 RUN mkdir -p /data/assets && chown -R app:app /data/assets
 USER app

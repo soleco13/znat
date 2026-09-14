@@ -967,6 +967,7 @@ export function RoomPage() {
             <SelfScreenShareButton
               priority={isTeacher}
               onScreenShareStarted={() => void pipRef.current?.open()}
+              onScreenShareStopped={() => pipRef.current?.close()}
             />
           ) : null}
           {media ? (
@@ -1069,7 +1070,15 @@ export function RoomPage() {
         <ApplyAudioOutput deviceId={spkDeviceId} />
         <MicSync enabled={self?.permissions.canSpeak ?? false} />
         <VideoSubscriptionManager participants={participants} mode={lessonMode} />
-        <ScreenShareAutoPip ref={pipRef} participants={participants} selfId={selfId} />
+        <ScreenShareAutoPip
+          ref={pipRef}
+          participants={participants}
+          selfId={selfId}
+          isTeacher={isTeacher}
+          handRaised={self?.handRaised ?? false}
+          onToggleHand={toggleHand}
+          onLeave={leaveRoom}
+        />
         {content}
         <RoomAudioRenderer />
       </LiveKitRoom>

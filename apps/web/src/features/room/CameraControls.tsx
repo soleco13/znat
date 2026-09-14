@@ -5,6 +5,7 @@ import { AlertTriangle, Video, VideoOff } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
 import { RoomControlButton } from "./RoomControlButton.js";
+import { useSelfCameraUiStore } from "./self-camera-ui-store.js";
 
 /**
  * Кнопка «камера» (Э5.1/Э5.3/Э6.1). Публикация трека ручная, как и микрофон.
@@ -21,16 +22,39 @@ export function SelfCameraButton({
   disabledReason?: string;
 }) {
   const { localParticipant, isCameraEnabled } = useLocalParticipant();
+  const desiredOn = useSelfCameraUiStore((s) => s.desiredOn);
+  const frameReady = useSelfCameraUiStore((s) => s.frameReady);
+  const setDesiredOn = useSelfCameraUiStore((s) => s.setDesiredOn);
+
+  // Реальное состояние LiveKit (подтверждённое `getUserMedia`/публикацией
+  // или их провалом) — источник истины, к которому UI подтягивается сам.
+  // Нужен на случай, если камера включилась/выключилась не по клику этой
+  // кнопки (напр. `setCameraEnabled(true)` не смог получить устройство —
+  // тогда `isCameraEnabled` так и останется false, и лоадер должен сняться,
+  // а не крутиться бесконечно).
+  useEffect(() => {
+    setDesiredOn(isCameraEnabled);
+  }, [isCameraEnabled, setDesiredOn]);
+
   return (
     <RoomControlButton
-      active={isCameraEnabled}
+      // Кнопка рисуется по «намерению» пользователя, а не по факту из
+      // LiveKit — включение/выключение выглядит мгновенным по клику, даже
+      // пока getUserMedia/публикация/остановка трека ещё идут под капотом.
+      active={desiredOn}
+      loading={desiredOn && !frameReady}
       activeIcon={Video}
       inactiveIcon={VideoOff}
       activeLabel="Выключить камеру"
       inactiveLabel="Включить камеру"
-      onToggle={() =>
-        localParticipant.setCameraEnabled(!isCameraEnabled, { resolution: maxResolution })
-      }
+      onToggle={() => {
+        const next = !desiredOn;
+        setDesiredOn(next);
+        localParticipant.setCameraEnabled(next, { resolution: maxResolution }).catch(() => {
+          // Не получилось — откатываем намерение к тому, что реально есть.
+          setDesiredOn(localParticipant.isCameraEnabled);
+        });
+      }}
       caption="Камера"
       disabled={disabled}
       title={disabled ? disabledReason : undefined}
@@ -48,6 +72,7 @@ const POLL_MS = 2000;
  */
 export function VideoDegradeSuggestion() {
   const { localParticipant, isCameraEnabled } = useLocalParticipant();
+  const setDesiredOn = useSelfCameraUiStore((s) => s.setDesiredOn);
   const [lossRatio, setLossRatio] = useState<number | null>(null);
 
   useEffect(() => {
@@ -91,7 +116,10 @@ export function VideoDegradeSuggestion() {
         variant="destructive"
         size="sm"
         className="h-7 shrink-0"
-        onClick={() => localParticipant.setCameraEnabled(false)}
+        onClick={() => {
+          setDesiredOn(false);
+          localParticipant.setCameraEnabled(false).catch(() => undefined);
+        }}
       >
         Выключить видео
       </Button>

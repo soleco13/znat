@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   CalendarDays,
   GraduationCap,
+  HardDrive,
   Library,
   LogOut,
   Menu,
@@ -32,6 +33,7 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { to: "/lessons", label: "Уроки", icon: CalendarDays, roles: ["admin", "teacher"] },
+  { to: "/admin/recordings", label: "Записи", icon: HardDrive, roles: ["admin"] },
   {
     to: "/materials",
     label: "Библиотека",

@@ -75,6 +75,11 @@ services:
     image: livekit/livekit-server:latest
     restart: unless-stopped
     network_mode: host
+    # Медиа-путь в реальном времени — приоритет над CPU остальных контейнеров
+    # (postgres/converter/egress на этой же машине), см. заметку у coturn ниже
+    # про то же самое. cpu_shares — относительный вес, не жёсткая резервация:
+    # не мешает остальным работать, когда livekit не занят.
+    cpu_shares: 4096
     depends_on:
       redis:
         condition: service_healthy
@@ -91,13 +96,39 @@ services:
           tcp_port: 7881
           port_range_start: 50000
           port_range_end: 60000
-          use_external_ip: true
+          # use_external_ip: true (без node_ip) заставляет livekit
+          # перебирать STUN-запросом КАЖДЫЙ интерфейс хоста — на этой
+          # машине это, помимо публичного IP, ещё и docker-бриджи
+          # (172.17/18/19.0.1), которые реальный клиент снаружи никогда
+          # не достучится. Обнаружено в логах 2026-09-11: "using external
+          # IPs" содержал вперемешку публичный IP и все три бридж-адреса —
+          # это лишние (нерабочие) ICE-кандидаты, замедляющие/шумящие
+          # согласование на каждом подключении. node_ip — штатное поле
+          # livekit (yaml-тег `node_ip`, pkg rtcconfig) — задаёт единственный
+          # адрес явно, без STUN-перебора по интерфейсам; use_external_ip
+          # отключён, раз адрес и так известен точно (TURN_DOMAIN — тот же
+          # публичный IP, что уже используется для TURN/STUN).
+          use_external_ip: false
+          node_ip: ${TURN_DOMAIN}
           stun_servers:
             - ${TURN_DOMAIN}:3478
           turn_servers:
             - host: ${TURN_DOMAIN}
               port: 3478
               protocol: udp
+              secret: ${TURN_SHARED_SECRET}
+            # TURNS (TLS) на 5349 — для сетей со строгим файрволом/DPI, где
+            # голый UDP на нестандартный порт режется целиком (частая причина
+            # «у меня хороший интернет, а связь на уроке плохая» — см. заметку
+            # деплоя). Сертификат самоподписанный (нет домена, только IP) —
+            # в отличие от обычной HTTPS-страницы, ICE-агент браузера не
+            # показывает предупреждение и не требует клика — TURNS кандидат
+            # либо тихо срабатывает, либо тихо отбрасывается и ICE падает на
+            # другой кандидат (UDP TURN/STUN). Проверить на реальном
+            # проблемном подключении, это best-effort, не гарантия.
+            - host: ${TURN_DOMAIN}
+              port: 5349
+              protocol: tls
               secret: ${TURN_SHARED_SECRET}
         redis:
           address: 127.0.0.1:6379
@@ -116,17 +147,26 @@ services:
 
   # Свой TURN (§3.2, §10.5 ТЗ) вместо stun.l.google.com — часть учеников
   # сидит за школьными/корпоративными NAT, без TURN у них не будет медиа.
-  # TLS (5349) сознательно не включаем в Э2.1: нужен реальный сертификат на
-  # TURN_DOMAIN, это отдельная операционная задача при разворачивании на
-  # боевом домене — см. "Известные пробелы" в docs/CURRENT_STAGE.md.
+  # TLS (5349) добавлен тестово (2026-09-11) с самоподписанным сертификатом
+  # (./turn-certs, не в git, сгенерирован openssl на TURN_DOMAIN=IP) — на
+  # боевом домене заменить на реальный сертификат (Let's Encrypt и т.п.), см.
+  # "Известные пробелы" в docs/CURRENT_STAGE.md.
   coturn:
     image: coturn/coturn:latest
     restart: unless-stopped
     network_mode: host
+    # Тот же приоритет, что у livekit — TURN relay на пути реального времени.
+    cpu_shares: 4096
+    volumes:
+      - ./turn-certs/turn_cert.pem:/certs/turn_cert.pem:ro
+      - ./turn-certs/turn_key.pem:/certs/turn_key.pem:ro
     command:
       - -n
       - --log-file=stdout
       - --listening-port=3478
+      - --tls-listening-port=5349
+      - --cert=/certs/turn_cert.pem
+      - --pkey=/certs/turn_key.pem
       - --min-port=49000
       - --max-port=49999
       - --realm=${TURN_DOMAIN}

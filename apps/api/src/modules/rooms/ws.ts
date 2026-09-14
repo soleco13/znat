@@ -84,6 +84,12 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
       // EgressPage.tsx) — тот же пробел, что и у живого участника,
       // подключившегося без initial join().
       send({ type: "stage_changed", stage: await roomsService.getCurrentLessonStage(lessonId) });
+      // Presence сразу при подключении — recorder должен видеть уже
+      // сидящих в уроке участников (лента камер в EgressPage.tsx), а не
+      // ждать их participant_joined (тот шлётся только НОВЫМ входам). Тот
+      // же снимок, что получает живой участник сразу после attachSocket
+      // ниже.
+      send({ type: "presence", participants: await roomsService.listParticipantsSnapshot(lessonId) });
 
       const onEvent = (message: ServerRoomMessage) => send(message);
       roomEvents.on(lessonId, onEvent);

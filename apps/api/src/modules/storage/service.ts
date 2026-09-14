@@ -1,3 +1,4 @@
+import { statfs } from "node:fs/promises";
 import type { StorageAdapter } from "./adapter.js";
 import { LocalFsStorageAdapter } from "./local-fs.js";
 import { signStorageUrl, verifyStorageSignature } from "./hmac.js";
@@ -36,4 +37,23 @@ export function getSignedFileUrl(storageKey: string, ttlSeconds: number = SIGNED
 
 export function verifyFileSignature(storageKey: string, exp: number, sig: string): boolean {
   return verifyStorageSignature(storageKey, exp, sig, env.STORAGE_HMAC_SECRET);
+}
+
+/**
+ * Место на диске тома, где живёт `STORAGE_ROOT` (Node 22 — `fs.statfs`, тот
+ * же системный вызов, что `df`). Только для `LocalFsStorageAdapter`: адаптер
+ * захардкожен на файловую систему сейчас (см. выше) — для S3/SeaweedFS этот
+ * вызов был бы бессмысленным (там своя квота, не диск этого хоста), но CI/
+ * dependency-cruiser это не проверяют, так что если адаптер когда-нибудь
+ * поменяют — эту функцию тоже придётся пересмотреть.
+ */
+export async function getDiskUsage(): Promise<{
+  totalBytes: number;
+  usedBytes: number;
+  freeBytes: number;
+}> {
+  const stats = await statfs(env.STORAGE_ROOT);
+  const totalBytes = stats.blocks * stats.bsize;
+  const freeBytes = stats.bavail * stats.bsize;
+  return { totalBytes, freeBytes, usedBytes: totalBytes - freeBytes };
 }

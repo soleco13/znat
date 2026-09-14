@@ -1,4 +1,4 @@
-import { and, desc, eq, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { lessonMaterials, lessonParticipants, lessons } from "../../db/schema.js";
 
@@ -120,6 +120,15 @@ export async function listLessons(input: { schoolId: string; ownerTeacherId?: st
     .from(lessons)
     .where(and(...conditions))
     .orderBy(desc(lessons.startsAt));
+}
+
+/** Заголовок + teacherId пачкой по id — для админ-списка записей (Э10, recordings/service.ts): без N+1 на каждую запись. */
+export async function listLessonTitlesByIds(ids: string[], schoolId: string) {
+  if (ids.length === 0) return [];
+  return db
+    .select({ id: lessons.id, title: lessons.title, teacherId: lessons.teacherId })
+    .from(lessons)
+    .where(and(inArray(lessons.id, ids), eq(lessons.schoolId, schoolId)));
 }
 
 // ─── Журнал посещений (`lesson_participants`) ────────────────────────────────

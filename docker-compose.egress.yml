@@ -43,10 +43,24 @@ services:
     # Chrome активно использует разделяемую память; дефолтные 64 МБ приводят к
     # падениям рендерера на длинных записях.
     shm_size: 1gb
+    # Однохостовый тестовый стенд (см. заметку деплоя): egress реально делит
+    # эти же 2 CPU с livekit, а не сидит на второй машине, как в §10.4 ТЗ.
+    # Жёсткий cap 1.5 CPU совпадает с уже подобранным
+    # cpu_cost.room_composite_cpu_cost=1.5 в egress.local.yaml — запись не
+    # должна суметь съесть оба ядра и посадить качество связи у всех
+    # остальных участников урока. cpu_shares ниже дефолтных 1024 — при
+    # реальной конкуренции за CPU livekit/coturn (cpu_shares: 4096 в
+    # docker-compose.yml) выигрывают у записи.
+    cpus: "1.5"
+    cpu_shares: 512
     environment:
       EGRESS_CONFIG_FILE: /etc/egress.yaml
     volumes:
-      - ./egress.yaml:/etc/egress.yaml:ro
+      # egress.yaml — git-шаблон с ${...}-плейсхолдерами (не раскрываются
+      # самим egress). egress.local.yaml — версия с реальными значениями,
+      # отрендеренная envsubst из .env.egress (не в git), см. заметку деплоя
+      # в /root/.claude memory этой сессии для однохостового теста.
+      - ./egress.local.yaml:/etc/egress.yaml:ro
       # Тот же каталог ассетов, что STORAGE_ROOT у `app` на основной машине.
       # На проде — точка монтирования сетевой ФС провайдера.
       - ${EGRESS_STORAGE_ROOT:-/data/assets}:/data/assets

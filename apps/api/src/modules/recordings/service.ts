@@ -3,17 +3,21 @@ import { randomUUID } from "node:crypto";
 import type { AccessTokenPayload } from "@school/shared";
 import {
   ACTIVE_RECORDING_STATUSES,
+  type AdminRecordingsListResponse,
   type LessonRecordingsResponse,
+  type RecordingExternalLinkResponse,
   type RecordingStatus,
   type RecordingSummary,
   type RecordingWithDownload,
+  type StorageUsageResponse,
 } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
 import { env } from "../../plugins/env.js";
 import * as lessonsService from "../lessons/service.js";
 import * as roomsService from "../rooms/service.js";
+import * as usersService from "../users/service.js";
 import { signRecorderToken } from "../recorder-auth/service.js";
-import { getSignedFileUrl, deleteFile } from "../storage/service.js";
+import { getSignedFileUrl, deleteFile, getDiskUsage } from "../storage/service.js";
 import type { EgressInfo } from "livekit-server-sdk";
 import * as egress from "./egress-client.js";
 import * as repo from "./repo.js";
@@ -121,7 +125,11 @@ export async function startLessonRecording(
       roomName: livekitRoom,
       storageKey,
       absoluteFilepath: absoluteFilepath(storageKey),
-      templateQuery: { lessonId, recorderToken },
+      // followUserId (Э10.6 доработка) — запись следует за viewport'ом ТОГО,
+      // кто её запустил (`user.sub`), не за ролью «teacher»: инициатор может
+      // быть admin, а прежний матчинг по роли в Board.tsx тогда молча не
+      // находил никого и запись оставалась на независимом дефолтном виде.
+      templateQuery: { lessonId, recorderToken, followUserId: user.sub },
     });
   } catch {
     throw new AppError(502, "egress_unavailable", "Сервис записи не ответил, попробуйте ещё раз");
@@ -214,6 +222,113 @@ export async function getLessonRecordings(
     active: active ? toSummary(active) : null,
     recordings: rows.map(toWithDownload),
   };
+}
+
+const DEFAULT_ADMIN_PAGE_SIZE = 20;
+const MAX_ADMIN_PAGE_SIZE = 100;
+/** Внешняя ссылка (не для UI школы, а «унести за пределы приложения») — дольше обычной, но не бессрочно. */
+const EXTERNAL_LINK_DEFAULT_TTL_SEC = 24 * 60 * 60;
+const EXTERNAL_LINK_MAX_TTL_SEC = 7 * 24 * 60 * 60;
+
+/**
+ * Пользовательский запрос (2026-09-12) — страница администратора «Записи»:
+ * весь архив школы одним списком (не по урокам), с заголовком урока и
+ * именем учителя (батчем через `lessonsService`/`usersService` — без
+ * прямого импорта их таблиц, CLAUDE.md). Только `admin` — это уже не
+ * «записи моего урока», а инфраструктурная страница с местом на диске.
+ */
+export async function listAllRecordings(
+  user: AccessTokenPayload,
+  input: { page: number; pageSize: number },
+): Promise<AdminRecordingsListResponse> {
+  if (user.role !== "admin") {
+    throw new AppError(403, "forbidden", "Страница записей доступна только администратору");
+  }
+  const pageSize = Math.min(Math.max(1, input.pageSize || DEFAULT_ADMIN_PAGE_SIZE), MAX_ADMIN_PAGE_SIZE);
+  const page = Math.max(1, input.page || 1);
+  const { rows, total } = await repo.listRecordingsForSchool(user.schoolId, {
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+  });
+
+  const lessonTitles = await lessonsService.getLessonTitles(
+    user.schoolId,
+    rows.map((r) => r.lessonId),
+  );
+  const teacherIds = [...lessonTitles.values()].map((l) => l.teacherId);
+  const teacherNames = await usersService.getUserNames(user.schoolId, teacherIds);
+
+  const items = rows.map((row) => {
+    const lesson = lessonTitles.get(row.lessonId);
+    const teacherName = lesson ? teacherNames.get(lesson.teacherId)?.fullName : undefined;
+    return {
+      ...toWithDownload(row),
+      lessonTitle: lesson?.title ?? "Урок удалён",
+      teacherName: teacherName ?? "—",
+    };
+  });
+
+  return { items, total };
+}
+
+/** Место на диске (§10.10 ТЗ — «сколько места есть/занято») + отдельно сколько из занятого — именно записи. */
+export async function getStorageUsage(user: AccessTokenPayload): Promise<StorageUsageResponse> {
+  if (user.role !== "admin") {
+    throw new AppError(403, "forbidden", "Место на диске доступно только администратору");
+  }
+  const [disk, recordingsBytes] = await Promise.all([
+    getDiskUsage(),
+    repo.sumRecordingsSizeForSchool(user.schoolId),
+  ]);
+  return { ...disk, recordingsBytes };
+}
+
+/**
+ * Внешняя ссылка на скачивание — абсолютный URL (`PUBLIC_ORIGIN` + тот же
+ * presigned-путь, что и обычная ссылка учителю), TTL длиннее дефолтного:
+ * это ссылка «унести за пределы приложения» (§10.10 ТЗ), не для показа тут
+ * же в интерфейсе.
+ */
+export async function createExternalDownloadLink(
+  user: AccessTokenPayload,
+  recordingId: string,
+  ttlSeconds?: number,
+): Promise<RecordingExternalLinkResponse> {
+  if (user.role !== "admin") {
+    throw new AppError(403, "forbidden", "Внешняя ссылка доступна только администратору");
+  }
+  const row = await repo.findRecordingById(recordingId, user.schoolId);
+  if (!row || row.status !== "ready" || !row.storageKey) {
+    throw new AppError(404, "not_found", "Запись не найдена или ещё не готова");
+  }
+  const ttl = Math.min(Math.max(1, ttlSeconds || EXTERNAL_LINK_DEFAULT_TTL_SEC), EXTERNAL_LINK_MAX_TTL_SEC);
+  const path = getSignedFileUrl(row.storageKey, ttl);
+  return {
+    url: new URL(path, env.PUBLIC_ORIGIN).toString(),
+    expiresAt: new Date(Date.now() + ttl * 1000).toISOString(),
+  };
+}
+
+/**
+ * Ручное удаление записи админом (§10.10 ТЗ — «можно было удалять видео из
+ * хранилища»), не дожидаясь ретеншна. Идущую прямо сейчас запись удалить
+ * нельзя — сначала остановить (иначе egress напишет файл туда, где мы уже
+ * ничего не ждём, и `applyEgressEvent` создаст висящую ссылку без файла).
+ */
+export async function adminDeleteRecording(
+  user: AccessTokenPayload,
+  recordingId: string,
+): Promise<void> {
+  if (user.role !== "admin") {
+    throw new AppError(403, "forbidden", "Удаление записи доступно только администратору");
+  }
+  const row = await repo.findRecordingById(recordingId, user.schoolId);
+  if (!row) throw new AppError(404, "not_found", "Запись не найдена");
+  if (ACTIVE_RECORDING_STATUSES.includes(row.status)) {
+    throw new AppError(409, "recording_active", "Сначала остановите запись, потом можно удалить");
+  }
+  if (row.storageKey) await deleteFile(row.storageKey);
+  await repo.updateRecording(row.id, { status: "deleted", sizeBytes: null });
 }
 
 /**

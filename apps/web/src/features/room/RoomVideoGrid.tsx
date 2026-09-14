@@ -6,13 +6,14 @@ import {
   VideoTrack,
 } from "@livekit/components-react";
 import { ConnectionQuality, Track } from "livekit-client";
-import { ChevronDown, ChevronUp, Hand, MicOff, Pin } from "lucide-react";
+import { ChevronDown, ChevronUp, Hand, Loader2, MicOff, Pin } from "lucide-react";
 import type { LessonMode, ParticipantSnapshot } from "@school/shared";
 
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/shared/ui/avatar";
 import { Button } from "@/shared/ui/button";
 import { QUALITY_COLOR, QUALITY_ICON, QUALITY_LABEL } from "./ConnectionQuality.js";
+import { useSelfCameraUiStore } from "./self-camera-ui-store.js";
 import { useAdaptiveGrid } from "./use-adaptive-grid.js";
 
 const GAP = 8;
@@ -58,6 +59,13 @@ export function RoomVideoGrid({
   const qualityByIdentity = new Map(
     roomParticipants.map((p) => [p.identity, p.connectionQuality]),
   );
+  // Своя плитка рисуется по «намерению» из `SelfCameraUiStore`, а не по
+  // факту трека — см. комментарий там же: включение показывает лоадер
+  // вместо чёрного экрана, выключение прячет видео сразу по клику кнопки,
+  // не дожидаясь остановки трека под капотом.
+  const selfDesiredOn = useSelfCameraUiStore((s) => s.desiredOn);
+  const selfFrameReady = useSelfCameraUiStore((s) => s.frameReady);
+  const setSelfFrameReady = useSelfCameraUiStore((s) => s.setFrameReady);
 
   const tiles = participants
     .filter((p) => p.connected)
@@ -73,6 +81,12 @@ export function RoomVideoGrid({
   const renderTile = (p: ParticipantSnapshot) => {
     const track = trackByIdentity.get(p.userId);
     const isSelf = p.userId === selfId;
+    // Для чужих плиток — как раньше, по факту наличия трека. Для своей —
+    // по `selfDesiredOn`: клик «выключить» прячет видео сразу, не дожидаясь
+    // реальной остановки трека; клик «включить» до первого кадра показывает
+    // лоадер, а не чёрный `<video>`.
+    const videoTrack = isSelf && !selfDesiredOn ? undefined : track;
+    const showLoader = isSelf && selfDesiredOn && !selfFrameReady;
     return (
       <div
         key={p.userId}
@@ -83,14 +97,26 @@ export function RoomVideoGrid({
             : "border-border ring-transparent",
         )}
       >
-        {track ? (
+        {videoTrack ? (
           <VideoTrack
-            trackRef={track}
-            className={cn("absolute inset-0 size-full object-cover", isSelf && "-scale-x-100")}
+            trackRef={videoTrack}
+            onLoadedData={isSelf ? () => setSelfFrameReady(true) : undefined}
+            className={cn(
+              "absolute inset-0 size-full object-cover transition-opacity",
+              isSelf && "-scale-x-100",
+              showLoader && "opacity-0",
+            )}
           />
-        ) : (
+        ) : !showLoader ? (
           <UserAvatar name={p.fullName} size={variant === "rail" ? 36 : 64} />
-        )}
+        ) : null}
+
+        {showLoader ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-slate-900 text-white/80">
+            <Loader2 className={cn("animate-spin", variant === "rail" ? "size-4" : "size-6")} aria-hidden />
+            {variant !== "rail" ? <span className="text-[11px]">Камера загружается…</span> : null}
+          </div>
+        ) : null}
 
         {(p.handRaised || p.pinned) && (
           <div className="absolute right-1.5 top-1.5 flex gap-1">

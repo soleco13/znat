@@ -85,8 +85,60 @@ function cursorColorFor(userId: string): string {
   return `hsl(${hash % 360}, 70%, 45%)`;
 }
 
-type ViewportAwarenessState = { scrollX: number; scrollY: number; zoom: number };
-type UserAwarenessState = { name: string; color: string; role: string };
+type ViewportAwarenessState = {
+  scrollX: number;
+  scrollY: number;
+  zoom: number;
+  /** CSS px контейнера холста источника — нужны получателю, чтобы пересчитать
+   * scroll под СВОЙ размер контейнера (см. `centerScrollFor` ниже). */
+  containerWidth: number;
+  containerHeight: number;
+};
+
+/**
+ * Пересчёт чужого viewport'а под СВОЙ контейнер: показать ту же область
+ * сцены, что видит источник, целиком и по центру.
+ *
+ * Почему нельзя просто скопировать `scrollX/scrollY/zoom` (так было, и это
+ * дважды ловил пользователь как «доска обрезана», 2026-09-11): `zoom` —
+ * это масштаб «сцена → CSS-пиксели», а видимая область = размер контейнера
+ * / zoom. Контейнеры не совпадают и совпасть не могут: у автора доски —
+ * его окно браузера (замерено вживую: 2338×1162), у записи — кадр 1280×720
+ * минус лента камер (~1068×696). При одинаковом `zoom` вдвое меньший
+ * контейнер физически показывает вдвое меньше сцены — всё, что не влезло,
+ * обрезается по краям.
+ *
+ * Поэтому zoom масштабируем на отношение размеров (`min` по осям — чтобы
+ * область источника поместилась целиком, а не обрезалась по узкой оси), а
+ * центр совмещаем: `screenX = (sceneX + scrollX) * zoom` ⇒
+ * `sceneX = screenX / zoom - scrollX` (тот же приём, что ниже по файлу для
+ * центрирования новых фигур). Зум/позиция при этом остаются ЖИВЫМИ: автор
+ * зумит или панорамирует — пересчёт едет за ним.
+ */
+function centerScrollFor(
+  viewport: ViewportAwarenessState,
+  ownWidth: number,
+  ownHeight: number,
+): { scrollX: number; scrollY: number; zoom: number } {
+  const { scrollX, scrollY, zoom, containerWidth, containerHeight } = viewport;
+  if (!containerWidth || !containerHeight || !ownWidth || !ownHeight) {
+    return { scrollX, scrollY, zoom };
+  }
+  const fitZoom = clampZoom(zoom * Math.min(ownWidth / containerWidth, ownHeight / containerHeight));
+  const centerSceneX = containerWidth / 2 / zoom - scrollX;
+  const centerSceneY = containerHeight / 2 / zoom - scrollY;
+  return {
+    scrollX: ownWidth / 2 / fitZoom - centerSceneX,
+    scrollY: ownHeight / 2 / fitZoom - centerSceneY,
+    zoom: fitZoom,
+  };
+}
+
+/** Диапазон зума самого Excalidraw — за его пределами `updateScene` молча не применится. */
+function clampZoom(value: number): number {
+  return Math.min(30, Math.max(0.1, value));
+}
+type UserAwarenessState = { id: string; name: string; color: string; role: string };
 
 /**
  * Метаданные страницы холста (Э3.6/Э3.7, §3.4/§4.3 ТЗ:
@@ -146,6 +198,7 @@ export function Board({
   onClose,
   connectionToken,
   readOnlyChrome = false,
+  followUserId,
 }: {
   lessonId: string;
   canDraw: boolean;
@@ -167,6 +220,16 @@ export function Board({
    * `canDraw={false}` → `viewModeEnabled`; это только про наш тулбар поверх.
    */
   readOnlyChrome?: boolean;
+  /**
+   * Доработка после теста записи (2026-09-11): recorder следует за
+   * viewport'ом КОНКРЕТНО того, кто запустил запись (`userId`, передан
+   * через `startLessonRecording` → `templateQuery.followUserId` →
+   * `EgressPage.tsx`), а не за первым встречным с `role === "teacher"` —
+   * инициатор мог быть admin, и матчинг по роли тогда молча не находил
+   * никого. Для обычного «следовать за учителем» (кнопка в тулбаре
+   * ученика) не передаётся — там матчинг по роли, как и был.
+   */
+  followUserId?: string;
 }) {
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null);
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -403,9 +466,47 @@ export function Board({
    */
   useEffect(() => {
     if (!provider?.awareness || !me) return;
-    const userState: UserAwarenessState = { name: me.fullName, color: cursorColorFor(me.id), role: me.role };
+    const userState: UserAwarenessState = { id: me.id, name: me.fullName, color: cursorColorFor(me.id), role: me.role };
     provider.awareness.setLocalStateField("user", userState);
   }, [provider, me]);
+
+  /**
+   * Мобильная/планшетная адаптация (жалоба пользователя, 2026-09-12): на
+   * телефоне/планшете доска после поворота экрана или открытия/закрытия
+   * клавиатуры оставалась «заземлена» — Excalidraw не перерисовывался под
+   * новый размер контейнера, и содержимое выглядело обрезанным. У
+   * Excalidraw есть собственный ResizeObserver на свой контейнер, но он
+   * реагирует на реальное изменение РАЗМЕРА бокса; на iOS/Android при
+   * появлении клавиатуры или повороте (особенно вместе с нашим `overflow-
+   * y-auto` на `<main>` в RoomPage) браузер не всегда шлёт то самое
+   * событие, на которое Excalidraw подписан, и его внутренний кеш
+   * `document.getBoundingClientRect()` устаревает. Публичный метод
+   * `excalidrawAPI.refresh()` для этого и существует (см. типы пакета —
+   * "Recalculates the position of the excalidraw component on screen") —
+   * дергаем его сами по `ResizeObserver` на НАШЕМ контейнере (более
+   * надёжный сигнал, чем `window resize`) и по `visualViewport`/
+   * `orientationchange` (клавиатура на iOS Safari не всегда шлёт `resize`
+   * окна, но всегда шлёт `visualViewport.resize`).
+   */
+  useEffect(() => {
+    if (!excalidrawAPI) return;
+    const container = boardContainerRef.current;
+    if (!container) return;
+
+    const refresh = () => excalidrawAPI.refresh();
+
+    const observer = new ResizeObserver(refresh);
+    observer.observe(container);
+
+    window.visualViewport?.addEventListener("resize", refresh);
+    window.addEventListener("orientationchange", refresh);
+
+    return () => {
+      observer.disconnect();
+      window.visualViewport?.removeEventListener("resize", refresh);
+      window.removeEventListener("orientationchange", refresh);
+    };
+  }, [excalidrawAPI]);
 
   /**
    * Э3.9: транслируем собственный viewport (scroll/zoom) в awareness —
@@ -417,7 +518,14 @@ export function Board({
     if (!excalidrawAPI || !provider?.awareness) return;
     const awareness = provider.awareness;
     const broadcastViewport = (scrollX: number, scrollY: number, zoomValue: number) => {
-      const viewportState: ViewportAwarenessState = { scrollX, scrollY, zoom: zoomValue };
+      const container = boardContainerRef.current;
+      const viewportState: ViewportAwarenessState = {
+        scrollX,
+        scrollY,
+        zoom: zoomValue,
+        containerWidth: container?.clientWidth ?? 0,
+        containerHeight: container?.clientHeight ?? 0,
+      };
       awareness.setLocalStateField("viewport", viewportState);
     };
     const state = excalidrawAPI.getAppState();
@@ -426,25 +534,33 @@ export function Board({
   }, [excalidrawAPI, provider]);
 
   /**
-   * Э3.9: «следовать за учителем» — пока включено, viewport этого клиента
-   * подчиняется viewport'у учителя из awareness. Учителя среди состояний
-   * ищем по `user.role`, а не по фиксированному userId — пришедшая с
-   * Э3.1 модель прав не завязана на конкретного «главного» участника
-   * (со-учителя/подмена тоже были бы `role: "teacher"`).
+   * Э3.9: «следовать за учителем» (кнопка в тулбаре ученика) — пока
+   * включено, viewport этого клиента подчиняется viewport'у учителя из
+   * awareness: та же точка сцены оказывается в центре СВОЕГО контейнера
+   * (`centerScrollFor`, см. докстринг типа выше) — зум берём как у
+   * учителя (значит, когда он зумирует — зумирует и здесь), но не копируем
+   * `scrollX/scrollY` буквально, иначе при другом размере окна получалась
+   * обрезка по краю, а не центрированный показ. Учителя среди состояний
+   * ищем по `user.role`, а не по фиксированному userId — пришедшая с Э3.1
+   * модель прав не завязана на конкретного «главного» участника (со-
+   * учителя/подмена тоже были бы `role: "teacher"`).
    */
   useEffect(() => {
     if (!followTeacher || !excalidrawAPI || !provider?.awareness) return;
     const awareness = provider.awareness;
     const applyTeacherViewport = () => {
+      const container = boardContainerRef.current;
+      if (!container) return;
       for (const state of awareness.getStates().values()) {
         const user = (state as { user?: UserAwarenessState }).user;
         const viewport = (state as { viewport?: ViewportAwarenessState }).viewport;
         if (user?.role === "teacher" && viewport) {
+          const centered = centerScrollFor(viewport, container.clientWidth, container.clientHeight);
           excalidrawAPI.updateScene({
             appState: {
-              scrollX: viewport.scrollX,
-              scrollY: viewport.scrollY,
-              zoom: { value: viewport.zoom as NormalizedZoomValue },
+              scrollX: centered.scrollX,
+              scrollY: centered.scrollY,
+              zoom: { value: centered.zoom as NormalizedZoomValue },
             },
           });
           return;
@@ -455,6 +571,49 @@ export function Board({
     awareness.on("change", applyTeacherViewport);
     return () => awareness.off("change", applyTeacherViewport);
   }, [followTeacher, excalidrawAPI, provider]);
+
+  /**
+   * Recorder (`followUserId` передан, Э10.6 доработка) — тот же приём, что
+   * выше у «следовать за учителем», только матчинг по конкретному `user.id`
+   * (не по роли: инициатор записи может быть admin, не teacher — прежняя
+   * версия матчинга по роли на записи никого не находила и висела на
+   * дефолтном viewport'е; см. память по этой доработке от 2026-09-11).
+   * Раньше здесь было буквальное копирование чужого scrollX/scrollY — при
+   * иной ширине контейнера (лента камер в записи отъедает часть кадра) это
+   * визуально резало по краю, а не центрировало (баг, пользователь заметил
+   * дважды). Потом — периодический `scrollToContent(fitToViewport)`, но это
+   * убивало реальное движение: масштаб/позиция на записи не менялись при
+   * панорамировании/зуме у инициатора (пользователь заметил и это). Сейчас
+   * — живое центрированное слежение, как у «следовать за учителем»: зум
+   * меняется вместе с инициатором, позиция скорректирована под размер
+   * контейнера записи.
+   */
+  useEffect(() => {
+    if (!followUserId || !excalidrawAPI || !provider?.awareness) return;
+    const awareness = provider.awareness;
+    const applyFollowedViewport = () => {
+      const container = boardContainerRef.current;
+      if (!container) return;
+      for (const state of awareness.getStates().values()) {
+        const user = (state as { user?: UserAwarenessState }).user;
+        const viewport = (state as { viewport?: ViewportAwarenessState }).viewport;
+        if (user?.id === followUserId && viewport) {
+          const centered = centerScrollFor(viewport, container.clientWidth, container.clientHeight);
+          excalidrawAPI.updateScene({
+            appState: {
+              scrollX: centered.scrollX,
+              scrollY: centered.scrollY,
+              zoom: { value: centered.zoom as NormalizedZoomValue },
+            },
+          });
+          return;
+        }
+      }
+    };
+    applyFollowedViewport();
+    awareness.on("change", applyFollowedViewport);
+    return () => awareness.off("change", applyFollowedViewport);
+  }, [followUserId, excalidrawAPI, provider]);
 
   function switchPage(pageId: string) {
     ydoc?.getMap("meta").set("activePageId", pageId);

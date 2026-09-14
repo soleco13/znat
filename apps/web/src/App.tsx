@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { LoginPage } from "./features/auth/LoginPage.js";
 import { GuestJoinPage } from "./features/guest/GuestJoinPage.js";
 import { LessonsListPage } from "./features/lessons/LessonsListPage.js";
+import { AdminRecordingsPage } from "./features/recordings/AdminRecordingsPage.js";
 import { MaterialEditorPage } from "./features/materials/MaterialEditorPage.js";
 import { MaterialsEditorLandingPage } from "./features/materials/MaterialsEditorLandingPage.js";
 import { MaterialsLibraryPage } from "./features/materials/MaterialsLibraryPage.js";
@@ -58,6 +59,11 @@ export function App() {
           element={<Shell roles={["admin", "methodist"]}><MaterialsEditorLandingPage /></Shell>}
         />
         <Route path="/materials/edit/:id" element={<Shell><MaterialEditorPage /></Shell>} />
+        {/* §10.10 ТЗ — место на диске + архив записей всей школы, только admin. */}
+        <Route
+          path="/admin/recordings"
+          element={<Shell roles={["admin"]}><AdminRecordingsPage /></Shell>}
+        />
         {/* Э10.2 — layout-шаблон записи. Открывается headless-Chrome внутри
             LiveKit Egress на второй машине; без нашей сессии, вне каркаса. */}
         <Route path="/egress" element={<EgressPage />} />

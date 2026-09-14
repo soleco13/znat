@@ -18,6 +18,9 @@ coverage/
 # локальные артефакты запуска (Redis-дамп, логи сервера, скриншоты отладки)
 dump.rdb
 server_log.txt
+/turn-certs/
+# Рендер egress.yaml через envsubst с реальными секретами (api_secret и т.п.) — не в git.
+/egress.local.yaml
 /room*.png
 docs/screenshots/
 .playwright-mcp/
