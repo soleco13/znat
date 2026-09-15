@@ -1,7 +1,7 @@
 import { useIsSpeaking, useLocalParticipant, useParticipants } from "@livekit/components-react";
 import { Mic, MicOff } from "lucide-react";
 
-import { RoomControlButton } from "./RoomControlButton.js";
+import { RoomControlButton, type RoomControlVariant } from "./RoomControlButton.js";
 
 /**
  * Кнопка «мьют себя» (Э2.5) — для любого участника с правом `canSpeak`.
@@ -12,9 +12,13 @@ import { RoomControlButton } from "./RoomControlButton.js";
 export function SelfMicButton({
   disabled = false,
   disabledReason,
+  variant,
+  onOpenSettings,
 }: {
   disabled?: boolean;
   disabledReason?: string;
+  variant?: RoomControlVariant;
+  onOpenSettings?: () => void;
 }) {
   const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
   const speaking = useIsSpeaking(localParticipant);
@@ -23,13 +27,16 @@ export function SelfMicButton({
       active={isMicrophoneEnabled}
       activeIcon={Mic}
       inactiveIcon={MicOff}
-      activeLabel="Выключить микрофон"
+      activeLabel="Микрофон"
       inactiveLabel="Включить звук"
       speaking={speaking && isMicrophoneEnabled}
       onToggle={() => localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}
       caption="Микрофон"
       disabled={disabled}
       title={disabled ? disabledReason : undefined}
+      variant={variant}
+      onOpenSettings={onOpenSettings}
+      settingsLabel="Выбрать микрофон"
     />
   );
 }

@@ -5,7 +5,7 @@ import type { ClaimScreenShareResponse } from "@school/shared";
 import { MonitorUp, MonitorX } from "lucide-react";
 
 import { apiFetch } from "@/shared/api-client";
-import { RoomControlButton } from "./RoomControlButton.js";
+import { RoomControlButton, type RoomControlVariant } from "./RoomControlButton.js";
 import { toast } from "@/shared/ui/sonner";
 
 /**
@@ -22,6 +22,10 @@ import { toast } from "@/shared/ui/sonner";
  * (`toScreenShareEncoding`, `media-quality.ts`), а не за каждым учителем.
  */
 const DOCUMENT_SCREEN_SHARE_PRESET = new VideoPreset(1920, 1080, 1_000_000, 5, "medium");
+
+function releaseScreenShare(lessonId: string) {
+  void apiFetch(`/lessons/${lessonId}/screen-share/release`, { method: "POST" }).catch(() => undefined);
+}
 
 /**
  * Демонстрация экрана (Э7.1). Аудио вкладки НЕ запрашивается (`audio:
@@ -57,6 +61,7 @@ export function SelfScreenShareButton({
   preemptedSignal,
   onScreenShareStarted,
   onScreenShareStopped,
+  variant,
 }: {
   lessonId: string;
   priority?: boolean;
@@ -72,6 +77,7 @@ export function SelfScreenShareButton({
    *  из тулбара внутри самого PiP, см. `ScreenShareAutoPip`) — не ждать
    *  `isScreenShareEnabled` из LiveKit-негоциации. */
   onScreenShareStopped?: () => void;
+  variant?: RoomControlVariant;
 }) {
   const { localParticipant, isScreenShareEnabled } = useLocalParticipant();
   const othersSharing = useTracks([Track.Source.ScreenShare], { onlySubscribed: false }).some(
@@ -102,10 +108,6 @@ export function SelfScreenShareButton({
     return apiFetch<ClaimScreenShareResponse>(`/lessons/${lessonId}/screen-share/claim`, {
       method: "POST",
     });
-  }
-
-  function release() {
-    void apiFetch(`/lessons/${lessonId}/screen-share/release`, { method: "POST" }).catch(() => undefined);
   }
 
   async function publishOnce(): Promise<void> {
@@ -152,7 +154,7 @@ export function SelfScreenShareButton({
     if (isScreenShareEnabled) {
       onScreenShareStopped?.();
       await localParticipant.setScreenShareEnabled(false);
-      release();
+      releaseScreenShare(lessonId);
       return;
     }
     const claimResult = await claim().catch(
@@ -176,12 +178,12 @@ export function SelfScreenShareButton({
       }
       if (outcome === "timeout") {
         toast.error("Не удалось начать демонстрацию — попробуйте ещё раз");
-        release();
+        releaseScreenShare(lessonId);
         return;
       }
       onScreenShareStarted?.();
     } catch (e) {
-      release();
+      releaseScreenShare(lessonId);
       toast.error(e instanceof Error ? `Не удалось начать демонстрацию: ${e.message}` : "Не удалось начать демонстрацию экрана");
     }
   }
@@ -193,11 +195,55 @@ export function SelfScreenShareButton({
       activeIcon={MonitorX}
       inactiveIcon={MonitorUp}
       activeLabel="Остановить демонстрацию"
-      inactiveLabel="Демонстрация экрана"
+      inactiveLabel="Демонстрация"
       onToggle={toggle}
       disabled={blocked}
       title={blocked ? "Кто-то уже демонстрирует экран" : undefined}
       caption="Экран"
+      variant={variant}
     />
+  );
+}
+
+/** Строка статуса над демонстрацией: кто показывает экран, у себя — кнопка «Остановить». */
+export function ScreenShareStatusBar({
+  lessonId,
+  participants,
+  onStopped,
+}: {
+  lessonId: string | undefined;
+  participants: { userId: string; fullName: string }[];
+  onStopped?: () => void;
+}) {
+  const { localParticipant, isScreenShareEnabled } = useLocalParticipant();
+  const track = useTracks([Track.Source.ScreenShare], { onlySubscribed: true })[0];
+  if (!track) return null;
+  const isSelf = track.participant.identity === localParticipant.identity;
+  const name =
+    participants.find((p) => p.userId === track.participant.identity)?.fullName ??
+    (track.participant.name || "Участник");
+
+  async function stop() {
+    onStopped?.();
+    await localParticipant.setScreenShareEnabled(false);
+    if (lessonId) releaseScreenShare(lessonId);
+  }
+
+  return (
+    <div className="flex shrink-0 items-center gap-2.5 rounded-xl border border-primary-muted bg-primary-light px-3 py-2 text-[13.5px] text-primary">
+      <MonitorUp className="size-[17px] shrink-0" aria-hidden />
+      <span className="min-w-0 flex-1 truncate">
+        {isSelf ? "Вы показываете экран" : `${name} показывает экран`}
+      </span>
+      {isSelf && isScreenShareEnabled ? (
+        <button
+          type="button"
+          onClick={() => void stop()}
+          className="h-[30px] shrink-0 rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
+        >
+          Остановить
+        </button>
+      ) : null}
+    </div>
   );
 }

@@ -1,29 +1,41 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   LiveKitRoom,
   RoomAudioRenderer,
+  useParticipants,
   useRoomContext,
   useTracks,
 } from "@livekit/components-react";
-import { Track, VideoPresets, type RoomOptions } from "livekit-client";
+import { ConnectionQuality, Track, VideoPresets, type RoomOptions } from "livekit-client";
 import {
+  AlertTriangle,
   ArrowLeft,
+  Check,
   ChevronRight,
   ClipboardList,
-  Copy,
+  Clock,
   Disc,
   GraduationCap,
   Hand,
+  LayoutGrid,
+  Link as LinkIcon,
   LogOut,
+  Maximize,
   MessageSquare,
+  MicOff,
+  Minimize,
+  MoreHorizontal,
   PenLine,
   Pin,
   Presentation,
+  Search,
   Send,
+  Settings,
+  SignalLow,
   SlidersHorizontal,
   Users,
-  Wrench,
+  type LucideIcon,
 } from "lucide-react";
 import type {
   ChatMessage,
@@ -41,12 +53,11 @@ import type {
 import { cn } from "@/lib/utils";
 import { apiFetch, setGuestMode } from "@/shared/api-client";
 import { useGuestSessionStore } from "@/features/guest/guest-session-store";
-import { Alert, AlertDescription } from "@/shared/ui/alert";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import { Checkbox } from "@/shared/ui/checkbox";
 import { Input } from "@/shared/ui/input";
 import { ScrollArea } from "@/shared/ui/scroll-area";
+import { Skeleton } from "@/shared/ui/skeleton";
 import { toast } from "@/shared/ui/sonner";
 import {
   Select,
@@ -55,6 +66,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/ui/select";
+import { Sheet, SheetContent, SheetTitle } from "@/shared/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 import { UserAvatar } from "@/shared/ui/avatar";
 import { SimpleTooltip, TooltipProvider } from "@/shared/ui/tooltip";
 import { Board } from "../canvas/Board.js";
@@ -66,15 +89,18 @@ import { RecordingConsentBanner, RecordingPanel } from "../recordings/RecordingP
 import { playRecordingSound } from "./recording-sound.js";
 import { SelfCameraButton, VideoDegradeSuggestion } from "./CameraControls.js";
 import { toScreenShareEncoding, toVideoEncoding, toVideoResolution } from "./media-quality.js";
-import { ConnectionQualityIcon, PacketLossWarning } from "./ConnectionQuality.js";
+import { PacketLossWarning } from "./ConnectionQuality.js";
 import { DeviceCheckScreen, type DeviceCheckResult } from "./DeviceCheckScreen.js";
+import { DeviceSettingsModal } from "./DeviceSettingsModal.js";
+import { formatClock, participantsCount } from "./format.js";
 import { ScreenShareAutoPip, type ScreenShareAutoPipHandle } from "./ScreenShareAutoPip.js";
-import { RoomControlButton } from "./RoomControlButton.js";
+import { RoomControlButton, type RoomControlVariant } from "./RoomControlButton.js";
 import { useRoomIdentity } from "./use-room-identity.js";
-import { MicStatusIcon, SelfMicButton } from "./MicControls.js";
+import { useIsNarrowViewport } from "./use-narrow-viewport.js";
+import { SelfMicButton } from "./MicControls.js";
 import { MicSync } from "./MicSync.js";
-import { ParticipantPresenceDot } from "./ParticipantPresenceDot.js";
-import { SelfScreenShareButton } from "./ScreenShareControls.js";
+import { ParticipantMenu } from "./ParticipantMenu.js";
+import { ScreenShareStatusBar, SelfScreenShareButton } from "./ScreenShareControls.js";
 import { RoomVideoGrid } from "./RoomVideoGrid.js";
 import { ScreenShareTile } from "./ScreenShareTile.js";
 import { useRoomSocket } from "./useRoomSocket.js";
@@ -114,11 +140,21 @@ function buildRoomOptions(settings: ClientMediaSettings | null): RoomOptions {
   };
 }
 
+type SocketStatusLike = "connecting" | "connected" | "reconnecting" | "closed";
+type DrawerMode = "tools" | "people" | "chat";
+
 const STATUS_LABEL: Record<SocketStatusLike, string> = {
   connecting: "Подключение…",
   connected: "На связи",
   reconnecting: "Переподключение…",
   closed: "Нет связи",
+};
+
+const STATUS_TONE: Record<SocketStatusLike, string> = {
+  connecting: "bg-warn-light text-[#b45309]",
+  connected: "bg-success-light text-success",
+  reconnecting: "bg-warn-light text-[#b45309]",
+  closed: "bg-danger-light text-danger",
 };
 
 /** Э6.4, §5.3 ТЗ. */
@@ -129,7 +165,25 @@ const LESSON_MODE_LABEL: Record<LessonMode, string> = {
   spotlight: "У доски",
 };
 
-type SocketStatusLike = "connecting" | "connected" | "reconnecting" | "closed";
+const ROLE_LABEL: Record<string, string> = {
+  teacher: "учитель",
+  admin: "админ",
+  methodist: "методист",
+};
+
+const DRAWER_TABS: { key: DrawerMode; label: string }[] = [
+  { key: "people", label: "Участники" },
+  { key: "chat", label: "Чат" },
+  { key: "tools", label: "Материалы" },
+];
+
+const MENU_CONTENT = "w-[280px] rounded-2xl p-1.5 shadow-lg";
+const MENU_ITEM = "h-9 gap-2.5 rounded-[10px] px-2.5 text-sm [&>svg]:text-muted-foreground";
+const MENU_LABEL = "px-2.5 pb-1 pt-2 text-[11.5px] font-bold uppercase tracking-[.07em] text-text-3";
+const ICON_BTN =
+  "relative flex size-11 items-center justify-center rounded-full text-text-2 transition-colors hover:bg-surface-3 hover:text-foreground [&_svg]:size-5";
+
+type PermissionKey = "canDraw" | "canSpeak" | "canShareScreen" | "canPublishVideo";
 
 export function RoomPage() {
   const { id: lessonId } = useParams<{ id: string }>();
@@ -141,10 +195,10 @@ export function RoomPage() {
   const selfId = identity?.id;
   const [leftAsGuest, setLeftAsGuest] = useState(false);
 
-  // Э12.7 §6.3/§6.4 — каркас урока: левый выдвижной блок (один, три режима)
-  // и что показано на стейдже (плитки участников / доска). Демонстрация
-  // экрана переключает стейдж сама (см. `StageContent`).
-  const [drawer, setDrawer] = useState<null | "tools" | "people" | "chat">(null);
+  // Э12.7 §6.3/§6.4 — одна боковая панель (три вкладки) и что показано на
+  // стейдже (плитки участников / доска). Демонстрация экрана переключает
+  // стейдж сама (см. `StageContent`).
+  const [drawer, setDrawer] = useState<null | DrawerMode>(null);
   const [stageView, setStageView] = useState<"people" | "board" | "activity">("people");
   // Э12 полировка: авторитетное «людям/доска» с сервера — держим отдельно от
   // `stageView`, чтобы закрытие задания знало, куда вернуться (не всегда «people»).
@@ -152,8 +206,7 @@ export function RoomPage() {
   const [activeTool, setActiveTool] = useState<null | "deck" | "activity" | "recording" | "class">(
     null,
   );
-  const toggleDrawer = (mode: "tools" | "people" | "chat") =>
-    setDrawer((cur) => (cur === mode ? null : mode));
+  const toggleDrawer = (mode: DrawerMode) => setDrawer((cur) => (cur === mode ? null : mode));
 
   useEffect(() => {
     if (drawer !== "tools") setActiveTool(null);
@@ -163,6 +216,8 @@ export function RoomPage() {
   const [lessonMode, setLessonMode] = useState<LessonMode>("lecture");
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [chatDraft, setChatDraft] = useState("");
+  const [chatSeen, setChatSeen] = useState(0);
+  const [peopleQuery, setPeopleQuery] = useState("");
   const [deckStatuses, setDeckStatuses] = useState<Record<string, DeckProgressEvent>>({});
   const [decks, setDecks] = useState<Deck[]>([]);
   const [activeActivityId, setActiveActivityId] = useState<string | null>(null);
@@ -180,6 +235,7 @@ export function RoomPage() {
   const [joinCamEnabled, setJoinCamEnabled] = useState(true);
   const [lessonTitle, setLessonTitle] = useState<string | null>(null);
   const [lessonJoinPath, setLessonJoinPath] = useState<string | null>(null);
+  const [lessonStart, setLessonStart] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   // Э10-звук: baseline «прошлое состояние записи» на текущее подключение
   // сокета. `null` — ещё не знаем (только что подключились) — в этом
@@ -197,6 +253,35 @@ export function RoomPage() {
   const [screenSharePreempted, setScreenSharePreempted] = useState(0);
   const selfIdRef = useRef(selfId);
   selfIdRef.current = selfId;
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [videoLayout, setVideoLayout] = useState<"grid" | "speaker">("grid");
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const isNarrowViewport = useIsNarrowViewport();
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(document.fullscreenElement !== null);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => undefined);
+    } else {
+      void document.documentElement.requestFullscreen().catch(() => undefined);
+    }
+  }
+
+  // Таймер именно ЭТОЙ сессии подключения (не `scheduledAt` урока — демо-уроки
+  // датированы в прошлом), сбрасывается при переприсоединении.
+  const [elapsedSec, setElapsedSec] = useState(0);
+  useEffect(() => {
+    if (!media) return;
+    const startedAt = Date.now();
+    setElapsedSec(0);
+    const id = setInterval(() => setElapsedSec(Math.floor((Date.now() - startedAt) / 1000)), 1000);
+    return () => clearInterval(id);
+  }, [media]);
+  const elapsedLabel = `${Math.floor(elapsedSec / 60)}:${String(elapsedSec % 60).padStart(2, "0")}`;
 
   const isTeacher = identity?.role === "teacher" || identity?.role === "admin";
 
@@ -280,6 +365,11 @@ export function RoomPage() {
     isGuest ? "guest" : "staff",
   );
 
+  // Оверлей переподключения — только если WS уже был `connected` хотя бы
+  // раз: на самом первом подключении место занимает экран загрузки.
+  const everConnectedRef = useRef(false);
+  if (status === "connected") everConnectedRef.current = true;
+
   const attemptJoin = useCallback(() => {
     if (!lessonId) return;
     setJoinFailed(false);
@@ -300,13 +390,20 @@ export function RoomPage() {
     attemptJoin();
 
     apiFetch<{ items: ChatMessage[] }>(`/lessons/${lessonId}/chat`)
-      .then((data) => setChat([...data.items].reverse()))
+      .then((data) => {
+        setChat([...data.items].reverse());
+        setChatSeen(data.items.length);
+      })
       .catch(() => undefined);
   }, [lessonId, deviceCheckDone, attemptJoin]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat]);
+  }, [chat, drawer]);
+
+  useEffect(() => {
+    if (drawer === "chat") setChatSeen(chat.length);
+  }, [drawer, chat.length]);
 
   useEffect(() => {
     if (!lessonId) return;
@@ -320,6 +417,7 @@ export function RoomPage() {
       .then((l) => {
         setLessonTitle(l.title);
         setLessonJoinPath(l.joinPath);
+        setLessonStart(l.scheduledAt);
       })
       .catch(() => undefined);
   }, [lessonId, isGuest, guestSession?.lessonTitle]);
@@ -385,7 +483,6 @@ export function RoomPage() {
     navigate("/lessons");
   }
 
-
   async function toggleHand() {
     if (!lessonId || !self) return;
     await apiFetch(`/lessons/${lessonId}/hand-raise`, {
@@ -394,11 +491,7 @@ export function RoomPage() {
     }).catch(() => undefined);
   }
 
-  async function togglePermission(
-    userId: string,
-    key: "canDraw" | "canSpeak" | "canShareScreen" | "canPublishVideo",
-    value: boolean,
-  ) {
+  async function togglePermission(userId: string, key: PermissionKey, value: boolean) {
     if (!lessonId) return;
     await apiFetch(`/lessons/${lessonId}/participants/${userId}/permissions`, {
       method: "PATCH",
@@ -441,9 +534,8 @@ export function RoomPage() {
   /**
    * Э12 полировка — учитель переключает доску/плитки для всего класса разом.
    * Как и `changeLessonMode`: не выставляем стейдж локально сразу, ждём
-   * своего же эхо `stage_changed` по WS (тот же приём, что уже работает
-   * для режима урока) — так self и остальные участники обновляются
-   * одинаково, без риска разойтись с сервером.
+   * своего же эхо `stage_changed` по WS — так self и остальные участники
+   * обновляются одинаково, без риска разойтись с сервером.
    */
   async function changeLessonStage(stage: "people" | "board") {
     if (!lessonId) return;
@@ -452,6 +544,7 @@ export function RoomPage() {
       body: JSON.stringify({ stage }),
     }).catch(() => setError("Не удалось переключить стейдж"));
   }
+  const toggleBoard = () => changeLessonStage(stageView === "board" ? "people" : "board");
 
   /** Э3.8. */
   async function toggleDrawForAll(canDraw: boolean) {
@@ -473,156 +566,163 @@ export function RoomPage() {
     }).catch(() => setError("Сообщение не отправлено"));
   }
 
-  const connected = status === "connected";
+  const openSettings = () => setSettingsOpen(true);
+  const openRecording = () => {
+    setDrawer("tools");
+    setActiveTool("recording");
+  };
 
-  // «Вы пока один» — показываем 10 сек после того, как стали единственным,
-  // потом прячем (одна плитка и так занимает весь стейдж адаптивно).
-  const [showAlonePill, setShowAlonePill] = useState(true);
   const connectedCount = participants.filter((p) => p.connected).length;
-  const aloneOnStage = deviceCheckDone && stageView === "people" && connectedCount <= 1;
-  useEffect(() => {
-    if (!aloneOnStage) return;
-    setShowAlonePill(true);
-    const t = setTimeout(() => setShowAlonePill(false), 10_000);
-    return () => clearTimeout(t);
-  }, [aloneOnStage]);
+  const aloneOnStage = media !== null && stageView === "people" && connectedCount <= 1;
+  const raisedHands = participants.filter((p) => p.handRaised && p.connected && p.userId !== selfId);
+  const unreadChat = drawer === "chat" ? 0 : Math.max(0, chat.length - chatSeen);
+  const headerMeta = lessonStart
+    ? `начало ${formatClock(lessonStart)} · ${participantsCount(connectedCount)}`
+    : participantsCount(connectedCount);
+  const shareVisible =
+    media !== null &&
+    Boolean(lessonId) &&
+    (isTeacher || Boolean(self?.permissions.canShareScreen)) &&
+    clientMediaSettings?.screenShareEnabled !== false;
 
-  const participantsPanel = (
-    <div className="flex flex-col gap-1.5 p-3">
-      {participants.map((p) => (
-        <div
-          key={p.userId}
-          className="rounded-md border border-border bg-card px-2.5 py-2 text-sm"
-        >
-          <div className="flex items-center gap-2">
-            {media ? (
-              <ParticipantPresenceDot userId={p.userId} connected={p.connected} />
-            ) : (
-              <span
-                className={cn(
-                  "size-2 shrink-0 rounded-full",
-                  p.connected ? "bg-success" : "bg-text-3",
-                )}
-              />
-            )}
-            <UserAvatar name={p.fullName} size={26} />
-            <span className="min-w-0 truncate font-medium text-foreground">{p.fullName}</span>
-            <span className="text-xs text-muted-foreground">
-              ({p.kind === "staff" ? p.role : "ученик"})
-            </span>
-            {p.handRaised ? (
-              <Hand className="size-3.5 text-warning" aria-label="Поднята рука" />
-            ) : null}
-            {p.pinned ? (
-              <Pin className="size-3.5 text-primary" aria-label="Закреплён в сетке видео" />
-            ) : null}
-            {media ? <MicStatusIcon userId={p.userId} /> : null}
-            {media ? <ConnectionQualityIcon userId={p.userId} /> : null}
-          </div>
+  // ── Панель «Участники» ────────────────────────────────────────────────
+  const peopleListProps: PeopleListProps = {
+    participants,
+    selfId,
+    isTeacher,
+    hasMedia: media !== null,
+    query: peopleQuery,
+    onTogglePermission: togglePermission,
+    onMute: muteParticipant,
+    onTogglePin: togglePin,
+  };
 
-          {isTeacher && p.userId !== selfId ? (
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-border pt-2 text-xs">
-              {(
-                [
-                  ["canDraw", "рисовать"],
-                  ["canSpeak", "говорить"],
-                  ["canPublishVideo", "видео"],
-                  ["canShareScreen", "экран"],
-                ] as const
-              ).map(([key, label]) => (
-                <label key={key} className="flex items-center gap-1.5">
-                  <Checkbox
-                    checked={p.permissions[key]}
-                    onCheckedChange={(v) => togglePermission(p.userId, key, v === true)}
-                  />
-                  {label}
-                </label>
-              ))}
-              {media && p.permissions.canSpeak ? (
-                <Button variant="outline" size="sm" onClick={() => muteParticipant(p.userId)}>
-                  Заглушить
-                </Button>
-              ) : null}
-              {media && p.kind === "guest" ? (
-                <Button
-                  variant={p.pinned ? "secondary" : "outline"}
-                  size="sm"
-                  onClick={() => togglePin(p.userId, !p.pinned)}
-                >
-                  <Pin aria-hidden />
-                  {p.pinned ? "Открепить" : "Закрепить"}
-                </Button>
-              ) : null}
-            </div>
+  const peoplePanel = (sheet: boolean) => (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className={cn("flex shrink-0 flex-col gap-2 border-b border-border py-2.5", sheet ? "px-4" : "px-3")}>
+        <label className="relative block">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-3"
+            aria-hidden
+          />
+          <Input
+            value={peopleQuery}
+            onChange={(e) => setPeopleQuery(e.target.value)}
+            placeholder="Найти участника"
+            aria-label="Найти участника"
+            className="h-9 pl-9 text-sm"
+          />
+        </label>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-bold uppercase tracking-[.07em] text-text-3">
+            В уроке · {connectedCount}
+          </span>
+          {isTeacher && media ? (
+            <button
+              type="button"
+              onClick={muteAll}
+              className="h-7 rounded-full border border-border bg-card px-2.5 text-[12.5px] font-semibold text-text-2 transition-colors hover:bg-surface-2"
+            >
+              Заглушить всех
+            </button>
           ) : null}
         </div>
-      ))}
+      </div>
+      <ScrollArea className="min-h-0 flex-1">
+        {media ? <LivePeopleList {...peopleListProps} /> : <PeopleList {...peopleListProps} />}
+      </ScrollArea>
     </div>
   );
 
-  const chatPanel = (
+  // ── Панель «Чат» ──────────────────────────────────────────────────────
+  const chatPanel = (sheet: boolean) => (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="shrink-0 border-b border-border px-3 py-2 text-sm font-heavy">Чат</div>
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-2 p-3">
-          {chat.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">Сообщений пока нет</p>
-          ) : (
-            chat.map((m) => (
-              <div key={m.id} className="text-sm">
-                <span className="font-semibold text-foreground">{m.authorName}: </span>
-                <span className="text-foreground">{m.body}</span>
-              </div>
-            ))
-          )}
-          <div ref={chatEndRef} />
+      {chat.length === 0 ? (
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2.5 px-7 py-8 text-center">
+          <span className="flex size-11 items-center justify-center rounded-full bg-primary-light text-primary">
+            <MessageSquare className="size-5" aria-hidden />
+          </span>
+          <span className="text-[15px] font-semibold">Сообщений пока нет</span>
+          <span className="text-[13px] text-muted-foreground [text-wrap:pretty]">
+            Напишите вопрос — его увидит весь класс. Учитель отвечает, не прерывая объяснение.
+          </span>
         </div>
-      </ScrollArea>
-      <form onSubmit={sendChat} className="flex shrink-0 gap-2 border-t border-border p-2.5">
+      ) : (
+        <ScrollArea className="min-h-0 flex-1">
+          <div className={cn("flex flex-col gap-3 py-3.5", sheet ? "px-4" : "px-3")}>
+            {chat.map((m, i) => {
+              const prev = chat[i - 1];
+              const continued = prev !== undefined && prev.authorName === m.authorName && prev.userId === m.userId;
+              return (
+                <div key={m.id} className={cn("flex flex-col gap-[3px]", continued && "-mt-2")}>
+                  {continued ? null : (
+                    <span className="flex items-baseline gap-2">
+                      <span className="truncate text-[13px] font-semibold text-foreground">{m.authorName}</span>
+                      <span className="shrink-0 text-[11.5px] text-text-3">{formatClock(m.createdAt)}</span>
+                    </span>
+                  )}
+                  <span
+                    className={cn(
+                      "self-start whitespace-pre-wrap break-words bg-surface-2 text-sm text-foreground [text-wrap:pretty]",
+                      sheet ? "rounded-xl px-[11px] py-[9px]" : "rounded-[10px] px-2.5 py-2",
+                    )}
+                  >
+                    {m.body}
+                  </span>
+                </div>
+              );
+            })}
+            <div ref={chatEndRef} />
+          </div>
+        </ScrollArea>
+      )}
+      <form
+        onSubmit={sendChat}
+        className={cn(
+          "flex shrink-0 gap-2 border-t border-border",
+          sheet ? "px-4 pb-[max(22px,env(safe-area-inset-bottom))] pt-3" : "p-2.5",
+        )}
+      >
         <Input
           value={chatDraft}
           onChange={(e) => setChatDraft(e.target.value)}
-          placeholder="Сообщение…"
+          placeholder="Сообщение классу…"
+          aria-label="Сообщение классу"
           maxLength={2000}
-          className="h-9"
+          className={cn("text-sm", sheet ? "h-11 rounded-xl" : "h-[38px]")}
         />
-        <Button type="submit" size="icon" className="size-9 shrink-0" aria-label="Отправить">
-          <Send />
+        <Button
+          type="submit"
+          size="icon"
+          className={cn("shrink-0", sheet ? "size-11 rounded-xl" : "size-[38px] rounded-[10px]")}
+          aria-label="Отправить"
+        >
+          <Send aria-hidden />
         </Button>
       </form>
     </div>
   );
 
-  // §6.4 — «Инструменты»: список «иконка + короткое название». Клик по
-  // строке открывает нужный инструмент в этой же панели (с кнопкой «назад»).
-  // «Доска» — не инструмент-панель, а переключатель стейджа для ВСЕГО урока
-  // (Э12 полировка), поэтому доступна только учителю/админу; ученик и
-  // методист просто видят её, когда её включает учитель. Ученику из строк
-  // ниже доступно только задание.
+  // ── Панель «Материалы» ────────────────────────────────────────────────
+  // «Доска» — переключатель стейджа для ВСЕГО урока, поэтому только учителю;
+  // ученику из строк ниже доступно только задание.
   const toolRows: {
     key: "board" | "deck" | "activity" | "recording" | "class";
-    icon: typeof PenLine;
+    icon: LucideIcon;
     label: string;
     hint?: string;
     show: boolean;
     onClick: () => void;
-    trailing?: React.ReactNode;
+    on?: boolean;
   }[] = [
     {
       key: "board",
       icon: PenLine,
       label: "Доска",
-      hint: stageView === "board" ? "открыта" : "рисование и слайды",
+      hint: stageView === "board" ? "открыта для класса" : "рисование и слайды",
       show: isTeacher,
-      onClick: () => changeLessonStage(stageView === "board" ? "people" : "board"),
-      trailing:
-        stageView === "board" ? (
-          <Badge variant="green" className="shrink-0">
-            вкл
-          </Badge>
-        ) : (
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-        ),
+      onClick: toggleBoard,
+      on: stageView === "board",
     },
     {
       key: "deck",
@@ -652,20 +752,16 @@ export function RoomPage() {
           setActiveTool("activity");
         }
       },
-      trailing:
-        activeActivityId && stageView === "activity" ? (
-          <Badge variant="green" className="shrink-0">
-            на экране
-          </Badge>
-        ) : undefined,
+      on: Boolean(activeActivityId) && stageView === "activity",
     },
     {
       key: "recording",
       icon: Disc,
       label: "Запись урока",
-      hint: recordingActive ? "идёт запись" : "начать запись",
+      hint: recordingActive ? `идёт запись · ${elapsedLabel}` : "начать запись",
       show: Boolean(lessonId && isTeacher),
       onClick: () => setActiveTool("recording"),
+      on: recordingActive,
     },
     {
       key: "class",
@@ -709,9 +805,9 @@ export function RoomPage() {
     ) : activeTool === "class" ? (
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-muted-foreground">Режим урока</span>
+          <span className="text-[13px] font-semibold text-text-2">Режим урока</span>
           <Select value={lessonMode} onValueChange={(v) => changeLessonMode(v as LessonMode)}>
-            <SelectTrigger className="h-9 text-sm">
+            <SelectTrigger className="h-10 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -724,25 +820,15 @@ export function RoomPage() {
           </Select>
         </div>
         {media ? (
-          <Button variant="outline" size="sm" onClick={muteAll}>
+          <Button variant="secondary" size="sm" onClick={muteAll}>
             Заглушить всех
           </Button>
         ) : null}
         <div className="flex gap-1.5">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1"
-            onClick={() => toggleDrawForAll(true)}
-          >
+          <Button variant="secondary" size="sm" className="flex-1" onClick={() => toggleDrawForAll(true)}>
             Рисовать всем
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1"
-            onClick={() => toggleDrawForAll(false)}
-          >
+          <Button variant="secondary" size="sm" className="flex-1" onClick={() => toggleDrawForAll(false)}>
             Запретить
           </Button>
         </div>
@@ -751,64 +837,174 @@ export function RoomPage() {
 
   const activeToolLabel = toolRows.find((r) => r.key === activeTool)?.label ?? "";
 
-  const toolsPanel = (
+  const toolsPanel = activeTool ? (
     <div className="flex h-full min-h-0 flex-col">
-      {activeTool ? (
-        <button
-          type="button"
-          onClick={() => setActiveTool(null)}
-          className="flex shrink-0 items-center gap-1.5 border-b border-border px-2 py-2 text-sm font-heavy text-foreground transition-colors hover:bg-secondary"
-        >
-          <ArrowLeft className="size-4" aria-hidden />
-          {activeToolLabel}
-        </button>
-      ) : (
-        <div className="shrink-0 border-b border-border px-3 py-2 text-sm font-heavy">
-          Инструменты
-        </div>
-      )}
+      <button
+        type="button"
+        onClick={() => setActiveTool(null)}
+        className="flex shrink-0 items-center gap-1.5 border-b border-border px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-surface-2"
+      >
+        <ArrowLeft className="size-4" aria-hidden />
+        {activeToolLabel}
+      </button>
       <ScrollArea className="min-h-0 flex-1">
-        {activeTool ? (
-          <div className="p-3">{toolBody}</div>
-        ) : (
-          <div className="flex flex-col p-1.5">
-            {toolRows
-              .filter((r) => r.show)
-              .map(({ key, icon: Icon, label, hint, onClick, trailing }) => (
+        <div className="p-3">{toolBody}</div>
+      </ScrollArea>
+    </div>
+  ) : (
+    <ScrollArea className="h-full">
+      <div className="flex flex-col gap-1 p-2.5">
+        {toolRows
+          .filter((r) => r.show)
+          .map(({ key, icon: Icon, label, hint, onClick, on }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={onClick}
+              className="flex items-center gap-3 rounded-2xl px-2.5 py-[11px] text-left transition-colors hover:bg-surface-2"
+            >
+              <span className="flex size-[38px] shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary">
+                <Icon className="size-[18px]" aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold text-foreground">{label}</span>
+                {hint ? <span className="block truncate text-xs text-muted-foreground">{hint}</span> : null}
+              </span>
+              {on ? (
+                <Badge variant="green" className="shrink-0">
+                  вкл
+                </Badge>
+              ) : (
+                <ChevronRight className="size-4 shrink-0 text-text-3" aria-hidden />
+              )}
+            </button>
+          ))}
+      </div>
+    </ScrollArea>
+  );
+
+  const drawerBody = (sheet: boolean) => (
+    <div className="flex h-full min-h-0 flex-col">
+      {sheet ? (
+        <>
+          <div className="flex shrink-0 justify-center pb-1 pt-2.5" aria-hidden>
+            <span className="h-1 w-[38px] rounded-full bg-border" />
+          </div>
+          <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 pb-2.5 pt-1.5">
+            <SheetTitle className="min-w-0 truncate text-base font-bold">
+              {DRAWER_TABS.find((t) => t.key === drawer)?.label ?? ""}
+            </SheetTitle>
+            <div role="tablist" className="ml-auto flex shrink-0 gap-1">
+              {DRAWER_TABS.map(({ key, label }) => (
                 <button
                   key={key}
                   type="button"
-                  onClick={onClick}
-                  className="flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-left transition-colors hover:bg-secondary"
-                >
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary">
-                    <Icon className="size-[18px]" aria-hidden />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-foreground">
-                      {label}
-                    </span>
-                    {hint ? (
-                      <span className="block truncate text-xs text-muted-foreground">{hint}</span>
-                    ) : null}
-                  </span>
-                  {trailing ?? (
-                    <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  role="tab"
+                  aria-selected={drawer === key}
+                  onClick={() => setDrawer(key)}
+                  className={cn(
+                    "inline-flex h-[30px] items-center rounded-full px-3 text-[12.5px] font-semibold transition-colors",
+                    drawer === key ? "bg-primary text-primary-foreground" : "bg-surface-2 text-text-2",
                   )}
+                >
+                  {label}
+                  {key === "people" ? ` ${connectedCount}` : ""}
                 </button>
               ))}
+            </div>
           </div>
-        )}
-      </ScrollArea>
+        </>
+      ) : (
+        <div role="tablist" className="flex shrink-0 gap-1 border-b border-border p-2.5">
+          {DRAWER_TABS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={drawer === key}
+              onClick={() => setDrawer(key)}
+              className={cn(
+                "inline-flex h-[34px] flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full text-[13.5px] font-semibold transition-colors",
+                drawer === key ? "bg-primary-light text-primary" : "text-text-2 hover:bg-surface-2",
+              )}
+            >
+              {label}
+              {key === "chat" && unreadChat > 0 ? (
+                <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground">
+                  {unreadChat}
+                </span>
+              ) : null}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="min-h-0 flex-1">
+        {drawer === "people" ? peoplePanel(sheet) : null}
+        {drawer === "chat" ? chatPanel(sheet) : null}
+        {drawer === "tools" ? toolsPanel : null}
+      </div>
     </div>
   );
+
+  // ── Стейдж ────────────────────────────────────────────────────────────
+  const soloCard = aloneOnStage ? (
+    <div className="flex shrink-0 flex-col items-start justify-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-xs md:min-w-0 md:flex-1 md:gap-3.5 md:p-8">
+      <span className="hidden size-11 items-center justify-center rounded-full bg-primary-light text-primary md:flex">
+        <Users className="size-5" aria-hidden />
+      </span>
+      <span className="text-base font-heavy tracking-[-.02em] md:text-xl">
+        {isTeacher ? "Вы пока один в уроке" : "Вы пока одни в уроке"}
+      </span>
+      <span className="hidden text-sm text-text-2 [text-wrap:pretty] md:block">
+        {isTeacher
+          ? "Отправьте ученикам ссылку — они войдут без установки приложений. Урок уже идёт."
+          : "Урок продолжится, как только подключатся остальные. Пока можно проверить микрофон и камеру."}
+      </span>
+      <div className="flex flex-wrap gap-2">
+        {isTeacher && lessonJoinPath ? (
+          <Button onClick={copyJoinLink}>
+            <LinkIcon aria-hidden />
+            Скопировать ссылку
+          </Button>
+        ) : null}
+        <Button variant="secondary" className="hidden md:inline-flex" onClick={openSettings}>
+          <SlidersHorizontal aria-hidden />
+          Проверить устройства
+        </Button>
+      </div>
+      {isTeacher && lessonJoinPath ? (
+        <span className="hidden max-w-full truncate font-mono text-[12.5px] text-text-3 md:block">
+          {window.location.host}
+          {lessonJoinPath}
+        </span>
+      ) : null}
+    </div>
+  ) : null;
 
   const stageArea = (
     <>
       {error ? (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <StageBanner tone="error" icon={AlertTriangle} action={{ label: "Скрыть", onClick: () => setError(null) }}>
+          {error}
+        </StageBanner>
+      ) : null}
+      {isTeacher && raisedHands.length > 0 ? (
+        <StageBanner
+          tone="info"
+          icon={Hand}
+          action={
+            raisedHands.length === 1 && !raisedHands[0]!.permissions.canSpeak
+              ? {
+                  label: "Дать слово",
+                  onClick: () => void togglePermission(raisedHands[0]!.userId, "canSpeak", true),
+                }
+              : { label: "Участники", onClick: () => setDrawer("people") }
+          }
+        >
+          {raisedHands.length === 1
+            ? `${raisedHands[0]!.fullName} поднял(а) руку — дайте слово, не прерывая объяснение.`
+            : `${raisedHands[0]!.fullName} и ещё ${raisedHands.length - 1} подняли руку.`}
+        </StageBanner>
       ) : null}
       {media && self?.permissions.canSpeak ? <PacketLossWarning /> : null}
       {media && (isTeacher || self?.permissions.canPublishVideo) ? <VideoDegradeSuggestion /> : null}
@@ -825,6 +1021,11 @@ export function RoomPage() {
           decks={decks}
           isTeacher={isTeacher}
           reviewSignal={reviewSignal}
+          videoLayout={videoLayout}
+          onLayoutChange={setVideoLayout}
+          onShowAll={() => setDrawer("people")}
+          solo={soloCard}
+          onScreenShareStopped={() => pipRef.current?.close()}
           onActivityClose={() => setStageView(sharedStage)}
           onBoardClose={isTeacher ? () => changeLessonStage("people") : undefined}
         />
@@ -838,159 +1039,269 @@ export function RoomPage() {
           />
         </div>
       ) : joinFailed ? (
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 text-sm">
-          <span className="text-foreground">Не удалось войти в урок</span>
-          <Button size="sm" onClick={attemptJoin}>
-            Повторить
-          </Button>
+        <div className="flex min-h-0 flex-1 items-center justify-center">
+          <StageBanner tone="error" icon={AlertTriangle} action={{ label: "Повторить", onClick: attemptJoin }}>
+            Не удалось войти в урок — проверьте соединение.
+          </StageBanner>
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 items-center justify-center rounded-xl border border-border bg-card text-sm text-muted-foreground">
-          Подключаемся к аудио и видео…
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3.5">
+          <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3">
+            {Array.from({ length: 6 }, (_, i) => (
+              <Skeleton key={i} className="aspect-video w-[150px] rounded-2xl md:w-[200px]" />
+            ))}
+          </div>
+          <span className="flex items-center gap-2.5 text-sm text-text-2">
+            <span
+              className="size-[18px] animate-spin rounded-full border-2 border-primary-muted border-t-primary"
+              aria-hidden
+            />
+            Подключаем звук и видео…
+          </span>
         </div>
       )}
-
-      {/* «Вы пока один» — плавающая подсказка поверх стейджа (не двигает
-          сетку), уходит через 10 сек. */}
-      {aloneOnStage && showAlonePill ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex animate-fade-in justify-center px-3">
-          <div className="pointer-events-auto flex max-w-full items-center gap-3 rounded-full border border-border bg-card/95 px-4 py-2 text-sm shadow-sm backdrop-blur">
-            <span className="truncate text-muted-foreground">
-              {isTeacher ? "Вы пока один — пригласите учеников" : "Ждём других участников"}
-            </span>
-            {isTeacher && lessonJoinPath ? (
-              <Button size="sm" className="shrink-0" onClick={copyJoinLink}>
-                <Copy aria-hidden />
-                Ссылка
-              </Button>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
     </>
   );
 
-  const drawerToggle = (
-    mode: "tools" | "people" | "chat",
-    label: string,
-    Icon: typeof Wrench,
-    badge?: number,
-  ) => (
-    <div className="flex flex-col items-center gap-1">
-      <SimpleTooltip content={label} side="top">
-        <Button
-          variant={drawer === mode ? "secondary" : "ghost"}
-          size="icon"
-          className="relative size-10"
-          onClick={() => toggleDrawer(mode)}
-          aria-pressed={drawer === mode}
-          aria-label={label}
-        >
-          <Icon aria-hidden />
-          {badge != null && badge > 0 ? (
-            <span className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
-              {badge}
-            </span>
-          ) : null}
-        </Button>
-      </SimpleTooltip>
-      <span className="text-[11px] leading-none text-muted-foreground">{label}</span>
-    </div>
+  // ── Меню ──────────────────────────────────────────────────────────────
+  const lessonModeSub = (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger className={MENU_ITEM}>
+        <SlidersHorizontal aria-hidden />
+        Режим урока
+      </DropdownMenuSubTrigger>
+      <DropdownMenuPortal>
+        <DropdownMenuSubContent className="w-56 rounded-2xl p-1.5 shadow-lg">
+          {Object.entries(LESSON_MODE_LABEL).map(([value, label]) => (
+            <DropdownMenuItem
+              key={value}
+              className={MENU_ITEM}
+              onSelect={() => changeLessonMode(value as LessonMode)}
+            >
+              <Check className={cn(lessonMode === value ? "opacity-100" : "opacity-0")} aria-hidden />
+              {label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuSubContent>
+      </DropdownMenuPortal>
+    </DropdownMenuSub>
+  );
+
+  const recordingItem = (
+    <DropdownMenuItem className={MENU_ITEM} onSelect={openRecording}>
+      <Disc aria-hidden />
+      <span className="flex-1">Запись урока</span>
+      {recordingActive ? (
+        <span className="inline-flex h-5 items-center rounded-full bg-danger-light px-2 text-[11.5px] font-semibold text-danger">
+          идёт
+        </span>
+      ) : null}
+    </DropdownMenuItem>
+  );
+
+  const classMenuItems = isTeacher ? (
+    <>
+      <DropdownMenuLabel className={cn(MENU_LABEL, "pt-2.5")}>Класс</DropdownMenuLabel>
+      {media ? (
+        <DropdownMenuItem className={MENU_ITEM} onSelect={muteAll}>
+          <MicOff aria-hidden />
+          Заглушить всех
+        </DropdownMenuItem>
+      ) : null}
+      {lessonModeSub}
+      <DropdownMenuItem className={MENU_ITEM} onSelect={() => toggleDrawForAll(true)}>
+        <PenLine aria-hidden />
+        Разрешить рисовать всем
+      </DropdownMenuItem>
+    </>
+  ) : null;
+
+  const cameraButton = (variant: RoomControlVariant) =>
+    isTeacher ? (
+      <SelfCameraButton
+        variant={variant}
+        onOpenSettings={variant === "pill" ? openSettings : undefined}
+        maxResolution={
+          clientMediaSettings
+            ? toVideoResolution(clientMediaSettings.cameraResolution, clientMediaSettings.cameraFps)
+            : undefined
+        }
+        encoding={
+          clientMediaSettings
+            ? toVideoEncoding(clientMediaSettings.cameraFps, clientMediaSettings.cameraBitrateKbps)
+            : undefined
+        }
+      />
+    ) : (
+      <SelfCameraButton
+        variant={variant}
+        onOpenSettings={variant === "pill" ? openSettings : undefined}
+        maxResolution={VideoPresets.h360.resolution}
+        disabled={!self?.permissions.canPublishVideo}
+        disabledReason="Камеру включает учитель — поднимите руку"
+      />
+    );
+
+  const micButton = (variant: RoomControlVariant) => (
+    <SelfMicButton
+      variant={variant}
+      onOpenSettings={variant === "pill" ? openSettings : undefined}
+      disabled={!self?.permissions.canSpeak}
+      disabledReason="Микрофон выключил учитель — поднимите руку"
+    />
+  );
+
+  const drawerIconButton = (mode: DrawerMode, label: string, Icon: LucideIcon, badge?: ReactNode) => (
+    <SimpleTooltip content={label} side="top">
+      <button
+        type="button"
+        onClick={() => toggleDrawer(mode)}
+        aria-pressed={drawer === mode}
+        aria-label={label}
+        className={cn(ICON_BTN, drawer === mode && "bg-surface-3 text-foreground")}
+      >
+        <Icon aria-hidden />
+        {badge}
+      </button>
+    </SimpleTooltip>
   );
 
   const content = (
     <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
-      {/* §6.1 — верхняя строка */}
-      <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-card px-3">
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
-          <GraduationCap className="size-4" aria-hidden />
+      {/* Шапка — десктоп */}
+      <header className="hidden h-14 shrink-0 items-center gap-3 border-b border-border bg-card/90 px-4 backdrop-blur-md md:flex">
+        <span className="flex size-[30px] shrink-0 items-center justify-center rounded-[10px] bg-primary text-primary-foreground">
+          <GraduationCap className="size-[17px]" aria-hidden />
         </span>
-        <span className="min-w-0 truncate text-sm font-heavy tracking-tight">
-          {lessonTitle ?? "Урок"}
+        <span className="flex min-w-0 flex-col">
+          <span className="truncate text-[15px] font-bold leading-tight tracking-[-.02em]">
+            {lessonTitle ?? "Урок"}
+          </span>
+          <span className="truncate text-xs leading-tight text-muted-foreground">{headerMeta}</span>
         </span>
-        {recordingActive ? (
-          <Badge variant="red" className="shrink-0">
-            <span className="mr-1 inline-block size-1.5 animate-pulse rounded-full bg-current" />
-            Запись
-          </Badge>
-        ) : null}
-        <span
-          className={cn(
-            "hidden shrink-0 items-center gap-1.5 text-xs font-medium sm:inline-flex",
-            connected ? "text-success" : "text-warning",
-          )}
-        >
-          <span
-            className={cn(
-              "size-1.5 rounded-full",
-              connected ? "bg-success" : "bg-warning animate-pulse",
-            )}
-          />
-          {STATUS_LABEL[status]}
-        </span>
-
-        <div className="ml-auto flex shrink-0 items-center gap-1">
+        <StatusPill status={status} />
+        {recordingActive ? <RecordingPill /> : null}
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           {isTeacher && lessonJoinPath ? (
-            <Button variant="ghost" size="sm" onClick={copyJoinLink}>
-              <Copy aria-hidden />
-              <span className="hidden md:inline">Ссылка</span>
+            <Button variant="secondary" className="h-9 rounded-[10px] px-3.5 text-[13.5px]" onClick={copyJoinLink}>
+              <LinkIcon aria-hidden />
+              Пригласить
             </Button>
           ) : null}
-          {!isTeacher ? (
-            <Badge variant="blue" className="hidden sm:inline-flex">
-              {LESSON_MODE_LABEL[lessonMode]}
-            </Badge>
+          {media ? (
+            <SimpleTooltip content="Настройки устройств" side="bottom">
+              <button
+                type="button"
+                onClick={openSettings}
+                aria-label="Настройки"
+                className="flex size-9 items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground"
+              >
+                <Settings className="size-[18px]" aria-hidden />
+              </button>
+            </SimpleTooltip>
           ) : null}
         </div>
       </header>
 
+      {/* Шапка — телефон */}
+      <header className="flex shrink-0 items-center gap-2 px-3.5 pb-2.5 pt-[max(8px,env(safe-area-inset-top))] md:hidden">
+        <span className="flex size-[26px] shrink-0 items-center justify-center rounded-[9px] bg-primary text-primary-foreground">
+          <GraduationCap className="size-[15px]" aria-hidden />
+        </span>
+        <span className="min-w-0 truncate text-[13.5px] font-bold">{lessonTitle ?? "Урок"}</span>
+        <StatusPill status={status} compact />
+        {recordingActive ? <RecordingPill compact /> : null}
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="Меню урока"
+              className="ml-auto flex size-[30px] shrink-0 items-center justify-center rounded-[9px] text-muted-foreground transition-colors hover:bg-surface-3"
+            >
+              <MoreHorizontal className="size-[18px]" aria-hidden />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className={MENU_CONTENT}>
+            <DropdownMenuLabel className={MENU_LABEL}>Урок</DropdownMenuLabel>
+            {!isTeacher ? (
+              <DropdownMenuItem className={MENU_ITEM} onSelect={() => setDrawer("people")}>
+                <Users aria-hidden />
+                <span className="flex-1">Участники</span>
+                <span className="text-xs text-text-3">{connectedCount}</span>
+              </DropdownMenuItem>
+            ) : null}
+            <DropdownMenuItem className={MENU_ITEM} onSelect={() => setDrawer("tools")}>
+              <ClipboardList aria-hidden />
+              Материалы урока
+            </DropdownMenuItem>
+            {isTeacher ? (
+              <DropdownMenuItem className={MENU_ITEM} onSelect={toggleBoard}>
+                <PenLine aria-hidden />
+                {stageView === "board" ? "Закрыть доску" : "Открыть доску"}
+              </DropdownMenuItem>
+            ) : null}
+            {isTeacher ? recordingItem : null}
+            {isTeacher && lessonJoinPath ? (
+              <DropdownMenuItem className={MENU_ITEM} onSelect={copyJoinLink}>
+                <LinkIcon aria-hidden />
+                Пригласить
+              </DropdownMenuItem>
+            ) : null}
+            {media ? (
+              <DropdownMenuItem className={MENU_ITEM} onSelect={openSettings}>
+                <Settings aria-hidden />
+                Настройки устройств
+              </DropdownMenuItem>
+            ) : null}
+            {classMenuItems}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </header>
+
       <RecordingConsentBanner active={recordingActive} />
 
-      {/* §6.2/§6.4 — левый выдвижной блок + стейдж. Брейкпоинт inline-сайдбара —
-          `md` (768px), не `sm`: компактные планшеты-портрет (iPad mini ~744px
-          и похожие) тоже должны получать оверлей поверх стейджа, а не
-          сжатую боковую панель — там для сетки видео/доски просто не
-          остаётся места. */}
       <div className="relative flex min-h-0 flex-1">
         {drawer ? (
-          <button
-            type="button"
-            aria-label="Закрыть панель"
-            onClick={() => setDrawer(null)}
-            className="fixed inset-0 z-10 bg-black/30 md:hidden"
-          />
-        ) : null}
-        {drawer ? (
-          <aside className="absolute inset-y-0 left-0 z-20 flex w-full max-w-[360px] flex-col border-r border-border bg-card md:relative md:w-[340px]">
-            {drawer === "tools" ? toolsPanel : null}
-            {drawer === "people" ? (
-              <div className="flex h-full min-h-0 flex-col">
-                <div className="shrink-0 border-b border-border px-3 py-2 text-sm font-heavy">
-                  Участники ({participants.length})
-                </div>
-                <ScrollArea className="min-h-0 flex-1">{participantsPanel}</ScrollArea>
-              </div>
-            ) : null}
-            {drawer === "chat" ? chatPanel : null}
+          <aside className="hidden w-[340px] shrink-0 flex-col border-r border-border bg-card md:flex">
+            {drawerBody(false)}
           </aside>
         ) : null}
 
-        <main className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
+        {/* `Sheet` затемняет весь экран своим оверлеем независимо от CSS-классов
+            содержимого — монтируем его только на узком вьюпорте. */}
+        {isNarrowViewport ? (
+          <Sheet open={drawer !== null} onOpenChange={(o) => !o && setDrawer(null)}>
+            <SheetContent
+              side="bottom"
+              aria-describedby={undefined}
+              className="flex h-[min(560px,80dvh)] flex-col gap-0 rounded-t-3xl border-0 p-0 shadow-[0_-8px_24px_rgba(16,24,40,.18)] [&>button:first-of-type]:hidden"
+            >
+              {drawerBody(true)}
+            </SheetContent>
+          </Sheet>
+        ) : null}
+
+        <main className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto px-3 md:gap-3 md:p-3.5">
           {stageArea}
         </main>
       </div>
 
-      {/* §6.3 — нижняя панель управления: иконка + короткая подпись под ней */}
-      <footer className="flex shrink-0 flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-border bg-card px-3 py-2 sm:justify-between">
-        <div className="flex items-center gap-1">
-          {drawerToggle("tools", "Инструменты", Wrench)}
-          {drawerToggle("people", "Участники", Users, participants.length)}
-          {drawerToggle("chat", "Чат", MessageSquare)}
+      {/* Футер — десктоп */}
+      <footer className="hidden h-[76px] shrink-0 items-center justify-between gap-4 border-t border-border bg-card px-4 md:flex">
+        <div className="hidden min-w-[200px] items-center gap-2.5 xl:flex">
+          <span className="inline-flex h-8 shrink-0 items-center gap-[7px] rounded-full bg-surface-2 px-3 font-mono text-[12.5px] font-semibold text-text-2">
+            <Clock className="size-3.5" aria-hidden />
+            {elapsedLabel}
+          </span>
+          <span className="truncate text-[12.5px] text-text-3">
+            Режим: {LESSON_MODE_LABEL[lessonMode].toLowerCase()}
+          </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2.5">
           {!isTeacher ? (
             <RoomControlButton
+              variant="pill"
               tone="action"
               active={self?.handRaised ?? false}
               activeIcon={Hand}
@@ -998,14 +1309,14 @@ export function RoomPage() {
               activeLabel="Опустить руку"
               inactiveLabel="Поднять руку"
               onToggle={toggleHand}
-              caption="Рука"
             />
           ) : null}
-          {media &&
-          lessonId &&
-          (isTeacher || self?.permissions.canShareScreen) &&
-          clientMediaSettings?.screenShareEnabled !== false ? (
+          {media ? micButton("pill") : null}
+          {media ? cameraButton("pill") : null}
+          {shareVisible || isTeacher ? <span className="mx-0.5 h-8 w-px shrink-0 bg-border" aria-hidden /> : null}
+          {shareVisible && lessonId ? (
             <SelfScreenShareButton
+              variant="pill"
               lessonId={lessonId}
               preemptedSignal={screenSharePreempted}
               priority={isTeacher}
@@ -1022,53 +1333,149 @@ export function RoomPage() {
               onScreenShareStopped={() => pipRef.current?.close()}
             />
           ) : null}
-          {media ? (
-            <SelfMicButton
-              disabled={!self?.permissions.canSpeak}
-              disabledReason="Микрофон выключил учитель — поднимите руку"
+          {isTeacher ? (
+            <RoomControlButton
+              variant="pill"
+              tone="action"
+              active={stageView === "board"}
+              activeIcon={PenLine}
+              inactiveIcon={PenLine}
+              activeLabel="Доска"
+              inactiveLabel="Доска"
+              onToggle={toggleBoard}
             />
           ) : null}
-          {media ? (
-            isTeacher ? (
-              <SelfCameraButton
-                maxResolution={
-                  clientMediaSettings
-                    ? toVideoResolution(clientMediaSettings.cameraResolution, clientMediaSettings.cameraFps)
-                    : undefined
-                }
-                encoding={
-                  clientMediaSettings
-                    ? toVideoEncoding(clientMediaSettings.cameraFps, clientMediaSettings.cameraBitrateKbps)
-                    : undefined
-                }
-              />
-            ) : (
-              <SelfCameraButton
-                maxResolution={VideoPresets.h360.resolution}
-                disabled={!self?.permissions.canPublishVideo}
-                disabledReason="Камеру включил учитель — поднимите руку"
-              />
-            )
-          ) : null}
-          <div className="flex flex-col items-center gap-1">
-            <SimpleTooltip content="Выйти из урока" side="top">
-              <button
-                type="button"
-                onClick={leaveRoom}
-                className="flex size-10 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-                aria-label="Выйти из урока"
-              >
-                <LogOut className="size-5" aria-hidden />
-              </button>
-            </SimpleTooltip>
-            <span className="text-[11px] leading-none text-muted-foreground">Выйти</span>
-          </div>
         </div>
 
-        {/* правый кластер намеренно пуст — переключение «плитки / доска»
-            живёт в панели «Инструменты» и в шапке доски (§6.5). */}
-        <div className="hidden w-[120px] sm:block" aria-hidden />
+        <div className="flex shrink-0 items-center gap-1.5">
+          {drawerIconButton(
+            "people",
+            "Участники",
+            Users,
+            <span className="absolute -right-px -top-px flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-surface-3 px-[5px] text-[11px] font-bold text-text-2">
+              {connectedCount}
+            </span>,
+          )}
+          {drawerIconButton(
+            "chat",
+            "Чат",
+            MessageSquare,
+            unreadChat > 0 ? (
+              <span className="absolute -right-px -top-px flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-[5px] text-[11px] font-bold text-primary-foreground">
+                {unreadChat}
+              </span>
+            ) : null,
+          )}
+          {drawerIconButton("tools", "Материалы урока", ClipboardList)}
+          <DropdownMenu modal={false}>
+            <SimpleTooltip content="Ещё" side="top">
+              <DropdownMenuTrigger asChild>
+                <button type="button" aria-label="Ещё" className={ICON_BTN}>
+                  <MoreHorizontal aria-hidden />
+                </button>
+              </DropdownMenuTrigger>
+            </SimpleTooltip>
+            <DropdownMenuContent align="end" side="top" sideOffset={10} className={MENU_CONTENT}>
+              <DropdownMenuLabel className={MENU_LABEL}>Урок</DropdownMenuLabel>
+              {isTeacher ? recordingItem : null}
+              <DropdownMenuItem
+                className={MENU_ITEM}
+                onSelect={() => setVideoLayout((l) => (l === "grid" ? "speaker" : "grid"))}
+              >
+                <LayoutGrid aria-hidden />
+                Вид: {videoLayout === "grid" ? "сетка" : "докладчик"}
+              </DropdownMenuItem>
+              <DropdownMenuItem className={MENU_ITEM} onSelect={toggleFullscreen}>
+                {isFullscreen ? <Minimize aria-hidden /> : <Maximize aria-hidden />}
+                {isFullscreen ? "Выйти из полноэкранного" : "На весь экран"}
+              </DropdownMenuItem>
+              {classMenuItems}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={leaveRoom}
+            className="ml-1.5 h-11 gap-2 rounded-full px-[18px] text-[15px] font-semibold [&_svg]:size-[19px]"
+          >
+            <LogOut aria-hidden />
+            Выйти
+          </Button>
+        </div>
       </footer>
+
+      {/* Футер — телефон */}
+      <footer className="flex shrink-0 flex-col gap-2.5 px-3 pb-[max(20px,env(safe-area-inset-bottom))] pt-3.5 md:hidden">
+        <div className="flex items-stretch gap-2">
+          {media ? micButton("tile") : null}
+          {media ? cameraButton("tile") : null}
+          {isTeacher ? (
+            <RoomControlButton
+              variant="tile"
+              tone="action"
+              active={drawer === "people"}
+              activeIcon={Users}
+              inactiveIcon={Users}
+              activeLabel="Участники"
+              inactiveLabel="Участники"
+              onToggle={() => toggleDrawer("people")}
+            />
+          ) : (
+            <RoomControlButton
+              variant="tile"
+              tone="action"
+              active={self?.handRaised ?? false}
+              activeIcon={Hand}
+              inactiveIcon={Hand}
+              activeLabel="Опустить руку"
+              inactiveLabel="Поднять руку"
+              caption="Рука"
+              onToggle={toggleHand}
+            />
+          )}
+          <RoomControlButton
+            variant="tile"
+            tone="action"
+            active={drawer === "chat"}
+            activeIcon={MessageSquare}
+            inactiveIcon={MessageSquare}
+            activeLabel="Чат"
+            inactiveLabel="Чат"
+            badge={unreadChat}
+            onToggle={() => toggleDrawer("chat")}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={leaveRoom}
+          className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-[#fecaca] bg-danger-light text-[15px] font-semibold text-danger transition-colors hover:bg-[#fee2e2]"
+        >
+          <LogOut className="size-[18px]" aria-hidden />
+          Выйти из урока
+        </button>
+      </footer>
+
+      {media ? <DeviceSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} /> : null}
+
+      {/* Только WS-канал (`status`), НЕ LiveKit-медиа — оно продолжает
+          работать под оверлеем, урок не прерывается. */}
+      {status === "reconnecting" && everConnectedRef.current ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(16,24,40,.45)] p-6 backdrop-blur-[3px]">
+          <div className="flex w-full max-w-[400px] flex-col items-center gap-3 rounded-[20px] bg-card p-7 text-center shadow-lg">
+            <span
+              className="size-11 animate-spin rounded-full border-[3px] border-[#fde68a] border-t-warning"
+              aria-hidden
+            />
+            <h2 className="text-lg font-bold tracking-[-.02em]">Связь прервалась — переподключаемся</h2>
+            <p className="text-sm text-text-2 [text-wrap:pretty]">
+              Урок продолжается. Вы вернётесь автоматически, выходить не нужно.
+            </p>
+            <Button variant="secondary" className="h-9 px-3.5 text-sm" onClick={leaveRoom}>
+              Выйти из урока
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 
@@ -1138,7 +1545,7 @@ export function RoomPage() {
             : false
         }
         // Разрыв аудио не показываем баннером — состояние видно на самой
-        // кнопке микрофона (красная «Звук выкл.»), плюс индикатор связи в шапке.
+        // кнопке микрофона, плюс индикатор связи в шапке.
         onDisconnected={() => undefined}
       >
         <ApplyAudioOutput deviceId={spkDeviceId} />
@@ -1163,22 +1570,200 @@ export function RoomPage() {
   );
 }
 
+function StatusPill({ status, compact = false }: { status: SocketStatusLike; compact?: boolean }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center rounded-full font-semibold",
+        compact ? "h-[22px] gap-[5px] px-2 text-[11px]" : "ml-2 h-[26px] gap-1.5 px-2.5 text-xs",
+        STATUS_TONE[status],
+      )}
+    >
+      <span
+        className={cn(
+          "rounded-full bg-current",
+          compact ? "size-[5px]" : "size-1.5",
+          status !== "connected" && "animate-pulse",
+        )}
+      />
+      {STATUS_LABEL[status]}
+    </span>
+  );
+}
+
+function RecordingPill({ compact = false }: { compact?: boolean }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center rounded-full bg-danger-light font-semibold text-danger",
+        compact ? "h-[22px] gap-[5px] px-2 text-[11px]" : "h-[26px] gap-1.5 px-2.5 text-xs",
+      )}
+    >
+      <span className={cn("animate-pulse rounded-full bg-current", compact ? "size-[5px]" : "size-1.5")} />
+      Запись
+    </span>
+  );
+}
+
+function StageBanner({
+  tone,
+  icon: Icon,
+  children,
+  action,
+}: {
+  tone: "info" | "warn" | "error";
+  icon: LucideIcon;
+  children: ReactNode;
+  action?: { label: string; onClick: () => void };
+}) {
+  return (
+    <div
+      className={cn(
+        "flex shrink-0 items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-[13.5px]",
+        tone === "info" && "border-primary-muted bg-primary-light text-primary",
+        tone === "warn" && "border-[#fde68a] bg-warn-light text-[#b45309]",
+        tone === "error" && "border-[#fecaca] bg-danger-light text-danger",
+      )}
+    >
+      <Icon className="size-[17px] shrink-0" aria-hidden />
+      <span className="min-w-0 flex-1 [text-wrap:pretty]">{children}</span>
+      {action ? (
+        <button
+          type="button"
+          onClick={action.onClick}
+          className="h-[30px] shrink-0 rounded-[9px] border border-current bg-transparent px-3 text-[13px] font-semibold"
+        >
+          {action.label}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+type PeopleListProps = {
+  participants: ParticipantSnapshot[];
+  selfId: string | undefined;
+  isTeacher: boolean;
+  hasMedia: boolean;
+  query: string;
+  micOffIds?: Set<string>;
+  weakIds?: Set<string>;
+  onTogglePermission: (userId: string, key: PermissionKey, value: boolean) => void;
+  onMute: (userId: string) => void;
+  onTogglePin: (userId: string, pinned: boolean) => void;
+};
+
+/** Список участников с живым состоянием микрофона/связи из LiveKit (только внутри `<LiveKitRoom>`). */
+function LivePeopleList(props: PeopleListProps) {
+  const roomParticipants = useParticipants();
+  const micOffIds = new Set(
+    roomParticipants.filter((p) => !p.isMicrophoneEnabled).map((p) => p.identity),
+  );
+  const weakIds = new Set(
+    roomParticipants
+      .filter(
+        (p) =>
+          p.connectionQuality === ConnectionQuality.Poor ||
+          p.connectionQuality === ConnectionQuality.Lost,
+      )
+      .map((p) => p.identity),
+  );
+  return <PeopleList {...props} micOffIds={micOffIds} weakIds={weakIds} />;
+}
+
+function PeopleList({
+  participants,
+  selfId,
+  isTeacher,
+  hasMedia,
+  query,
+  micOffIds,
+  weakIds,
+  onTogglePermission,
+  onMute,
+  onTogglePin,
+}: PeopleListProps) {
+  const q = query.trim().toLowerCase();
+  const rows = participants
+    .filter((p) => !q || p.fullName.toLowerCase().includes(q))
+    .sort((a, b) => {
+      if (a.connected !== b.connected) return a.connected ? -1 : 1;
+      if (a.userId === selfId) return -1;
+      if (b.userId === selfId) return 1;
+      if (a.handRaised !== b.handRaised) return a.handRaised ? -1 : 1;
+      return a.joinedAt.localeCompare(b.joinedAt);
+    });
+
+  if (rows.length === 0) {
+    return <p className="px-3 py-8 text-center text-sm text-muted-foreground">Никого не нашли</p>;
+  }
+
+  return (
+    <div className="flex flex-col gap-0.5 px-2 pb-2.5 pt-1.5">
+      {rows.map((p) => {
+        const isSelf = p.userId === selfId;
+        const weak = weakIds?.has(p.userId) ?? false;
+        const roleLabel = p.kind === "staff" && p.role ? ROLE_LABEL[p.role] : undefined;
+        const hint = isSelf
+          ? isTeacher
+            ? "вы · ведёт урок"
+            : "вы"
+          : !p.connected
+            ? "не в уроке"
+            : p.handRaised
+              ? "поднял(а) руку"
+              : weak
+                ? "плохая связь"
+                : null;
+        return (
+          <div
+            key={p.userId}
+            className={cn(
+              "flex items-center gap-2.5 rounded-[10px] p-2 transition-colors hover:bg-surface-2",
+              !p.connected && "opacity-60",
+            )}
+          >
+            <UserAvatar name={p.fullName} size={32} />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="flex min-w-0 items-center gap-1.5">
+                <span className="truncate text-sm font-medium text-foreground">{p.fullName}</span>
+                {roleLabel ? (
+                  <span className="inline-flex h-[18px] shrink-0 items-center rounded-full bg-primary-light px-[7px] text-[11px] font-semibold text-primary">
+                    {roleLabel}
+                  </span>
+                ) : null}
+                {p.handRaised ? <Hand className="size-3.5 shrink-0 text-warning" aria-label="Поднята рука" /> : null}
+                {p.pinned ? <Pin className="size-3.5 shrink-0 text-primary" aria-label="Закреплён" /> : null}
+              </span>
+              {hint ? <span className="truncate text-xs text-text-3">{hint}</span> : null}
+            </span>
+            <span className="flex shrink-0 items-center gap-2 text-text-3">
+              {p.connected && micOffIds?.has(p.userId) ? (
+                <MicOff className="size-[15px]" aria-label="Микрофон выключен" />
+              ) : null}
+              {weak ? <SignalLow className="size-[15px] text-warning" aria-label="Плохая связь" /> : null}
+              {isTeacher && !isSelf ? (
+                <ParticipantMenu
+                  participant={p}
+                  hasMedia={hasMedia}
+                  onTogglePermission={onTogglePermission}
+                  onMute={onMute}
+                  onTogglePin={onTogglePin}
+                />
+              ) : null}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /**
- * Э12.7 §6.2 — контент стейджа при активном LiveKit. Рендерится только
- * внутри `<LiveKitRoom>` (использует `useTracks`). Один компонент на все
- * виды стейджа (плитки / доска / задание), потому что демонстрацию экрана
- * нужно учитывать в каждом из них:
- *
- *  - активная демонстрация экрана — это то, на что смотрит урок (§5.3 ТЗ,
- *    Э7.3 сам переводит режим в «Лекцию»): показываем её на стейдже поверх
- *    плиток И доски. Иначе демонстрацию, начатую при открытой доске, не
- *    видел бы никто — регресс каркаса RoomShell (Э12.7), где `ScreenShareTile`
- *    жил только в ветке плиток;
- *  - явно выданное задание (`view === "activity"`) демонстрацией НЕ
- *    перебиваем — это отдельное осознанное действие учителя «показать
- *    работу классу», оно приоритетнее;
- *  - плитки участников: в ветке демонстрации/доски/задания — узкой лентой
- *    справа (`variant="rail"`), иначе — адаптивной сеткой на весь стейдж.
+ * Э12.7 §6.2 — контент стейджа при активном LiveKit (использует `useTracks`).
+ *  - активная демонстрация экрана показывается поверх плиток И доски;
+ *  - явно выданное задание (`view === "activity"`) демонстрацией НЕ перебиваем;
+ *  - плитки: рядом с демонстрацией/доской/заданием — лентой, иначе сеткой.
  */
 function StageContent({
   view,
@@ -1191,6 +1776,11 @@ function StageContent({
   decks,
   isTeacher,
   reviewSignal,
+  videoLayout = "grid",
+  onLayoutChange,
+  onShowAll,
+  solo,
+  onScreenShareStopped,
   onActivityClose,
   onBoardClose,
 }: {
@@ -1204,6 +1794,12 @@ function StageContent({
   decks: Deck[];
   isTeacher: boolean;
   reviewSignal: number;
+  videoLayout?: "grid" | "speaker";
+  onLayoutChange: (layout: "grid" | "speaker") => void;
+  onShowAll: () => void;
+  /** Блок «Вы пока один» рядом с плиткой. */
+  solo: ReactNode;
+  onScreenShareStopped: () => void;
   onActivityClose: () => void;
   onBoardClose: (() => void) | undefined;
 }) {
@@ -1219,22 +1815,44 @@ function StageContent({
         onClose={onActivityClose}
       />
     ) : screenSharing ? (
-      <ScreenShareTile />
+      <div className="flex h-full min-h-0 flex-col gap-2.5">
+        <ScreenShareStatusBar lessonId={lessonId} participants={participants} onStopped={onScreenShareStopped} />
+        <div className="min-h-0 flex-1">
+          <ScreenShareTile />
+        </div>
+      </div>
     ) : view === "board" && lessonId ? (
       <Board lessonId={lessonId} canDraw={canDraw} decks={decks} onClose={onBoardClose} />
     ) : (
-      <RoomVideoGrid participants={participants} selfId={selfId} mode={mode} />
+      <RoomVideoGrid
+        participants={participants}
+        selfId={selfId}
+        mode={mode}
+        layout={videoLayout}
+        onLayoutChange={onLayoutChange}
+        onShowAll={onShowAll}
+      />
     );
 
   const railed =
     (view === "activity" && activityId) || screenSharing || (view === "board" && lessonId);
 
-  if (!railed) return <div className="min-h-0 flex-1">{main}</div>;
+  if (!railed) {
+    if (solo) {
+      return (
+        <div className="flex min-h-0 flex-1 flex-col gap-2 md:flex-row md:items-stretch md:gap-3.5">
+          <div className="min-h-0 min-w-0 flex-1 md:flex-[1.5]">{main}</div>
+          {solo}
+        </div>
+      );
+    }
+    return <div className="min-h-0 flex-1">{main}</div>;
+  }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 sm:flex-row">
-      <div className="min-h-0 flex-1">{main}</div>
-      <RoomVideoGrid participants={participants} selfId={selfId} mode={mode} variant="rail" />
+    <div className="flex min-h-0 flex-1 flex-col gap-2 md:flex-row md:gap-3">
+      <div className="min-h-0 min-w-0 flex-1">{main}</div>
+      <RoomVideoGrid participants={participants} selfId={selfId} mode={mode} variant="rail" onShowAll={onShowAll} />
     </div>
   );
 }

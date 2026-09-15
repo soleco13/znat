@@ -3,8 +3,7 @@ import { useLocalParticipant } from "@livekit/components-react";
 import { Track, VideoPresets, type VideoEncoding, type VideoResolution } from "livekit-client";
 import { AlertTriangle, Video, VideoOff } from "lucide-react";
 
-import { Button } from "@/shared/ui/button";
-import { RoomControlButton } from "./RoomControlButton.js";
+import { RoomControlButton, type RoomControlVariant } from "./RoomControlButton.js";
 import { useSelfCameraUiStore } from "./self-camera-ui-store.js";
 
 /**
@@ -16,6 +15,8 @@ export function SelfCameraButton({
   encoding,
   disabled = false,
   disabledReason,
+  variant,
+  onOpenSettings,
 }: {
   maxResolution?: VideoResolution;
   /** Параметры школы (запрос 2026-09-14) — битрейт камеры, `toVideoEncoding` в `RoomPage.tsx`. Без него — дефолт LiveKit по разрешению. */
@@ -23,6 +24,8 @@ export function SelfCameraButton({
   /** Юзабилити-правка: без права `canPublishVideo` кнопка видна, но disabled с объяснением. */
   disabled?: boolean;
   disabledReason?: string;
+  variant?: RoomControlVariant;
+  onOpenSettings?: () => void;
 }) {
   const { localParticipant, isCameraEnabled } = useLocalParticipant();
   const desiredOn = useSelfCameraUiStore((s) => s.desiredOn);
@@ -48,7 +51,7 @@ export function SelfCameraButton({
       loading={desiredOn && !frameReady}
       activeIcon={Video}
       inactiveIcon={VideoOff}
-      activeLabel="Выключить камеру"
+      activeLabel="Камера"
       inactiveLabel="Включить камеру"
       onToggle={() => {
         const next = !desiredOn;
@@ -61,6 +64,9 @@ export function SelfCameraButton({
       caption="Камера"
       disabled={disabled}
       title={disabled ? disabledReason : undefined}
+      variant={variant}
+      onOpenSettings={onOpenSettings}
+      settingsLabel="Выбрать камеру"
     />
   );
 }
@@ -110,22 +116,21 @@ export function VideoDegradeSuggestion() {
   if (lossRatio === null || lossRatio <= VIDEO_PACKET_LOSS_WARNING_RATIO) return null;
 
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-foreground">
-      <span className="inline-flex items-center gap-1.5">
-        <AlertTriangle className="size-3.5 shrink-0 text-destructive" aria-hidden />
-        Плохой канал (потери видео {Math.round(lossRatio * 100)}%) — видео может мешать звуку урока.
+    <div className="flex shrink-0 items-center gap-2.5 rounded-xl border border-[#fde68a] bg-warn-light px-3.5 py-2.5 text-[13.5px] text-[#b45309]">
+      <AlertTriangle className="size-[17px] shrink-0" aria-hidden />
+      <span className="min-w-0 flex-1 [text-wrap:pretty]">
+        Плохая связь — теряется {Math.round(lossRatio * 100)}% видео. Видео может мешать звуку урока.
       </span>
-      <Button
-        variant="destructive"
-        size="sm"
-        className="h-7 shrink-0"
+      <button
+        type="button"
+        className="h-[30px] shrink-0 rounded-[9px] border border-current bg-transparent px-3 text-[13px] font-semibold"
         onClick={() => {
           setDesiredOn(false);
           localParticipant.setCameraEnabled(false).catch(() => undefined);
         }}
       >
         Выключить видео
-      </Button>
+      </button>
     </div>
   );
 }

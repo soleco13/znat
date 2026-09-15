@@ -20,6 +20,8 @@ export function useAdaptiveGrid(
   ref: React.RefObject<HTMLElement | null>,
   count: number,
   gap = 8,
+  /** Ширина/высота плитки; `tile` в результате — ширина. */
+  aspect = 1,
 ): GridLayout {
   const [layout, setLayout] = useState<GridLayout>({ cols: 1, tile: 0 });
   const rafRef = useRef<number | null>(null);
@@ -39,7 +41,7 @@ export function useAdaptiveGrid(
       const rows = Math.ceil(count / cols);
       const tile = Math.min(
         (w - gap * (cols - 1)) / cols,
-        (h - gap * (rows - 1)) / rows,
+        ((h - gap * (rows - 1)) / rows) * aspect,
       );
       if (tile > best.tile) best = { cols, tile };
     }
@@ -64,7 +66,7 @@ export function useAdaptiveGrid(
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ref, count, gap]);
+  }, [ref, count, gap, aspect]);
 
   return layout;
 }

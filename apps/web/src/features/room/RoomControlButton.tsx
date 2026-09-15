@@ -1,17 +1,18 @@
-import { Loader2, type LucideIcon } from "lucide-react";
+import { ChevronUp, Loader2, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Toggle } from "@/shared/ui/toggle";
 import { SimpleTooltip } from "@/shared/ui/tooltip";
 
+export type RoomControlVariant = "circle" | "pill" | "tile";
+
 /**
- * Э12.7 — кнопка нижней панели урока: круглый тумблер (shadcn `Toggle`,
- * вариант `media` — как на экране проверки устройств). Только иконка,
- * подпись — во всплывающей подсказке. Состояние читается прямо с кнопки:
- * включено — нейтральный вид и иконка «есть», выключено — красный и иконка
- * «нет». `tone="action"` — для кнопок-действий (демонстрация, рука), где
- * «выключено» не значит «плохо». `speaking` — зелёное кольцо, когда идёт
- * сигнал с микрофона (человек говорит).
+ * Кнопка панели урока. Три вида:
+ *  - `circle` — круглый тумблер с подписью в тултипе (PiP-тулбар);
+ *  - `pill` — десктопный футер: иконка + подпись в строку, опционально
+ *    сплит-кнопка «шеврон» для выбора устройства внутри той же пилюли;
+ *  - `tile` — мобильный футер: крупная плитка 56px, иконка над подписью.
+ * `tone="media"`: выключено — красная заливка. `tone="action"`: включено — синий тинт.
  */
 export function RoomControlButton({
   active,
@@ -26,27 +27,118 @@ export function RoomControlButton({
   loading = false,
   title,
   caption,
+  variant = "circle",
+  onOpenSettings,
+  settingsLabel = "Настройки устройства",
+  badge,
 }: {
   active: boolean;
   activeIcon: LucideIcon;
   inactiveIcon: LucideIcon;
-  /** Подпись-подсказка, когда включено (обычно название: «Микрофон»). */
   activeLabel: string;
-  /** Подпись-подсказка, когда выключено (обычно действие: «Включить звук»). */
   inactiveLabel: string;
   onToggle: () => void;
   disabled?: boolean;
   tone?: "media" | "action";
   speaking?: boolean;
-  /** Идёт получение устройства/потока (напр. камера ещё грузится после клика) — иконка сменяется на спиннер, но кнопка остаётся кликабельной. */
   loading?: boolean;
   /** Переопределяет текст подсказки (напр. причину, по которой кнопка недоступна). */
   title?: string;
-  /** Короткая постоянная подпись под кнопкой (не зависит от состояния — само состояние видно на кнопке). */
+  /** Короткая постоянная подпись: под кнопкой у `circle`, внутри плитки у `tile`. */
   caption?: string;
+  variant?: RoomControlVariant;
+  /** Только `pill`: шеврон выбора устройства в той же пилюле. */
+  onOpenSettings?: () => void;
+  settingsLabel?: string;
+  /** Только `tile`: счётчик в углу (непрочитанные сообщения). */
+  badge?: number;
 }) {
   const Icon = active ? ActiveIcon : InactiveIcon;
   const label = title ?? (active ? activeLabel : inactiveLabel);
+  const alarm = tone === "media" && !active;
+  const highlighted = tone === "action" && active;
+  const surface = alarm
+    ? "border-destructive bg-destructive text-destructive-foreground"
+    : highlighted
+      ? "border-primary-muted bg-primary-light text-primary"
+      : "border-border bg-card text-foreground";
+  const hover = alarm ? "hover:bg-black/10" : highlighted ? "hover:bg-black/[.04]" : "hover:bg-surface-2";
+  const iconNode = loading ? <Loader2 className="animate-spin" aria-hidden /> : <Icon aria-hidden />;
+
+  if (variant === "tile") {
+    return (
+      <button
+        type="button"
+        onClick={onToggle}
+        disabled={disabled}
+        aria-pressed={active}
+        aria-label={label}
+        title={label}
+        className={cn(
+          "relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-[3px] rounded-2xl border text-[11.5px] font-semibold leading-none transition-colors disabled:opacity-50 [&_svg]:size-[21px] [&_svg]:shrink-0",
+          surface,
+          alarm ? "" : hover,
+          speaking && "ring-2 ring-success ring-offset-1",
+        )}
+      >
+        {iconNode}
+        <span className="max-w-full truncate px-1">{caption ?? label}</span>
+        {badge ? (
+          <span className="absolute right-2.5 top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground">
+            {badge}
+          </span>
+        ) : null}
+      </button>
+    );
+  }
+
+  if (variant === "pill") {
+    return (
+      <span
+        className={cn(
+          "inline-flex shrink-0 items-center overflow-hidden rounded-full border shadow-xs transition-colors",
+          surface,
+          speaking && "ring-2 ring-success ring-offset-1",
+        )}
+      >
+        <SimpleTooltip content={label} side="top">
+          <button
+            type="button"
+            onClick={onToggle}
+            disabled={disabled}
+            aria-pressed={active}
+            aria-label={label}
+            className={cn(
+              "inline-flex h-12 items-center gap-2 px-3.5 text-[15px] font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50 lg:px-[18px] [&_svg]:size-5 [&_svg]:shrink-0",
+              hover,
+            )}
+          >
+            {iconNode}
+            <span className="hidden whitespace-nowrap lg:inline">{label}</span>
+          </button>
+        </SimpleTooltip>
+        {onOpenSettings ? (
+          <>
+            <span aria-hidden className={cn("h-[26px] w-px", alarm ? "bg-white/30" : "bg-border")} />
+            <SimpleTooltip content={settingsLabel} side="top">
+              <button
+                type="button"
+                onClick={onOpenSettings}
+                aria-label={settingsLabel}
+                className={cn(
+                  "flex h-12 w-9 items-center justify-center transition-colors [&_svg]:size-4",
+                  alarm ? "text-white/80 hover:bg-black/10" : "text-text-3 hover:bg-surface-2 hover:text-text-2",
+                )}
+              >
+                <ChevronUp aria-hidden />
+              </button>
+            </SimpleTooltip>
+          </>
+        ) : null}
+      </span>
+    );
+  }
+
   const button = (
     <SimpleTooltip content={label} side="top">
       <span className="relative inline-flex">
@@ -60,11 +152,9 @@ export function RoomControlButton({
           onPressedChange={onToggle}
           disabled={disabled}
           aria-label={label}
-          // Тач-таргет крупнее дефолтных 40px (size-10) — телефон/планшет,
-          // не только мышь.
           className={cn("relative size-11", speaking && "ring-2 ring-success ring-offset-1")}
         >
-          {loading ? <Loader2 className="animate-spin" aria-hidden /> : <Icon aria-hidden />}
+          {iconNode}
         </Toggle>
       </span>
     </SimpleTooltip>

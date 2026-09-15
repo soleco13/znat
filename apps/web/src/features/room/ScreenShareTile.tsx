@@ -33,7 +33,7 @@ export function ScreenShareTile() {
     <div className="flex h-full w-full items-center justify-center">
       <VideoTrack
         trackRef={track}
-        className="max-h-full max-w-full rounded-xl border border-border object-contain shadow-sm"
+        className="max-h-full max-w-full rounded-2xl border border-border bg-card object-contain shadow-xs"
       />
     </div>
   );
