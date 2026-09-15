@@ -416,7 +416,11 @@ export function DeviceCheckScreen({
             появление подсказок НЕ меняют раскладку: у правых карточек
             фиксированная высота строк и внутренний скролл, контролы всегда
             в разметке (в выключенном состоянии — disabled). */}
-        <div className="grid w-full max-w-4xl gap-3 md:h-[26rem] md:grid-cols-[3fr_2fr]">
+        {/* `grid-cols-1` (== `minmax(0,1fr)`) вместо предполагаемой одной
+            неявной auto-колонки — та растягивалась под контент (карточка с
+            `aspect-video` + названия устройств не желали сжиматься),
+            распирая всю раскладку на планшетах/телефонах. */}
+        <div className="grid w-full max-w-4xl grid-cols-1 gap-3 md:h-[26rem] md:grid-cols-[3fr_2fr]">
           {/* ---------- Камера ---------- */}
           <Card className="relative aspect-video overflow-hidden bg-slate-900 md:aspect-auto md:h-full">
             <div
@@ -482,8 +486,8 @@ export function DeviceCheckScreen({
               <div className="absolute inset-x-3 bottom-3">
                 <Alert variant="warning" className="bg-card/95 backdrop-blur">
                   <AlertTriangle className="size-4" aria-hidden />
-                  <AlertDescription className="flex flex-wrap items-center gap-2">
-                    <span>{camError}</span>
+                  <AlertDescription className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className="min-w-0 break-words">{camError}</span>
                     <Button variant="outline" size="sm" onClick={() => openCam(null)}>
                       <RotateCcw aria-hidden /> Ещё раз
                     </Button>
@@ -509,7 +513,7 @@ export function DeviceCheckScreen({
           </Card>
 
           {/* ---------- Микрофон + Динамики ---------- */}
-          <div className="grid min-h-0 gap-3 md:grid-rows-[1.55fr_1fr]">
+          <div className="grid min-h-0 grid-cols-1 gap-3 md:grid-rows-[1.55fr_1fr]">
             <Card className="flex min-h-0 flex-col p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -545,8 +549,8 @@ export function DeviceCheckScreen({
                 {micPermission === "denied" || micPermission === "unavailable" ? (
                   <Alert variant="warning">
                     <AlertTriangle className="size-4" aria-hidden />
-                    <AlertDescription className="flex flex-wrap items-center gap-2">
-                      <span>{micError}</span>
+                    <AlertDescription className="flex min-w-0 flex-wrap items-center gap-2">
+                      <span className="min-w-0 break-words">{micError}</span>
                       <Button variant="outline" size="sm" onClick={() => openMic(null)}>
                         <RotateCcw aria-hidden /> Ещё раз
                       </Button>
@@ -570,7 +574,7 @@ export function DeviceCheckScreen({
                         ))}
                       </SelectContent>
                     </Select>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"

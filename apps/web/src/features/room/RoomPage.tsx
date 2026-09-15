@@ -1046,9 +1046,13 @@ export function RoomPage() {
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3.5">
-          <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3">
+          {/* `flex-wrap` вместо `grid md:grid-cols-3` — плитки сами переносятся
+              на новую строку по реально доступной ширине стейджа (та сужается
+              открытой боковой панелью), а не держат фиксированное число колонок
+              по ширине всего вьюпорта, иначе на планшете они вылезали за край. */}
+          <div className="flex w-full max-w-[644px] flex-wrap justify-center gap-2.5">
             {Array.from({ length: 6 }, (_, i) => (
-              <Skeleton key={i} className="aspect-video w-[150px] rounded-2xl md:w-[200px]" />
+              <Skeleton key={i} className="aspect-video w-[150px] shrink-0 grow-0 rounded-2xl sm:w-[200px]" />
             ))}
           </div>
           <span className="flex items-center gap-2.5 text-sm text-text-2">
@@ -1090,7 +1094,7 @@ export function RoomPage() {
   const recordingItem = (
     <DropdownMenuItem className={MENU_ITEM} onSelect={openRecording}>
       <Disc aria-hidden />
-      <span className="flex-1">Запись урока</span>
+      <span className="flex-1">{recordingActive ? "Остановить запись" : "Запись урока"}</span>
       {recordingActive ? (
         <span className="inline-flex h-5 items-center rounded-full bg-danger-light px-2 text-[11.5px] font-semibold text-danger">
           идёт
