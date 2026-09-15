@@ -87,7 +87,7 @@ import { LessonActivityPanel } from "../materials/LessonActivityPanel.js";
 import { ActivityStage } from "./ActivityStage.js";
 import { RecordingConsentBanner, RecordingPanel } from "../recordings/RecordingPanel.js";
 import { playRecordingSound } from "./recording-sound.js";
-import { ParticipantJoinLeaveSound } from "./ParticipantJoinLeaveSound.js";
+import { playParticipantSound } from "./participant-sound.js";
 import { SelfCameraButton, VideoDegradeSuggestion } from "./CameraControls.js";
 import { toScreenShareEncoding, toVideoEncoding, toVideoResolution } from "./media-quality.js";
 import { PacketLossWarning } from "./ConnectionQuality.js";
@@ -302,12 +302,14 @@ export function RoomPage() {
         setParticipants(message.participants);
         break;
       case "participant_joined":
+        if (message.participant.userId !== selfIdRef.current) playParticipantSound("joined");
         setParticipants((prev) => [
           ...prev.filter((p) => p.userId !== message.participant.userId),
           message.participant,
         ]);
         break;
       case "participant_left":
+        if (message.userId !== selfIdRef.current) playParticipantSound("left");
         setParticipants((prev) => prev.filter((p) => p.userId !== message.userId));
         break;
       case "permissions_updated":
@@ -1567,7 +1569,6 @@ export function RoomPage() {
       >
         <ApplyAudioOutput deviceId={spkDeviceId} />
         <MicSync enabled={self?.permissions.canSpeak ?? false} />
-        <ParticipantJoinLeaveSound />
         <VideoSubscriptionManager participants={participants} mode={lessonMode} />
         {clientMediaSettings?.pipEnabled !== false ? (
           <ScreenShareAutoPip
