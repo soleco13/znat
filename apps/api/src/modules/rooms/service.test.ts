@@ -49,6 +49,7 @@ const {
       cameraFps: 24,
       cameraBitrateKbps: 1700,
       micHighQuality: false,
+      noiseSuppressionEnabled: true,
       screenShareResolution: "1080p",
       screenShareFps: 15,
       screenShareBitrateKbps: 2500,

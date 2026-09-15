@@ -111,6 +111,7 @@ import { VideoSubscriptionManager } from "./VideoSubscriptions.js";
 // Дефолт на время, пока `clientMediaSettings` ещё не загружены (см. `buildRoomOptions`).
 const FALLBACK_ROOM_OPTIONS: RoomOptions = {
   videoCaptureDefaults: { resolution: VideoPresets.h720.resolution },
+  audioCaptureDefaults: { noiseSuppression: true },
   publishDefaults: { simulcast: true },
   adaptiveStream: true,
   dynacast: true,
@@ -131,6 +132,14 @@ function buildRoomOptions(settings: ClientMediaSettings | null): RoomOptions {
   if (!settings) return FALLBACK_ROOM_OPTIONS;
   return {
     videoCaptureDefaults: { resolution: toVideoResolution(settings.cameraResolution, settings.cameraFps) },
+    // Тот же дефолт, что ниже в `audio={...}` — нужен здесь ОТДЕЛЬНО, потому
+    // что ручной повторный тогл микрофона (`MicControls.tsx`) вызывает
+    // `setMicrophoneEnabled` без options и падает на этот дефолт комнаты, а
+    // не на пропы первого коннекта.
+    audioCaptureDefaults: {
+      noiseSuppression: settings.noiseSuppressionEnabled,
+      channelCount: settings.micHighQuality ? 2 : undefined,
+    },
     publishDefaults: {
       simulcast: true,
       videoEncoding: toVideoEncoding(settings.cameraFps, settings.cameraBitrateKbps),
@@ -1533,6 +1542,9 @@ export function RoomPage() {
                 // качество звука» (стерео); участник не переопределяет
                 // явно, но выбор устройства (deviceId) остаётся его.
                 channelCount: clientMediaSettings?.micHighQuality ? 2 : undefined,
+                // Шумоподавление — клиентский DSP-фильтр браузера, по
+                // умолчанию включено школой (см. school-settings.ts).
+                noiseSuppression: clientMediaSettings?.noiseSuppressionEnabled ?? true,
               }
             : false
         }

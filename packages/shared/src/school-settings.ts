@@ -50,6 +50,15 @@ export const schoolSettingsSchema = z.object({
   cameraBitrateKbps: videoBitrateKbpsSchema.default(1700),
   /** Высокое качество звука (стерео/больший битрейт Opus) — мягкий дефолт микрофона. */
   micHighQuality: z.boolean().default(false),
+  /**
+   * Шумоподавление микрофона — клиентская `noiseSuppression`-константа
+   * `getUserMedia`/LiveKit `AudioCaptureOptions` (запрос: сервер не должен
+   * декодировать/обрабатывать чужое аудио, это дорого именно на медиа-ядре;
+   * встроенный в браузер DSP-фильтр — часть уже работающего пайплайна
+   * эхоподавления, лишней нагрузки на устройство участника почти не даёт).
+   * По умолчанию включено, школа может выключить.
+   */
+  noiseSuppressionEnabled: z.boolean().default(true),
 
   /** Мягкий дефолт разрешения/fps/битрейта демонстрации экрана — применяется в `ScreenShareControls.tsx`. */
   screenShareResolution: mediaQualityPresetSchema.default("1080p"),
@@ -94,6 +103,7 @@ export const clientMediaSettingsSchema = schoolSettingsSchema.pick({
   cameraFps: true,
   cameraBitrateKbps: true,
   micHighQuality: true,
+  noiseSuppressionEnabled: true,
   screenShareResolution: true,
   screenShareFps: true,
   screenShareBitrateKbps: true,

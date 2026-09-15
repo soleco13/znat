@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocalParticipant, useRoomContext, VideoTrack } from "@livekit/components-react";
 import { Track } from "livekit-client";
-import { Mic, Video, Volume2, type LucideIcon } from "lucide-react";
+import { Mic, Video, Volume2, Waves, type LucideIcon } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
 import {
@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/ui/select";
+import { Switch } from "@/shared/ui/switch";
 
 /**
  * Настройки устройств посреди урока. Переключает уже идущую публикацию через
@@ -41,12 +42,18 @@ export function DeviceSettingsModal({
   const [micId, setMicId] = useState("");
   const [camId, setCamId] = useState("");
   const [spkId, setSpkId] = useState("");
+  // Личный тумблер участника поверх школьного дефолта (§ школьные
+  // настройки, `noiseSuppressionEnabled`) — читаем ТЕКУЩИЙ эффективный
+  // дефолт комнаты (не школьный дефолт напрямую), чтобы модалка не
+  // сбрасывала выбор участника при повторном открытии в этом же уроке.
+  const [noiseSuppression, setNoiseSuppression] = useState(true);
 
   useEffect(() => {
     if (!open) return;
     setMicId("");
     setCamId("");
     setSpkId("");
+    setNoiseSuppression(room.options.audioCaptureDefaults?.noiseSuppression !== false);
     navigator.mediaDevices
       .enumerateDevices()
       .then((list) => {
@@ -56,12 +63,26 @@ export function DeviceSettingsModal({
         setSpkDevices(usable.filter((d) => d.kind === "audiooutput"));
       })
       .catch(() => undefined);
-  }, [open]);
+  }, [open, room]);
 
   function apply() {
     if (micId) void room.switchActiveDevice("audioinput", micId).catch(() => undefined);
     if (camId) void room.switchActiveDevice("videoinput", camId).catch(() => undefined);
     if (spkId) void room.switchActiveDevice("audiooutput", spkId).catch(() => undefined);
+
+    // Тот же приём, что и `switchActiveDevice` внутри SDK (мутирует
+    // `room.options.audioCaptureDefaults` напрямую) — следующий ручной тогл
+    // микрофона (`MicControls.tsx`, без явных options) подхватит выбор
+    // участника, а не откатится на школьный дефолт.
+    room.options.audioCaptureDefaults = {
+      ...room.options.audioCaptureDefaults,
+      noiseSuppression,
+    };
+    const micPub = localParticipant.getTrackPublication(Track.Source.Microphone);
+    if (micPub?.audioTrack) {
+      void micPub.audioTrack.applyConstraints({ noiseSuppression }).catch(() => undefined);
+    }
+
     onOpenChange(false);
   }
 
@@ -98,6 +119,17 @@ export function DeviceSettingsModal({
             <DeviceField label="Микрофон" icon={Mic} value={micId} onChange={setMicId} devices={micDevices} fallback="Микрофон" />
             <DeviceField label="Камера" icon={Video} value={camId} onChange={setCamId} devices={camDevices} fallback="Камера" />
             <DeviceField label="Звук выводить в" icon={Volume2} value={spkId} onChange={setSpkId} devices={spkDevices} fallback="Динамики" />
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <Waves className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-text-2">Шумоподавление</p>
+                  <p className="text-xs text-text-3">Убирает фоновый шум с вашего микрофона</p>
+                </div>
+              </div>
+              <Switch checked={noiseSuppression} onCheckedChange={setNoiseSuppression} />
+            </div>
           </div>
         </div>
 

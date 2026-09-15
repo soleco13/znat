@@ -8,6 +8,7 @@ import {
   Mic,
   MonitorUp,
   PictureInPicture2,
+  Waves,
 } from "lucide-react";
 import type {
   Framerate,
@@ -272,6 +273,19 @@ export function SettingsPage() {
                 checked={data.micHighQuality}
                 disabled={savingKey === "micHighQuality"}
                 onCheckedChange={(v) => void patch("micHighQuality", { micHighQuality: v })}
+              />
+            </Row>
+            <Row
+              icon={Waves}
+              title="Шумоподавление микрофона"
+              description="Убирает фоновый шум на стороне участника (браузер), не нагружает сервер"
+            >
+              <Switch
+                checked={data.noiseSuppressionEnabled}
+                disabled={savingKey === "noiseSuppressionEnabled"}
+                onCheckedChange={(v) =>
+                  void patch("noiseSuppressionEnabled", { noiseSuppressionEnabled: v })
+                }
               />
             </Row>
           </Section>
