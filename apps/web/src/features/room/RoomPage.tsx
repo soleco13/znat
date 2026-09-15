@@ -87,6 +87,7 @@ import { LessonActivityPanel } from "../materials/LessonActivityPanel.js";
 import { ActivityStage } from "./ActivityStage.js";
 import { RecordingConsentBanner, RecordingPanel } from "../recordings/RecordingPanel.js";
 import { playRecordingSound } from "./recording-sound.js";
+import { ParticipantJoinLeaveSound } from "./ParticipantJoinLeaveSound.js";
 import { SelfCameraButton, VideoDegradeSuggestion } from "./CameraControls.js";
 import { toScreenShareEncoding, toVideoEncoding, toVideoResolution } from "./media-quality.js";
 import { PacketLossWarning } from "./ConnectionQuality.js";
@@ -1566,6 +1567,7 @@ export function RoomPage() {
       >
         <ApplyAudioOutput deviceId={spkDeviceId} />
         <MicSync enabled={self?.permissions.canSpeak ?? false} />
+        <ParticipantJoinLeaveSound />
         <VideoSubscriptionManager participants={participants} mode={lessonMode} />
         {clientMediaSettings?.pipEnabled !== false ? (
           <ScreenShareAutoPip
