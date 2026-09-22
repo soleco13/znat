@@ -19,6 +19,17 @@
 		reverse_proxy host.docker.internal:7880
 	}
 
+	# Лендинг на "/" — см. подробный комментарий в тестовом Caddyfile (тот же
+	# приём). /login и остальные пути приложения по-прежнему идут в app ниже.
+	handle / {
+		root * /srv/landing
+		file_server
+	}
+	handle_path /landing/* {
+		root * /srv/landing
+		file_server
+	}
+
 	reverse_proxy app:3000
 	encode gzip
 

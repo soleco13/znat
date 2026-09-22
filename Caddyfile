@@ -8,6 +8,16 @@
 # Локальная разработка (docker-compose up): без TLS, без домена.
 # Продовый конфиг с доменом и Let's Encrypt — Caddyfile.prod (Э0.8, деплой на боевой сервер).
 :80 {
+	# Лендинг — см. подробный комментарий в https-блоке ниже, тот же приём.
+	handle / {
+		root * /srv/landing
+		file_server
+	}
+	handle_path /landing/* {
+		root * /srv/landing
+		file_server
+	}
+
 	reverse_proxy app:3000
 	encode gzip
 }
@@ -29,6 +39,27 @@ https://213.21.241.28 {
 	# Один порт/сертификат — одно подтверждение.
 	handle_path /livekit/* {
 		reverse_proxy host.docker.internal:7880
+	}
+
+	# Лендинг (landing/) — отдельный статический сайт, точно на "/" (раньше
+	# этот путь отдавало приложение — RequireAuth+HomeRedirect уводил на
+	# /lessons). Раздаётся Caddy напрямую из файлов, а не через app: продающая
+	# страница не должна зависеть от доступности Node-процесса приложения.
+	# Кнопка «Войти» на лендинге ведёт на /login — этот и все остальные пути
+	# приложения (/login, /lessons, /j/:token, /assets/* самого приложения и
+	# т.д.) по-прежнему уходят в app ниже, не переезжали.
+	#
+	# `handle /` матчит ИМЕННО "/" (без звёздочки — точное совпадение, не
+	# префикс), поэтому не перехватывает остальные пути. Свой префикс
+	# /landing/* — под собственные ассеты лендинга (`vite.config.ts` собирает
+	# их с base "/landing/"), чтобы не столкнуться с /assets/* приложения.
+	handle / {
+		root * /srv/landing
+		file_server
+	}
+	handle_path /landing/* {
+		root * /srv/landing
+		file_server
 	}
 
 	reverse_proxy app:3000

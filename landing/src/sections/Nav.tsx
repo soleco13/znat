@@ -58,7 +58,7 @@ export function Nav() {
 
           <div className="hidden items-center gap-2 sm:flex">
             <Button asChild variant="ghost" size="sm">
-              <a href="#login">Войти</a>
+              <a href="/login">Войти</a>
             </Button>
             <Button asChild size="sm">
               <a href="#pricing">Начать бесплатно</a>
@@ -90,7 +90,7 @@ export function Nav() {
             ))}
             <div className="mt-1 grid grid-cols-2 gap-2 border-t border-border pt-3">
               <Button asChild variant="secondary" size="sm">
-                <a href="#login">Войти</a>
+                <a href="/login">Войти</a>
               </Button>
               <Button asChild size="sm">
                 <a href="#pricing">Начать</a>

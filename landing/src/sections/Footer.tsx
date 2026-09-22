@@ -45,7 +45,7 @@ export function Footer() {
               <a href="#pricing" className="rounded-lg border border-border bg-card px-3 py-2 text-[13px] font-semibold text-foreground shadow-xs hover:bg-secondary">
                 Начать бесплатно
               </a>
-              <a href="#login" className="rounded-lg px-3 py-2 text-[13px] font-medium text-muted-foreground hover:text-foreground">
+              <a href="/login" className="rounded-lg px-3 py-2 text-[13px] font-medium text-muted-foreground hover:text-foreground">
                 Войти
               </a>
             </div>
