@@ -368,6 +368,26 @@ export function Board({
     const yElements = ydoc.getArray<Y.Map<unknown>>(`elements:${activePageId}`);
     const yAssets = ydoc.getMap<unknown>("assets");
 
+    // Защита от повреждённых записей: если запись `Y.Map` осталась без
+    // ключа `el` (замечено на реальном уроке — клиент прервался между
+    // добавлением `pos` и самого элемента, писавшего их не одной
+    // Y-транзакцией), безусловное `x.get("el").id` внутри конструктора
+    // `ExcalidrawBinding` (`y-excalidraw`, не наш код) падает и роняет
+    // ErrorBoundary всей страницы урока, а не только доску — пользователь
+    // не может войти в урок вообще. Чистим такие записи ДО создания
+    // привязки: урок сам себя чинит при следующем открытии доски.
+    const corruptIndexes: number[] = [];
+    yElements.forEach((entry, i) => {
+      if (!entry.get("el")) corruptIndexes.push(i);
+    });
+    if (corruptIndexes.length > 0) {
+      ydoc.transact(() => {
+        for (let i = corruptIndexes.length - 1; i >= 0; i--) {
+          yElements.delete(corruptIndexes[i]!, 1);
+        }
+      });
+    }
+
     // Э3.11, §3.4 ТЗ: undo/redo в мультиплеере через `Y.UndoManager` со
     // scope по клиенту. Scope — `Y.Array` ИМЕННО активной страницы (у
     // каждой страницы свой массив с Э3.6), поэтому менеджер живёт и
