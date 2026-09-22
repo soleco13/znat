@@ -371,22 +371,41 @@ export function Board({
     // Защита от повреждённых записей: если запись `Y.Map` осталась без
     // ключа `el` (замечено на реальном уроке — клиент прервался между
     // добавлением `pos` и самого элемента, писавшего их не одной
-    // Y-транзакцией), безусловное `x.get("el").id` внутри конструктора
-    // `ExcalidrawBinding` (`y-excalidraw`, не наш код) падает и роняет
-    // ErrorBoundary всей страницы урока, а не только доску — пользователь
-    // не может войти в урок вообще. Чистим такие записи ДО создания
-    // привязки: урок сам себя чинит при следующем открытии доски.
-    const corruptIndexes: number[] = [];
-    yElements.forEach((entry, i) => {
-      if (!entry.get("el")) corruptIndexes.push(i);
-    });
-    if (corruptIndexes.length > 0) {
+    // Y-транзакцией; точный триггер внутри `y-excalidraw` не установлен, но
+    // сам паттерн повторяем), безусловное `x.get("el").id` внутри
+    // `ExcalidrawBinding` (`y-excalidraw`, не наш код) падает — И в
+    // конструкторе (роняет ErrorBoundary всей страницы урока, не только
+    // доску — пользователь не мог войти), И в его собственном обработчике
+    // чужих правок `_remoteElementsChangeHandler` (тихо валит именно
+    // ПРИМЕНЕНИЕ локальной правки ДО отправки в `yElements` — отсюда «с
+    // одного клиента рисую, у других не появляется»).
+    //
+    // Разовой чистки при монтировании (было раньше) достаточно только на
+    // открытии уже испорченной доски. Чтобы порча не долетела до чужого
+    // клиента, ПОКА доска у него уже открыта, нужен постоянный наблюдатель:
+    // регистрируем его ДО создания `ExcalidrawBinding` — `y-excalidraw`
+    // вешает СВОЙ `observeDeep` внутри своего конструктора (ниже), то есть
+    // ПОСЛЕ нашего `.observe()`. Yjs вызывает наблюдателей одного и того же
+    // массива в порядке регистрации, а наша чистка внутри `ydoc.transact`
+    // применяется синхронно — к моменту, когда очередь дойдёт до
+    // обработчика `y-excalidraw` для того же события, битой записи в
+    // `yElements` уже нет. Сам вызов `sanitize()` из своего же `.observe()`
+    // не зацикливается: после удаления повторный проход находит 0 битых
+    // записей и не трогает документ.
+    const sanitize = () => {
+      const corruptIndexes: number[] = [];
+      yElements.forEach((entry, i) => {
+        if (!entry.get("el")) corruptIndexes.push(i);
+      });
+      if (corruptIndexes.length === 0) return;
       ydoc.transact(() => {
         for (let i = corruptIndexes.length - 1; i >= 0; i--) {
           yElements.delete(corruptIndexes[i]!, 1);
         }
       });
-    }
+    };
+    sanitize();
+    yElements.observe(sanitize);
 
     // Э3.11, §3.4 ТЗ: undo/redo в мультиплеере через `Y.UndoManager` со
     // scope по клиенту. Scope — `Y.Array` ИМЕННО активной страницы (у
@@ -454,6 +473,7 @@ export function Board({
     return () => {
       setBinding(null);
       setUndoState(null);
+      yElements.unobserve(sanitize);
       nextBinding.destroy();
       // `nextBinding.destroy()` только снимает свои подписи/слушатели
       // (проверено чтением бандла — прогоняет `this.subscriptions`), но
