@@ -1321,17 +1321,62 @@ export function RoomPage() {
 
       {/* Футер — десктоп */}
       <footer className="hidden h-[76px] shrink-0 items-center justify-between gap-4 border-t border-border bg-card px-4 md:flex">
-        <div className="hidden min-w-[200px] items-center gap-2.5 xl:flex">
-          <span className="inline-flex h-8 shrink-0 items-center gap-[7px] rounded-full bg-surface-2 px-3 font-mono text-[12.5px] font-semibold text-text-2">
-            <Clock className="size-3.5" aria-hidden />
-            {elapsedLabel}
-          </span>
-          <span className="truncate text-[12.5px] text-text-3">
-            Режим: {LESSON_MODE_LABEL[lessonMode].toLowerCase()}
-          </span>
+        {/* Слева — кнопки-меню (участники/чат/материалы/⋯): были у кнопки
+            «Выйти» справа, пользователь попросил поменять местами с
+            таймером (2026-09-23). В отличие от таймера — навигационные,
+            видны всегда, а не только от `xl`. */}
+        <div className="flex min-w-[200px] shrink-0 items-center gap-1.5">
+          {drawerIconButton(
+            "people",
+            "Участники",
+            Users,
+            <span className="absolute -right-px -top-px flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-surface-3 px-[5px] text-[11px] font-bold text-text-2">
+              {connectedCount}
+            </span>,
+          )}
+          {drawerIconButton(
+            "chat",
+            "Чат",
+            MessageSquare,
+            unreadChat > 0 ? (
+              <span className="absolute -right-px -top-px flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-[5px] text-[11px] font-bold text-primary-foreground">
+                {unreadChat}
+              </span>
+            ) : null,
+          )}
+          {drawerIconButton("tools", "Материалы урока", ClipboardList)}
+          <DropdownMenu modal={false}>
+            <SimpleTooltip content="Ещё" side="top">
+              <DropdownMenuTrigger asChild>
+                <button type="button" aria-label="Ещё" className={ICON_BTN}>
+                  <MoreHorizontal aria-hidden />
+                </button>
+              </DropdownMenuTrigger>
+            </SimpleTooltip>
+            <DropdownMenuContent align="start" side="top" sideOffset={10} className={MENU_CONTENT}>
+              <DropdownMenuLabel className={MENU_LABEL}>Урок</DropdownMenuLabel>
+              {isTeacher ? recordingItem : null}
+              <DropdownMenuItem
+                className={MENU_ITEM}
+                onSelect={() => setVideoLayout((l) => (l === "grid" ? "speaker" : "grid"))}
+              >
+                <LayoutGrid aria-hidden />
+                Вид: {videoLayout === "grid" ? "сетка" : "докладчик"}
+              </DropdownMenuItem>
+              <DropdownMenuItem className={MENU_ITEM} onSelect={toggleFullscreen}>
+                {isFullscreen ? <Minimize aria-hidden /> : <Maximize aria-hidden />}
+                {isFullscreen ? "Выйти из полноэкранного" : "На весь экран"}
+              </DropdownMenuItem>
+              {classMenuItems}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        <div className="flex min-w-0 items-center gap-2.5">
+        {/* `overflow-x-auto` — страховка: если кнопки (mic/camera/share/
+            board) всё же не помещаются (очень узкий `md`-планшет), группа
+            скроллится сама в своих границах вместо наезда на соседние
+            секции футера, а не расползается по всей ширине без ограничений. */}
+        <div className="flex min-w-0 items-center gap-2.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
           {!isTeacher ? (
             <RoomControlButton
               variant="pill"
@@ -1380,56 +1425,24 @@ export function RoomPage() {
           ) : null}
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5">
-          {drawerIconButton(
-            "people",
-            "Участники",
-            Users,
-            <span className="absolute -right-px -top-px flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-surface-3 px-[5px] text-[11px] font-bold text-text-2">
-              {connectedCount}
-            </span>,
-          )}
-          {drawerIconButton(
-            "chat",
-            "Чат",
-            MessageSquare,
-            unreadChat > 0 ? (
-              <span className="absolute -right-px -top-px flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-[5px] text-[11px] font-bold text-primary-foreground">
-                {unreadChat}
-              </span>
-            ) : null,
-          )}
-          {drawerIconButton("tools", "Материалы урока", ClipboardList)}
-          <DropdownMenu modal={false}>
-            <SimpleTooltip content="Ещё" side="top">
-              <DropdownMenuTrigger asChild>
-                <button type="button" aria-label="Ещё" className={ICON_BTN}>
-                  <MoreHorizontal aria-hidden />
-                </button>
-              </DropdownMenuTrigger>
-            </SimpleTooltip>
-            <DropdownMenuContent align="end" side="top" sideOffset={10} className={MENU_CONTENT}>
-              <DropdownMenuLabel className={MENU_LABEL}>Урок</DropdownMenuLabel>
-              {isTeacher ? recordingItem : null}
-              <DropdownMenuItem
-                className={MENU_ITEM}
-                onSelect={() => setVideoLayout((l) => (l === "grid" ? "speaker" : "grid"))}
-              >
-                <LayoutGrid aria-hidden />
-                Вид: {videoLayout === "grid" ? "сетка" : "докладчик"}
-              </DropdownMenuItem>
-              <DropdownMenuItem className={MENU_ITEM} onSelect={toggleFullscreen}>
-                {isFullscreen ? <Minimize aria-hidden /> : <Maximize aria-hidden />}
-                {isFullscreen ? "Выйти из полноэкранного" : "На весь экран"}
-              </DropdownMenuItem>
-              {classMenuItems}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        {/* Справа — таймер (был слева, поменялся местами с кнопками-меню
+            выше) и «Выйти». Таймер по-прежнему скрыт ниже `xl` — необязательная
+            информация, а не навигация. */}
+        <div className="flex shrink-0 items-center gap-2.5">
+          <div className="hidden items-center gap-2.5 xl:flex">
+            <span className="inline-flex h-8 shrink-0 items-center gap-[7px] rounded-full bg-surface-2 px-3 font-mono text-[12.5px] font-semibold text-text-2">
+              <Clock className="size-3.5" aria-hidden />
+              {elapsedLabel}
+            </span>
+            <span className="truncate text-[12.5px] text-text-3">
+              Режим: {LESSON_MODE_LABEL[lessonMode].toLowerCase()}
+            </span>
+          </div>
           <Button
             type="button"
             variant="destructive"
             onClick={leaveRoom}
-            className="ml-1.5 h-11 gap-2 rounded-full px-[18px] text-[15px] font-semibold [&_svg]:size-[19px]"
+            className="h-11 gap-2 rounded-full px-[18px] text-[15px] font-semibold [&_svg]:size-[19px]"
           >
             <LogOut aria-hidden />
             Выйти
