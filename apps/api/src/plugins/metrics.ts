@@ -1,7 +1,11 @@
 import fp from "fastify-plugin";
 import type { FastifyInstance } from "fastify";
 import client from "prom-client";
-import { getActiveCanvasDocumentsCount } from "../modules/canvas/service.js";
+import {
+  getActiveCanvasDocumentsCount,
+  getCanvasDocumentsWithPendingUpdatesCount,
+  getRejectedReadOnlyUpdatesCount,
+} from "../modules/canvas/service.js";
 import { getActiveLessonTrafficSnapshot } from "../modules/rooms/service.js";
 import { getRecordingLoadSnapshot } from "../modules/recordings/service.js";
 
@@ -30,6 +34,25 @@ new client.Gauge({
   registers: [register],
   collect() {
     this.set(getActiveCanvasDocumentsCount());
+  },
+});
+
+new client.Counter({
+  name: "canvas_readonly_rejected_updates_total",
+  help: "Правки доски, отброшенные сервером из-за read-only подключения",
+  registers: [register],
+  collect() {
+    this.reset();
+    this.inc(getRejectedReadOnlyUpdatesCount());
+  },
+});
+
+new client.Gauge({
+  name: "canvas_docs_with_pending_updates",
+  help: "Y.Doc в памяти, где правки клиента застряли в pending и не видны другим участникам",
+  registers: [register],
+  collect() {
+    this.set(getCanvasDocumentsWithPendingUpdatesCount());
   },
 });
 

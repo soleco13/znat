@@ -1,5 +1,7 @@
 import {
   getActiveCanvasDocumentsCount,
+  getCanvasDocumentsWithPendingUpdatesCount,
+  getRejectedReadOnlyUpdatesCount,
   hocuspocus,
   postAnswerToBoard,
   setDrawPermission,
@@ -33,6 +35,8 @@ export function closeCanvasDocument(lessonId: string): void {
 
 export {
   getActiveCanvasDocumentsCount,
+  getCanvasDocumentsWithPendingUpdatesCount,
+  getRejectedReadOnlyUpdatesCount,
   postAnswerToBoard,
   setDrawPermission,
   startCanvasUnloadSweep,

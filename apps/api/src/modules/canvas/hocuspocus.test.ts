@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Doc, Map as YMap, Text as YText, applyUpdate, encodeStateAsUpdate } from "yjs";
+import {
+  Doc,
+  Map as YMap,
+  Text as YText,
+  applyUpdate,
+  encodeStateAsUpdate,
+  encodeStateVectorFromUpdate,
+} from "yjs";
 import type { Document as HocuspocusDocument } from "@hocuspocus/server";
 import type { AccessTokenPayload } from "@school/shared";
 // Э10.6: НЕ мокаем — чистый модуль без сторонних импортов (см. его докстринг),
@@ -47,6 +54,9 @@ const {
   clearDrawPermissionOverrides,
   postAnswerToBoard,
   hocuspocus,
+  trackReadOnlyRejection,
+  getRejectedReadOnlyUpdatesCount,
+  getCanvasDocumentsWithPendingUpdatesCount,
 } = await import("./hocuspocus.js");
 
 const SCHOOL_ID = "11111111-1111-1111-1111-111111111111";
@@ -568,5 +578,72 @@ describe("postAnswerToBoard (Э8.10, §7.3 ТЗ: «вынести чей-то о
     expect(yElements.length).toBe(2);
     const ids = yElements.toArray().map((m) => (m as InstanceType<typeof YMap>).get("el") as { id: string }).map((e) => e.id);
     expect(ids).toEqual(["existing", expect.any(String)]);
+  });
+});
+
+describe("видимость отброшенных и застрявших правок доски", () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+  afterEach(() => {
+    warn.mockClear();
+    clearDrawPermissionOverrides({ documentName: LESSON_ID });
+  });
+
+  function syncPayload(readOnly: boolean, type: number, userId = STUDENT_ID) {
+    return {
+      connection: fakeConnection(userId, readOnly),
+      type,
+      documentName: LESSON_ID,
+      context: { userId },
+    } as unknown as Parameters<typeof trackReadOnlyRejection>[0];
+  }
+
+  it("считает правку read-only подключения и пишет в лог", async () => {
+    const before = getRejectedReadOnlyUpdatesCount();
+
+    await trackReadOnlyRejection(syncPayload(true, 2));
+
+    expect(getRejectedReadOnlyUpdatesCount()).toBe(before + 1);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0]?.[0])).toContain(STUDENT_ID);
+  });
+
+  it("лог — не чаще раза в минуту на участника, счётчик — каждый отказ", async () => {
+    const before = getRejectedReadOnlyUpdatesCount();
+
+    await trackReadOnlyRejection(syncPayload(true, 2));
+    await trackReadOnlyRejection(syncPayload(true, 2));
+    await trackReadOnlyRejection(syncPayload(true, 2, OTHER_STUDENT_ID));
+
+    expect(getRejectedReadOnlyUpdatesCount()).toBe(before + 3);
+    expect(warn).toHaveBeenCalledTimes(2);
+  });
+
+  it("не считает правки подключения с правом рисовать и рукопожатие read-only клиента", async () => {
+    const before = getRejectedReadOnlyUpdatesCount();
+
+    await trackReadOnlyRejection(syncPayload(false, 2));
+    await trackReadOnlyRejection(syncPayload(true, 0));
+    await trackReadOnlyRejection(syncPayload(true, 1));
+
+    expect(getRejectedReadOnlyUpdatesCount()).toBe(before);
+  });
+
+  it("находит документ, где правки клиента застряли в pending из-за пропущенного начала", () => {
+    const author = new Doc();
+    const probe = new Doc();
+    author.getArray("elements").push(["first"]);
+    const first = encodeStateAsUpdate(author);
+    author.getArray("elements").push(["second"]);
+    const onlySecond = encodeStateAsUpdate(author, encodeStateVectorFromUpdate(first));
+    applyUpdate(probe, onlySecond);
+    const before = getCanvasDocumentsWithPendingUpdatesCount();
+
+    hocuspocus.documents.set("lesson-pending-probe", probe as unknown as HocuspocusDocument);
+    expect(getCanvasDocumentsWithPendingUpdatesCount()).toBe(before + 1);
+
+    applyUpdate(probe, first);
+    expect(getCanvasDocumentsWithPendingUpdatesCount()).toBe(before);
+    hocuspocus.documents.delete("lesson-pending-probe");
   });
 });

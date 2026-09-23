@@ -1,6 +1,7 @@
 import {
   Hocuspocus,
   type afterUnloadDocumentPayload,
+  type beforeSyncPayload,
   type beforeUnloadDocumentPayload,
   type connectedPayload,
   type onAuthenticatePayload,
@@ -78,6 +79,56 @@ export async function clearDrawPermissionOverrides(
   payload: Pick<afterUnloadDocumentPayload, "documentName">,
 ): Promise<void> {
   drawPermissionOverrides.delete(payload.documentName);
+  lastRejectionLogAt.delete(payload.documentName);
+}
+
+/** `messageYjsUpdate` из y-protocols/sync — обычная правка клиента после рукопожатия. */
+const YJS_UPDATE_MESSAGE = 2;
+const REJECTION_LOG_INTERVAL_MS = 60_000;
+let rejectedReadOnlyUpdates = 0;
+const lastRejectionLogAt = new Map<string, Map<string, number>>();
+
+/**
+ * Hocuspocus отбрасывает правки read-only подключения молча — ни лога, ни
+ * ошибки, клиент при этом видит свои штрихи. Считаем такие отказы (метрика)
+ * и пишем в лог не чаще раза в минуту на участника: рассинхрон права на
+ * клиенте и сервере теперь виден без раскопок в Postgres.
+ */
+export async function trackReadOnlyRejection(
+  payload: Pick<beforeSyncPayload, "connection" | "type" | "documentName" | "context">,
+): Promise<void> {
+  if (!payload.connection.readOnly || payload.type !== YJS_UPDATE_MESSAGE) return;
+  rejectedReadOnlyUpdates++;
+  const userId = (payload.context as { userId?: string } | undefined)?.userId ?? "unknown";
+  let byUser = lastRejectionLogAt.get(payload.documentName);
+  if (!byUser) {
+    byUser = new Map();
+    lastRejectionLogAt.set(payload.documentName, byUser);
+  }
+  const now = Date.now();
+  if (now - (byUser.get(userId) ?? 0) < REJECTION_LOG_INTERVAL_MS) return;
+  byUser.set(userId, now);
+  console.warn(
+    `canvas: отброшена правка read-only подключения lesson=${payload.documentName} participant=${userId}`,
+  );
+}
+
+export function getRejectedReadOnlyUpdatesCount(): number {
+  return rejectedReadOnlyUpdates;
+}
+
+/**
+ * Документы в памяти, где Yjs держит правки в pending: им не хватает более
+ * ранней правки того же клиента (обычно отброшенной сервером), поэтому они не
+ * видны никому, кроме автора. Ненулевое значение во время урока — прямой
+ * признак «рисую, а у других не появляется».
+ */
+export function getCanvasDocumentsWithPendingUpdatesCount(): number {
+  let count = 0;
+  for (const document of hocuspocus.documents.values()) {
+    if (document.store.pendingStructs || document.store.pendingDs) count++;
+  }
+  return count;
 }
 
 /**
@@ -386,6 +437,7 @@ export const hocuspocus = new Hocuspocus({
   connected: clearEmptySinceOnConnect,
   onDisconnect: trackEmptySinceOnDisconnect,
   beforeUnloadDocument: vetoUnloadDuringGracePeriod,
+  beforeSync: trackReadOnlyRejection,
   afterUnloadDocument: clearDrawPermissionOverrides,
 });
 
