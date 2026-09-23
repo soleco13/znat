@@ -16,6 +16,7 @@ import recorderAccessPlugin from "./plugins/recorder-access.js";
 import metricsPlugin from "./plugins/metrics.js";
 import { rateLimitKey, rateLimitMax } from "./plugins/rate-limit-key.js";
 import { serializeRequest } from "./plugins/log-redact.js";
+import { checkHealth } from "./plugins/health.js";
 import { initErrorReporting } from "./plugins/sentry.js";
 import authRoutes from "./modules/auth/routes.js";
 import usersRoutes from "./modules/users/routes.js";
@@ -73,7 +74,12 @@ export function buildServer() {
   app.register(recorderAccessPlugin);
   app.register(metricsPlugin);
 
-  app.get("/health", async () => ({ status: "ok" }));
+  app.get("/health", async (_request, reply) => {
+    const health = await checkHealth({ db: () => pool.query("select 1"), redis: () => redis.ping() });
+    return reply
+      .status(health.ok ? 200 : 503)
+      .send({ status: health.ok ? "ok" : "degraded", db: health.db, redis: health.redis });
+  });
 
   app.register(filesRoutes);
   app.register(roomsWsRoutes);

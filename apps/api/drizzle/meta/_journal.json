@@ -183,6 +183,13 @@
       "when": 1790147626332,
       "tag": "0025_refresh_tokens_hash_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1790147865961,
+      "tag": "0026_pg_stat_statements",
+      "breakpoints": true
     }
   ]
 }

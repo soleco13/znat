@@ -2,6 +2,20 @@ services:
   postgres:
     image: postgres:17
     restart: unless-stopped
+    # Наблюдаемость и память: без pg_stat_statements и лога медленных запросов
+    # проблему на реальном уроке не увидеть. shared_buffers — скромно: хост
+    # делит память с LiveKit, egress и приложением.
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=1GB
+      - -c
+      - log_min_duration_statement=500ms
+    shm_size: 256mb
     environment:
       POSTGRES_USER: school
       POSTGRES_PASSWORD: school
