@@ -67,10 +67,31 @@ export async function getLatestMaterial(schoolId: string, materialId: string): P
 }
 
 /** Конкретная закреплённая версия — то, что реально видел ученик (Э8.6/8.10). */
+const VERSION_CACHE_LIMIT = 200;
+/**
+ * Разобранные версии материала, LRU в памяти процесса. Задание на уроке
+ * перечитывало и заново валидировало Zod-ом одну и ту же версию на каждом
+ * тике опросов учителя (прогресс раз в 4 с, работа ученика раз в 5 с) и
+ * каждом автосохранении ученика. Версию меняет только автосохранение
+ * черновика в редакторе — оно и сбрасывает запись (`updateMaterialDraft`).
+ */
+const versionCache = new Map<string, LoadedMaterial>();
+
 export async function getMaterialVersion(versionId: string): Promise<LoadedMaterial> {
+  const cached = versionCache.get(versionId);
+  if (cached) {
+    versionCache.delete(versionId);
+    versionCache.set(versionId, cached);
+    return structuredClone(cached);
+  }
   const row = await repo.findMaterialVersionById(versionId);
   if (!row) throw new AppError(404, "material_not_found", "Версия материала не найдена");
-  return parseVersion(row);
+  const loaded = parseVersion(row);
+  versionCache.set(versionId, loaded);
+  if (versionCache.size > VERSION_CACHE_LIMIT) {
+    versionCache.delete(versionCache.keys().next().value!);
+  }
+  return structuredClone(loaded);
 }
 
 /** Полное содержимое версии + владение/статус — то, что грузит редактор (Э9.2). */
@@ -148,6 +169,7 @@ export async function updateMaterialDraft(
 
   if (row.status !== "published") {
     await repo.updateDraftVersionContent(row.materialId, row.versionId, content, true);
+    versionCache.delete(row.versionId);
     return;
   }
   if (row.versionId === row.currentVersionId) {
@@ -155,6 +177,7 @@ export async function updateMaterialDraft(
     return;
   }
   await repo.updateDraftVersionContent(row.materialId, row.versionId, content, false);
+  versionCache.delete(row.versionId);
 }
 
 /**

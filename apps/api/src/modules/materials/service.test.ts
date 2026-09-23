@@ -12,6 +12,7 @@ const { repoMock, validationMock } = vi.hoisted(() => ({
     publishVersion: vi.fn(),
     setMaterialStatus: vi.fn(),
     listMaterialVersions: vi.fn(),
+    findMaterialVersionById: vi.fn(),
   },
   validationMock: { validateMaterial: vi.fn() },
 }));
@@ -29,6 +30,7 @@ const {
   listMaterialVersions,
   validateMaterialForEdit,
   createMaterial,
+  getMaterialVersion,
 } = await import("./service.js");
 
 const SCHOOL = "11111111-1111-1111-1111-111111111111";
@@ -426,5 +428,45 @@ describe("validateMaterialForEdit (Э9.9, §7.2 ТЗ: экран «Валида�
     const result = await validateMaterialForEdit(ADMIN, "m1");
     expect(validationMock.validateMaterial).toHaveBeenCalledWith(SCHOOL, VALID_CONTENT);
     expect(result).toBe(issues);
+  });
+});
+
+describe("кеш версий материала на уроке", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("повторное чтение той же версии не ходит в БД", async () => {
+    repoMock.findMaterialVersionById.mockResolvedValue(materialRow({ versionId: "cache-v1" }));
+
+    await getMaterialVersion("cache-v1");
+    await getMaterialVersion("cache-v1");
+
+    expect(repoMock.findMaterialVersionById).toHaveBeenCalledTimes(1);
+  });
+
+  it("мутация полученного объекта не портит кеш", async () => {
+    repoMock.findMaterialVersionById.mockResolvedValue(materialRow({ versionId: "cache-v2" }));
+
+    const first = await getMaterialVersion("cache-v2");
+    first.material.title = "испорчено";
+
+    expect((await getMaterialVersion("cache-v2")).material.title).toBe("Материал");
+  });
+
+  it("автосохранение черновика сбрасывает запись — дальше читается новое содержимое", async () => {
+    repoMock.findMaterialVersionById.mockResolvedValueOnce(
+      materialRow({ versionId: "cache-v3", status: "draft", createdBy: ADMIN.sub }),
+    );
+    await getMaterialVersion("cache-v3");
+    const edited = { ...VALID_CONTENT, title: "Новый заголовок" };
+    repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(
+      materialRow({ versionId: "cache-v3", status: "draft", createdBy: ADMIN.sub }),
+    );
+    await updateMaterialDraft(ADMIN, "m1", edited);
+    repoMock.findMaterialVersionById.mockResolvedValueOnce({
+      ...materialRow({ versionId: "cache-v3", status: "draft", createdBy: ADMIN.sub }),
+      content: edited,
+    });
+
+    expect((await getMaterialVersion("cache-v3")).material.title).toBe("Новый заголовок");
   });
 });
