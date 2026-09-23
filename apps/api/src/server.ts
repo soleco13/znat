@@ -14,6 +14,7 @@ import rbacPlugin from "./plugins/rbac.js";
 import lessonAccessPlugin from "./plugins/lesson-access.js";
 import recorderAccessPlugin from "./plugins/recorder-access.js";
 import metricsPlugin from "./plugins/metrics.js";
+import { rateLimitKey, rateLimitMax } from "./plugins/rate-limit-key.js";
 import { initErrorReporting } from "./plugins/sentry.js";
 import authRoutes from "./modules/auth/routes.js";
 import usersRoutes from "./modules/users/routes.js";
@@ -59,7 +60,7 @@ export function buildServer() {
 
   app.register(cookie, { secret: env.COOKIE_SECRET });
   app.register(multipart, { limits: { fileSize: 200 * 1024 * 1024 } });
-  app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
+  app.register(rateLimit, { max: rateLimitMax, keyGenerator: rateLimitKey, timeWindow: "1 minute" });
   app.register(websocket);
 
   app.register(errorsPlugin);

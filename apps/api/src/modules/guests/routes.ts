@@ -6,13 +6,17 @@ import * as guestsService from "./service.js";
 
 /**
  * Э12.4 — гостевой вход ученика (§1.4/§1.6 план-ТЗ). Публичные, без
- * `app.authenticate`: у ученика аккаунта нет. Rate limit 20/мин на IP
- * (`GET /j/:token` перебором токена + `POST .../enter` спамом сессий).
- * Регистрируется под префиксом `/api/v1` рядом с остальными модулями.
+ * `app.authenticate`: у ученика аккаунта нет. Регистрируется под префиксом
+ * `/api/v1` рядом с остальными модулями.
+ *
+ * Вход по ссылке считается по IP, и лимит рассчитан на класс за одним
+ * роутером: 30 учеников × (превью + вход + сессия) ≈ 90 запросов в минуту
+ * (было 20 — выбивало 429 с 7-го ученика). Перебор ссылки лимит не
+ * сдерживает и не должен: токен — 32 случайных байта.
  */
 export default async function guestsRoutes(app: FastifyInstance) {
   const rateLimited = {
-    config: { rateLimit: { max: 20, timeWindow: "1 minute" } },
+    config: { rateLimit: { max: 300, timeWindow: "1 minute" } },
   };
 
   app.get<{ Params: { token: string } }>("/j/:token", rateLimited, async (request, reply) => {
