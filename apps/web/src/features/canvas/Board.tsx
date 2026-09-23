@@ -77,6 +77,8 @@ const PAGE_ELEMENT_WARN_AT = 450;
 const FIRST_PAGE_ID = "board-page-1";
 /** §6.5: не больше 3 листов доски (слайды презентации — отдельно, не в счёт). */
 const MAX_BOARD_PAGES = 3;
+/** Сколько правки могут ждать подтверждения сервера без единого ack, прежде чем считаем синхронизацию сломанной. */
+const SYNC_STALL_MS = 5000;
 
 /** Стабильный цвет курсора участника — из userId, без похода на сервер (Э3.9). */
 function cursorColorFor(userId: string): string {
@@ -300,6 +302,45 @@ export function Board({
   useEffect(() => {
     if (canDraw && provider?.isSynced) provider.forceSync();
   }, [provider, canDraw]);
+
+  // Сторож синхронизации: правки ждут подтверждения, а подтверждений нет
+  // `SYNC_STALL_MS` подряд (сервер отбрасывает их или сокет умер без close,
+  // как бывает на мобильной сети) — показываем это рисующему и сами
+  // повторяем SyncStep1, пока не пройдёт. Раньше такой сбой был полностью
+  // невидимым: у себя штрихи есть, у остальных нет.
+  const [syncStalled, setSyncStalled] = useState(false);
+  useEffect(() => {
+    if (!provider) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let last = provider.unsyncedChanges;
+    const stop = () => {
+      if (timer) clearTimeout(timer);
+      timer = null;
+    };
+    const arm = () => {
+      stop();
+      timer = setTimeout(() => {
+        timer = null;
+        setSyncStalled(true);
+        provider.forceSync();
+      }, SYNC_STALL_MS);
+    };
+    const onUnsyncedChanges = ({ number }: { number: number }) => {
+      if (number === 0) {
+        stop();
+        setSyncStalled(false);
+      } else if (number < last || !timer) {
+        arm();
+      }
+      last = number;
+    };
+    provider.on("unsyncedChanges", onUnsyncedChanges);
+    return () => {
+      stop();
+      provider.off("unsyncedChanges", onUnsyncedChanges);
+      setSyncStalled(false);
+    };
+  }, [provider]);
 
   useEffect(() => {
     if (!ydoc || !provider) return;
@@ -1173,8 +1214,13 @@ export function Board({
           slide={activeMeta?.slide ?? null}
         />
         {!readOnlyChrome && boardChrome}
-        {(importNote || uploadError || pageElementCount >= PAGE_ELEMENT_WARN_AT) && (
+        {(syncStalled || importNote || uploadError || pageElementCount >= PAGE_ELEMENT_WARN_AT) && (
           <div className="pointer-events-none absolute inset-x-3 top-16 z-10 flex flex-col items-center gap-1 text-center">
+            {syncStalled && (
+              <span className="rounded-md bg-card/95 px-2 py-1 text-xs font-medium text-destructive shadow-sm backdrop-blur">
+                Доска не синхронизирована — восстанавливаем связь…
+              </span>
+            )}
             {importNote && (
               <span className="rounded-md bg-card/95 px-2 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur">
                 {importNote}
