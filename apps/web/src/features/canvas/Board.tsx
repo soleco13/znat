@@ -291,6 +291,16 @@ export function Board({
     };
   }, [lessonId, accessToken, isGuest, connectionToken]);
 
+  // Пока клиент read-only, y-excalidraw всё равно пишет в Y.Doc (например,
+  // зеркалит загруженные картинки в `assets`), и сервер эти правки отбрасывает.
+  // После выдачи права Yjs держит все следующие правки клиента в pending — им
+  // не хватает отброшенного начала, — и до учителя ничего не доходит. Повторный
+  // SyncStep1 заставляет сервер запросить у клиента всё недостающее, дыра
+  // закрывается (проверено на живом Hocuspocus 4.6).
+  useEffect(() => {
+    if (canDraw && provider?.isSynced) provider.forceSync();
+  }, [provider, canDraw]);
+
   useEffect(() => {
     if (!ydoc || !provider) return;
     const pagesMap = ydoc.getMap<PageMeta>("pages");
