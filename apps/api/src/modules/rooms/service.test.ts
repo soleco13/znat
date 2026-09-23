@@ -92,6 +92,7 @@ vi.mock("./presence.js", async () => {
       roomMap(lessonId).delete(userId);
     }),
     listParticipants: vi.fn(async (lessonId: string) => new Map(roomMap(lessonId))),
+    listRoomIds: vi.fn(async () => [...rooms.entries()].filter(([, m]) => m.size > 0).map(([id]) => id)),
     getGrantedPermissions: vi.fn(async (lessonId: string, userId: string) => grants.get(`${lessonId}:${userId}`) ?? null),
     setGrantedPermissions: vi.fn(async (lessonId: string, userId: string, permissions: unknown) => {
       grants.set(`${lessonId}:${userId}`, permissions);
@@ -940,5 +941,48 @@ describe("живучесть presence на уроке", () => {
 
   it("pong участника, удалённого из комнаты, сообщает, что сокет надо закрыть", async () => {
     await expect(roomsService.touchHeartbeat(LESSON_ID, STUDENT_ID)).resolves.toBe(false);
+  });
+});
+
+describe("зачистка presence после перезапуска сервера", () => {
+  function ghost(connected: boolean, ageMs: number) {
+    return {
+      fullName: "Ушедший",
+      kind: "guest" as const,
+      role: null,
+      connected,
+      handRaised: false,
+      pinned: false,
+      permissions: presenceModule.defaultPermissions("guest"),
+      joinedAt: new Date().toISOString(),
+      lastSeenAt: Date.now() - ageMs,
+    };
+  }
+
+  it("находит комнату без единого join в этом процессе и удаляет давно отключившегося", async () => {
+    await presenceModule.setParticipant(SECOND_LESSON_ID, STUDENT_ID, ghost(false, 17 * 60 * 60 * 1000));
+    const received: unknown[] = [];
+    roomEvents.once(SECOND_LESSON_ID, (msg) => received.push(msg));
+
+    await roomsService.runPresenceSweepOnce();
+
+    expect(await presenceModule.getParticipant(SECOND_LESSON_ID, STUDENT_ID)).toBeNull();
+    expect(received).toEqual([{ type: "participant_left", userId: STUDENT_ID }]);
+  });
+
+  it("снимает connected у «на связи», который молчит дольше таймаута heartbeat", async () => {
+    await presenceModule.setParticipant(SECOND_LESSON_ID, STUDENT_ID, ghost(true, 5 * 60 * 1000));
+
+    await roomsService.runPresenceSweepOnce();
+
+    expect((await presenceModule.getParticipant(SECOND_LESSON_ID, STUDENT_ID))?.connected).toBe(false);
+  });
+
+  it("живого участника не трогает", async () => {
+    await presenceModule.setParticipant(SECOND_LESSON_ID, STUDENT_ID, ghost(true, 1000));
+
+    await roomsService.runPresenceSweepOnce();
+
+    expect((await presenceModule.getParticipant(SECOND_LESSON_ID, STUDENT_ID))?.connected).toBe(true);
   });
 });

@@ -33,8 +33,12 @@ const MAX_SIMULTANEOUS_STUDENT_MICS = 4;
 /** §10.8 ТЗ: тот же порог, что Grafana-алерт Э6.6 (80% медиа-бюджета ~750 Мбит/с) — одно число на автоматическую деградацию (Э6.5) и уведомление человека (Э6.6). */
 const PLATFORM_TRAFFIC_LIMIT_MBPS = 600;
 
-/** lessonId -> schoolId, для фоновой зачистки и авто-завершения пустых комнат. */
-const activeLessons = new Map<string, string>();
+/**
+ * Уроки с живой комнатой — для фоновой зачистки и оценки трафика. Кеш в
+ * памяти процесса: после перезапуска его восстанавливает сам sweep по
+ * ключам presence в Redis (см. `runPresenceSweepOnce`).
+ */
+const activeLessons = new Set<string>();
 const emptyRoomTimers = new Map<string, NodeJS.Timeout>();
 let sweepInterval: NodeJS.Timeout | null = null;
 
@@ -153,7 +157,7 @@ function clearEmptyRoomTimer(lessonId: string): void {
  * Освобождаем только эфемерные ресурсы: выгружаем Y.Doc холста и снимаем
  * урок с учёта активного трафика. Название функции историческое.
  */
-async function scheduleAutoEndIfEmpty(_schoolId: string, lessonId: string): Promise<void> {
+async function scheduleAutoEndIfEmpty(lessonId: string): Promise<void> {
   const participants = await presence.listParticipants(lessonId);
   if (participants.size > 0) {
     clearEmptyRoomTimer(lessonId);
@@ -319,7 +323,7 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
   const participantId = actor.participantId;
   const isStaff = actor.kind === "staff";
 
-  activeLessons.set(lessonId, schoolId);
+  activeLessons.add(lessonId);
   clearEmptyRoomTimer(lessonId);
 
   // Э12.9: раньше «новую» комнату распознавали по переходу урока
@@ -419,7 +423,7 @@ export async function leave(actor: LessonActor, lessonId: string): Promise<void>
   await repo.closeOpenSession(lessonId, actor.participantId);
   await presence.releaseScreenShare(lessonId, actor.participantId);
   emitRoomEvent(lessonId, { type: "participant_left", userId: actor.participantId });
-  await scheduleAutoEndIfEmpty(actor.schoolId, lessonId);
+  await scheduleAutoEndIfEmpty(lessonId);
 }
 
 /**
@@ -926,7 +930,7 @@ export function isStaleEntry(entry: PresenceEntry, now: number): boolean {
   return presence.isStaleEntry(entry, now, RECONNECT_GRACE_MS, HEARTBEAT_TIMEOUT_MS);
 }
 
-async function sweepRoom(schoolId: string, lessonId: string): Promise<void> {
+async function sweepRoom(lessonId: string): Promise<void> {
   const now = Date.now();
   const participants = await presence.listParticipants(lessonId);
   let changed = false;
@@ -943,16 +947,30 @@ async function sweepRoom(schoolId: string, lessonId: string): Promise<void> {
     changed = true;
   }
   if (changed) {
-    await scheduleAutoEndIfEmpty(schoolId, lessonId);
+    await scheduleAutoEndIfEmpty(lessonId);
   }
+}
+
+/**
+ * Один проход зачистки. Комнаты берём не только из `activeLessons`: тот
+ * пополняется лишь через POST /join, а после перезапуска сервера участники
+ * возвращаются переподключением сокета, без join — зачистка для их урока
+ * не работала вовсе, и ушедшие навсегда оставались «на связи» пустыми
+ * плитками (на стенде нашлась запись 17-часовой давности).
+ */
+export async function runPresenceSweepOnce(): Promise<void> {
+  for (const lessonId of await presence.listRoomIds()) activeLessons.add(lessonId);
+  await Promise.all(
+    [...activeLessons].map((lessonId) =>
+      sweepRoom(lessonId).catch((err) => console.error("rooms: sweep failed", lessonId, err)),
+    ),
+  );
 }
 
 export function startPresenceSweep(): void {
   if (sweepInterval) return;
   sweepInterval = setInterval(() => {
-    for (const [lessonId, schoolId] of activeLessons) {
-      sweepRoom(schoolId, lessonId).catch((err) => console.error("rooms: sweep failed", lessonId, err));
-    }
+    runPresenceSweepOnce().catch((err) => console.error("rooms: sweep failed", err));
   }, SWEEP_INTERVAL_MS);
   sweepInterval.unref?.();
 }

@@ -54,6 +54,18 @@ export async function listParticipants(lessonId: string): Promise<Map<string, Pr
   return result;
 }
 
+/** Уроки, у которых в Redis есть presence-записи. SCAN, а не KEYS — не блокирует Redis. */
+export async function listRoomIds(): Promise<string[]> {
+  const ids: string[] = [];
+  let cursor = "0";
+  do {
+    const [next, keys] = await redis.scan(cursor, "MATCH", "room:*:participants", "COUNT", 200);
+    cursor = next;
+    for (const k of keys) ids.push(k.slice("room:".length, -":participants".length));
+  } while (cursor !== "0");
+  return ids;
+}
+
 export async function countConnected(lessonId: string): Promise<number> {
   const all = await listParticipants(lessonId);
   let n = 0;
