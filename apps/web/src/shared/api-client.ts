@@ -52,6 +52,30 @@ export async function refreshAccessToken(): Promise<boolean> {
   return refreshInFlight;
 }
 
+/** Запас до истечения, при котором токен уже считаем протухшим — переподключение не должно улететь с токеном, истекающим в пути. */
+const TOKEN_EXPIRY_MARGIN_MS = 30_000;
+
+function isExpiring(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]!.replace(/-/g, "+").replace(/_/g, "/"))) as { exp?: number };
+    return !payload.exp || payload.exp * 1000 - Date.now() < TOKEN_EXPIRY_MARGIN_MS;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Access-токен для долгоживущих WS (комната, доска): живёт ~15 минут, и
+ * переподключение после обрыва или перезапуска сервера с токеном из памяти
+ * отвергалось — учитель не мог вернуться в урок без перезагрузки страницы.
+ */
+export async function getFreshAccessToken(): Promise<string | null> {
+  const token = useAuthStore.getState().accessToken;
+  if (token && !isExpiring(token)) return token;
+  await refreshAccessToken();
+  return useAuthStore.getState().accessToken;
+}
+
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},

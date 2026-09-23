@@ -23,7 +23,7 @@ import type { CanvasImageUploadResponse, Deck } from "@school/shared";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/shared/auth-store";
 import { useGuestSessionStore } from "@/features/guest/guest-session-store";
-import { apiFetch } from "@/shared/api-client";
+import { apiFetch, getFreshAccessToken } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
 import {
   DropdownMenu,
@@ -173,7 +173,7 @@ function sortedPageEntries(pagesMap: Y.Map<PageMeta>): Array<[string, PageMeta]>
  * CLAUDE.md, ошибка здесь означает утечку сети/памяти на каждом
  * переключении страницы или перерендере):
  * 1. Подключение (`Y.Doc` + `HocuspocusProvider`) — зависит только от
- *    `lessonId`/`accessToken`, не пересоздаётся при листании страниц.
+ *    `lessonId` и наличия токена, не пересоздаётся при листании страниц.
  * 2. Синхронизация списка страниц и `activePageId` из `Y.Map`ов
  *    `"pages"`/`"meta"` — зависит от `ydoc` (готовности подключения №1).
  * 3. `ExcalidrawBinding` — привязывается к `Y.Array` ИМЕННО активной
@@ -234,7 +234,7 @@ export function Board({
   followUserId?: string;
 }) {
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null);
-  const accessToken = useAuthStore((s) => s.accessToken);
+  const hasAccessToken = useAuthStore((s) => !!s.accessToken);
   const me = useAuthStore((s) => s.user);
   const guestSession = useGuestSessionStore((s) => s.session);
   const isGuest = !me && !!guestSession;
@@ -271,7 +271,17 @@ export function Board({
     // литералом-маркером (`HocuspocusProvider` не шлёт auth-сообщение при
     // пустом токене), доступ проверяется по httpOnly-куке `guest_session`
     // в `canvas/hocuspocus.ts#resolveCanvasConnectionActor`.
-    const token = connectionToken ?? accessToken ?? (isGuest ? GUEST_CANVAS_TOKEN_MARKER : null);
+    // Персонал — функцией: провайдер зовёт её на каждом (пере)подключении, и
+    // после обрыва или перезапуска сервера уходит свежий токен, а не истёкший
+    // из памяти. Поэтому и зависимость эффекта — наличие токена, а не его
+    // значение: плановое обновление токена больше не пересоздаёт Y.Doc посреди урока.
+    const token =
+      connectionToken ??
+      (hasAccessToken
+        ? async () => (await getFreshAccessToken()) ?? ""
+        : isGuest
+          ? GUEST_CANVAS_TOKEN_MARKER
+          : null);
     if (!token) return;
 
     const doc = new Y.Doc();
@@ -291,7 +301,7 @@ export function Board({
       nextProvider.destroy();
       doc.destroy();
     };
-  }, [lessonId, accessToken, isGuest, connectionToken]);
+  }, [lessonId, hasAccessToken, isGuest, connectionToken]);
 
   // Пока клиент read-only, y-excalidraw всё равно пишет в Y.Doc (например,
   // зеркалит загруженные картинки в `assets`), и сервер эти правки отбрасывает.

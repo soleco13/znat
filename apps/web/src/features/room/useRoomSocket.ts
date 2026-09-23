@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ServerRoomMessage } from "@school/shared";
-import { useAuthStore } from "../../shared/auth-store.js";
+import { getFreshAccessToken } from "../../shared/api-client.js";
 
 export type SocketStatus = "connecting" | "connected" | "reconnecting" | "closed";
 
@@ -43,10 +43,11 @@ export function useRoomSocket(
     let attempt = 0;
     let stopped = false;
 
-    const connect = () => {
+    const connect = async () => {
       let tokenParam = "";
       if (mode === "staff") {
-        const token = useAuthStore.getState().accessToken;
+        const token = await getFreshAccessToken().catch(() => null);
+        if (stopped) return;
         if (!token) {
           setStatus("reconnecting");
           reconnectTimer = setTimeout(connect, 1000);
@@ -95,7 +96,7 @@ export function useRoomSocket(
       };
     };
 
-    connect();
+    void connect();
 
     return () => {
       stopped = true;
