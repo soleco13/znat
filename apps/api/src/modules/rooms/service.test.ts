@@ -73,6 +73,7 @@ vi.mock("./presence.js", async () => {
   const modesBeforeShare = new Map<string, string>();
   const stages = new Map<string, string>();
   const screenShareLocks = new Map<string, string>();
+  const grants = new Map<string, unknown>();
   const roomMap = (lessonId: string) => {
     let m = rooms.get(lessonId);
     if (!m) {
@@ -91,6 +92,10 @@ vi.mock("./presence.js", async () => {
       roomMap(lessonId).delete(userId);
     }),
     listParticipants: vi.fn(async (lessonId: string) => new Map(roomMap(lessonId))),
+    getGrantedPermissions: vi.fn(async (lessonId: string, userId: string) => grants.get(`${lessonId}:${userId}`) ?? null),
+    setGrantedPermissions: vi.fn(async (lessonId: string, userId: string, permissions: unknown) => {
+      grants.set(`${lessonId}:${userId}`, permissions);
+    }),
     countConnected: vi.fn(
       async (lessonId: string) =>
         [...roomMap(lessonId).values()].filter((e) => (e as { connected: boolean }).connected).length,
@@ -130,6 +135,7 @@ vi.mock("./presence.js", async () => {
       modesBeforeShare.clear();
       stages.clear();
       screenShareLocks.clear();
+      grants.clear();
     },
   };
 });
@@ -899,6 +905,37 @@ describe("живучесть presence на уроке", () => {
 
     roomEvents.off(LESSON_ID, listener);
     expect(received).toEqual([]);
+  });
+
+  it("ученик, удалённый sweep-ом (телефон заснул), при перезаходе сохраняет выданное учителем право", async () => {
+    await roomsService.join(guestActor(), LESSON_ID);
+    await roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, { canDraw: true });
+    await presenceModule.removeParticipant(LESSON_ID, STUDENT_ID);
+    canvasServiceMock.setDrawPermission.mockClear();
+
+    const result = await roomsService.join(guestActor(), LESSON_ID);
+
+    expect(result.self.permissions.canDraw).toBe(true);
+    expect(canvasServiceMock.setDrawPermission).toHaveBeenCalledWith(LESSON_ID, STUDENT_ID, true);
+  });
+
+  it("право, выданное всем разом, тоже переживает перезаход", async () => {
+    await roomsService.join(guestActor(), LESSON_ID);
+    await roomsService.setDrawForAllStudents(SCHOOL_ID, LESSON_ID, teacherToken(), true);
+    await presenceModule.removeParticipant(LESSON_ID, STUDENT_ID);
+
+    const result = await roomsService.join(guestActor(), LESSON_ID);
+
+    expect(result.self.permissions.canDraw).toBe(true);
+  });
+
+  it("без грантов учителя перезашедший ученик получает права по настройкам урока", async () => {
+    await roomsService.join(guestActor(), LESSON_ID);
+    await presenceModule.removeParticipant(LESSON_ID, STUDENT_ID);
+
+    const result = await roomsService.join(guestActor(), LESSON_ID);
+
+    expect(result.self.permissions.canDraw).toBe(false);
   });
 
   it("pong участника, удалённого из комнаты, сообщает, что сокет надо закрыть", async () => {

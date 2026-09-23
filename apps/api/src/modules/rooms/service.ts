@@ -328,6 +328,7 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
   const roomWasEmpty = (await presence.countConnected(lessonId)) === 0;
 
   const existing = await presence.getParticipant(lessonId, participantId);
+  const granted = existing || isStaff ? null : await presence.getGrantedPermissions(lessonId, participantId);
   const entry: PresenceEntry = existing
     ? { ...existing, connected: true, lastSeenAt: Date.now() }
     : {
@@ -347,7 +348,7 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
         permissions:
           actor.kind === "staff"
             ? presence.defaultPermissions("staff")
-            : guestPermissionsFromSettings(lesson.settings),
+            : (granted ?? guestPermissionsFromSettings(lesson.settings)),
         joinedAt: new Date().toISOString(),
         lastSeenAt: Date.now(),
       };
@@ -662,6 +663,7 @@ export async function updatePermissions(
 
   entry.permissions = permissions;
   await presence.setParticipant(lessonId, targetUserId, entry);
+  if (entry.kind === "guest") await presence.setGrantedPermissions(lessonId, targetUserId, permissions);
   // Э3.8: живой пуш canDraw в canvas — тем же способом (rooms → canvas,
   // не наоборот, см. заметки Э3.2), что closeCanvasDocument. Только когда
   // patch реально трогает canDraw — иначе бессмысленный вызов на каждое
@@ -695,6 +697,7 @@ export async function setDrawForAllStudents(
     if (entry.kind !== "guest") continue;
     entry.permissions = { ...entry.permissions, canDraw };
     await presence.setParticipant(lessonId, userId, entry);
+    await presence.setGrantedPermissions(lessonId, userId, entry.permissions);
     canvasService.setDrawPermission(lessonId, userId, canDraw);
   }
   emitRoomEvent(lessonId, { type: "presence", participants: await listParticipantsSnapshot(lessonId) });

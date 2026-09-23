@@ -61,6 +61,36 @@ export async function countConnected(lessonId: string): Promise<number> {
   return n;
 }
 
+function grantsKey(lessonId: string): string {
+  return `room:${lessonId}:grants`;
+}
+
+/** Гранты учителя переживают перезаход ученика в пределах дня занятий, но не копятся вечно. */
+const GRANTS_TTL_SECONDS = 12 * 60 * 60;
+
+/**
+ * Права, выданные учителем вручную, — отдельно от presence-записи: sweep
+ * удаляет запись заснувшего телефона, и при перезаходе ученик получал права
+ * по настройкам урока, теряя выданное (рисовал «в пустоту» после
+ * пробуждения).
+ */
+export async function getGrantedPermissions(
+  lessonId: string,
+  userId: string,
+): Promise<ParticipantPermissions | null> {
+  const raw = await redis.hget(grantsKey(lessonId), userId);
+  return raw ? (JSON.parse(raw) as ParticipantPermissions) : null;
+}
+
+export async function setGrantedPermissions(
+  lessonId: string,
+  userId: string,
+  permissions: ParticipantPermissions,
+): Promise<void> {
+  await redis.hset(grantsKey(lessonId), userId, JSON.stringify(permissions));
+  await redis.expire(grantsKey(lessonId), GRANTS_TTL_SECONDS);
+}
+
 function modeKey(lessonId: string): string {
   return `room:${lessonId}:mode`;
 }
