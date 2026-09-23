@@ -127,7 +127,19 @@
   pointer-events: none;
 }
 
-/* Инструменты — колонка слева по центру */
+/* Инструменты — колонка слева по центру (стиль КонтурТолк, §6.5). Только
+   пока сам Excalidraw считает раскладку «десктопной» (мышь, широкий
+   контейнер холста) — `.shapes-section` в его DOM вообще существует
+   ТОЛЬКО тогда; на телефоне/планшете структура другая (`.App-toolbar--mobile`,
+   см. ниже — MobileToolRail.tsx заменяет её собой целиком), так что
+   отдельное media-условие здесь не нужно: раз `.shapes-section` есть,
+   значит нужен именно этот вид.
+   `:not(.App-bottom-bar *)` — доп. страховка: у Excalidraw в мобильном DOM
+   есть ВТОРОЙ, отдельный `<footer class="App-toolbar">` (без модификатора
+   `--mobile`!) внутри `.App-bottom-bar` — контекстные Правка/Дублировать/
+   Удалить + штатные Undo/Redo под выбранной фигурой. Без этого исключения
+   правило ниже ловило и его тоже классом `.App-toolbar` — раздувало в
+   пустую колонку на 400px высотой (жалоба пользователя, 2026-09-24). */
 .canvas-board .excalidraw .shapes-section {
   position: absolute !important;
   left: 0 !important;
@@ -135,18 +147,57 @@
   transform: translateY(-50%) !important;
   pointer-events: auto;
 }
-.canvas-board .excalidraw .App-toolbar,
-.canvas-board .excalidraw .App-toolbar-container {
+.canvas-board .excalidraw .App-toolbar:not(.App-toolbar--mobile):not(.App-bottom-bar *),
+.canvas-board .excalidraw .App-toolbar-container:not(.App-toolbar--mobile):not(.App-bottom-bar *) {
   display: flex !important;
   flex-direction: column !important;
   width: auto !important;
   border-radius: var(--radius-xl) !important;
 }
-.canvas-board .excalidraw .App-toolbar .Stack_horizontal {
+.canvas-board .excalidraw .App-toolbar:not(.App-toolbar--mobile):not(.App-bottom-bar *) .Stack_horizontal {
   grid-auto-flow: row !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 2px;
+}
+
+/* Телефон/планшет — свой компактный вертикальный тулбар (MobileToolRail.tsx,
+   слева, только выделение/карандаш/ластик + рука/замочек + выпадающий
+   список фигур) вместо нативного. Жалобы пользователя, 2026-09-24: (1)
+   нативный тулбар показывал все 9+ инструментов сразу без группировки,
+   (2) «замочек»/«рука» (`.mobile-misc-tools-container`) висели отдельным
+   блоком без всякой связи с остальными инструментами — теперь то и другое
+   в одном месте. Прячем нативные элементы ПОЛНОСТЬЮ (не просто
+   перестилизовываем) — они существуют в DOM Excalidraw, только когда сам
+   пакет решил, что раскладка мобильная, так что доп. media-условие тут не
+   нужно: сама раскладка уже посчитана правильно под контейнер холста
+   (шире, чем у окна браузера в среднем, см. историю правок этого файла). */
+.canvas-board .excalidraw .App-toolbar--mobile,
+.canvas-board .excalidraw .mobile-misc-tools-container {
+  display: none !important;
+}
+/* Наша замена — по умолчанию скрыта (десктоп, `.shapes-section` уже
+   справляется), показываем ровно когда Excalidraw переключился в мобильный
+   DOM (`:has()` — живой селектор, пересчитывается сам при ресайзе/повороте
+   экрана, без обращения к JS). */
+.mobile-tool-rail {
+  display: none;
+}
+.canvas-board:has(.excalidraw .App-toolbar--mobile) .mobile-tool-rail {
+  display: block;
+}
+
+/* Шапка доски (`board-chrome` в Board.tsx — страницы/undo/фото/⋯) на
+   телефоне/планшете компактнее: добавление/удаление листа и «Скрыть
+   доску» (`board-chrome-page-admin`/`board-chrome-close`) спрятаны отсюда,
+   те же действия продублированы пунктами меню «Ещё» — на маленьком экране
+   каждый лишний значок в шапке заметен. Возвращать её пониже ленте
+   инструментов больше не нужно: та теперь слева и вертикальная
+   (MobileToolRail), а не сверху горизонтальной лентой — верхняя строка
+   свободна для шапки в любом случае. */
+.canvas-board:has(.excalidraw .App-toolbar--mobile) .board-chrome-page-admin,
+.canvas-board:has(.excalidraw .App-toolbar--mobile) .board-chrome-close {
+  display: none !important;
 }
 
 /* Свойства фигуры — горизонтальной лентой внизу по центру. Excalidraw
@@ -273,9 +324,55 @@
 }
 
 /* Штатные Undo/Redo Excalidraw скрыты — заменены своими в тулбаре Board.tsx
-   (y-excalidraw перехватывает клик, но не управляет их disabled). */
-.canvas-board .undo-redo-buttons {
+   (y-excalidraw перехватывает клик, но не управляет их disabled). Десктоп —
+   класс `.undo-redo-buttons`; мобильный контекстный `.App-bottom-bar`
+   (Правка/Дублировать/Удалить + Undo/Redo под выбранной фигурой) метит их
+   иначе, `data-testid` без завязки на русскую локаль (жалоба пользователя,
+   2026-09-24 — тот же дубль, что «занимает всю строку»: два набора
+   undo/redo на одной доске, наш и нативный, путают). Остальные кнопки бара
+   (Правка/Дублировать/Удалить) не трогаем — реально полезны на тач-экране. */
+.canvas-board .undo-redo-buttons,
+.canvas-board .excalidraw .App-bottom-bar [data-testid="button-undo"],
+.canvas-board .excalidraw .App-bottom-bar [data-testid="button-redo"] {
   display: none !important;
+}
+/* `.App-bottom-bar` — нативный контейнер Excalidraw для Правка/Дублировать/
+   Удалить под выбранной фигурой на тач-экране (после того, как выше скрыли
+   его же Undo/Redo). Свою видимую «таблетку» (`.Island`) Excalidraw по
+   умолчанию растягивает на всю ширину контейнера холста, даже когда внутри
+   1-3 маленькие кнопки — ровно это и есть «нижняя панель занимает всю
+   строку» из жалобы пользователя (2026-09-24), никак не наш код, штатное
+   поведение библиотеки в этом конкретном месте (верхний тулбар так себя не
+   ведёт). `width: max-content` — по размеру реального содержимого. */
+.canvas-board .excalidraw .App-bottom-bar .Island,
+.canvas-board .excalidraw .App-bottom-bar footer.App-toolbar,
+.canvas-board .excalidraw .App-bottom-bar .App-toolbar-content {
+  width: max-content !important;
+  /* `.Island` несёт свой `min-width: 100%` (без `!important`, но `width:
+     max-content` его не перебивает — по CSS `min-width` зажимает `width`
+     снизу вне зависимости от того, что в нём явно указано) — обнаружено
+     живой проверкой computed style, не по документации пакета. */
+  min-width: 0 !important;
+}
+/* `.App-bottom-bar` (flex, `align-items: flex-end`, `justify-content: normal`
+   — эффективно «влево») по умолчанию прижимает свою «таблетку» к НИЖНЕМУ
+   ЛЕВОМУ углу холста. При выбранной фигуре она разворачивается в высокую
+   панель (Обводка/Заливка/Толщина/Непрозрачность/Слои) — и та же левая
+   сторона, что и у MobileToolRail (тоже слева, по вертикали через центр) —
+   прямое наложение (жалоба пользователя со скриншотом, 2026-09-24).
+   `justify-content: flex-end` — к правому краю: там же только компактная
+   `board-chrome` в верхнем правом углу, конфликта нет. */
+.canvas-board .excalidraw .App-bottom-bar {
+  justify-content: flex-end !important;
+}
+/* Развёрнутая панель (Обводка/Заливка/…) всё ещё растёт вверх от нижнего
+   края и на невысоком экране дотягивается до шапки доски (`board-chrome`,
+   верхний правый угол — тот же угол, раз панель теперь тоже справа).
+   Ограничиваем высоту с запасом под шапку и даём свою прокрутку вместо
+   выталкивания вверх. */
+.canvas-board .excalidraw .App-bottom-bar .Island {
+  max-height: calc(100% - 76px) !important;
+  overflow-y: auto !important;
 }
 
 /* Гамбургер-меню целиком (Открыть / Экспорт / Найти / Справка / Сбросить

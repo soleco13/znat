@@ -43,6 +43,7 @@ import {
   type SlidePageRef,
 } from "./PageBackground.js";
 import { getPdfPageSizes } from "./pdf.js";
+import { MobileToolRail, type RailTool } from "./MobileToolRail.js";
 import { SlideSearch } from "./SlideSearch.js";
 import "@excalidraw/excalidraw/index.css";
 import "./Board.css";
@@ -234,6 +235,12 @@ export function Board({
   followUserId?: string;
 }) {
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null);
+  // Для MobileToolRail (телефон/планшет, §см. Board.css `.App-toolbar--mobile`) —
+  // какой инструмент активен сейчас, чтобы подсвечивать нужную кнопку.
+  // Источник истины один: `AppState.activeTool` самого Excalidraw, синка —
+  // через `onChange` (он же используется для лимита элементов страницы).
+  const [railActiveTool, setRailActiveTool] = useState<RailTool>("selection");
+  const [railLocked, setRailLocked] = useState(false);
   const hasAccessToken = useAuthStore((s) => !!s.accessToken);
   const me = useAuthStore((s) => s.user);
   const guestSession = useGuestSessionStore((s) => s.session);
@@ -965,6 +972,19 @@ export function Board({
    * переполнение не нужно: лимит глобальный, лишние элементы отбрасываются
    * у всех одинаково.
    */
+  /** MobileToolRail — активный инструмент/лок берём из `AppState`, а не
+   *  дублируем свой источник истины: Excalidraw и так шлёт его в `onChange`
+   *  на каждое изменение (включая смену инструмента без единого мазка). */
+  function syncRailToolState(appState: { activeTool: { type: string; locked: boolean } }) {
+    const type = appState.activeTool.type;
+    if (type === "selection" || type === "rectangle" || type === "diamond" || type === "ellipse" ||
+        type === "arrow" || type === "line" || type === "freedraw" || type === "text" ||
+        type === "eraser" || type === "hand") {
+      setRailActiveTool(type);
+    }
+    setRailLocked(appState.activeTool.locked);
+  }
+
   function handleSceneChange(elements: readonly OrderedExcalidrawElement[]) {
     if (!excalidrawAPI || revertingRef.current) return;
     const live = elements.filter((el) => !el.isDeleted);
@@ -1005,7 +1025,14 @@ export function Board({
   );
 
   const boardChrome = ydoc ? (
-    <div className="pointer-events-none absolute right-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] items-center gap-1.5">
+    <div
+      className={cn(
+        "board-chrome pointer-events-none absolute right-3 z-10 flex max-w-[calc(100%-1.5rem)] items-center gap-1.5",
+        // Лента слайдов теперь тоже сверху (см. ниже) — уступаем ей верхнюю
+        // строку, только когда она реально есть.
+        slidePages.length > 0 ? "top-16" : "top-3",
+      )}
+    >
       {/* Страницы — компактная лента */}
       <div className="pointer-events-auto flex items-center gap-1 rounded-xl border border-border bg-card/95 p-1 shadow-sm backdrop-blur">
         <div className="flex max-w-[40vw] items-center gap-0.5 overflow-x-auto">
@@ -1028,6 +1055,10 @@ export function Board({
             </button>
           ))}
         </div>
+        {/* Добавить/удалить лист — на телефоне/планшете спрятаны отсюда
+            (`board-chrome-page-admin`, см. Board.css): места в шапке мало,
+            те же действия продублированы пунктами в меню «Ещё» ниже. На
+            десктопе видны как обычно, прямыми кнопками. */}
         {isTeacher && (
           <SimpleTooltip
             content={
@@ -1039,7 +1070,7 @@ export function Board({
             <Button
               variant="ghost"
               size="icon-sm"
-              className="size-9"
+              className="board-chrome-page-admin size-9"
               onClick={addPage}
               disabled={nonSlidePages.length >= MAX_BOARD_PAGES}
               aria-label="Добавить лист"
@@ -1053,7 +1084,7 @@ export function Board({
             <Button
               variant="ghost"
               size="icon-sm"
-              className="size-9 text-destructive hover:bg-destructive/10"
+              className="board-chrome-page-admin size-9 text-destructive hover:bg-destructive/10"
               onClick={() => deletePage(activePageId)}
               aria-label="Удалить страницу"
             >
@@ -1128,6 +1159,30 @@ export function Board({
                   {followTeacher ? "Не следовать за учителем" : "Следовать за учителем"}
                 </DropdownMenuItem>
               )}
+              {/* Дубли `board-chrome-page-admin` кнопок из ленты страниц —
+                  на телефоне/планшете те скрыты (мало места), пункты меню
+                  их единственный путь. На десктопе тоже доступны, лишним не
+                  мешает. */}
+              {isTeacher && (
+                <DropdownMenuItem
+                  onSelect={addPage}
+                  disabled={nonSlidePages.length >= MAX_BOARD_PAGES}
+                >
+                  <Plus aria-hidden />
+                  {nonSlidePages.length >= MAX_BOARD_PAGES
+                    ? `Максимум ${MAX_BOARD_PAGES} листа`
+                    : "Добавить лист"}
+                </DropdownMenuItem>
+              )}
+              {isTeacher && activePageId && pages.length > 1 && (
+                <DropdownMenuItem
+                  onSelect={() => deletePage(activePageId)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 aria-hidden />
+                  Удалить страницу
+                </DropdownMenuItem>
+              )}
               {isTeacher && activePageId && activeMeta?.kind !== "image" && (
                 <>
                   <DropdownMenuLabel>Фон страницы</DropdownMenuLabel>
@@ -1175,19 +1230,31 @@ export function Board({
                   ))}
                 </>
               )}
+              {/* Дубль кнопки-крестика справа — на телефоне/планшете та
+                  скрыта (`board-chrome-close`), пункт меню — единственный
+                  путь туда. */}
+              {onClose && isTeacher && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={onClose}>
+                    <X aria-hidden />
+                    Скрыть доску
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         )}
 
         {onClose && isTeacher && (
-          <>
+          <span className="board-chrome-close inline-flex items-center">
             <Separator orientation="vertical" className="mx-0.5 h-5" />
             <SimpleTooltip content="Скрыть доску">
               <Button variant="ghost" size="icon-sm" className="size-9" onClick={onClose} aria-label="Скрыть доску">
                 <X />
               </Button>
             </SimpleTooltip>
-          </>
+          </span>
         )}
       </div>
     </div>
@@ -1224,6 +1291,16 @@ export function Board({
           slide={activeMeta?.slide ?? null}
         />
         {!readOnlyChrome && boardChrome}
+        {/* Мобильная/планшетная (тач) панель инструментов — см. MobileToolRail.tsx.
+            Только когда можно рисовать: без `canDraw` Excalidraw и так read-only
+            (viewModeEnabled), выбирать инструмент нечем. На десктопе (мышь) не
+            видна — свой нативный вертикальный тулбар Excalidraw уже слева
+            (Board.css), здесь просто не нужна вторая копия того же самого. */}
+        {!readOnlyChrome && canDraw && excalidrawAPI && (
+          <div className="mobile-tool-rail pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2">
+            <MobileToolRail excalidrawAPI={excalidrawAPI} activeTool={railActiveTool} locked={railLocked} />
+          </div>
+        )}
         {(syncStalled || importNote || uploadError || pageElementCount >= PAGE_ELEMENT_WARN_AT) && (
           <div className="pointer-events-none absolute inset-x-3 top-16 z-10 flex flex-col items-center gap-1 text-center">
             {syncStalled && (
@@ -1257,8 +1334,14 @@ export function Board({
             )}
           </div>
         )}
+        {/* Лента слайдов — сверху, а не снизу (запрос пользователя,
+            2026-09-24): снизу она соседствовала с панелью свойств фигуры
+            (`.App-menu__left`, тоже низ-центр) и уводила внимание от
+            только что открытого инструмента. Шапка доски (boardChrome)
+            подвинута ниже (`top-16` вместо `top-3`) РОВНО когда лента
+            слайдов есть — незачем сдвигать её всегда, когда слайдов нет. */}
         {ydoc && slidePages.length > 0 && (
-          <div className="pointer-events-auto absolute inset-x-3 bottom-3 z-10 flex gap-1.5 overflow-x-auto rounded-lg bg-card/90 p-1.5 shadow-sm backdrop-blur">
+          <div className="pointer-events-auto absolute inset-x-3 top-3 z-10 flex gap-1.5 overflow-x-auto rounded-lg bg-card/90 p-1.5 shadow-sm backdrop-blur">
             {slidePages.map(([pageId, meta], i) => (
               <button
                 key={pageId}
@@ -1294,8 +1377,12 @@ export function Board({
             // публикует его в awareness только когда сам вызывается, а вызывает
             // его именно Excalidraw через этот проп, не сам пакет.
             onPointerUpdate={binding?.onPointerUpdate}
-            // Э3.12: откат локальных добавлений сверх лимита 500 (см. handleSceneChange).
-            onChange={handleSceneChange}
+            // Э3.12: откат локальных добавлений сверх лимита 500 (handleSceneChange) +
+            // синхронизация активного инструмента для MobileToolRail (syncRailToolState).
+            onChange={(elements, appState) => {
+              handleSceneChange(elements);
+              syncRailToolState(appState);
+            }}
             // Э3.8, §5.2 ТЗ: без canDraw — доска read-only. `viewModeEnabled`
             // реактивный проп (не только initialData — проверено чтением
             // скомпилированного бандла: сам компонент подхватывает его на
