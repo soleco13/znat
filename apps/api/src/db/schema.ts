@@ -123,6 +123,35 @@ export const emailVerificationTokens = pgTable(
   (t) => [index("email_verification_tokens_user_idx").on(t.userId)],
 );
 
+/**
+ * Э14.2 — приглашение в чужое пространство (§ план-ТЗ Э14): только по
+ * ссылке/коду от админа пространства, не открытый поиск (решено заранее —
+ * иначе кто угодно мог бы зайти в чужую школу). Хранится только хэш кода
+ * (та же схема, что `email_verification_tokens.tokenHash`) — сырой код
+ * показывается админу ровно один раз, при создании.
+ */
+export const schoolInvites = pgTable(
+  "school_invites",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    schoolId: uuid("school_id")
+      .notNull()
+      .references(() => schools.id, { onDelete: "cascade" }),
+    codeHash: text("code_hash").notNull().unique(),
+    role: roleEnum("role").notNull(),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    /** NULL — не ограничено (только expiresAt/revokedAt гасят инвайт). */
+    maxUses: integer("max_uses"),
+    useCount: integer("use_count").notNull().default(0),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("school_invites_school_idx").on(t.schoolId)],
+);
+
 export const lessons = pgTable(
   "lessons",
   {

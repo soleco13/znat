@@ -9,6 +9,7 @@ import {
 import { env } from "../../plugins/env.js";
 import { AppError } from "../../plugins/errors.js";
 import * as authService from "../auth/service.js";
+import * as invitesService from "../invites/service.js";
 import * as mailService from "../mail/service.js";
 import * as repo from "./repo.js";
 
@@ -77,10 +78,44 @@ async function registerAndSendVerification(input: {
   return { status: "pending_verification", email: result.user.email };
 }
 
+/** Э14.2 — присоединение к чужому пространству по инвайту (роль/школа берутся из самого инвайта). */
+async function joinViaInvite(
+  inviteCode: string,
+  input: { email: string; password: string; fullName: string },
+): Promise<RegisterResponse> {
+  const passwordHash = await authService.hashPassword(input.password);
+  const rawToken = randomBytes(32).toString("base64url");
+  const verificationExpiresAt = new Date(Date.now() + VERIFICATION_TOKEN_TTL_HOURS * 60 * 60 * 1000);
+
+  let result;
+  try {
+    result = await repo.joinSchoolViaInvite({
+      inviteCodeHash: invitesService.hashInviteCode(inviteCode),
+      email: input.email,
+      passwordHash,
+      fullName: input.fullName,
+      verificationTokenHash: hashToken(rawToken),
+      verificationExpiresAt,
+    });
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      throw new AppError(409, "email_taken", "Пользователь с таким email уже существует");
+    }
+    throw err;
+  }
+  if (!result) {
+    throw new AppError(410, "invite_invalid", "Приглашение недействительно или уже использовано");
+  }
+
+  const verifyLink = `${env.PUBLIC_ORIGIN}/verify-email?token=${rawToken}`;
+  await mailService.sendVerificationEmail(result.user.email, verifyLink);
+
+  return { status: "pending_verification", email: result.user.email };
+}
+
 export async function registerIndividual(input: IndividualRegisterRequest): Promise<RegisterResponse> {
   if (input.inviteCode) {
-    // Э14.2 доделает присоединение к чужому пространству по инвайт-ссылке.
-    throw new AppError(501, "invite_not_supported_yet", "Присоединение по приглашению пока не реализовано");
+    return joinViaInvite(input.inviteCode, input);
   }
 
   const slug = await generateUniqueSlug(input.fullName);

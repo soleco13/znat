@@ -30,6 +30,7 @@ import materialsRoutes from "./modules/materials/routes.js";
 import recordingsRoutes from "./modules/recordings/routes.js";
 import schoolSettingsRoutes from "./modules/school-settings/routes.js";
 import registrationRoutes from "./modules/registration/routes.js";
+import invitesRoutes from "./modules/invites/routes.js";
 import {
   startRecordingRetentionSweep,
   stopRecordingRetentionSweep,
@@ -89,6 +90,7 @@ export function buildServer() {
       api.register(recordingsRoutes);
       api.register(schoolSettingsRoutes);
       api.register(registrationRoutes);
+      api.register(invitesRoutes);
       api.register(assetsRoutes);
     },
     { prefix: "/api/v1" },

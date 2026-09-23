@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { repoMock, authServiceMock, mailServiceMock } = vi.hoisted(() => ({
+const { repoMock, authServiceMock, mailServiceMock, invitesServiceMock } = vi.hoisted(() => ({
   repoMock: {
     slugExists: vi.fn().mockResolvedValue(false),
     findSchoolBySlug: vi.fn(),
     registerSchoolWithAdmin: vi.fn(),
+    joinSchoolViaInvite: vi.fn(),
     findEmailVerificationTokenByHash: vi.fn(),
     consumeVerificationToken: vi.fn(),
   },
@@ -15,11 +16,15 @@ const { repoMock, authServiceMock, mailServiceMock } = vi.hoisted(() => ({
   mailServiceMock: {
     sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
   },
+  invitesServiceMock: {
+    hashInviteCode: vi.fn((code: string) => `hash(${code})`),
+  },
 }));
 
 vi.mock("./repo.js", () => repoMock);
 vi.mock("../auth/service.js", () => authServiceMock);
 vi.mock("../mail/service.js", () => mailServiceMock);
+vi.mock("../invites/service.js", () => invitesServiceMock);
 
 const { registerIndividual, registerOrganization, confirmEmail, getSpacePublicInfo } = await import(
   "./service.js"
@@ -67,18 +72,6 @@ describe("registerIndividual", () => {
     );
   });
 
-  it("inviteCode ещё не поддержан (Э14.2) — явный 501, школа не создаётся", async () => {
-    await expect(
-      registerIndividual({
-        fullName: "Иван Петров",
-        email: "tutor@example.com",
-        password: "password123",
-        inviteCode: "some-code",
-      }),
-    ).rejects.toMatchObject({ statusCode: 501 });
-    expect(repoMock.registerSchoolWithAdmin).not.toHaveBeenCalled();
-  });
-
   it("дубликат email → 409 email_taken, письмо не отправляется", async () => {
     repoMock.registerSchoolWithAdmin.mockRejectedValue({ code: "23505" });
 
@@ -86,6 +79,56 @@ describe("registerIndividual", () => {
       registerIndividual({ fullName: "Иван Петров", email: "tutor@example.com", password: "password123" }),
     ).rejects.toMatchObject({ statusCode: 409, code: "email_taken" });
     expect(mailServiceMock.sendVerificationEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe("registerIndividual с inviteCode (Э14.2 — присоединение к чужому пространству)", () => {
+  it("валидный инвайт → пользователь создан в школе/роли инвайта, школа НЕ создаётся заново", async () => {
+    repoMock.joinSchoolViaInvite.mockResolvedValue({
+      user: userRow({ role: "teacher", email: "joined@example.com" }),
+      invite: { schoolId: SCHOOL_ID, role: "teacher" },
+    });
+
+    const result = await registerIndividual({
+      fullName: "Иван Петров",
+      email: "joined@example.com",
+      password: "password123",
+      inviteCode: "raw-invite-code",
+    });
+
+    expect(result).toEqual({ status: "pending_verification", email: "joined@example.com" });
+    expect(invitesServiceMock.hashInviteCode).toHaveBeenCalledWith("raw-invite-code");
+    expect(repoMock.joinSchoolViaInvite).toHaveBeenCalledWith(
+      expect.objectContaining({ inviteCodeHash: "hash(raw-invite-code)", email: "joined@example.com" }),
+    );
+    expect(repoMock.registerSchoolWithAdmin).not.toHaveBeenCalled();
+  });
+
+  it("недействительный/исчерпанный инвайт (repo возвращает null) → 410 invite_invalid", async () => {
+    repoMock.joinSchoolViaInvite.mockResolvedValue(null);
+
+    await expect(
+      registerIndividual({
+        fullName: "Иван Петров",
+        email: "joined@example.com",
+        password: "password123",
+        inviteCode: "bad-code",
+      }),
+    ).rejects.toMatchObject({ statusCode: 410, code: "invite_invalid" });
+    expect(mailServiceMock.sendVerificationEmail).not.toHaveBeenCalled();
+  });
+
+  it("дубликат email при вступлении по инвайту → 409 email_taken", async () => {
+    repoMock.joinSchoolViaInvite.mockRejectedValue({ code: "23505" });
+
+    await expect(
+      registerIndividual({
+        fullName: "Иван Петров",
+        email: "joined@example.com",
+        password: "password123",
+        inviteCode: "raw-invite-code",
+      }),
+    ).rejects.toMatchObject({ statusCode: 409, code: "email_taken" });
   });
 });
 

@@ -11,6 +11,7 @@ import {
   PanelLeftOpen,
   Settings,
   SquarePen,
+  Ticket,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Role } from "@school/shared";
@@ -44,6 +45,7 @@ const NAV: NavItem[] = [
   },
   { to: "/materials/edit", label: "Редактор", icon: SquarePen, roles: ["admin", "methodist"] },
   { to: "/admin/settings", label: "Параметры", icon: Settings, roles: ["admin"] },
+  { to: "/admin/invites", label: "Приглашения", icon: Ticket, roles: ["admin"] },
 ];
 
 const ROLE_LABEL: Record<Role, string> = {

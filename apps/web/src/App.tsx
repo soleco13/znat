@@ -9,6 +9,8 @@ import { OrganizationRegisterPage } from "./features/registration/OrganizationRe
 import { EmailSentPage } from "./features/registration/EmailSentPage.js";
 import { VerifyEmailPage } from "./features/registration/VerifyEmailPage.js";
 import { SpacePage } from "./features/spaces/SpacePage.js";
+import { AcceptInvitePage } from "./features/spaces/AcceptInvitePage.js";
+import { InvitesPage } from "./features/invites/InvitesPage.js";
 import { LessonsListPage } from "./features/lessons/LessonsListPage.js";
 import { AdminRecordingsPage } from "./features/recordings/AdminRecordingsPage.js";
 import { MaterialEditorPage } from "./features/materials/MaterialEditorPage.js";
@@ -47,8 +49,14 @@ export function App() {
         <Route path="/register/organization" element={<OrganizationRegisterPage />} />
         <Route path="/register/check-email" element={<EmailSentPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
-        {/* Э14.1 — публичная визитка пространства; приём инвайта (`/s/:slug/invite/:code`) — Э14.2. */}
+        {/* Э14.1/Э14.2 — публичная визитка пространства и приём приглашения, вне AppShell/RequireAuth. */}
         <Route path="/s/:slug" element={<SpacePage />} />
+        <Route path="/s/:slug/invite/:code" element={<AcceptInvitePage />} />
+        {/* Э14.2 — приглашения в пространство, только admin. */}
+        <Route
+          path="/admin/invites"
+          element={<Shell roles={["admin"]}><InvitesPage /></Shell>}
+        />
         {/* Э12.6 — вход ученика по прямой ссылке, вне AppShell и RequireAuth. */}
         <Route path="/j/:token" element={<GuestJoinPage />} />
         {/* §4.2 ТЗ: уроки — admin и teacher; методист сюда не ходит. */}

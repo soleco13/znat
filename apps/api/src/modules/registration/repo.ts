@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { schools, users, emailVerificationTokens } from "../../db/schema.js";
+import { schools, users, emailVerificationTokens, schoolInvites } from "../../db/schema.js";
 import type { Role, SchoolKind } from "@school/shared";
 
 export async function slugExists(slug: string): Promise<boolean> {
@@ -54,6 +54,59 @@ export async function registerSchoolWithAdmin(input: {
       expiresAt: input.verificationExpiresAt,
     });
     return { school: school!, user: user! };
+  });
+}
+
+/**
+ * Э14.2 — присоединение к чужому пространству по инвайту. Атомарный "захват
+ * слота" — `UPDATE ... WHERE <ещё валиден> RETURNING` в одной транзакции с
+ * созданием пользователя: если инвайт не найден/просрочен/отозван/исчерпан,
+ * `invite` будет `null` и пользователь не создаётся; если следом упадёт
+ * инсерт юзера (дубликат email), откатится и инкремент `useCount` — инвайт
+ * не сгорает впустую на чужой ошибке.
+ */
+export async function joinSchoolViaInvite(input: {
+  inviteCodeHash: string;
+  email: string;
+  passwordHash: string;
+  fullName: string;
+  verificationTokenHash: string;
+  verificationExpiresAt: Date;
+}) {
+  return db.transaction(async (tx) => {
+    const now = new Date();
+    const [invite] = await tx
+      .update(schoolInvites)
+      .set({ useCount: sql`${schoolInvites.useCount} + 1` })
+      .where(
+        and(
+          eq(schoolInvites.codeHash, input.inviteCodeHash),
+          isNull(schoolInvites.revokedAt),
+          or(isNull(schoolInvites.expiresAt), gt(schoolInvites.expiresAt, now)),
+          or(isNull(schoolInvites.maxUses), lt(schoolInvites.useCount, schoolInvites.maxUses)),
+        ),
+      )
+      .returning();
+    if (!invite) {
+      return null;
+    }
+
+    const [user] = await tx
+      .insert(users)
+      .values({
+        schoolId: invite.schoolId,
+        email: input.email,
+        passwordHash: input.passwordHash,
+        fullName: input.fullName,
+        role: invite.role,
+      })
+      .returning();
+    await tx.insert(emailVerificationTokens).values({
+      userId: user!.id,
+      tokenHash: input.verificationTokenHash,
+      expiresAt: input.verificationExpiresAt,
+    });
+    return { user: user!, invite };
   });
 }
 
