@@ -5,6 +5,8 @@ import { useAuthStore } from "../../shared/auth-store.js";
 export type SocketStatus = "connecting" | "connected" | "reconnecting" | "closed";
 
 const MAX_BACKOFF_MS = 16_000;
+/** Сервер закрывает так сокет участника, которого нет в комнате (`rooms/ws.ts`). */
+const NOT_JOINED_CLOSE_CODE = 4003;
 
 /**
  * WS-канал комнаты урока: только пуш от сервера, переподключение с экспоненциальным
@@ -26,10 +28,13 @@ export function useRoomSocket(
   enabled = true,
   mode: "staff" | "guest" | "recorder" = "staff",
   recorderToken?: string,
+  onNotJoined?: () => Promise<void>,
 ) {
   const [status, setStatus] = useState<SocketStatus>("connecting");
   const onMessageRef = useRef(onMessage);
   onMessageRef.current = onMessage;
+  const onNotJoinedRef = useRef(onNotJoined);
+  onNotJoinedRef.current = onNotJoined;
 
   useEffect(() => {
     if (!enabled) return;
@@ -62,22 +67,31 @@ export function useRoomSocket(
       socket = new WebSocket(url);
 
       socket.onopen = () => {
-        attempt = 0;
         setStatus("connected");
       };
       socket.onmessage = (event) => {
+        // Бэкофф сбрасываем по первому сообщению, а не по open: сокет, который
+        // сервер закрывает сразу после рукопожатия (4003), иначе долбил бы раз
+        // в секунду бесконечно.
+        attempt = 0;
         try {
           onMessageRef.current(JSON.parse(event.data) as ServerRoomMessage);
         } catch {
           // игнорируем нераспознанные сообщения
         }
       };
-      socket.onclose = () => {
+      socket.onclose = (event) => {
         if (stopped) return;
         setStatus("reconnecting");
         const delay = Math.min(1000 * 2 ** attempt, MAX_BACKOFF_MS);
         attempt += 1;
-        reconnectTimer = setTimeout(connect, delay);
+        const rejoin =
+          event.code === NOT_JOINED_CLOSE_CODE && onNotJoinedRef.current
+            ? onNotJoinedRef.current().catch(() => undefined)
+            : Promise.resolve();
+        void rejoin.then(() => {
+          if (!stopped) reconnectTimer = setTimeout(connect, delay);
+        });
       };
     };
 

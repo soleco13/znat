@@ -370,11 +370,23 @@ export function RoomPage() {
     }
   }, []);
 
+  // Сервер удаляет участника после ~90 с молчания (телефон заснул, сеть
+  // пропала) и закрывает его сокет кодом 4003. Входим заново тем же POST
+  // /join — без этого клиент бесконечно переподключался, оставаясь вне урока.
+  // До первого успешного входа не дублируем штатный `attemptJoin`.
+  const joinedRef = useRef(false);
+  const rejoinAfterEviction = useCallback(async () => {
+    if (!lessonId || !joinedRef.current) return;
+    await apiFetch<JoinLessonResponse>(`/lessons/${lessonId}/join`, { method: "POST" });
+  }, [lessonId]);
+
   const status = useRoomSocket(
     lessonId ?? "",
     handleMessage,
     deviceCheckDone,
     isGuest ? "guest" : "staff",
+    undefined,
+    rejoinAfterEviction,
   );
 
   // Оверлей переподключения — только если WS уже был `connected` хотя бы
@@ -387,6 +399,7 @@ export function RoomPage() {
     setJoinFailed(false);
     apiFetch<JoinLessonResponse>(`/lessons/${lessonId}/join`, { method: "POST" })
       .then((data) => {
+        joinedRef.current = true;
         setParticipants(data.participants);
         setLessonMode(data.lessonMode);
         setMedia(data.media);
