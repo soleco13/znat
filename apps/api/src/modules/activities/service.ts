@@ -422,11 +422,14 @@ const STUCK_AFTER_MS = 3 * 60 * 1000;
  */
 async function computeActivityProgress(activity: ActivityRow): Promise<ActivityProgress> {
   const activityId = activity.id;
-  const [roster, stats, loaded] = await Promise.all([
-    roomsService.listLessonParticipants(activity.lessonId),
+  const [stats, loaded] = await Promise.all([
     repo.answeredStatsByActivity(activityId),
     materialsService.getMaterialVersion(activity.materialVersionId),
   ]);
+  const roster = await roomsService.listLessonParticipants(activity.lessonId, {
+    around: activity.createdAt,
+    engagedIds: stats.map((s) => s.participantId),
+  });
   const students = roster.filter((p) => p.kind === "guest");
   const total = loaded.material.blocks.filter((b) => b.type === "question").length;
   const statByParticipant = new Map(stats.map((s) => [s.participantId, s]));
@@ -534,7 +537,10 @@ export async function getStudentAttempt(
   const activity = await loadActivityForSchool(activityId, user.schoolId);
   await assertActivityOwner(user, activity);
 
-  const roster = await roomsService.listLessonParticipants(activity.lessonId);
+  const roster = await roomsService.listLessonParticipants(activity.lessonId, {
+    around: activity.createdAt,
+    engagedIds: [participantId],
+  });
   const participant = roster.find((p) => p.id === participantId && p.kind === "guest");
   if (!participant) {
     throw new AppError(404, "participant_not_found", "Ученик не найден на этом уроке");
@@ -638,7 +644,10 @@ export async function getMyAnnotations(
 
 /** Тот же приём, что `getStudentAttempt`: `participantId` обязан быть учеником этого урока. */
 async function assertParticipantOnRoster(lessonId: string, participantId: string): Promise<void> {
-  const roster = await roomsService.listLessonParticipants(lessonId);
+  const roster = await roomsService.listLessonParticipants(lessonId, {
+    around: new Date(),
+    engagedIds: [participantId],
+  });
   if (!roster.some((p) => p.id === participantId && p.kind === "guest")) {
     throw new AppError(404, "participant_not_found", "Ученик не найден на этом уроке");
   }
@@ -756,10 +765,11 @@ export async function getReviewResponses(
     throw new AppError(404, "question_not_found", "Вопрос не найден в материале");
   }
 
-  const [roster, rows] = await Promise.all([
-    roomsService.listLessonParticipants(activity.lessonId),
-    repo.listResponsesByActivity(activityId),
-  ]);
+  const rows = await repo.listResponsesByActivity(activityId);
+  const roster = await roomsService.listLessonParticipants(activity.lessonId, {
+    around: activity.createdAt,
+    engagedIds: [...new Set(rows.map((r) => r.participantId))],
+  });
   const byParticipant = new Map(
     rows
       .filter((r) => r.questionId === questionId && r.response.type === question.interaction.type)
@@ -813,7 +823,10 @@ export async function pushAnswerToBoard(
 
   let label = "Ответ ученика";
   if (!input.anonymous) {
-    const roster = await roomsService.listLessonParticipants(activity.lessonId);
+    const roster = await roomsService.listLessonParticipants(activity.lessonId, {
+      around: activity.createdAt,
+      engagedIds: [input.participantId],
+    });
     const participant = roster.find((p) => p.id === input.participantId);
     label = participant ? participant.displayName : label;
   }

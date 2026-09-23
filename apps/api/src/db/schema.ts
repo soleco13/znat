@@ -206,6 +206,8 @@ export const lessonParticipants = pgTable(
     index("lesson_participants_lesson_idx").on(t.lessonId),
     // Переподключение гостя по стабильному `guestId` в пределах урока (Э12.4).
     index("lesson_participants_lesson_guest_idx").on(t.lessonId, t.guestId),
+    // Ростер задания — окно занятия по joined_at в постоянном уроке с растущим журналом.
+    index("lesson_participants_lesson_joined_idx").on(t.lessonId, t.joinedAt),
   ],
 );
 

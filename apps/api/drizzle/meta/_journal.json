@@ -169,6 +169,13 @@
       "when": 1790142589930,
       "tag": "0023_e14_2_school_invites",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1790147449375,
+      "tag": "0024_lesson_participants_joined_idx",
+      "breakpoints": true
     }
   ]
 }

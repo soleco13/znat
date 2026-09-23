@@ -1,4 +1,4 @@
-import { eq, and, isNull, lt, desc, asc, count, or, inArray, sql } from "drizzle-orm";
+import { eq, and, isNull, lt, lte, gte, desc, asc, count, or, inArray, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { lessonParticipants, chatMessages, users } from "../../db/schema.js";
 
@@ -66,14 +66,48 @@ export async function findCanonicalParticipant(
   return rows[0] ?? null;
 }
 
+/** Занятие постоянного урока укладывается в сутки: шире окно — захватит прошлые или следующие занятия. */
+const ROSTER_WINDOW_MS = 12 * 60 * 60 * 1000;
+
 /**
  * Ростер участников урока для учительских панелей заданий (Э12.5) —
  * канонические строки (по одной на `guestId`/`userId`), самые ранние.
  * `kind` позволяет вызывающему отфильтровать только учеников.
+ *
+ * Урок постоянный: журнал посещений копит всех, кто когда-либо входил по
+ * ссылке (на стенде — 52 человека за 12 дней). Поэтому берём только тех,
+ * кто был на занятии вокруг момента `around` (вошёл в окне ±12 ч и не ушёл
+ * раньше), плюс явно переданных `engagedIds` (ответившие на задание), —
+ * иначе учитель видел десятки «не начал» из прошлых недель, а опрос
+ * прогресса раз в 4 с перечитывал всю историю урока.
  */
 export async function listCanonicalParticipants(
   lessonId: string,
+  around: Date,
+  engagedIds: string[],
 ): Promise<{ id: string; kind: "staff" | "guest"; displayName: string }[]> {
+  const present = and(
+    gte(lessonParticipants.joinedAt, new Date(around.getTime() - ROSTER_WINDOW_MS)),
+    lte(lessonParticipants.joinedAt, new Date(around.getTime() + ROSTER_WINDOW_MS)),
+    or(isNull(lessonParticipants.leftAt), gte(lessonParticipants.leftAt, around)),
+  );
+  const identities = await db
+    .select({ guestId: lessonParticipants.guestId, userId: lessonParticipants.userId })
+    .from(lessonParticipants)
+    .where(
+      and(
+        eq(lessonParticipants.lessonId, lessonId),
+        engagedIds.length > 0 ? or(present, inArray(lessonParticipants.id, engagedIds)) : present,
+      ),
+    );
+  const guestIds = [...new Set(identities.map((r) => r.guestId).filter((v): v is string => v !== null))];
+  const userIds = [...new Set(identities.map((r) => r.userId).filter((v): v is string => v !== null))];
+  if (guestIds.length === 0 && userIds.length === 0) return [];
+
+  const identityMatch = [
+    ...(guestIds.length > 0 ? [inArray(lessonParticipants.guestId, guestIds)] : []),
+    ...(userIds.length > 0 ? [inArray(lessonParticipants.userId, userIds)] : []),
+  ];
   const rows = await db
     .select({
       id: lessonParticipants.id,
@@ -85,7 +119,7 @@ export async function listCanonicalParticipants(
     })
     .from(lessonParticipants)
     .leftJoin(users, eq(users.id, lessonParticipants.userId))
-    .where(eq(lessonParticipants.lessonId, lessonId))
+    .where(and(eq(lessonParticipants.lessonId, lessonId), or(...identityMatch)))
     .orderBy(asc(lessonParticipants.joinedAt));
 
   const seen = new Set<string>();

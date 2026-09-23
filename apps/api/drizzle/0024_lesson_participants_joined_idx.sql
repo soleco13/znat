@@ -1,0 +1,1 @@
+CREATE INDEX "lesson_participants_lesson_joined_idx" ON "lesson_participants" USING btree ("lesson_id","joined_at");

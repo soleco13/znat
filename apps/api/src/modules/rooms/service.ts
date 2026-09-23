@@ -98,8 +98,9 @@ export async function ensureParticipant(
 /** Ростер участников урока для учительских панелей заданий (Э12.5). */
 export async function listLessonParticipants(
   lessonId: string,
+  scope: { around: Date; engagedIds: string[] },
 ): Promise<{ id: string; kind: "staff" | "guest"; displayName: string }[]> {
-  return repo.listCanonicalParticipants(lessonId);
+  return repo.listCanonicalParticipants(lessonId, scope.around, scope.engagedIds);
 }
 
 /** Имена участников по id строк `lesson_participants` (Э12.5) — для очереди ручной проверки. */
