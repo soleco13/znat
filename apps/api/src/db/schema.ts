@@ -321,7 +321,8 @@ export const refreshTokens = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    tokenHash: text("token_hash").notNull(),
+    // Уникальный индекс: каждое обновление токена ищет строку по хэшу — без него полный скан растущей таблицы.
+    tokenHash: text("token_hash").notNull().unique(),
     familyId: uuid("family_id").notNull(),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
     replacedByHash: text("replaced_by_hash"),

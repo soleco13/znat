@@ -1,4 +1,4 @@
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, lt } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { users, refreshTokens } from "../../db/schema.js";
 
@@ -58,4 +58,13 @@ export async function revokeFamily(familyId: string) {
     .update(refreshTokens)
     .set({ revokedAt: new Date() })
     .where(and(eq(refreshTokens.familyId, familyId), isNull(refreshTokens.revokedAt)));
+}
+
+/** Истёкший refresh-токен всё равно отвергается по сроку — строка больше ни для чего не нужна. */
+export async function deleteExpiredRefreshTokens(now: Date): Promise<number> {
+  const rows = await db
+    .delete(refreshTokens)
+    .where(lt(refreshTokens.expiresAt, now))
+    .returning({ id: refreshTokens.id });
+  return rows.length;
 }

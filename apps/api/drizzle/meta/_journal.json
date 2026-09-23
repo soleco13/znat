@@ -176,6 +176,13 @@
       "when": 1790147449375,
       "tag": "0024_lesson_participants_joined_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1790147626332,
+      "tag": "0025_refresh_tokens_hash_unique",
+      "breakpoints": true
     }
   ]
 }

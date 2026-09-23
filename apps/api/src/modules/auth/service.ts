@@ -140,3 +140,30 @@ export async function getUserOrThrow(userId: string) {
   }
   return user;
 }
+
+const REFRESH_TOKEN_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
+let refreshTokenCleanupTimer: ReturnType<typeof setInterval> | null = null;
+
+/**
+ * Ротация добавляет строку `refresh_tokens` на каждое обновление токена
+ * (раз в ~15 минут на вкладку), а удаления не было вовсе — таблица росла
+ * бесконечно. Чистим истёкшие раз в час.
+ */
+export async function runRefreshTokenCleanupOnce(): Promise<number> {
+  return repo.deleteExpiredRefreshTokens(new Date());
+}
+
+export function startRefreshTokenCleanup(): void {
+  if (refreshTokenCleanupTimer) return;
+  refreshTokenCleanupTimer = setInterval(() => {
+    runRefreshTokenCleanupOnce().catch((err) => console.error("auth: refresh token cleanup failed", err));
+  }, REFRESH_TOKEN_CLEANUP_INTERVAL_MS);
+  refreshTokenCleanupTimer.unref?.();
+}
+
+export function stopRefreshTokenCleanup(): void {
+  if (refreshTokenCleanupTimer) {
+    clearInterval(refreshTokenCleanupTimer);
+    refreshTokenCleanupTimer = null;
+  }
+}

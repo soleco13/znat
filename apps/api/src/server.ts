@@ -44,6 +44,7 @@ import {
 import { startConvertEvents, stopConvertEvents } from "./modules/jobs/service.js";
 import { startCanvasUnloadSweep, stopCanvasUnloadSweep } from "./modules/canvas/service.js";
 import { startPresenceSweep, stopPresenceSweep } from "./modules/rooms/service.js";
+import { startRefreshTokenCleanup, stopRefreshTokenCleanup } from "./modules/auth/service.js";
 import { assetsRoutes, filesRoutes } from "./modules/storage/routes.js";
 import { pool } from "./db/client.js";
 import { redis } from "./db/redis.js";
@@ -120,6 +121,7 @@ async function main() {
   startConvertEvents(buildConvertJobHandlers());
   startDeckReconcileSweep();
   startRecordingRetentionSweep();
+  startRefreshTokenCleanup();
 
   const shutdown = async (signal: string) => {
     app.log.info({ signal }, "Shutting down");
@@ -127,6 +129,7 @@ async function main() {
     stopCanvasUnloadSweep();
     stopDeckReconcileSweep();
     stopRecordingRetentionSweep();
+    stopRefreshTokenCleanup();
     await stopConvertEvents();
     await app.close();
     await pool.end();
