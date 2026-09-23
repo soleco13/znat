@@ -352,6 +352,10 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
         lastSeenAt: Date.now(),
       };
   await presence.setParticipant(lessonId, participantId, entry);
+  // Без явного пуша доска знает только дефолт по роли (гость — read-only), а
+  // presence гостя берёт canDraw из настроек урока или сохранённого гранта —
+  // клиент рисует, а сервер доски молча отбрасывает штрихи.
+  canvasService.setDrawPermission(lessonId, participantId, entry.permissions.canDraw);
   if (!existing) {
     await repo.insertJoin({
       lessonId,
@@ -487,11 +491,23 @@ export async function markDisconnected(lessonId: string, userId: string): Promis
   emitRoomEvent(lessonId, { type: "presence", participants: await listParticipantsSnapshot(lessonId) });
 }
 
-export async function touchHeartbeat(lessonId: string, userId: string): Promise<void> {
+/**
+ * Pong живого сокета. Возвращает `false`, если участника в комнате уже нет
+ * (sweep удалил после долгого молчания) — сокет тогда нужно закрыть, чтобы
+ * клиент вошёл заново, иначе он висит «на связи», невидимый для остальных.
+ */
+export async function touchHeartbeat(lessonId: string, userId: string): Promise<boolean> {
   const entry = await presence.getParticipant(lessonId, userId);
-  if (!entry) return;
-  entry.lastSeenAt = Date.now();
-  await presence.setParticipant(lessonId, userId, entry);
+  if (!entry) return false;
+  // Sweep мог снять `connected` за пропуск pong-ов (короткий обрыв сети), а
+  // сокет при этом выжил — без восстановления участник остаётся скрытым из
+  // сетки камер до перезагрузки страницы.
+  const wasDisconnected = !entry.connected;
+  await presence.setParticipant(lessonId, userId, { ...entry, connected: true, lastSeenAt: Date.now() });
+  if (wasDisconnected) {
+    emitRoomEvent(lessonId, { type: "presence", participants: await listParticipantsSnapshot(lessonId) });
+  }
+  return true;
 }
 
 export async function setHandRaised(

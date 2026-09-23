@@ -143,7 +143,12 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
     }, PING_INTERVAL_MS);
 
     socket.on("pong", () => {
-      void roomsService.touchHeartbeat(lessonId, userId);
+      roomsService
+        .touchHeartbeat(lessonId, userId)
+        .then((present) => {
+          if (!present) socket.close(4003, "not_joined");
+        })
+        .catch((err: unknown) => request.log.warn({ err, lessonId, userId }, "room heartbeat failed"));
     });
 
     socket.on("close", () => {

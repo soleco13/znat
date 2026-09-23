@@ -136,6 +136,7 @@ vi.mock("./presence.js", async () => {
 
 const roomsService = await import("./service.js");
 const presence = (await import("./presence.js")) as unknown as { __clear: () => void };
+const presenceModule = await import("./presence.js");
 const { roomEvents } = await import("./events.js");
 
 const SCHOOL_ID = "11111111-1111-1111-1111-111111111111";
@@ -399,6 +400,7 @@ describe("права участников", () => {
   it("изменение canSpeak НЕ трогает canvas — canDraw не менялся", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
     await roomsService.join(guestActor(), LESSON_ID);
+    canvasServiceMock.setDrawPermission.mockClear();
 
     await roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, { canSpeak: true });
 
@@ -420,6 +422,7 @@ describe("глобальный тумблер рисования (Э3.8)", () =>
     await roomsService.join(guestActor(), LESSON_ID);
     await roomsService.join(guestActor(OTHER_STUDENT_ID), LESSON_ID);
     await roomsService.join(staffActor(), LESSON_ID);
+    canvasServiceMock.setDrawPermission.mockClear();
 
     await roomsService.setDrawForAllStudents(SCHOOL_ID, LESSON_ID, teacherToken(), true);
 
@@ -846,5 +849,59 @@ describe("вебхуки LiveKit (Э2.7)", () => {
 
       expect(res.granted).toBe(true);
     });
+  });
+});
+
+describe("живучесть presence на уроке", () => {
+  beforeEach(() => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+  });
+
+  it("вход синхронизирует право рисовать с доской — иначе гость рисует, а сервер доски отбрасывает штрихи", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson({ settings: { studentsCanDraw: true } }));
+
+    await roomsService.join(guestActor(), LESSON_ID);
+
+    expect(canvasServiceMock.setDrawPermission).toHaveBeenCalledWith(LESSON_ID, STUDENT_ID, true);
+  });
+
+  it("повторный вход сохраняет выданное учителем право и снова пушит его в доску", async () => {
+    await roomsService.join(guestActor(), LESSON_ID);
+    await roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, { canDraw: true });
+    canvasServiceMock.setDrawPermission.mockClear();
+
+    await roomsService.join(guestActor(), LESSON_ID);
+
+    expect(canvasServiceMock.setDrawPermission).toHaveBeenCalledWith(LESSON_ID, STUDENT_ID, true);
+  });
+
+  it("pong живого сокета возвращает connected, снятый sweep-ом, и рассылает presence", async () => {
+    await roomsService.join(guestActor(), LESSON_ID);
+    const entry = await presenceModule.getParticipant(LESSON_ID, STUDENT_ID);
+    await presenceModule.setParticipant(LESSON_ID, STUDENT_ID, { ...entry!, connected: false });
+    const received: unknown[] = [];
+    roomEvents.once(LESSON_ID, (msg) => received.push(msg));
+
+    const present = await roomsService.touchHeartbeat(LESSON_ID, STUDENT_ID);
+
+    expect(present).toBe(true);
+    expect((await presenceModule.getParticipant(LESSON_ID, STUDENT_ID))?.connected).toBe(true);
+    expect(received).toEqual([expect.objectContaining({ type: "presence" })]);
+  });
+
+  it("pong уже подключённого участника не рассылает лишний presence", async () => {
+    await roomsService.join(guestActor(), LESSON_ID);
+    const received: unknown[] = [];
+    const listener = (msg: unknown) => received.push(msg);
+    roomEvents.on(LESSON_ID, listener);
+
+    await roomsService.touchHeartbeat(LESSON_ID, STUDENT_ID);
+
+    roomEvents.off(LESSON_ID, listener);
+    expect(received).toEqual([]);
+  });
+
+  it("pong участника, удалённого из комнаты, сообщает, что сокет надо закрыть", async () => {
+    await expect(roomsService.touchHeartbeat(LESSON_ID, STUDENT_ID)).resolves.toBe(false);
   });
 });
