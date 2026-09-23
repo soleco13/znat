@@ -15,6 +15,7 @@ import lessonAccessPlugin from "./plugins/lesson-access.js";
 import recorderAccessPlugin from "./plugins/recorder-access.js";
 import metricsPlugin from "./plugins/metrics.js";
 import { rateLimitKey, rateLimitMax } from "./plugins/rate-limit-key.js";
+import { serializeRequest } from "./plugins/log-redact.js";
 import { initErrorReporting } from "./plugins/sentry.js";
 import authRoutes from "./modules/auth/routes.js";
 import usersRoutes from "./modules/users/routes.js";
@@ -55,6 +56,7 @@ export function buildServer() {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === "production" ? "info" : "debug",
+      serializers: { req: serializeRequest },
     },
     trustProxy: true,
   });
