@@ -5,6 +5,7 @@ import {
   Text as YText,
   applyUpdate,
   encodeStateAsUpdate,
+  encodeStateVector,
   encodeStateVectorFromUpdate,
 } from "yjs";
 import type { Document as HocuspocusDocument } from "@hocuspocus/server";
@@ -246,11 +247,38 @@ describe("loadCanvasDocument (Э3.2)", () => {
   });
 
   it("документ есть в БД — возвращает сырые байты как есть", async () => {
-    const saved = Buffer.from([1, 2, 3]);
+    const doc = new Doc();
+    doc.getArray("elements").push(["stroke"]);
+    const saved = Buffer.from(encodeStateAsUpdate(doc));
     repoMock.loadDoc.mockResolvedValue(saved);
 
     const result = await loadCanvasDocument({ documentName: LESSON_ID });
     expect(result).toBe(saved);
+  });
+
+  it("выбрасывает застрявшие pending-правки, сохраняя видимое содержимое", async () => {
+    const author = new Doc();
+    author.getArray("elements").push(["lost"]);
+    const lost = encodeStateAsUpdate(author);
+    author.getArray("elements").push(["stuck"]);
+    const stuck = encodeStateAsUpdate(author, encodeStateVectorFromUpdate(lost));
+    const teacher = new Doc();
+    teacher.getArray("elements").push(["visible"]);
+    const server = new Doc();
+    applyUpdate(server, encodeStateAsUpdate(teacher));
+    applyUpdate(server, stuck);
+    expect(server.store.pendingStructs).not.toBeNull();
+    repoMock.loadDoc.mockResolvedValue(Buffer.from(encodeStateAsUpdate(server)));
+
+    const result = await loadCanvasDocument({ documentName: LESSON_ID });
+
+    const loaded = new Doc();
+    applyUpdate(loaded, result!);
+    expect(loaded.store.pendingStructs).toBeNull();
+    expect(loaded.getArray("elements").toArray()).toEqual(["visible"]);
+    // Автор, всё ещё подключённый, досылает пропуск — и его правки восстанавливаются целиком.
+    applyUpdate(loaded, encodeStateAsUpdate(author, encodeStateVector(loaded)));
+    expect(loaded.getArray("elements").toArray()).toHaveLength(3);
   });
 });
 

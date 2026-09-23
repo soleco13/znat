@@ -297,7 +297,27 @@ export async function loadCanvasDocument(
   payload: Pick<onLoadDocumentPayload, "documentName">,
 ): Promise<Buffer | undefined> {
   const ydoc = await repo.loadDoc(payload.documentName);
-  return ydoc ?? undefined;
+  return ydoc ? dropStuckPendingUpdates(ydoc) : undefined;
+}
+
+/**
+ * `encodeStateAsUpdate` сохраняет и pending-правки — те, что ждут отброшенной
+ * когда-то более ранней правки того же клиента. Они никому не видны и копятся
+ * (на реальном уроке — 2 МБ из 2 МБ документа, которые каждый вход качал
+ * заново). Выбрасывать их безопасно: если автор ещё подключён, при
+ * рукопожатии он пришлёт всё, начиная с пропуска, по state vector сервера.
+ */
+function dropStuckPendingUpdates(state: Buffer): Buffer {
+  const doc = new Y.Doc();
+  try {
+    Y.applyUpdate(doc, state);
+    if (!doc.store.pendingStructs && !doc.store.pendingDs) return state;
+    doc.store.pendingStructs = null;
+    doc.store.pendingDs = null;
+    return Buffer.from(encodeStateAsUpdate(doc));
+  } finally {
+    doc.destroy();
+  }
 }
 
 /**
