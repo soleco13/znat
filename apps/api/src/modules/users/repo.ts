@@ -9,6 +9,7 @@ export async function insertUser(input: {
   passwordHash: string;
   fullName: string;
   role: Role;
+  emailVerifiedAt?: Date;
 }) {
   const [row] = await db.insert(users).values(input).returning();
   return row;

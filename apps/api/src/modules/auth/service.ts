@@ -40,15 +40,15 @@ async function issueRefreshToken(userId: string, familyId: string) {
   return { token, expiresAt };
 }
 
-export async function login(email: string, password: string) {
-  const user = await repo.findUserByEmail(email);
-  if (!user || !user.isActive) {
-    throw new AppError(401, "invalid_credentials", "Неверный email или пароль");
-  }
-  const valid = await argon2.verify(user.passwordHash, password);
-  if (!valid) {
-    throw new AppError(401, "invalid_credentials", "Неверный email или пароль");
-  }
+/**
+ * Э14.1 — минт новой сессии (access + refresh, новая `familyId`) для уже
+ * аутентифицированного пользователя. Общая точка для `login()` и
+ * подтверждения почты при self-signup (`registration` модуль) — токены не
+ * дублируются в двух местах.
+ */
+export async function issueSessionForUser<T extends { id: string; schoolId: string; role: string }>(
+  user: T,
+) {
   await repo.touchLastLogin(user.id);
 
   const familyId = randomUUID();
@@ -60,6 +60,23 @@ export async function login(email: string, password: string) {
   const refresh = await issueRefreshToken(user.id, familyId);
 
   return { accessToken, refreshToken: refresh.token, refreshExpiresAt: refresh.expiresAt, user };
+}
+
+export async function login(email: string, password: string) {
+  const user = await repo.findUserByEmail(email);
+  if (!user || !user.isActive) {
+    throw new AppError(401, "invalid_credentials", "Неверный email или пароль");
+  }
+  // Э14.1: passwordHash nullable (задел под OAuth-only аккаунты, Э14.3) —
+  // без этой проверки argon2.verify(null, ...) кинул бы сырой TypeError.
+  if (!user.passwordHash) {
+    throw new AppError(401, "invalid_credentials", "Неверный email или пароль");
+  }
+  const valid = await argon2.verify(user.passwordHash, password);
+  if (!valid) {
+    throw new AppError(401, "invalid_credentials", "Неверный email или пароль");
+  }
+  return issueSessionForUser(user);
 }
 
 export async function refresh(presentedToken: string) {

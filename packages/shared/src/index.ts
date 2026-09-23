@@ -13,3 +13,6 @@ export * from "./annotations.js";
 export * from "./import.js";
 export * from "./recordings.js";
 export * from "./school-settings.js";
+export * from "./schools.js";
+export * from "./inn-ogrn.js";
+export * from "./registration.js";

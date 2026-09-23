@@ -12,6 +12,10 @@ export async function createUser(schoolId: string, input: CreateUserRequest) {
       passwordHash,
       fullName: input.fullName,
       role: input.role,
+      // Э14.1: почта self-signup аккаунтов требует подтверждения по ссылке,
+      // но админ, создающий сотрудника вручную, тем самым уже ручается за
+      // неё — считаем подтверждённой сразу.
+      emailVerifiedAt: new Date(),
     });
   } catch (err) {
     if (isUniqueViolation(err)) {

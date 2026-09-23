@@ -35,6 +35,7 @@
     "jose": "^5.9.6",
     "livekit-server-sdk": "^2.18.0",
     "mammoth": "^1.12.2",
+    "nodemailer": "^6.9.16",
     "pdfjs-dist": "^4.10.38",
     "pg": "^8.13.1",
     "prom-client": "^15.1.3",
@@ -44,6 +45,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
+    "@types/nodemailer": "^6.4.17",
     "@types/pg": "^8.11.10",
     "drizzle-kit": "^0.30.1",
     "tsx": "^4.19.2",

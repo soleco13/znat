@@ -3,6 +3,12 @@ import type { ReactNode } from "react";
 
 import { LoginPage } from "./features/auth/LoginPage.js";
 import { GuestJoinPage } from "./features/guest/GuestJoinPage.js";
+import { RegisterChoicePage } from "./features/registration/RegisterChoicePage.js";
+import { IndividualRegisterPage } from "./features/registration/IndividualRegisterPage.js";
+import { OrganizationRegisterPage } from "./features/registration/OrganizationRegisterPage.js";
+import { EmailSentPage } from "./features/registration/EmailSentPage.js";
+import { VerifyEmailPage } from "./features/registration/VerifyEmailPage.js";
+import { SpacePage } from "./features/spaces/SpacePage.js";
 import { LessonsListPage } from "./features/lessons/LessonsListPage.js";
 import { AdminRecordingsPage } from "./features/recordings/AdminRecordingsPage.js";
 import { MaterialEditorPage } from "./features/materials/MaterialEditorPage.js";
@@ -35,6 +41,14 @@ export function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        {/* Э14.1 — публичная self-signup регистрация (§ план-ТЗ Э14), вне AppShell и RequireAuth. */}
+        <Route path="/register" element={<RegisterChoicePage />} />
+        <Route path="/register/individual" element={<IndividualRegisterPage />} />
+        <Route path="/register/organization" element={<OrganizationRegisterPage />} />
+        <Route path="/register/check-email" element={<EmailSentPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        {/* Э14.1 — публичная визитка пространства; приём инвайта (`/s/:slug/invite/:code`) — Э14.2. */}
+        <Route path="/s/:slug" element={<SpacePage />} />
         {/* Э12.6 — вход ученика по прямой ссылке, вне AppShell и RequireAuth. */}
         <Route path="/j/:token" element={<GuestJoinPage />} />
         {/* §4.2 ТЗ: уроки — admin и teacher; методист сюда не ходит. */}

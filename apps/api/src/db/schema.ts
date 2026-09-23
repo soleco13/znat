@@ -56,9 +56,31 @@ export const recordingStatusEnum = pgEnum("recording_status", [
   "deleted",
 ]);
 
+/**
+ * Э14.1 — публичная self-signup регистрация (§ план-ТЗ Э14). `individual` —
+ * репетитор без организации (в т.ч. без явного «пространства» — тогда это
+ * его личная школа под капотом); `organization` — ООО, регистрирующее своё
+ * «пространство» с названием, ИНН/ОГРН.
+ */
+export const schoolKindEnum = pgEnum("school_kind", ["individual", "organization"]);
+
 export const schools = pgTable("schools", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
+  /**
+   * Э14.1 — идентификатор «пространства» в публичных путях `/s/<slug>/...`
+   * (визитка, приём инвайта). NOT NULL с рождения: дефолт в миграции
+   * генерирует значение и для уже существующих строк (та же техника, что у
+   * `lessons.joinToken`), backfill-UPDATE не нужен.
+   */
+  slug: text("slug")
+    .notNull()
+    .unique()
+    .default(sql`'space-' || substr(gen_random_uuid()::text, 1, 8)`),
+  kind: schoolKindEnum("kind").notNull().default("individual"),
+  /** Только для `kind: "organization"`. Формат+контрольная сумма проверяются в packages/shared, сверки с ЕГРЮЛ нет. */
+  inn: text("inn"),
+  ogrn: text("ogrn"),
   timezone: text("timezone").notNull().default("UTC"),
   settings: jsonb("settings").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -70,13 +92,36 @@ export const users = pgTable("users", {
     .notNull()
     .references(() => schools.id, { onDelete: "cascade" }),
   email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  /** Nullable с Э14.1: задел под OAuth-only аккаунты (Э14.3) — по паролю входят только email-аккаунты. */
+  passwordHash: text("password_hash"),
   fullName: text("full_name").notNull(),
   role: roleEnum("role").notNull(),
   isActive: boolean("is_active").notNull().default(true),
+  /** Э14.1 — self-signup требует подтверждения почты; NULL = письмо отправлено, но ссылка ещё не открыта. */
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Э14.1 — одноразовый токен подтверждения почты при self-signup. Хранится
+ * только хэш (та же схема, что `refreshTokens.tokenHash`), сырой токен
+ * живёт только в письме.
+ */
+export const emailVerificationTokens = pgTable(
+  "email_verification_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("email_verification_tokens_user_idx").on(t.userId)],
+);
 
 export const lessons = pgTable(
   "lessons",

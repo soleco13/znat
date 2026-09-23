@@ -1,20 +1,20 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { GraduationCap } from "lucide-react";
-import type { LoginRequest, MeResponse } from "@school/shared";
+import { User } from "lucide-react";
 
-import { apiFetch, ApiError } from "@/shared/api-client";
-import { useAuthStore } from "@/shared/auth-store";
+import { ApiError } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { registerIndividual } from "./registration-api.js";
 
-export function LoginPage() {
+/** Э14.1 — self-signup репетитора: без организации, личное пространство создаётся под капотом. */
+export function IndividualRegisterPage() {
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const setAuth = useAuthStore((s) => s.setAuth);
   const navigate = useNavigate();
 
   async function onSubmit(e: FormEvent) {
@@ -22,16 +22,10 @@ export function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      const body: LoginRequest = { email, password };
-      const data = await apiFetch<{ accessToken: string; user: MeResponse }>("/auth/login", {
-        method: "POST",
-        body: JSON.stringify(body),
-      });
-      setAuth(data.accessToken, data.user);
-      navigate("/lessons");
+      const result = await registerIndividual({ fullName, email, password });
+      navigate("/register/check-email", { state: { email: result.email } });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Не удалось войти");
-    } finally {
+      setError(err instanceof ApiError ? err.message : "Не удалось зарегистрироваться");
       setSubmitting(false);
     }
   }
@@ -41,36 +35,45 @@ export function LoginPage() {
       <div className="w-full max-w-[400px] rounded-xl border border-border bg-card p-9 shadow-lg">
         <div className="mb-8 flex flex-col items-center text-center">
           <span className="mb-3.5 flex size-14 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <GraduationCap className="size-7" aria-hidden />
+            <User className="size-7" aria-hidden />
           </span>
-          <h1 className="text-[22px] font-heavy tracking-tight">Школа онлайн</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">Вход в платформу</p>
+          <h1 className="text-[22px] font-heavy tracking-tight">Регистрация репетитора</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">Личный кабинет без организации</p>
         </div>
 
         <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="login-email">Email</Label>
+            <Label htmlFor="reg-name">Имя и фамилия</Label>
             <Input
-              id="login-email"
-              type="email"
-              autoComplete="email"
-              placeholder="you@school.ru"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              aria-invalid={error != null}
+              id="reg-name"
+              autoComplete="name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
               required
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="login-password">Пароль</Label>
+            <Label htmlFor="reg-email">Email</Label>
             <Input
-              id="login-password"
+              id="reg-email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="reg-password">Пароль</Label>
+            <Input
+              id="reg-password"
               type="password"
-              autoComplete="current-password"
-              placeholder="••••••••"
+              autoComplete="new-password"
+              minLength={8}
+              placeholder="Минимум 8 символов"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              aria-invalid={error != null}
               required
             />
           </div>
@@ -82,14 +85,13 @@ export function LoginPage() {
           ) : null}
 
           <Button type="submit" size="lg" className="mt-1 w-full" loading={submitting}>
-            {submitting ? "Входим…" : "Войти"}
+            {submitting ? "Регистрируем…" : "Зарегистрироваться"}
           </Button>
         </form>
 
         <p className="mt-5 text-center text-sm text-muted-foreground">
-          Нет аккаунта?{" "}
           <Link to="/register" className="font-medium text-primary hover:underline">
-            Зарегистрироваться
+            ← Назад к выбору
           </Link>
         </p>
       </div>

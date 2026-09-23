@@ -62,6 +62,22 @@ const envSchema = z.object({
    * токенов не должна давать другой (тот же принцип, что у гостевого).
    */
   JWT_RECORDER_SECRET: z.string().min(32),
+
+  // --- Э14.1: собственный SMTP-релей на этом же сервере для писем
+  //     подтверждения почты при self-signup (гейт §1.2 ТЗ: бесплатный,
+  //     не на критическом пути урока — не пришло письмо → просто не
+  //     подтверждена почта, урок не деградирует; смена релея — другой хост
+  //     в этой же переменной, без переделки архитектуры). ---
+  SMTP_HOST: z.string().min(1).default("localhost"),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_USER: z.string().min(1).optional(),
+  SMTP_PASS: z.string().min(1).optional(),
+  SMTP_SECURE: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
+  /** Адрес отправителя — на проде должен жить в домене с настроенными SPF/DKIM/DMARC (инфра, не код). */
+  SMTP_FROM: z.string().min(1).default("no-reply@localhost"),
 });
 
 export const env = envSchema.parse(process.env);

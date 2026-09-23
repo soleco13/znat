@@ -14,6 +14,8 @@ export default defineConfig({
       COOKIE_SECRET: "test-cookie-secret-at-least-32-characters",
       STORAGE_HMAC_SECRET: "test-storage-hmac-secret-at-least-32-chars",
       LIVEKIT_API_SECRET: "test-livekit-api-secret",
+      SMTP_HOST: "localhost",
+      SMTP_FROM: "no-reply@localhost",
     },
   },
 });
