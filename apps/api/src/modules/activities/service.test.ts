@@ -35,6 +35,7 @@ const {
     ensureParticipant: vi.fn(),
     listLessonParticipants: vi.fn(),
     getParticipantNames: vi.fn(),
+    getPresenceId: vi.fn(),
   },
   canvasServiceMock: { postAnswerToBoard: vi.fn() },
   redisMock: { set: vi.fn(), get: vi.fn(), mget: vi.fn() },
@@ -618,6 +619,19 @@ describe("пометки учителя поверх материала учен
       participantId: PARTICIPANT_A,
       strokes: [stroke],
       updatedBy: TEACHER,
+    });
+  });
+
+  it("после сохранения ученик получает событие по WS урока — адресно, по его presence-id", async () => {
+    roomsServiceMock.getPresenceId.mockResolvedValue("99999999-9999-9999-9999-999999999999");
+
+    await saveStudentAnnotations(teacher, ACTIVITY, PARTICIPANT_A, { strokes: [stroke] });
+
+    expect(roomsServiceMock.getPresenceId).toHaveBeenCalledWith(PARTICIPANT_A);
+    expect(roomsServiceMock.broadcastToLesson).toHaveBeenCalledWith(expect.any(String), {
+      type: "annotations_updated",
+      userId: "99999999-9999-9999-9999-999999999999",
+      activityId: ACTIVITY,
     });
   });
 

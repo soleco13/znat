@@ -3,14 +3,19 @@ import type { AnnotationStroke } from "@school/shared";
 
 import type { AutosaveStatus } from "./useActivityAutosave.js";
 import { getMyAnnotations, getStudentAnnotations, saveStudentAnnotations } from "./annotations-api.js";
+import { onAnnotationsUpdated } from "./annotations-events.js";
 
-/** Как часто ученик перечитывает пометки учителя (тот же приём, что опрос прогресса Э8.8). */
-const POLL_MS = 3_000;
+/**
+ * Страховочный опрос на случай пропущенного WS-события (сокет
+ * переподключался). Основной путь — пуш `annotations_updated`: раньше
+ * каждый ученик опрашивал раз в 3 с, ~10 запросов в секунду на класс.
+ */
+const FALLBACK_POLL_MS = 30_000;
 /** Пауза после последнего штриха перед автосохранением у учителя. */
 const SAVE_DEBOUNCE_MS = 1_500;
 
 /**
- * Ученик: пометки учителя поверх его материала (read-only, опрос).
+ * Ученик: пометки учителя поверх его материала (read-only, пуш + редкий опрос).
  * `enabled=false` держит опрос выключенным (материал не на экране).
  */
 export function useStudentAnnotationsPoll(activityId: string, enabled: boolean): AnnotationStroke[] {
@@ -24,10 +29,14 @@ export function useStudentAnnotationsPoll(activityId: string, enabled: boolean):
         .then((r) => !cancelled && setStrokes(r.strokes))
         .catch(() => undefined);
     void load();
-    const t = setInterval(() => void load(), POLL_MS);
+    const t = setInterval(() => void load(), FALLBACK_POLL_MS);
+    const unsubscribe = onAnnotationsUpdated((updatedActivityId) => {
+      if (updatedActivityId === activityId) void load();
+    });
     return () => {
       cancelled = true;
       clearInterval(t);
+      unsubscribe();
     };
   }, [activityId, enabled]);
 

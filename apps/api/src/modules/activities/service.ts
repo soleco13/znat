@@ -623,6 +623,10 @@ export async function saveStudentAnnotations(
     strokes: body.strokes,
     updatedBy: user.sub,
   });
+  const presenceId = await roomsService.getPresenceId(participantId);
+  if (presenceId) {
+    roomsService.broadcastToLesson(activity.lessonId, { type: "annotations_updated", userId: presenceId, activityId });
+  }
   return { strokes: body.strokes, updatedAt: updatedAt.toISOString() };
 }
 

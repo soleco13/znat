@@ -95,6 +95,11 @@ export async function ensureParticipant(
   return { id: row!.id, displayName: actor.displayName };
 }
 
+/** Presence-id участника по его строке журнала — адресовать WS-сообщение урока конкретному ученику. */
+export async function getPresenceId(lessonParticipantId: string): Promise<string | null> {
+  return repo.findPresenceId(lessonParticipantId);
+}
+
 /** Ростер участников урока для учительских панелей заданий (Э12.5). */
 export async function listLessonParticipants(
   lessonId: string,

@@ -207,3 +207,13 @@ export async function countOpenSessions(lessonId: string) {
     .where(and(eq(lessonParticipants.lessonId, lessonId), isNull(lessonParticipants.leftAt)));
   return rows[0]?.total ?? 0;
 }
+
+/** Presence-id (= LiveKit identity) по строке журнала: `guest_id` гостя или `user_id` персонала. */
+export async function findPresenceId(lessonParticipantId: string): Promise<string | null> {
+  const rows = await db
+    .select({ guestId: lessonParticipants.guestId, userId: lessonParticipants.userId })
+    .from(lessonParticipants)
+    .where(eq(lessonParticipants.id, lessonParticipantId))
+    .limit(1);
+  return rows[0]?.guestId ?? rows[0]?.userId ?? null;
+}

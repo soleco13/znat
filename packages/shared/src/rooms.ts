@@ -145,6 +145,9 @@ export const serverRoomMessageSchema = z.discriminatedUnion("type", [
   // (POST /lessons/:id/screen-share/claim) у уже делившегося участника — тот
   // должен сам остановить СВОЙ трек локально (`userId` === его же id).
   z.object({ type: z.literal("screen_share_preempted"), userId: z.string().uuid() }),
+  // Учитель изменил пометки ученику `userId` (presence-id) по заданию — тот
+  // перечитывает их сразу, вместо опроса каждые 3 с всем классом.
+  z.object({ type: z.literal("annotations_updated"), userId: z.string().uuid(), activityId: z.string().uuid() }),
   z.object({ type: z.literal("error"), message: z.string() }),
 ]);
 export type ServerRoomMessage = z.infer<typeof serverRoomMessageSchema>;

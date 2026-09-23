@@ -105,6 +105,7 @@ import { ScreenShareStatusBar, SelfScreenShareButton } from "./ScreenShareContro
 import { RoomVideoGrid } from "./RoomVideoGrid.js";
 import { ScreenShareTile } from "./ScreenShareTile.js";
 import { useRoomSocket } from "./useRoomSocket.js";
+import { notifyAnnotationsUpdated } from "../materials/annotations-events.js";
 import { VideoSubscriptionManager } from "./VideoSubscriptions.js";
 
 // Э5.1/Э5.2 — см. подробные комментарии ниже у <LiveKitRoom>. 720p + simulcast,
@@ -363,6 +364,9 @@ export function RoomPage() {
       }
       case "screen_share_preempted":
         if (message.userId === selfIdRef.current) setScreenSharePreempted((n) => n + 1);
+        break;
+      case "annotations_updated":
+        if (message.userId === selfIdRef.current) notifyAnnotationsUpdated(message.activityId);
         break;
       case "error":
         setError(message.message);
