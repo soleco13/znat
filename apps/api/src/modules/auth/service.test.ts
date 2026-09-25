@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { repoMock, argonMock } = vi.hoisted(() => ({
+const { repoMock, argonMock, redisMock, mailMock } = vi.hoisted(() => ({
+  redisMock: { set: vi.fn().mockResolvedValue("OK") },
+  mailMock: { sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined) },
   repoMock: {
+    revokeAllForUser: vi.fn(),
+    updatePasswordHash: vi.fn(),
+    insertPasswordResetToken: vi.fn(),
+    consumePasswordReset: vi.fn(),
     findUserByEmail: vi.fn(),
     findUserById: vi.fn(),
     touchLastLogin: vi.fn().mockResolvedValue(undefined),
@@ -17,8 +23,10 @@ const { repoMock, argonMock } = vi.hoisted(() => ({
 
 vi.mock("./repo.js", () => repoMock);
 vi.mock("argon2", () => ({ default: argonMock }));
+vi.mock("../../db/redis.js", () => ({ redis: redisMock }));
+vi.mock("../mail/service.js", () => mailMock);
 
-const { login, refresh } = await import("./service.js");
+const { login, refresh, requestPasswordReset, resetPassword, changePassword } = await import("./service.js");
 
 const USER = {
   id: "22222222-2222-2222-2222-222222222222",
@@ -33,6 +41,7 @@ const USER = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  redisMock.set.mockResolvedValue("OK");
 });
 
 describe("login", () => {
@@ -106,5 +115,57 @@ describe("refresh — гонка вкладок", () => {
   it("токен после выхода (отозван без преемника) — отказ даже сразу", async () => {
     repoMock.findRefreshTokenByHash.mockResolvedValue(record({ revokedAt: new Date(), replacedByHash: null }));
     await expect(refresh("tok")).rejects.toMatchObject({ code: "refresh_token_reused" });
+  });
+});
+
+describe("сброс и смена пароля", () => {
+  it("неизвестный email — тихо, без письма (нельзя перебирать адреса)", async () => {
+    repoMock.findUserByEmail.mockResolvedValue(null);
+    await expect(requestPasswordReset("nobody@example.com")).resolves.toBeUndefined();
+    expect(mailMock.sendPasswordResetEmail).not.toHaveBeenCalled();
+  });
+
+  it("известный email — токен (только хэш) и письмо со ссылкой", async () => {
+    repoMock.findUserByEmail.mockResolvedValue(USER);
+    await requestPasswordReset(USER.email);
+    const stored = repoMock.insertPasswordResetToken.mock.calls[0]![0] as { tokenHash: string };
+    const link = mailMock.sendPasswordResetEmail.mock.calls[0]![1] as string;
+    expect(link).toContain("/reset-password?token=");
+    expect(link).not.toContain(stored.tokenHash);
+  });
+
+  it("повтор в течение минуты — письмо не уходит", async () => {
+    redisMock.set.mockResolvedValue(null);
+    repoMock.findUserByEmail.mockResolvedValue(USER);
+    await requestPasswordReset(USER.email);
+    expect(mailMock.sendPasswordResetEmail).not.toHaveBeenCalled();
+  });
+
+  it("недействительная ссылка — 400", async () => {
+    argonMock.hash.mockResolvedValue("new-hash");
+    repoMock.consumePasswordReset.mockResolvedValue(null);
+    await expect(resetPassword("bad", "newpassword1")).rejects.toMatchObject({
+      statusCode: 400,
+      code: "invalid_reset_token",
+    });
+  });
+
+  it("смена: неверный текущий пароль — 400, пароль не меняется", async () => {
+    repoMock.findUserById.mockResolvedValue(USER);
+    argonMock.verify.mockResolvedValue(false);
+    await expect(changePassword(USER.id, "wrong", "newpassword1")).rejects.toMatchObject({
+      code: "wrong_current_password",
+    });
+    expect(repoMock.updatePasswordHash).not.toHaveBeenCalled();
+  });
+
+  it("смена: новый пароль, остальные сессии отозваны, текущей — новая", async () => {
+    repoMock.findUserById.mockResolvedValue(USER);
+    argonMock.verify.mockResolvedValue(true);
+    argonMock.hash.mockResolvedValue("new-hash");
+    const session = await changePassword(USER.id, "old", "newpassword1");
+    expect(repoMock.updatePasswordHash).toHaveBeenCalledWith(USER.id, "new-hash");
+    expect(repoMock.revokeAllForUser).toHaveBeenCalledWith(USER.id);
+    expect(session.refreshToken).toEqual(expect.any(String));
   });
 });

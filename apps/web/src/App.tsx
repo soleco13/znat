@@ -2,6 +2,9 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import type { ReactNode } from "react";
 
 import { LoginPage } from "./features/auth/LoginPage.js";
+import { ChangePasswordPage } from "./features/account/ChangePasswordPage.js";
+import { ForgotPasswordPage } from "./features/account/ForgotPasswordPage.js";
+import { ResetPasswordPage } from "./features/account/ResetPasswordPage.js";
 import { GuestJoinPage } from "./features/guest/GuestJoinPage.js";
 import { RegisterChoicePage } from "./features/registration/RegisterChoicePage.js";
 import { IndividualRegisterPage } from "./features/registration/IndividualRegisterPage.js";
@@ -49,6 +52,9 @@ export function App() {
         <Route path="/register/organization" element={<OrganizationRegisterPage />} />
         <Route path="/register/check-email" element={<EmailSentPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/account/password" element={<Shell><ChangePasswordPage /></Shell>} />
         {/* Э14.1/Э14.2 — публичная визитка пространства и приём приглашения, вне AppShell/RequireAuth. */}
         <Route path="/s/:slug" element={<SpacePage />} />
         <Route path="/s/:slug/invite/:code" element={<AcceptInvitePage />} />

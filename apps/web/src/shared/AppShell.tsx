@@ -4,6 +4,7 @@ import {
   CalendarDays,
   GraduationCap,
   HardDrive,
+  KeyRound,
   Library,
   LogOut,
   Menu,
@@ -235,6 +236,13 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <div className="text-xs text-muted-foreground">{ROLE_LABEL[user.role]}</div>
               </div>
               <UserAvatar name={user.fullName} size={38} />
+              <SimpleTooltip content="Сменить пароль">
+                <Button variant="ghost" size="icon" asChild aria-label="Сменить пароль">
+                  <Link to="/account/password">
+                    <KeyRound />
+                  </Link>
+                </Button>
+              </SimpleTooltip>
               <SimpleTooltip content="Выйти">
                 <Button
                   variant="ghost"

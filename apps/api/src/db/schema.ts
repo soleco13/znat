@@ -124,6 +124,25 @@ export const emailVerificationTokens = pgTable(
 );
 
 /**
+ * Одноразовая ссылка сброса пароля («Забыли пароль?»). Как и у
+ * подтверждения почты, хранится только хэш; живёт час.
+ */
+export const passwordResetTokens = pgTable(
+  "password_reset_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("password_reset_tokens_user_idx").on(t.userId)],
+);
+
+/**
  * Э14.2 — приглашение в чужое пространство (§ план-ТЗ Э14): только по
  * ссылке/коду от админа пространства, не открытый поиск (решено заранее —
  * иначе кто угодно мог бы зайти в чужую школу). Хранится только хэш кода

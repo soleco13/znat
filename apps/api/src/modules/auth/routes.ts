@@ -1,5 +1,11 @@
 import type { FastifyInstance } from "fastify";
-import { loginRequestSchema, meResponseSchema } from "@school/shared";
+import {
+  changePasswordRequestSchema,
+  forgotPasswordRequestSchema,
+  loginRequestSchema,
+  meResponseSchema,
+  resetPasswordRequestSchema,
+} from "@school/shared";
 import * as authService from "./service.js";
 import { AppError } from "../../plugins/errors.js";
 import { env } from "../../plugins/env.js";
@@ -61,6 +67,31 @@ export default async function authRoutes(app: FastifyInstance) {
     reply.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_PATH });
     return reply.send({ ok: true });
   });
+
+  const passwordLimited = { config: { rateLimit: { max: 5, timeWindow: "1 minute" } } };
+
+  app.post("/auth/password/forgot", passwordLimited, async (request, reply) => {
+    const body = forgotPasswordRequestSchema.parse(request.body);
+    await authService.requestPasswordReset(body.email);
+    return reply.status(202).send({ ok: true });
+  });
+
+  app.post("/auth/password/reset", passwordLimited, async (request, reply) => {
+    const body = resetPasswordRequestSchema.parse(request.body);
+    await authService.resetPassword(body.token, body.password);
+    return reply.send({ ok: true });
+  });
+
+  app.post(
+    "/auth/password/change",
+    { preHandler: app.authenticate, ...passwordLimited },
+    async (request, reply) => {
+      const body = changePasswordRequestSchema.parse(request.body);
+      const result = await authService.changePassword(request.user.sub, body.currentPassword, body.newPassword);
+      setRefreshCookie(reply, result.refreshToken, result.refreshExpiresAt);
+      return reply.send({ accessToken: result.accessToken, user: toMeResponse(result.user) });
+    },
+  );
 
   app.get("/auth/me", { preHandler: app.authenticate }, async (request, reply) => {
     const user = await authService.getUserOrThrow(request.user.sub);

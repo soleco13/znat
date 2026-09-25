@@ -2,7 +2,9 @@ import { randomUUID, randomBytes, createHash } from "node:crypto";
 import argon2 from "argon2";
 import { SignJWT, jwtVerify } from "jose";
 import { accessTokenPayloadSchema, type AccessTokenPayload, type Role } from "@school/shared";
+import { redis } from "../../db/redis.js";
 import { env } from "../../plugins/env.js";
+import * as mailService from "../mail/service.js";
 import { AppError } from "../../plugins/errors.js";
 import * as repo from "./repo.js";
 
@@ -184,4 +186,57 @@ export function stopRefreshTokenCleanup(): void {
     clearInterval(refreshTokenCleanupTimer);
     refreshTokenCleanupTimer = null;
   }
+}
+
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+/** Не чаще одного письма сброса в минуту на адрес. */
+const PASSWORD_RESET_COOLDOWN_SECONDS = 60;
+
+/**
+ * «Забыли пароль?». Ответ одинаковый, есть такой аккаунт или нет, — по
+ * эндпоинту нельзя перебирать зарегистрированные адреса. Сбой SMTP только
+ * логируется по той же причине.
+ */
+export async function requestPasswordReset(email: string): Promise<void> {
+  const cooldown = await redis.set(`mail:reset:${email}`, "1", "EX", PASSWORD_RESET_COOLDOWN_SECONDS, "NX");
+  if (cooldown !== "OK") return;
+  const user = await repo.findUserByEmail(email);
+  if (!user || !user.isActive) return;
+  const rawToken = randomBytes(32).toString("base64url");
+  await repo.insertPasswordResetToken({
+    userId: user.id,
+    tokenHash: hashOpaqueToken(rawToken),
+    expiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MS),
+  });
+  try {
+    await mailService.sendPasswordResetEmail(user.email, `${env.PUBLIC_ORIGIN}/reset-password?token=${rawToken}`);
+  } catch (err) {
+    console.error("auth: не удалось отправить письмо сброса пароля", err);
+  }
+}
+
+/** Новый пароль по ссылке из письма; все прежние сессии отзываются. */
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  const passwordHash = await hashPassword(newPassword);
+  const user = await repo.consumePasswordReset(hashOpaqueToken(token), passwordHash, new Date());
+  if (!user) {
+    throw new AppError(400, "invalid_reset_token", "Ссылка недействительна, уже использована или истекла — запросите новую");
+  }
+}
+
+/**
+ * Смена пароля вошедшим пользователем. Остальные сессии (другие устройства,
+ * возможно — чужие) отзываются, текущей выдаётся новая.
+ */
+export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
+  const user = await repo.findUserById(userId);
+  if (!user || !user.isActive) {
+    throw new AppError(401, "invalid_credentials", "Пользователь недоступен");
+  }
+  if (!user.passwordHash || !(await argon2.verify(user.passwordHash, currentPassword))) {
+    throw new AppError(400, "wrong_current_password", "Текущий пароль указан неверно");
+  }
+  await repo.updatePasswordHash(user.id, await hashPassword(newPassword));
+  await repo.revokeAllForUser(user.id);
+  return issueSessionForUser(user);
 }

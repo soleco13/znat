@@ -197,6 +197,13 @@
       "when": 1790353166687,
       "tag": "0027_email_verified_backfill",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1790354720971,
+      "tag": "0028_password_reset_tokens",
+      "breakpoints": true
     }
   ]
 }

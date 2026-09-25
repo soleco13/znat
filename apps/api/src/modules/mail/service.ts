@@ -32,3 +32,12 @@ export async function sendVerificationEmail(to: string, verifyLink: string) {
     html: `<p>Чтобы подтвердить почту и активировать аккаунт, перейдите по ссылке:</p><p><a href="${verifyLink}">${verifyLink}</a></p><p>Ссылка действует 24 часа.</p>`,
   });
 }
+
+export async function sendPasswordResetEmail(to: string, resetLink: string) {
+  await sendMail({
+    to,
+    subject: "Сброс пароля",
+    text: `Чтобы задать новый пароль, перейдите по ссылке: ${resetLink}\n\nСсылка действует 1 час. Если вы не запрашивали сброс — просто проигнорируйте письмо, пароль останется прежним.`,
+    html: `<p>Чтобы задать новый пароль, перейдите по ссылке:</p><p><a href="${resetLink}">${resetLink}</a></p><p>Ссылка действует 1 час. Если вы не запрашивали сброс — просто проигнорируйте письмо, пароль останется прежним.</p>`,
+  });
+}

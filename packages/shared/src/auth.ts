@@ -14,6 +14,27 @@ export const loginRequestSchema = z.object({
 });
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
 
+/** Требования к новому паролю — те же, что при регистрации. */
+export const newPasswordSchema = z.string().min(8, "Пароль — не короче 8 символов").max(200);
+
+/** «Забыли пароль?» — ответ одинаковый, есть такой аккаунт или нет. */
+export const forgotPasswordRequestSchema = z.object({ email: emailSchema });
+export type ForgotPasswordRequest = z.infer<typeof forgotPasswordRequestSchema>;
+
+/** Новый пароль по ссылке из письма. */
+export const resetPasswordRequestSchema = z.object({
+  token: z.string().min(1).max(200),
+  password: newPasswordSchema,
+});
+export type ResetPasswordRequest = z.infer<typeof resetPasswordRequestSchema>;
+
+/** Смена пароля вошедшим пользователем — с подтверждением текущего. */
+export const changePasswordRequestSchema = z.object({
+  currentPassword: z.string().min(1).max(200),
+  newPassword: newPasswordSchema,
+});
+export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>;
+
 export const meResponseSchema = z.object({
   id: z.string().uuid(),
   schoolId: z.string().uuid(),
