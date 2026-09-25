@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { lessonSettingsSchema } from "./lessons.js";
+import { personalDataConsentSchema } from "./auth.js";
 
 /**
  * Э12 — гостевой вход учеников (§1.6 план-ТЗ). Ученик не имеет аккаунта:
@@ -50,6 +51,7 @@ export type GuestLessonInfo = z.infer<typeof guestLessonInfoSchema>;
 /** Тело `POST /j/:token/enter` — только имя. «Свободный вход»: любое имя, без выбора из списка (решение №3, §2 план-ТЗ). */
 export const guestEnterRequestSchema = z.object({
   name: z.string().trim().min(1, "Введите имя").max(80),
+  personalDataConsent: personalDataConsentSchema,
 });
 export type GuestEnterRequest = z.infer<typeof guestEnterRequestSchema>;
 

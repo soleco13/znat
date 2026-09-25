@@ -1136,3 +1136,26 @@ export function stopPresenceSweep(): void {
     sweepInterval = null;
   }
 }
+
+const CHAT_RETENTION_SWEEP_INTERVAL_MS = 6 * 60 * 60 * 1000;
+let chatRetentionTimer: NodeJS.Timeout | null = null;
+
+/** Удаляет сообщения чата старше `CHAT_RETENTION_DAYS`. */
+export async function runChatRetentionOnce(now = new Date()): Promise<number> {
+  return repo.deleteChatMessagesBefore(new Date(now.getTime() - env.CHAT_RETENTION_DAYS * 24 * 60 * 60 * 1000));
+}
+
+export function startChatRetentionSweep(): void {
+  if (chatRetentionTimer) return;
+  chatRetentionTimer = setInterval(() => {
+    runChatRetentionOnce().catch((err) => console.error("rooms: chat retention failed", err));
+  }, CHAT_RETENTION_SWEEP_INTERVAL_MS);
+  chatRetentionTimer.unref?.();
+}
+
+export function stopChatRetentionSweep(): void {
+  if (chatRetentionTimer) {
+    clearInterval(chatRetentionTimer);
+    chatRetentionTimer = null;
+  }
+}

@@ -5,6 +5,7 @@ import { slugify, validateInn, validateOgrn } from "@school/shared";
 
 import { ApiError } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
+import { PersonalDataConsent } from "@/shared/PersonalDataConsent";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { registerOrganization } from "./registration-api.js";
@@ -18,6 +19,7 @@ export function OrganizationRegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
@@ -38,7 +40,7 @@ export function OrganizationRegisterPage() {
     }
     setSubmitting(true);
     try {
-      const result = await registerOrganization({ orgName, inn, ogrn, fullName, email, password });
+      const result = await registerOrganization({ orgName, inn, ogrn, fullName, email, password, personalDataConsent: true });
       navigate("/register/check-email", { state: { email: result.email } });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Не удалось зарегистрироваться");
@@ -130,13 +132,15 @@ export function OrganizationRegisterPage() {
             />
           </div>
 
+          <PersonalDataConsent checked={consent} onChange={setConsent} />
+
           {error ? (
             <p className="text-sm font-medium text-destructive" role="alert">
               {error}
             </p>
           ) : null}
 
-          <Button type="submit" size="lg" className="mt-1 w-full" loading={submitting}>
+          <Button type="submit" size="lg" className="mt-1 w-full" loading={submitting} disabled={!consent}>
             {submitting ? "Регистрируем…" : "Создать пространство"}
           </Button>
         </form>

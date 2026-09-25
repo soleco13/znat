@@ -14,6 +14,15 @@ export const loginRequestSchema = z.object({
 });
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
 
+/**
+ * Согласие на обработку персональных данных (152-ФЗ) — без него не
+ * регистрируем и не пускаем гостя в урок. Только `true`: снятая галочка
+ * отклоняется схемой.
+ */
+export const personalDataConsentSchema = z.literal(true, {
+  errorMap: () => ({ message: "Нужно согласие на обработку персональных данных" }),
+});
+
 /** Требования к новому паролю — те же, что при регистрации. */
 export const newPasswordSchema = z.string().min(8, "Пароль — не короче 8 символов").max(200);
 

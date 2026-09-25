@@ -18,6 +18,8 @@ const envSchema = z.object({
   GUEST_SESSION_TTL_HOURS: z.coerce.number().int().min(1).max(24).default(6),
   /** Потолок учеников в одном уроке (§ ТЗ: класс до 30) — утёкшая ссылка не заведёт в урок сотни гостей. */
   LESSON_MAX_GUESTS: z.coerce.number().int().min(1).max(1000).default(50),
+  /** Сколько дней хранить сообщения чата урока (152-ФЗ: персональные данные не хранятся бессрочно). */
+  CHAT_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(365),
   COOKIE_SECRET: z.string().min(32),
   STORAGE_ROOT: z.string().min(1).default("/data/assets"),
   /**

@@ -69,7 +69,7 @@ describe("занятый неподтверждённым аккаунтом ema
     repoMock.findUnverifiedUserByEmail.mockResolvedValue(userRow({ id: "stale" }));
     repoMock.registerSchoolWithAdmin.mockResolvedValue({ school: { id: SCHOOL_ID }, user: userRow() });
 
-    await registerIndividual({ fullName: "Иван Петров", email: "tutor@example.com", password: "password123" });
+    await registerIndividual({ fullName: "Иван Петров", email: "tutor@example.com", password: "password123", personalDataConsent: true });
 
     expect(repoMock.deleteStaleUnverifiedUser).toHaveBeenCalledWith("stale", expect.any(Date));
     expect(repoMock.deleteStaleUnverifiedUser.mock.invocationCallOrder[0]).toBeLessThan(
@@ -83,7 +83,7 @@ describe("занятый неподтверждённым аккаунтом ema
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     await expect(
-      registerIndividual({ fullName: "Иван Петров", email: "tutor@example.com", password: "password123" }),
+      registerIndividual({ fullName: "Иван Петров", email: "tutor@example.com", password: "password123", personalDataConsent: true }),
     ).resolves.toEqual({ status: "pending_verification", email: "tutor@example.com" });
   });
 });
@@ -137,6 +137,7 @@ describe("registerIndividual", () => {
       fullName: "Иван Петров",
       email: "tutor@example.com",
       password: "password123",
+      personalDataConsent: true,
     });
 
     expect(result).toEqual({ status: "pending_verification", email: "tutor@example.com" });
@@ -153,7 +154,7 @@ describe("registerIndividual", () => {
     repoMock.registerSchoolWithAdmin.mockRejectedValue({ code: "23505" });
 
     await expect(
-      registerIndividual({ fullName: "Иван Петров", email: "tutor@example.com", password: "password123" }),
+      registerIndividual({ fullName: "Иван Петров", email: "tutor@example.com", password: "password123", personalDataConsent: true }),
     ).rejects.toMatchObject({ statusCode: 409, code: "email_taken" });
     expect(mailServiceMock.sendVerificationEmail).not.toHaveBeenCalled();
   });
@@ -171,6 +172,7 @@ describe("registerIndividual с inviteCode (Э14.2 — присоединени�
       email: "joined@example.com",
       password: "password123",
       inviteCode: "raw-invite-code",
+      personalDataConsent: true,
     });
 
     expect(result).toEqual({ status: "pending_verification", email: "joined@example.com" });
@@ -190,6 +192,7 @@ describe("registerIndividual с inviteCode (Э14.2 — присоединени�
         email: "joined@example.com",
         password: "password123",
         inviteCode: "bad-code",
+        personalDataConsent: true,
       }),
     ).rejects.toMatchObject({ statusCode: 410, code: "invite_invalid" });
     expect(mailServiceMock.sendVerificationEmail).not.toHaveBeenCalled();
@@ -204,6 +207,7 @@ describe("registerIndividual с inviteCode (Э14.2 — присоединени�
         email: "joined@example.com",
         password: "password123",
         inviteCode: "raw-invite-code",
+        personalDataConsent: true,
       }),
     ).rejects.toMatchObject({ statusCode: 409, code: "email_taken" });
   });
@@ -223,6 +227,7 @@ describe("registerOrganization", () => {
       orgName: "Школа 10",
       inn: "7707083893",
       ogrn: "1027700132195",
+      personalDataConsent: true,
     });
 
     expect(result.status).toBe("pending_verification");

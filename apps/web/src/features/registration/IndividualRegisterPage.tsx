@@ -4,6 +4,7 @@ import { User } from "lucide-react";
 
 import { ApiError } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
+import { PersonalDataConsent } from "@/shared/PersonalDataConsent";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { registerIndividual } from "./registration-api.js";
@@ -14,6 +15,7 @@ export function IndividualRegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
@@ -22,7 +24,7 @@ export function IndividualRegisterPage() {
     setError(null);
     setSubmitting(true);
     try {
-      const result = await registerIndividual({ fullName, email, password });
+      const result = await registerIndividual({ fullName, email, password, personalDataConsent: true });
       navigate("/register/check-email", { state: { email: result.email } });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Не удалось зарегистрироваться");
@@ -78,13 +80,15 @@ export function IndividualRegisterPage() {
             />
           </div>
 
+          <PersonalDataConsent checked={consent} onChange={setConsent} />
+
           {error ? (
             <p className="text-sm font-medium text-destructive" role="alert">
               {error}
             </p>
           ) : null}
 
-          <Button type="submit" size="lg" className="mt-1 w-full" loading={submitting}>
+          <Button type="submit" size="lg" className="mt-1 w-full" loading={submitting} disabled={!consent}>
             {submitting ? "Регистрируем…" : "Зарегистрироваться"}
           </Button>
         </form>

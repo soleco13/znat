@@ -46,6 +46,7 @@ export async function registerSchoolWithAdmin(input: {
         passwordHash: input.passwordHash,
         fullName: input.fullName,
         role: input.role,
+        personalDataConsentAt: new Date(),
       })
       .returning();
     await tx.insert(emailVerificationTokens).values({
@@ -99,6 +100,7 @@ export async function joinSchoolViaInvite(input: {
         passwordHash: input.passwordHash,
         fullName: input.fullName,
         role: invite.role,
+        personalDataConsentAt: new Date(),
       })
       .returning();
     await tx.insert(emailVerificationTokens).values({

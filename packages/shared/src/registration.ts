@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { validateInn, validateOgrn } from "./inn-ogrn.js";
-import { emailSchema, meResponseSchema } from "./auth.js";
+import { emailSchema, meResponseSchema, personalDataConsentSchema } from "./auth.js";
 
 /**
  * Э14.1 — публичная self-signup регистрация репетитора (физлицо, без
@@ -13,6 +13,7 @@ export const individualRegisterRequestSchema = z.object({
   email: emailSchema,
   password: z.string().min(8).max(200),
   inviteCode: z.string().min(1).optional(),
+  personalDataConsent: personalDataConsentSchema,
 });
 export type IndividualRegisterRequest = z.infer<typeof individualRegisterRequestSchema>;
 
@@ -24,6 +25,7 @@ export const organizationRegisterRequestSchema = z.object({
   orgName: z.string().min(1).max(200),
   inn: z.string().refine(validateInn, { message: "Некорректный ИНН" }),
   ogrn: z.string().refine(validateOgrn, { message: "Некорректный ОГРН" }),
+  personalDataConsent: personalDataConsentSchema,
 });
 export type OrganizationRegisterRequest = z.infer<typeof organizationRegisterRequestSchema>;
 

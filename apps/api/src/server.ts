@@ -46,7 +46,12 @@ import {
 } from "./modules/decks/service.js";
 import { startConvertEvents, stopConvertEvents } from "./modules/jobs/service.js";
 import { startCanvasUnloadSweep, stopCanvasUnloadSweep } from "./modules/canvas/service.js";
-import { startPresenceSweep, stopPresenceSweep } from "./modules/rooms/service.js";
+import {
+  startChatRetentionSweep,
+  startPresenceSweep,
+  stopChatRetentionSweep,
+  stopPresenceSweep,
+} from "./modules/rooms/service.js";
 import { startRefreshTokenCleanup, stopRefreshTokenCleanup } from "./modules/auth/service.js";
 import { startUnverifiedCleanup, stopUnverifiedCleanup } from "./modules/registration/service.js";
 import { filesRoutes } from "./modules/storage/routes.js";
@@ -158,6 +163,7 @@ export function buildServer() {
 async function main() {
   const app = buildServer();
   startPresenceSweep();
+  startChatRetentionSweep();
   startCanvasUnloadSweep();
   startConvertEvents(buildConvertJobHandlers());
   startDeckReconcileSweep();
@@ -168,6 +174,7 @@ async function main() {
   const shutdown = async (signal: string) => {
     app.log.info({ signal }, "Shutting down");
     stopPresenceSweep();
+    stopChatRetentionSweep();
     stopCanvasUnloadSweep();
     stopDeckReconcileSweep();
     stopRecordingRetentionSweep();

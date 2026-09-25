@@ -21,7 +21,8 @@ export async function enterGuestLesson(
 ): Promise<GuestEnterResponse> {
   const res = await apiFetch<GuestEnterResponse>(`/j/${encodeURIComponent(token)}/enter`, {
     method: "POST",
-    body: JSON.stringify({ name }),
+    // Кнопка входа недоступна без галочки согласия — сюда приходим только с ней.
+    body: JSON.stringify({ name, personalDataConsent: true }),
   });
   setGuestMode(true);
   useGuestSessionStore.getState().setSession({ ...res, lessonTitle });

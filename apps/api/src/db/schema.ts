@@ -99,6 +99,8 @@ export const users = pgTable("users", {
   isActive: boolean("is_active").notNull().default(true),
   /** Э14.1 — self-signup требует подтверждения почты; NULL = письмо отправлено, но ссылка ещё не открыта. */
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+  /** Когда человек дал согласие на обработку персональных данных при регистрации (152-ФЗ). */
+  personalDataConsentAt: timestamp("personal_data_consent_at", { withTimezone: true }),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

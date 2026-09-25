@@ -5,6 +5,7 @@ import { GraduationCap, Link2Off } from "lucide-react";
 import { ApiError } from "@/shared/api-client";
 import { useAsync } from "@/shared/hooks/use-async";
 import { Button } from "@/shared/ui/button";
+import { PersonalDataConsent } from "@/shared/PersonalDataConsent";
 import { CenteredSpinner } from "@/shared/ui/spinner";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
@@ -24,6 +25,7 @@ export function GuestJoinPage() {
   const info = useAsync(() => fetchGuestLessonInfo(token), [token]);
 
   const [name, setName] = useState("");
+  const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,6 +90,8 @@ export function GuestJoinPage() {
                 </p>
               </div>
 
+              <PersonalDataConsent checked={consent} onChange={setConsent} />
+
               {error ? (
                 <p className="text-sm font-medium text-destructive" role="alert">
                   {error}
@@ -99,7 +103,7 @@ export function GuestJoinPage() {
                 size="lg"
                 className="mt-1 w-full"
                 loading={submitting}
-                disabled={!name.trim()}
+                disabled={!name.trim() || !consent}
               >
                 {submitting ? "Входим…" : "Продолжить"}
               </Button>

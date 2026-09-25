@@ -217,3 +217,12 @@ export async function findPresenceId(lessonParticipantId: string): Promise<strin
     .limit(1);
   return rows[0]?.guestId ?? rows[0]?.userId ?? null;
 }
+
+/** Сообщения чата старше срока хранения — удаляются целиком (152-ФЗ: не храним дольше нужного). */
+export async function deleteChatMessagesBefore(before: Date): Promise<number> {
+  const rows = await db
+    .delete(chatMessages)
+    .where(lt(chatMessages.createdAt, before))
+    .returning({ id: chatMessages.id });
+  return rows.length;
+}
