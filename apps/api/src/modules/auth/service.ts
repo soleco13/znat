@@ -66,7 +66,50 @@ export async function issueSessionForUser<T extends { id: string; schoolId: stri
   return { accessToken, refreshToken: refresh.token, refreshExpiresAt: refresh.expiresAt, user };
 }
 
+/**
+ * Подбор пароля к одному аккаунту с разных IP лимит по IP не сдерживает —
+ * считаем неудачи на сам email: 10 за 15 минут, дальше 429 до конца окна.
+ * Проверка до argon2: перебор ещё и не жжёт CPU на хэширование.
+ */
+const LOGIN_FAILURES_LIMIT = 10;
+const LOGIN_FAILURES_WINDOW_SECONDS = 15 * 60;
+
+function loginFailuresKey(email: string): string {
+  return `login:fail:${email}`;
+}
+
+async function assertLoginNotThrottled(email: string): Promise<void> {
+  let failures = 0;
+  try {
+    failures = Number(await redis.get(loginFailuresKey(email))) || 0;
+  } catch {
+    return;
+  }
+  if (failures >= LOGIN_FAILURES_LIMIT) {
+    throw new AppError(429, "too_many_login_attempts", "Слишком много неудачных попыток входа — попробуйте через 15 минут");
+  }
+}
+
+async function recordLoginFailure(email: string): Promise<void> {
+  try {
+    const n = await redis.incr(loginFailuresKey(email));
+    if (n === 1) await redis.expire(loginFailuresKey(email), LOGIN_FAILURES_WINDOW_SECONDS);
+  } catch {
+    // учёт попыток — не критичный путь
+  }
+}
+
 export async function login(email: string, password: string) {
+  await assertLoginNotThrottled(email);
+  try {
+    return await loginUnthrottled(email, password);
+  } catch (err) {
+    if (err instanceof AppError && err.code === "invalid_credentials") await recordLoginFailure(email);
+    throw err;
+  }
+}
+
+async function loginUnthrottled(email: string, password: string) {
   const user = await repo.findUserByEmail(email);
   if (!user || !user.isActive) {
     throw new AppError(401, "invalid_credentials", "Неверный email или пароль");
@@ -86,6 +129,7 @@ export async function login(email: string, password: string) {
   if (!user.emailVerifiedAt) {
     throw new AppError(403, "email_not_verified", "Почта не подтверждена — перейдите по ссылке из письма");
   }
+  await redis.del(loginFailuresKey(email)).catch(() => undefined);
   return issueSessionForUser(user);
 }
 

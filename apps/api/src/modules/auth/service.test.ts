@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { repoMock, argonMock, redisMock, mailMock } = vi.hoisted(() => ({
-  redisMock: { set: vi.fn().mockResolvedValue("OK") },
+  redisMock: {
+    set: vi.fn().mockResolvedValue("OK"),
+    get: vi.fn().mockResolvedValue(null),
+    incr: vi.fn().mockResolvedValue(1),
+    expire: vi.fn().mockResolvedValue(1),
+    del: vi.fn().mockResolvedValue(1),
+  },
   mailMock: { sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined) },
   repoMock: {
     revokeAllForUser: vi.fn(),
@@ -42,6 +48,9 @@ const USER = {
 beforeEach(() => {
   vi.clearAllMocks();
   redisMock.set.mockResolvedValue("OK");
+  redisMock.get.mockResolvedValue(null);
+  redisMock.incr.mockResolvedValue(1);
+  redisMock.del.mockResolvedValue(1);
 });
 
 describe("login", () => {
@@ -66,6 +75,31 @@ describe("login", () => {
     repoMock.findUserByEmail.mockResolvedValue({ ...USER, emailVerifiedAt: null });
     argonMock.verify.mockResolvedValue(false);
     await expect(login(USER.email, "wrong")).rejects.toMatchObject({ statusCode: 401, code: "invalid_credentials" });
+  });
+});
+
+describe("login — лимит неудач на аккаунт", () => {
+  it("неверный пароль засчитывается в счётчик email", async () => {
+    repoMock.findUserByEmail.mockResolvedValue(USER);
+    argonMock.verify.mockResolvedValue(false);
+    await expect(login(USER.email, "wrong")).rejects.toMatchObject({ statusCode: 401 });
+    expect(redisMock.incr).toHaveBeenCalledWith(`login:fail:${USER.email}`);
+  });
+
+  it("10 неудач — 429 без проверки пароля (argon2 не вызывается)", async () => {
+    redisMock.get.mockResolvedValue("10");
+    await expect(login(USER.email, "password123")).rejects.toMatchObject({
+      statusCode: 429,
+      code: "too_many_login_attempts",
+    });
+    expect(argonMock.verify).not.toHaveBeenCalled();
+  });
+
+  it("успешный вход сбрасывает счётчик", async () => {
+    repoMock.findUserByEmail.mockResolvedValue(USER);
+    argonMock.verify.mockResolvedValue(true);
+    await login(USER.email, "password123");
+    expect(redisMock.del).toHaveBeenCalledWith(`login:fail:${USER.email}`);
   });
 });
 
