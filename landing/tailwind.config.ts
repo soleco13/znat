@@ -2,7 +2,7 @@ import type { Config } from "tailwindcss";
 import tailwindcssAnimate from "tailwindcss-animate";
 
 /**
- * Дизайн-система «Школа онлайн» (Shkola / AutoCheck) — те же токены, что в
+ * Дизайн-система «Матис» (Shkola / AutoCheck) — те же токены, что в
  * apps/web/tailwind.config.js. Значения приходят из src/index.css.
  * Лендинг добавляет свои keyframes для скролл-анимаций и «дорогих» эффектов.
  */
@@ -59,6 +59,8 @@ export default {
           light: "var(--c-teal-light)",
         },
         cyan: "var(--c-cyan)",
+        danger: { DEFAULT: "var(--c-danger)", light: "var(--c-danger-light)" },
+        warn: { DEFAULT: "var(--c-warn)", light: "var(--c-warn-light)" },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
@@ -120,46 +122,10 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        float: {
-          "0%, 100%": { transform: "translateY(0)" },
-          "50%": { transform: "translateY(-14px)" },
-        },
-        "float-slow": {
-          "0%, 100%": { transform: "translateY(0) rotate(0deg)" },
-          "50%": { transform: "translateY(-22px) rotate(1.5deg)" },
-        },
-        aurora: {
-          "0%, 100%": { transform: "translate3d(0,0,0) scale(1)" },
-          "33%": { transform: "translate3d(4%, -6%, 0) scale(1.12)" },
-          "66%": { transform: "translate3d(-5%, 4%, 0) scale(0.95)" },
-        },
-        marquee: {
-          from: { transform: "translateX(0)" },
-          to: { transform: "translateX(calc(-50% - 0.75rem))" },
-        },
-        "pulse-ring": {
-          "0%": { transform: "scale(0.9)", opacity: "0.7" },
-          "70%": { transform: "scale(1.7)", opacity: "0" },
-          "100%": { opacity: "0" },
-        },
-        shimmer: {
-          "100%": { transform: "translateX(100%)" },
-        },
-        "gradient-pan": {
-          "0%, 100%": { backgroundPosition: "0% 50%" },
-          "50%": { backgroundPosition: "100% 50%" },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.24s cubic-bezier(0.2,0.8,0.2,1)",
         "accordion-up": "accordion-up 0.24s cubic-bezier(0.2,0.8,0.2,1)",
-        float: "float 7s ease-in-out infinite",
-        "float-slow": "float-slow 11s ease-in-out infinite",
-        aurora: "aurora 22s ease-in-out infinite",
-        marquee: "marquee var(--marquee-duration, 34s) linear infinite",
-        "pulse-ring": "pulse-ring 2.4s cubic-bezier(0.2,0.8,0.2,1) infinite",
-        shimmer: "shimmer 2.4s ease-in-out infinite",
-        "gradient-pan": "gradient-pan 6s ease infinite",
       },
     },
   },

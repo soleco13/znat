@@ -1,109 +1,124 @@
-import { ArrowRight, Check, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { GraduationCap, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { Strike } from "@/components/Ink";
 import { Reveal } from "@/components/Reveal";
 import { SectionHeading } from "@/components/SectionHeading";
+import { useReveal } from "@/hooks/useReveal";
 
-const BEFORE = [
-  "Zoom для видео, Miro для доски, Google Формы для теста",
-  "Ученик ставит 3 расширения и всё равно «меня не видно»",
-  "Демонстрация экрана вместо слайдов — текст расплывается",
-  "Ответы собираются вручную после урока",
-  "Запись — отдельный сервис и отдельная оплата",
+const TABS = [
+  { name: "Zoom — видео", c: "#2d8cff" },
+  { name: "Miro — доска", c: "#f5b800" },
+  { name: "Google Формы", c: "#7248b9" },
+  { name: "PDF со слайдами", c: "#e03131" },
+  { name: "Запись экрана", c: "#0d9488" },
+  { name: "Чат класса", c: "#16a34a" },
 ];
 
-const AFTER = [
-  "Видео, доска, слайды, задания и чат — в одном окне урока",
-  "Ученик открывает ссылку и сразу в классе",
-  "Слайды рендерятся чётко, поверх них можно писать",
-  "Класс отвечает — учитель видит прогресс вживую",
-  "Запись включается одной кнопкой, лежит рядом с уроком",
+const ROWS = [
+  {
+    before: "Zoom для видео, Miro для доски, Google Формы для теста",
+    after: "Видео, доска, слайды, задания и чат — в одном окне урока",
+  },
+  {
+    before: "Ученик ставит 3 расширения и всё равно «меня не видно»",
+    after: "Ученик открывает ссылку и сразу в классе",
+  },
+  {
+    before: "Демонстрация экрана вместо слайдов — текст расплывается",
+    after: "Слайды рендерятся чётко, поверх них можно писать",
+  },
+  {
+    before: "Ответы собираются вручную после урока",
+    after: "Класс отвечает — учитель видит прогресс вживую",
+  },
+  {
+    before: "Запись — отдельный сервис и отдельная оплата",
+    after: "Запись включается одной кнопкой, лежит рядом с уроком",
+  },
 ];
 
-export function Problem() {
+/** Шесть вкладок «схлопываются» в одну — при появлении блока в поле зрения. */
+function TabStrip() {
+  const { ref, visible } = useReveal<HTMLDivElement>({ threshold: 0.7 });
+  const [merged, setMerged] = useState(false);
+  useEffect(() => {
+    if (!visible) return;
+    const t = setTimeout(() => setMerged(true), 1300);
+    return () => clearTimeout(t);
+  }, [visible]);
+
   return (
-    <section className="relative py-20 sm:py-28">
-      <div className="container-l">
-        <SectionHeading
-          eyebrow="Знакомо?"
-          title={
-            <>
-              Урок не должен начинаться <br className="hidden sm:block" />
-              со слов «сейчас, я найду вкладку»
-            </>
-          }
-          subtitle="Каждый инструмент по отдельности хорош. Вместе они крадут первые десять минут урока и внимание учеников."
-        />
-
-        <div className="mx-auto mt-14 grid max-w-4xl gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
-          <Reveal>
-            <Panel
-              tone="bad"
-              title="Как обычно"
-              items={BEFORE}
-            />
-          </Reveal>
-
-          <Reveal delay={120} className="mx-auto hidden size-12 place-items-center rounded-full border border-border bg-card text-primary shadow-sm sm:grid">
-            <ArrowRight className="size-5" />
-          </Reveal>
-
-          <Reveal delay={80}>
-            <Panel tone="good" title="Со «Школой онлайн»" items={AFTER} />
-          </Reveal>
-        </div>
+    <div ref={ref} className="overflow-hidden rounded-[18px] border border-border bg-card shadow-md">
+      <div className="flex items-end gap-1 border-b border-border bg-surface-3 px-2.5 pt-2.5">
+        {TABS.map((t, i) => (
+          <span
+            key={t.name}
+            className={cn(
+              "flex h-9 min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap rounded-t-[10px] bg-card text-[13px] font-medium text-text-2 transition-all duration-700 ease-ds",
+              merged ? "max-w-0 px-0 opacity-0" : "max-w-[200px] px-3 opacity-100",
+            )}
+            style={{ transitionDelay: merged ? `${i * 90}ms` : "0ms", flex: merged ? "0 1 0px" : "1 1 0px" }}
+          >
+            <span className="size-3 shrink-0 rounded-[4px]" style={{ background: t.c }} />
+            <span className="truncate">{t.name}</span>
+            <X className="ml-auto size-3 shrink-0 text-text-3" aria-hidden />
+          </span>
+        ))}
+        <span
+          className={cn(
+            "flex h-9 min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap rounded-t-[10px] bg-card px-3 text-[13px] font-semibold text-foreground transition-all duration-700 ease-ds",
+            merged ? "max-w-[260px] flex-[1_1_0px]" : "max-w-0 flex-[0_1_0px] px-0 opacity-0",
+          )}
+          style={{ transitionDelay: merged ? "500ms" : "0ms" }}
+        >
+          <span className="flex size-4 shrink-0 items-center justify-center rounded-[5px] bg-primary text-primary-foreground">
+            <GraduationCap className="size-3" aria-hidden />
+          </span>
+          Матис
+        </span>
       </div>
-    </section>
+      <div className="px-5 py-7 sm:px-8">
+        <p
+          className={cn(
+            "text-[15px] transition-all duration-700 ease-ds",
+            merged ? "text-foreground" : "text-muted-foreground",
+          )}
+        >
+          {merged ? "Одна вкладка. Один урок." : "Урок начался, а нужные окна ещё открываются…"}
+        </p>
+      </div>
+    </div>
   );
 }
 
-function Panel({
-  tone,
-  title,
-  items,
-}: {
-  tone: "bad" | "good";
-  title: string;
-  items: string[];
-}) {
-  const good = tone === "good";
+export function Problem() {
   return (
-    <div
-      className={cn(
-        "h-full rounded-2xl border p-5 sm:p-6",
-        good
-          ? "border-primary-muted bg-primary-light/40 shadow-glow"
-          : "border-border bg-card",
-      )}
-    >
-      <div className="flex items-center gap-2">
-        <span
-          className={cn(
-            "grid size-6 place-items-center rounded-full",
-            good ? "bg-primary text-primary-foreground" : "bg-surface-3 text-text-3",
-          )}
-        >
-          {good ? <Check className="size-3.5" /> : <X className="size-3.5" />}
-        </span>
-        <span className={cn("text-[15px] font-heavy", good ? "text-primary" : "text-muted-foreground")}>
-          {title}
-        </span>
+    <section className="relative py-24 sm:py-32">
+      <div className="container-l">
+        <SectionHeading
+          title="Урок не должен начинаться со слов «сейчас, я найду вкладку»"
+          subtitle="Каждый инструмент по отдельности хорош. Вместе они крадут первые десять минут урока и внимание учеников."
+        />
+
+        <Reveal className="mt-14 max-w-3xl">
+          <TabStrip />
+        </Reveal>
+
+        <ul className="mt-16 max-w-4xl divide-y divide-border border-y border-border">
+          {ROWS.map((r, i) => (
+            <li key={i} className="grid gap-2 py-6 sm:grid-cols-2 sm:gap-10">
+              <p className="text-[17px] leading-snug text-muted-foreground">
+                <Strike d={i * 120}>{r.before}</Strike>
+              </p>
+              <Reveal delay={350 + i * 120}>
+                <p className="text-[17px] font-semibold leading-snug text-foreground">{r.after}</p>
+              </Reveal>
+            </li>
+          ))}
+        </ul>
       </div>
-      <ul className="mt-4 space-y-3">
-        {items.map((t) => (
-          <li key={t} className="flex gap-2.5 text-[14px] leading-snug">
-            <span
-              className={cn(
-                "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full",
-                good ? "bg-success/15 text-success" : "bg-danger/10 text-danger",
-              )}
-            >
-              {good ? <Check className="size-2.5" /> : <X className="size-2.5" />}
-            </span>
-            <span className={good ? "text-foreground" : "text-muted-foreground"}>{t}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
+    </section>
   );
 }

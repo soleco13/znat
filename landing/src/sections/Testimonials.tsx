@@ -1,7 +1,6 @@
-import { Quote } from "lucide-react";
-
-import { Reveal } from "@/components/Reveal";
+import { ChatMsg } from "@/components/ChatMsg";
 import { SectionHeading } from "@/components/SectionHeading";
+import { UserAvatar } from "@/lesson/parts";
 
 const ITEMS = [
   {
@@ -9,51 +8,51 @@ const ITEMS = [
       "Раньше у нас было три сервиса и инструкция для родителей на страницу. Теперь ученику приходит одна ссылка, и он в классе за десять секунд.",
     name: "Ирина К.",
     role: "Руководитель онлайн-школы",
-    initials: "ИК",
+    at: "10:12",
   },
   {
     quote:
       "Редактор материалов — то, ради чего мы перешли. Методисты собирают проверочные сами, без вёрстки, а движок считает баллы за меня.",
     name: "Дмитрий С.",
     role: "Методист по математике",
-    initials: "ДС",
+    at: "10:14",
   },
   {
     quote:
       "Доска и слайды в одном холсте изменили сам формат урока. Дети пишут у доски по очереди, я вижу, кто отвечает — не гадаю по чёрному экрану.",
     name: "Марина В.",
     role: "Учитель русского языка",
-    initials: "МВ",
+    at: "10:15",
   },
 ];
 
+/** Отзывы — сообщения в чате урока (та же разметка, что у чата в комнате). */
 export function Testimonials() {
   return (
-    <section className="relative py-20 sm:py-28">
-      <div className="container-l">
-        <SectionHeading eyebrow="Отзывы" title="За это платформу и любят" />
+    <section className="relative border-t border-border bg-white py-24 sm:py-32">
+      <div className="container-l grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
+        <SectionHeading title="Что пишут в чат после урока" />
 
-        <div className="mt-14 grid gap-4 lg:grid-cols-3">
-          {ITEMS.map((t, i) => (
-            <Reveal key={t.name} delay={i * 90}>
-              <figure className="flex h-full flex-col rounded-2xl border border-border bg-card p-6">
-                <Quote className="size-7 text-primary-muted" />
-                <blockquote className="mt-3 flex-1 text-[15px] leading-relaxed text-foreground">
+        <div className="lesson-ui flex flex-col gap-7">
+          {ITEMS.map((t) => (
+            <div key={t.name} className="flex gap-3.5">
+              <UserAvatar name={t.name} size={40} />
+              <ChatMsg
+                className="min-w-0"
+                typingMs={900}
+                header={
+                  <span className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="text-[15px] font-semibold text-foreground">{t.name}</span>
+                    <span className="text-[12.5px] text-text-3">{t.role}</span>
+                    <span className="text-[12px] text-text-3">{t.at}</span>
+                  </span>
+                }
+              >
+                <span className="block max-w-[58ch] rounded-[12px] bg-surface-2 px-4 py-3 text-[17px] leading-relaxed text-foreground">
                   {t.quote}
-                </blockquote>
-                <figcaption className="mt-5 flex items-center gap-3 border-t border-border pt-4">
-                  <span className="grid size-10 place-items-center rounded-full bg-gradient-to-br from-primary to-teal text-[13px] font-bold text-white">
-                    {t.initials}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-[14px] font-heavy text-foreground">
-                      {t.name}
-                    </span>
-                    <span className="block truncate text-[12.5px] text-muted-foreground">{t.role}</span>
-                  </span>
-                </figcaption>
-              </figure>
-            </Reveal>
+                </span>
+              </ChatMsg>
+            </div>
           ))}
         </div>
       </div>

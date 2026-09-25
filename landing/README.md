@@ -1,18 +1,28 @@
-# Лендинг «Школа онлайн»
+# Лендинг «Матис»
 
 Продающий одностраничник платформы (SaaS по подписке). Отдельный проект,
 **не входит в pnpm-workspace** монолита — своя `node_modules`.
 
 ## Стек
 
-Vite 6 + React 19 + TypeScript + Tailwind 3 + shadcn-примитивы (button,
-badge, accordion), `lucide-react`, `tailwindcss-animate`. Анимации — CSS +
-IntersectionObserver, без тяжёлых зависимостей.
+Vite 6 + React 19 + TypeScript + Tailwind 3 + shadcn-примитивы (button, badge), `lucide-react`, `tailwindcss-animate`. Шрифт Manrope —
+`@fontsource-variable/manrope` (кириллица, в бандле, без CDN). Анимации — CSS +
+IntersectionObserver, без тяжёлых зависимостей; `prefers-reduced-motion`
+показывает финальное состояние сразу.
 
-Дизайн-система — та же, что в `apps/web`: токены `src/index.css` перенесены
-verbatim из `apps/web/src/index.css` (синий `#1d4ed8`, easing
-`cubic-bezier(.2,.8,.2,1)`, радиусы, тени). При правках дизайн-системы в
-приложении — синхронизировать сюда.
+Концепция: **страница — это урок**. Шапка страницы — шапка урока, навигация
+внизу — панель управления урока, отзывы — сообщения чата, вопросы — «поднятые
+руки», три шага — переписка в чате. Оформление — «пометки учителя»: маркер,
+красный карандаш, тетрадная клетка (`Ink.tsx`, `.notebook`).
+
+**Интерфейс урока в макетах — копия приложения** (`src/lesson/*`): плитки
+участников, шапка, футер, панель участников/чата, доска, задание, прогресс
+класса перенесены из `apps/web/src/features/{room,canvas,materials}` дословно
+(классы и разметка), без LiveKit и данных. Шрифт внутри `.lesson-ui` — системный,
+как в приложении. **Меняете интерфейс урока — синхронизируйте `src/lesson/`.**
+Не копируется: видеопоток (вместо него силуэты) и иконки Excalidraw (lucide).
+
+Единственное отличие токенов от приложения — `--font` (Manrope) у заголовков.
 
 ## Разработка
 
@@ -29,17 +39,12 @@ pnpm preview                      # предпросмотр prod-сборки
 ```
 src/
   App.tsx                 порядок секций
-  index.css               токены ДС + утилиты лендинга (.reveal, .card-ring, aurora…)
-  components/              переиспользуемые куски
-    ui/                    button · badge · accordion (адаптированы под токены ДС)
-    Reveal.tsx             появление при скролле
-    ProductMock.tsx        макет «холста урока» для героя (живая вёрстка, не скрин)
-    BrowserFrame.tsx       рамка браузера вокруг макета
-    Aurora.tsx CountUp.tsx Marquee.tsx SectionHeading.tsx Logo.tsx ScrollProgress.tsx
-  sections/               Nav · Hero · CapabilityBar · Stats · Problem · Features ·
-                          CanvasShowcase · TaskEngine · HowItWorks · Security ·
-                          Pricing · Testimonials · FAQ · CTA · Footer
-  hooks/useReveal.ts
+  index.css               токены ДС + утилиты (.notebook, .mark, .strike, .ink, .word, .draw…)
+  lesson/                 копия интерфейса урока: parts · scenes · RoomWindow (десктоп/телефон) · data
+  components/             Ink (Mark/Pencil/Strike/Ring/Words) · Reveal · SectionHeading · Logo · ui/
+  sections/               Nav (+Dock) · Hero · Problem · Features · LessonFlow (закреплённое окно) ·
+                          TaskEngine · HowItWorks · Security · Pricing · Testimonials · FAQ · CTA · Footer
+  hooks/                  useReveal · useMedia
 ```
 
 ## Правки контента

@@ -1,43 +1,38 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { Words } from "./Ink";
 import { Reveal } from "./Reveal";
 
-/** Единая шапка секции: eyebrow + заголовок + подзаголовок, по центру. */
+/** Заголовок секции: крупный, слова выезжают по одному; без «эйброу»-плашек и нумерации. */
 export function SectionHeading({
-  eyebrow,
   title,
   subtitle,
-  align = "center",
   className,
+  tone = "light",
 }: {
-  eyebrow?: React.ReactNode;
   title: React.ReactNode;
   subtitle?: React.ReactNode;
-  align?: "center" | "left";
   className?: string;
+  tone?: "light" | "dark";
 }) {
+  const dark = tone === "dark";
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-4",
-        align === "center" ? "mx-auto max-w-2xl items-center text-center" : "max-w-2xl",
-        className,
-      )}
-    >
-      {eyebrow ? (
-        <Reveal as="span" className="eyebrow">
-          {eyebrow}
-        </Reveal>
-      ) : null}
-      <Reveal
-        as="div"
-        delay={60}
-        className="text-balance text-[30px] font-heavy leading-[1.12] tracking-tightest text-foreground sm:text-[40px]"
+    <div className={cn("flex max-w-3xl flex-col gap-5", className)}>
+      <Words
+        as="h2"
+        className={cn(
+          "text-balance text-[34px] font-black leading-[1.05] tracking-tightest sm:text-[52px]",
+          dark ? "text-white" : "text-foreground",
+        )}
       >
         {title}
-      </Reveal>
+      </Words>
       {subtitle ? (
-        <Reveal as="div" delay={120} className="text-[17px] leading-relaxed text-muted-foreground">
+        <Reveal
+          as="div"
+          delay={200}
+          className={cn("max-w-xl text-[17px] leading-relaxed", dark ? "text-white/65" : "text-muted-foreground")}
+        >
           {subtitle}
         </Reveal>
       ) : null}

@@ -5,8 +5,8 @@ const GROUPS = [
     title: "Продукт",
     links: [
       { label: "Возможности", href: "#features" },
-      { label: "Холст урока", href: "#canvas" },
-      { label: "Движок заданий", href: "#how" },
+      { label: "Ход урока", href: "#lesson" },
+      { label: "Движок заданий", href: "#tasks" },
       { label: "Тарифы", href: "#pricing" },
     ],
   },
@@ -73,7 +73,7 @@ export function Footer() {
         </div>
 
         <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 text-[12.5px] text-text-3 sm:flex-row">
-          <span>© {new Date().getFullYear()} «Школа онлайн». Все права защищены.</span>
+          <span>© {new Date().getFullYear()} «Матис». Все права защищены.</span>
           <span className="inline-flex items-center gap-1.5">
             <span className="size-1.5 rounded-full bg-success" />
             Все системы работают

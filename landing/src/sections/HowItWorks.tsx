@@ -1,59 +1,101 @@
-import { CalendarPlus, Link2, PlayCircle } from "lucide-react";
-
+import { ChatMsg } from "@/components/ChatMsg";
+import { Pencil } from "@/components/Ink";
 import { Reveal } from "@/components/Reveal";
 import { SectionHeading } from "@/components/SectionHeading";
 
-const STEPS = [
+const MESSAGES = [
   {
-    icon: CalendarPlus,
-    n: "01",
-    title: "Создайте урок",
-    text: "Название, учитель, настройки класса. Комната остаётся постоянной — ссылка не протухает.",
+    who: "Марина Петровна",
+    at: "09:52",
+    body: "Создала урок «Алгебра · 8 класс». Комната постоянная — ссылка не протухает.",
   },
   {
-    icon: Link2,
-    n: "02",
-    title: "Пришлите ссылку ученикам",
-    text: "Одна ссылка на весь класс. Ученик вводит имя, проходит проверку камеры и микрофона — и в уроке.",
+    who: "Марина Петровна",
+    at: "09:53",
+    body: "Ссылка на весь класс: matis.online/j/8k2-xq",
+    cont: true,
   },
+  { who: "Аня Соколова", at: "09:58", body: "Открыла, ввела имя. Камера и микрофон проверены." },
+  { who: "Илья Крылов", at: "09:58", body: "Я тоже в классе" },
   {
-    icon: PlayCircle,
-    n: "03",
-    title: "Ведите урок",
-    text: "Доска, слайды, задания, запись — переключаются на лету для всех. Готовьтесь один раз, повторяйте сколько нужно.",
+    who: "Марина Петровна",
+    at: "10:00",
+    body: "Начинаем. Доска, слайды и задания переключаются у всех сразу — готовилась один раз.",
   },
 ];
 
+/** Три шага — как переписка в чате урока (разметка сообщений из RoomPage.chatPanel). */
 export function HowItWorks() {
   return (
-    <section id="how" className="relative scroll-mt-24 bg-white py-20 sm:py-28">
-      <div className="container-l">
-        <SectionHeading
-          eyebrow="Как это работает"
-          title={<>От «создать» до «вести урок» — <span className="whitespace-nowrap">три шага</span></>}
-        />
-
-        <div className="relative mt-14 grid gap-4 sm:grid-cols-3">
-          {/* соединительная линия */}
-          <div className="pointer-events-none absolute left-0 right-0 top-11 hidden h-px bg-gradient-to-r from-transparent via-border to-transparent sm:block" />
-
-          {STEPS.map((s, i) => (
-            <Reveal key={s.n} delay={i * 110}>
-              <article className="relative h-full rounded-2xl border border-border bg-card p-6 text-center">
-                <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[0_12px_30px_-8px_rgba(29,78,216,0.5)]">
-                  <s.icon className="size-6" />
-                </div>
-                <span className="mt-4 block font-mono text-[12px] font-bold tracking-widest text-primary">
-                  {s.n}
+    <section id="how" className="relative border-y border-border bg-white py-24 sm:py-32">
+      <div className="container-l grid gap-14 lg:grid-cols-[1fr_minmax(0,460px)] lg:gap-20">
+        <div>
+          <SectionHeading
+            title={
+              <>
+                От «создать» до «вести урок» — <Pencil kind="under" d={500}>три шага</Pencil>
+              </>
+            }
+          />
+          <ol className="mt-12 max-w-md space-y-8">
+            {[
+              ["Создайте урок", "Название, учитель, настройки класса."],
+              ["Пришлите ссылку", "Одна ссылка на весь класс. Ученик вводит имя — и в уроке."],
+              ["Ведите урок", "Готовьтесь один раз, повторяйте сколько нужно."],
+            ].map(([t, d], i) => (
+              <Reveal as="li" key={t} delay={i * 130} className="flex gap-5">
+                <span className="mt-1 text-[15px] font-black tabular-nums text-primary">{i + 1}.</span>
+                <span>
+                  <span className="block text-[20px] font-black tracking-tightest text-foreground">{t}</span>
+                  <span className="mt-1 block text-[15px] leading-relaxed text-muted-foreground">{d}</span>
                 </span>
-                <h3 className="mt-1 text-[17px] font-heavy tracking-head text-foreground">{s.title}</h3>
-                <p className="mx-auto mt-2 max-w-[34ch] text-[14px] leading-relaxed text-muted-foreground">
-                  {s.text}
-                </p>
-              </article>
-            </Reveal>
-          ))}
+              </Reveal>
+            ))}
+          </ol>
         </div>
+
+        <Reveal className="lesson-ui self-start overflow-hidden rounded-[18px] border border-border bg-card shadow-lg">
+          <div role="tablist" className="flex shrink-0 gap-1 border-b border-border p-2.5">
+            {["Участники", "Чат", "Материалы"].map((t) => (
+              <span
+                key={t}
+                className={
+                  "inline-flex h-[34px] flex-1 items-center justify-center whitespace-nowrap rounded-full text-[13.5px] font-semibold " +
+                  (t === "Чат" ? "bg-primary-light text-primary" : "text-text-2")
+                }
+              >
+                {t}
+              </span>
+            ))}
+          </div>
+          <div className="flex flex-col gap-3 px-4 py-4">
+            {MESSAGES.map((m, i) => (
+              <ChatMsg
+                key={i}
+                delay={300 + i * 250}
+                typingMs={700}
+                className={m.cont ? "-mt-2" : ""}
+                header={
+                  m.cont ? null : (
+                    <span className="flex items-baseline gap-2">
+                      <span className="truncate text-[13px] font-semibold text-foreground">{m.who}</span>
+                      <span className="shrink-0 text-[11.5px] text-text-3">{m.at}</span>
+                    </span>
+                  )
+                }
+              >
+                <span className="block self-start whitespace-pre-wrap break-words rounded-[10px] bg-surface-2 px-2.5 py-2 text-sm text-foreground">
+                  {m.body}
+                </span>
+              </ChatMsg>
+            ))}
+          </div>
+          <div className="flex gap-2 border-t border-border p-2.5">
+            <span className="flex h-[38px] w-full items-center rounded-md border border-border bg-card px-3.5 text-sm text-muted-foreground shadow-xs">
+              Сообщение классу…
+            </span>
+          </div>
+        </Reveal>
       </div>
     </section>
   );

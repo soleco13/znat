@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 /**
- * Кнопка дизайн-системы «Школа онлайн» (as-is из apps/web/src/shared/ui/button,
+ * Кнопка дизайн-системы «Матис» (as-is из apps/web/src/shared/ui/button,
  * + размер `xl` для hero-CTA лендинга).
  */
 const buttonVariants = cva(

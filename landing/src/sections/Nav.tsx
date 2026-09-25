@@ -1,24 +1,43 @@
-import { useEffect, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { GraduationCap, Menu, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Logo } from "@/components/Logo";
+import { StatusPill } from "@/lesson/parts";
 
-const LINKS = [
-  { href: "#features", label: "Возможности" },
-  { href: "#canvas", label: "Холст урока" },
-  { href: "#how", label: "Как это работает" },
-  { href: "#pricing", label: "Тарифы" },
-  { href: "#faq", label: "Вопросы" },
+export const SECTIONS = [
+  { id: "features", label: "Возможности" },
+  { id: "lesson", label: "Ход урока" },
+  { id: "tasks", label: "Задания" },
+  { id: "pricing", label: "Тарифы" },
+  { id: "faq", label: "Вопросы" },
 ];
 
+function useActiveSection() {
+  const [active, setActive] = useState<string | null>(null);
+  useEffect(() => {
+    const els = SECTIONS.map((l) => document.getElementById(l.id)).filter((e): e is HTMLElement => !!e);
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) setActive(e.target.id);
+          else setActive((cur) => (cur === e.target.id ? null : cur));
+        }
+      },
+      { rootMargin: "-45% 0px -50% 0px" },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+  return active;
+}
+
+/** Шапка страницы — это шапка урока: та же разметка, что в комнате (RoomPage → header). */
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
+    const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -27,78 +46,153 @@ export function Nav() {
   return (
     <header
       className={cn(
-        "fixed inset-x-0 top-0 z-50 transition-all duration-300 ease-ds",
-        scrolled ? "py-2.5" : "py-4",
+        "fixed inset-x-0 top-0 z-50 border-b transition-colors duration-300",
+        scrolled || open ? "border-border bg-card/90 backdrop-blur-md" : "border-transparent bg-transparent",
       )}
     >
-      <div className="container-l">
-        <nav
-          className={cn(
-            "flex items-center justify-between gap-4 rounded-pill px-3 py-2 transition-all duration-300 ease-ds sm:px-4",
-            scrolled
-              ? "glass border border-border/70 shadow-md"
-              : "border border-transparent",
-          )}
-        >
-          <a href="#top" className="shrink-0 rounded-pill py-1 pl-1.5 pr-2" aria-label="Школа онлайн — на главную">
-            <Logo />
+      <div className="flex h-14 items-center gap-3 px-4 sm:px-6" style={{ animation: "nav-in 0.7s var(--ease) both" }}>
+        <a href="#top" className="flex min-w-0 items-center gap-3" aria-label="Матис — на главную">
+          <span className="flex size-[30px] shrink-0 items-center justify-center rounded-[10px] bg-primary text-primary-foreground">
+            <GraduationCap className="size-[17px]" aria-hidden />
+          </span>
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate text-[15px] font-bold leading-tight tracking-[-.02em]">Матис</span>
+            <span className="hidden truncate text-xs leading-tight text-muted-foreground sm:block">
+              Знакомство с платформой
+            </span>
+          </span>
+        </a>
+        <span className="hidden sm:block">
+          <StatusPill />
+        </span>
+
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <a
+            href="/login"
+            className="hidden h-10 items-center rounded-[10px] px-3.5 text-[13.5px] font-semibold text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground sm:inline-flex"
+          >
+            Войти
           </a>
-
-          <div className="hidden items-center gap-1 lg:flex">
-            {LINKS.map((l) => (
-              <a
-                key={l.href}
-                href={l.href}
-                className="rounded-pill px-3.5 py-2 text-[14px] font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-              >
-                {l.label}
-              </a>
-            ))}
-          </div>
-
-          <div className="hidden items-center gap-2 sm:flex">
-            <Button asChild variant="ghost" size="sm">
-              <a href="/login">Войти</a>
-            </Button>
-            <Button asChild size="sm">
-              <a href="#pricing">Начать бесплатно</a>
-            </Button>
-          </div>
-
+          <a
+            href="#pricing"
+            className="btn-press inline-flex h-10 items-center rounded-[10px] bg-primary px-3.5 text-[13.5px] font-semibold text-primary-foreground shadow-xs transition-all hover:bg-primary-hover hover:shadow-[0_4px_12px_rgba(29,78,216,0.28)]"
+          >
+            Начать<span className="hidden sm:inline">&nbsp;бесплатно</span>
+          </a>
           <button
             type="button"
-            className="grid size-9 place-items-center rounded-full text-foreground sm:hidden"
+            className="grid size-11 cursor-pointer place-items-center rounded-[10px] text-muted-foreground transition-colors hover:bg-surface-3 md:hidden"
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? "Закрыть меню" : "Открыть меню"}
             aria-expanded={open}
           >
-            {open ? <X className="size-5" /> : <Menu className="size-5" />}
+            {open ? <X className="size-[18px]" /> : <Menu className="size-[18px]" />}
           </button>
-        </nav>
-
-        {open ? (
-          <div className="mt-2 grid gap-1 rounded-2xl border border-border bg-card p-3 shadow-lg sm:hidden">
-            {LINKS.map((l) => (
-              <a
-                key={l.href}
-                href={l.href}
-                onClick={() => setOpen(false)}
-                className="rounded-lg px-3 py-2.5 text-[15px] font-medium text-foreground hover:bg-secondary"
-              >
-                {l.label}
-              </a>
-            ))}
-            <div className="mt-1 grid grid-cols-2 gap-2 border-t border-border pt-3">
-              <Button asChild variant="secondary" size="sm">
-                <a href="/login">Войти</a>
-              </Button>
-              <Button asChild size="sm">
-                <a href="#pricing">Начать</a>
-              </Button>
-            </div>
-          </div>
-        ) : null}
+        </div>
       </div>
+
+      {open ? (
+        <div className="fade-in grid gap-1 px-3 pb-4 md:hidden">
+          {SECTIONS.map((l) => (
+            <a
+              key={l.id}
+              href={`#${l.id}`}
+              onClick={() => setOpen(false)}
+              className="rounded-[10px] px-3 py-3 text-[16px] font-semibold text-foreground active:bg-surface-3"
+            >
+              {l.label}
+            </a>
+          ))}
+          <a href="/login" className="rounded-[10px] px-3 py-3 text-[16px] font-semibold text-muted-foreground">
+            Войти
+          </a>
+        </div>
+      ) : null}
     </header>
+  );
+}
+
+/**
+ * Навигация по разделам — панель управления урока внизу экрана: те же пилюли
+ * (`RoomControlButton variant="pill"`). Подсветка активного раздела «переезжает»
+ * между пунктами (clip-path на дублирующем слое — без анимации размеров).
+ */
+export function Dock() {
+  const active = useActiveSection();
+  const [show, setShow] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const items = useRef<Record<string, HTMLAnchorElement | null>>({});
+  const [box, setBox] = useState<{ l: number; r: number; t: number; b: number } | null>(null);
+
+  useEffect(() => {
+    const onScroll = () => setShow(window.scrollY > 520);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const measure = () => {
+      const w = wrap.current;
+      const el = active ? items.current[active] : null;
+      if (!w || !el) return setBox(null);
+      setBox({
+        l: el.offsetLeft,
+        r: w.offsetWidth - el.offsetLeft - el.offsetWidth,
+        t: el.offsetTop,
+        b: w.offsetHeight - el.offsetTop - el.offsetHeight,
+      });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [active, show]);
+
+  const hidden = !show || active === "lesson";
+  const vars = box
+    ? ({ ["--l" as string]: `${box.l}px`, ["--r" as string]: `${box.r}px`, ["--t" as string]: `${box.t}px`, ["--b" as string]: `${box.b}px` } as React.CSSProperties)
+    : ({ ["--l" as string]: "50%", ["--r" as string]: "50%", ["--t" as string]: "50%", ["--b" as string]: "50%" } as React.CSSProperties);
+
+  return (
+    <nav
+      aria-label="Разделы"
+      aria-hidden={hidden}
+      className={cn(
+        "fixed inset-x-0 bottom-4 z-40 hidden justify-center transition-[transform,opacity] duration-500 ease-ds md:flex",
+        hidden ? "pointer-events-none translate-y-6 opacity-0" : "translate-y-0 opacity-100",
+      )}
+    >
+      <div ref={wrap} className="relative rounded-full border border-border bg-card/95 shadow-lg backdrop-blur-md">
+        <div className="flex items-center gap-1.5 p-1.5">
+          {SECTIONS.map((s) => (
+            <a
+              key={s.id}
+              ref={(el) => {
+                items.current[s.id] = el;
+              }}
+              href={`#${s.id}`}
+              tabIndex={hidden ? -1 : 0}
+              aria-current={active === s.id ? "true" : undefined}
+              className="inline-flex h-11 items-center rounded-full px-4 text-[14px] font-semibold text-text-2 transition-colors duration-200 hover:text-foreground focus-visible:outline-2"
+            >
+              {s.label}
+            </a>
+          ))}
+        </div>
+        <div
+          aria-hidden
+          className="dock-hl pointer-events-none absolute inset-0 rounded-full border border-primary-muted bg-primary-light"
+          style={vars}
+        >
+          <div className="flex items-center gap-1.5 p-1.5">
+            {SECTIONS.map((s) => (
+              <span key={s.id} className="inline-flex h-11 items-center rounded-full px-4 text-[14px] font-semibold text-primary">
+                {s.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </nav>
   );
 }

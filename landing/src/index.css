@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* =============================================================================
-   Дизайн-система «Школа онлайн» (Shkola / AutoCheck) — токены verbatim из
+   Дизайн-система «Матис» (Shkola / AutoCheck) — токены verbatim из
    apps/web/src/index.css. Единый источник правды для лендинга.
    ========================================================================== */
 :root {
@@ -30,12 +30,21 @@
   --c-border-solid: #e7eaef;
 
   --c-danger: #dc2626;
+  --c-danger-light: #fef2f2;
   --c-warn: #d97706;
+  --c-warn-light: #fffaeb;
   --c-success: #16a34a;
+  --c-success-light: #f0fdf4;
 
   /* ---------- Typography ---------- */
-  --font:
+  /* Manrope (variable, cyrillic) лежит в бандле через @fontsource-variable —
+     единственное отличие лендинга от токенов приложения. */
+  /* Шрифт интерфейса урока — как в приложении (системный), см. .lesson-ui. */
+  --font-app:
     -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font:
+    "Manrope Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
 
@@ -59,6 +68,12 @@
 
   /* ---------- Motion ---------- */
   --transition: 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Общие токены движения лендинга (transform/opacity only). */
+  --dur-1: 160ms;
+  --dur-2: 320ms;
+  --dur-3: 560ms;
+  --dur-4: 900ms;
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 
   /* ---------- Семантические shadcn-токены (HSL) ---------- */
@@ -94,7 +109,8 @@
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
     /* компенсация фиксированной шапки при переходах по якорям */
-    scroll-padding-top: 88px;
+    scroll-padding-top: 80px;
+    scroll-padding-bottom: 96px; /* нижняя панель разделов не должна перекрывать фокус */
   }
   body {
     margin: 0;
@@ -131,10 +147,9 @@
 }
 
 @layer components {
-  /* ---- Обёртка секций ---- */
   .container-l {
     width: 100%;
-    max-width: 1120px;
+    max-width: 1200px;
     margin-inline: auto;
     padding-inline: 20px;
   }
@@ -142,120 +157,317 @@
     .container-l { padding-inline: 32px; }
   }
 
-  /* ---- Заголовки ---- */
-  .eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 650;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--c-primary);
+  /* Интерфейс урока — шрифт и трекинг как в приложении, а не как у лендинга. */
+  .lesson-ui {
+    font-family: var(--font-app);
+    letter-spacing: normal;
+    line-height: 1.5;
+    text-align: left;
   }
+  .lesson-ui h1, .lesson-ui h2, .lesson-ui h3 { letter-spacing: var(--tracking-head); }
 
-  /* ---- Градиентный текст на ключевых словах ---- */
-  .text-gradient {
-    background: linear-gradient(100deg, #1d4ed8 0%, #3b82f6 40%, #06d6c4 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    background-size: 200% auto;
-  }
-
-  /* ---- «Стеклянная» карточка ---- */
-  .glass {
-    background: rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(18px) saturate(160%);
-    -webkit-backdrop-filter: blur(18px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.7);
-  }
-
-  /* ---- Карточка с обводкой-градиентом при наведении ---- */
-  .card-ring {
+  /* Тетрадный лист: клетка и красное поле слева. */
+  .notebook {
+    background-color: #fbfcfe;
+    background-image:
+      linear-gradient(to right, rgba(29, 78, 216, 0.075) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(29, 78, 216, 0.075) 1px, transparent 1px);
+    background-size: 26px 26px;
+    background-position: 0 -1px;
     position: relative;
-    border: 1px solid hsl(var(--border));
-    background: hsl(var(--card));
-    border-radius: var(--radius-xl);
-    transition:
-      transform var(--transition),
-      box-shadow var(--transition),
-      border-color var(--transition);
   }
-  .card-ring::before {
+  .notebook::before {
     content: "";
     position: absolute;
-    inset: -1px;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(135deg, rgba(29, 78, 216, 0.55), rgba(6, 214, 196, 0.45));
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    opacity: 0;
-    transition: opacity var(--transition);
+    top: 56px;
+    bottom: 0;
+    left: clamp(12px, 5vw, 78px);
+    width: 2px;
+    background: rgba(224, 49, 49, 0.28);
     pointer-events: none;
   }
-  .card-ring:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
-  }
-  .card-ring:hover::before { opacity: 1; }
 
-  /* ---- Точечный фон ---- */
-  .bg-dots {
-    background-image: radial-gradient(rgba(16, 24, 40, 0.09) 1px, transparent 1px);
-    background-size: 22px 22px;
+  /* Ползунок числа учителей: тонкая линия, круглый «маркер». */
+  .price-range {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 28px;
+    background: transparent;
+    cursor: pointer;
   }
+  .price-range::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 99px;
+    background: linear-gradient(to right, var(--c-primary) var(--p, 0%), var(--c-border-solid) var(--p, 0%));
+  }
+  .price-range::-moz-range-track {
+    height: 4px;
+    border-radius: 99px;
+    background: var(--c-border-solid);
+  }
+  .price-range::-moz-range-progress { height: 4px; border-radius: 99px; background: var(--c-primary); }
+  .price-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 26px;
+    height: 26px;
+    margin-top: -11px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--c-primary);
+    box-shadow: var(--shadow-md);
+    transition: transform 0.2s var(--ease);
+  }
+  .price-range::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--c-primary);
+    box-shadow: var(--shadow-md);
+  }
+  .price-range:active::-webkit-slider-thumb { transform: scale(1.12); }
 
-  /* ---- Мягкое свечение-блоб для aurora-фона ---- */
-  .aurora-blob {
-    position: absolute;
-    border-radius: 9999px;
-    filter: blur(64px);
-    opacity: 0.55;
+  /* «Печатает…» — три точки перед сообщением чата (конечная, не декоративная). */
+  .typing { display: inline-flex; gap: 4px; padding: 10px 12px; border-radius: 10px; background: hsl(var(--secondary)); }
+  .typing i {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--c-text-3);
+    animation: dot-bounce 0.9s var(--ease) infinite;
+  }
+  .typing i:nth-child(2) { animation-delay: 0.12s; }
+  .typing i:nth-child(3) { animation-delay: 0.24s; }
+
+  /* Сообщение чата: появляется со сдвигом и лёгким «пружинящим» масштабом. */
+  .msg-in { animation: msg-in var(--dur-3) var(--ease-spring) both; transform-origin: left bottom; }
+
+  /* Кнопка: нажатие «вдавливает», стрелка едет. */
+  .btn-press { transition: transform var(--dur-1) var(--ease), box-shadow var(--dur-2) var(--ease), background-color var(--dur-2) var(--ease); }
+  .btn-press:hover { transform: translateY(-2px); }
+  .btn-press:active { transform: translateY(0) scale(0.98); }
+
+  /* Плавающее окно урока в герое — поднимается при скролле (переменные ставит JS). */
+  .scroll-lift {
+    transform: translate3d(0, calc((1 - var(--sp, 1)) * 48px), 0) scale(calc(0.955 + var(--sp, 1) * 0.045));
+    transform-origin: 50% 0;
     will-change: transform;
-    animation: aurora 22s ease-in-out infinite;
   }
+
+  /* Нижняя панель: подсвеченный слой обрезается под активный пункт. */
+  .dock-hl {
+    clip-path: inset(var(--t, 0px) var(--r, 50%) var(--b, 0px) var(--l, 50%) round 999px);
+    transition: clip-path var(--dur-3) var(--ease);
+  }
+
+  /* Индикатор прогресса страницы. */
+  .page-progress { transform: scaleX(var(--pp, 0)); transform-origin: left; }
+
+  /* Красное поле тетради «прорисовывается» сверху вниз при загрузке. */
+  .notebook::before { transform-origin: top; animation: margin-draw 1.4s var(--ease) 0.2s both; }
+
+  .skip-link {
+    position: fixed; left: 12px; top: -60px; z-index: 100;
+    padding: 10px 16px; border-radius: 10px; background: var(--c-text); color: #fff; font-weight: 600;
+    transition: top var(--dur-2) var(--ease);
+  }
+  .skip-link:focus { top: 12px; }
+
+  .prose :where(p) { margin: 0.25em 0; }
+
+  /* Прозрачная полоса прокрутки для горизонтальных лент. */
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+
+  /* ---- Разметка «как у учителя»: маркер, карандаш ----
+     Все три рисуются, когда родитель получает data-visible="true". */
+  .mark {
+    background-image: linear-gradient(rgba(250, 204, 21, 0.62), rgba(250, 204, 21, 0.62));
+    background-repeat: no-repeat;
+    background-position: 0 88%;
+    background-size: 0% 46%;
+    transition: background-size 0.9s var(--ease) var(--d, 0ms);
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    padding-inline: 0.08em;
+    margin-inline: -0.08em;
+  }
+  .strike {
+    background-image: linear-gradient(#e03131, #e03131);
+    background-repeat: no-repeat;
+    background-position: 0 58%;
+    background-size: 0% 2px;
+    transition: background-size 0.9s var(--ease) var(--d, 0ms);
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+  .strike[data-visible="true"] { background-size: 100% 2px; }
+  [data-visible="true"] .mark,
+  .mark[data-visible="true"] { background-size: 100% 46%; }
+
+  .ink {
+    stroke-dasharray: var(--len, 400);
+    stroke-dashoffset: var(--len, 400);
+    transition: stroke-dashoffset var(--dur, 1s) var(--ease) var(--d, 0ms);
+  }
+  [data-visible="true"] .ink,
+  .ink[data-visible="true"] { stroke-dashoffset: 0; }
+
+  /* ---- Слова заголовка выезжают из-под линии ---- */
+  .word {
+    display: inline-block;
+    overflow: hidden;
+    vertical-align: bottom;
+    padding-bottom: 0.14em;
+    margin-bottom: -0.14em;
+  }
+  .word > span {
+    display: inline-block;
+    transform: translateY(105%);
+    transition: transform 0.85s var(--ease) var(--d, 0ms);
+  }
+  [data-visible="true"] .word > span { transform: none; }
+  .word-free { overflow: visible; }
+  .word-free > span {
+    opacity: 0;
+    transition: transform 0.85s var(--ease) var(--d, 0ms), opacity 0.6s var(--ease) var(--d, 0ms);
+  }
+  [data-visible="true"] .word-free > span { opacity: 1; }
+
+  /* ---- Сцены внутри окна урока проигрываются при монтировании ---- */
+  .draw {
+    stroke-dasharray: var(--len, 600);
+    stroke-dashoffset: var(--len, 600);
+    animation: draw var(--dur, 1.1s) var(--ease) forwards;
+    animation-delay: var(--d, 0ms);
+  }
+  .pop {
+    opacity: 0;
+    animation: pop 0.55s var(--ease) forwards;
+    animation-delay: var(--d, 0ms);
+  }
+  .slide-in {
+    opacity: 0;
+    animation: slide-in 0.6s var(--ease) forwards;
+    animation-delay: var(--d, 0ms);
+  }
+  .fade-in { animation: fade-in 0.4s var(--ease) both; }
+  .scene-in { animation: scene-in var(--dur-3) var(--ease) both; }
+  .speak-ring { animation: speak 0.35s var(--ease) both; animation-delay: var(--d, 0ms); }
+  .cell-fill {
+    background: hsl(var(--border));
+    animation: cell-fill 0.4s var(--ease) forwards;
+    animation-delay: var(--d, 0ms);
+  }
+  .bar-grow {
+    transform-origin: bottom;
+    transform: scaleY(0);
+    animation: bar-grow 0.8s var(--ease) forwards;
+    animation-delay: var(--d, 0ms);
+  }
+
+  .cursor-move {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    animation: var(--path) var(--dur, 3s) var(--ease) var(--d, 0ms) forwards;
+    opacity: 0;
+  }
+
+  /* Кровать-«плавающая» подпись рядом с окном урока */
+  .float-y { animation: float-y 7s ease-in-out infinite; }
 }
 
 @layer utilities {
-  /* ---- Появление при скролле (JS выставляет data-visible) ---- */
   .reveal {
     opacity: 0;
-    transform: translateY(22px);
+    transform: translateY(24px);
     transition:
-      opacity 0.7s cubic-bezier(0.2, 0.8, 0.2, 1),
-      transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+      opacity 0.8s var(--ease),
+      transform 0.8s var(--ease);
     transition-delay: var(--reveal-delay, 0ms);
   }
   .reveal[data-visible="true"] {
     opacity: 1;
     transform: none;
   }
+  .reveal-x {
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 1.1s var(--ease);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+  .reveal-x[data-visible="true"] { transform: scaleX(1); }
+
   @media (prefers-reduced-motion: reduce) {
-    .reveal { opacity: 1; transform: none; }
+    .reveal, .reveal-x { opacity: 1; transform: none; }
+    .word > span { transform: none; }
+    .word-free > span { opacity: 1; }
+    .mark { background-size: 100% 46%; }
+    .strike { background-size: 100% 2px; }
+    .ink { stroke-dashoffset: 0; }
+    .draw { stroke-dashoffset: 0; }
+    .pop, .slide-in { opacity: 1; animation: none; }
+    .cursor-move { opacity: 0; animation: none; }
+    .bar-grow { transform: none; animation: none; }
+    .float-y { animation: none; }
+    .scroll-lift { transform: none; }
+    .msg-in { animation: none; }
+    .notebook::before { animation: none; }
+    .dock-hl { transition: none; }
   }
+}
 
-  /* ---- «Бегущая строка» ---- */
-  .marquee-track {
-    display: flex;
-    width: max-content;
-    gap: 1.5rem;
-    animation: marquee var(--marquee-duration, 34s) linear infinite;
-  }
-  .marquee-mask {
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent,
-      #000 8%,
-      #000 92%,
-      transparent
-    );
-    mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
-  }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes pop {
+  from { opacity: 0; transform: translateY(6px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes scene-in {
+  from { opacity: 0; transform: scale(0.985) translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes speak {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes cell-fill { to { background: var(--fill, #16a34a); } }
+@keyframes bar-grow { to { transform: scaleY(1); } }
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes dot-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+@keyframes msg-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes margin-draw { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes nav-in { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: none; } }
+@keyframes ping-once {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  100% { transform: scale(2); opacity: 0; }
+}
 
-  .pause-on-hover:hover .marquee-track {
-    animation-play-state: paused;
-  }
+/* Пути курсоров на доске (координаты — в пикселях холста 820×540). */
+@keyframes cur-teacher {
+  0% { opacity: 0; transform: translate(180px, 90px); }
+  8% { opacity: 1; }
+  30% { transform: translate(430px, 290px); }
+  60% { transform: translate(430px, 170px); }
+  100% { opacity: 1; transform: translate(590px, 230px); }
+}
+@keyframes cur-student {
+  0% { opacity: 0; transform: translate(220px, 400px); }
+  15% { opacity: 1; }
+  100% { opacity: 1; transform: translate(330px, 320px); }
 }

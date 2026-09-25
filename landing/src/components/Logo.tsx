@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-/** Логотип «Школа онлайн» — как в приложении: шапочка выпускника в синем скруглённом квадрате. */
+/** Логотип «Матис» — как в приложении: шапочка выпускника в синем скруглённом квадрате. */
 export function Logo({ className, mark = true }: { className?: string; mark?: boolean }) {
   return (
     <span className={cn("inline-flex items-center gap-2.5 select-none", className)}>
@@ -10,7 +10,7 @@ export function Logo({ className, mark = true }: { className?: string; mark?: bo
         </span>
       ) : null}
       <span className="text-[17px] font-heavy tracking-head text-foreground">
-        Школа <span className="text-primary">онлайн</span>
+        Матис
       </span>
     </span>
   );

@@ -1,11 +1,10 @@
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { useState } from "react";
+import { Hand } from "lucide-react";
+
+import { cn } from "@/lib/utils";
 import { Reveal } from "@/components/Reveal";
 import { SectionHeading } from "@/components/SectionHeading";
+import { UserAvatar } from "@/lesson/parts";
 
 const QA = [
   {
@@ -38,21 +37,68 @@ const QA = [
   },
 ];
 
-export function FAQ() {
-  return (
-    <section id="faq" className="relative scroll-mt-24 bg-white py-20 sm:py-28">
-      <div className="container-l">
-        <SectionHeading eyebrow="Вопросы" title="Коротко о главном" />
+const ASKERS = ["Анна К.", "Игорь Т.", "Марина Ш.", "Олег Р.", "Светлана Д.", "Павел Н.", "Юля М."];
 
-        <Reveal className="mx-auto mt-12 max-w-3xl">
-          <Accordion type="single" collapsible className="space-y-3">
-            {QA.map((item, i) => (
-              <AccordionItem key={i} value={`item-${i}`}>
-                <AccordionTrigger>{item.q}</AccordionTrigger>
-                <AccordionContent>{item.a}</AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+/** Вопросы — «поднятые руки»: строки как в списке участников, ответ учителя — сообщением в чате. */
+export function FAQ() {
+  const [open, setOpen] = useState(0);
+  return (
+    <section id="faq" className="relative py-24 sm:py-32">
+      <div className="container-l grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
+        <div className="lg:sticky lg:top-28 lg:self-start">
+          <SectionHeading
+            title="Поднимите руку — ответим"
+            subtitle="Семь вопросов, которые задают чаще всего. Нажмите на любой."
+          />
+        </div>
+
+        <Reveal className="lesson-ui flex flex-col gap-0.5">
+          {QA.map((item, i) => {
+            const on = open === i;
+            return (
+              <div key={i} className="rounded-[10px]">
+                <button
+                  type="button"
+                  onClick={() => setOpen(on ? -1 : i)}
+                  aria-expanded={on}
+                  className={cn(
+                    "group flex min-h-[56px] w-full cursor-pointer items-center gap-3 rounded-[10px] p-2.5 text-left transition-colors duration-200 hover:bg-surface-2 focus-visible:outline-2",
+                    on && "bg-surface-2",
+                  )}
+                >
+                  <UserAvatar name={ASKERS[i % ASKERS.length]!} size={36} />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="text-[15.5px] font-medium text-foreground">{item.q}</span>
+                    </span>
+                    <span className="truncate text-xs text-text-3">{ASKERS[i % ASKERS.length]} · поднял(а) руку</span>
+                  </span>
+                  <Hand
+                    className={cn("size-4 shrink-0 origin-bottom text-warning transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:-rotate-12 group-hover:scale-110", on && "-rotate-12 scale-125")}
+                    aria-hidden
+                  />
+                </button>
+                <div
+                  className="grid transition-[grid-template-rows] duration-500 ease-ds"
+                  style={{ gridTemplateRows: on ? "1fr" : "0fr" }}
+                >
+                  <div className="overflow-hidden">
+                    <div className={cn("flex flex-col gap-[3px] px-2.5 pb-4 pl-[58px] pt-2 transition-opacity duration-500", on ? "opacity-100" : "opacity-0")}>
+                      <span className="flex items-baseline gap-2">
+                        <span className="text-[13px] font-semibold text-foreground">Марина Петровна</span>
+                        <span className="inline-flex h-[18px] items-center rounded-full bg-primary-light px-[7px] text-[11px] font-semibold text-primary">
+                          учитель
+                        </span>
+                      </span>
+                      <span className="max-w-[60ch] self-start rounded-[10px] bg-primary-light px-3 py-2.5 text-[15px] leading-relaxed text-foreground">
+                        {item.a}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </Reveal>
       </div>
     </section>

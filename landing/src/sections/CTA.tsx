@@ -1,48 +1,39 @@
 import { ArrowRight } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Aurora } from "@/components/Aurora";
+import { Ring, Words } from "@/components/Ink";
 import { Reveal } from "@/components/Reveal";
 
 export function CTA() {
   return (
-    <section id="cta" className="relative scroll-mt-24 py-20 sm:py-28">
-      <div className="container-l">
-        <Reveal className="relative overflow-hidden rounded-[34px] border border-primary/30 bg-gradient-to-br from-primary via-[#2563eb] to-teal px-6 py-14 text-center text-white shadow-glow sm:px-12 sm:py-20">
-          <Aurora variant="band" />
-          <div className="relative mx-auto max-w-2xl">
-            <h2 className="text-[30px] font-black leading-[1.1] tracking-tightest sm:text-[46px]">
-              Проведите следующий урок в едином холсте
-            </h2>
-            <p className="mx-auto mt-5 max-w-lg text-[16px] leading-relaxed text-white/85 sm:text-[18px]">
-              14 дней бесплатно. Настройка занимает вечер, а не квартал. Ученики уже завтра
-              заходят по одной ссылке.
-            </p>
-            <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Button
-                asChild
-                size="xl"
-                variant="secondary"
-                className="w-full border-transparent bg-white text-primary hover:bg-white/90 sm:w-auto"
-              >
-                <a href="#pricing">
-                  Начать бесплатно
-                  <ArrowRight className="size-[1.15em]" />
-                </a>
-              </Button>
-              <Button
-                asChild
-                size="xl"
-                variant="outline"
-                className="w-full border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white sm:w-auto"
-              >
-                <a href="#demo">Запросить демонстрацию</a>
-              </Button>
-            </div>
-            <p className="mt-4 text-[13px] text-white/70">
-              Есть вопросы по внедрению в сеть школ? Напишите — покажем на вашем материале.
-            </p>
-          </div>
+    <section id="cta" className="notebook relative overflow-hidden py-28 sm:py-40">
+      <div className="container-l relative">
+        <Words as="h2" step={60} className="max-w-[16ch] text-[44px] font-black leading-[1.02] tracking-tightest sm:text-[84px]">
+          Проведите следующий урок в одном окне
+        </Words>
+
+        <Reveal delay={400} className="mt-10 max-w-xl text-[19px] leading-relaxed text-muted-foreground">
+          <Ring d={900}>14 дней</Ring> бесплатно. Настройка занимает вечер, а не квартал. Ученики уже завтра заходят по
+          одной ссылке.
+        </Reveal>
+
+        <Reveal delay={550} className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <a
+            href="#pricing"
+            className="btn-press group inline-flex h-[58px] items-center justify-center gap-2.5 rounded-[16px] bg-primary px-8 text-[17px] font-semibold text-primary-foreground hover:bg-primary-hover hover:shadow-[0_12px_34px_-8px_rgba(29,78,216,0.6)]"
+          >
+            Начать бесплатно
+            <ArrowRight className="size-[19px] transition-transform duration-200 group-hover:translate-x-1" />
+          </a>
+          <a
+            href="#demo"
+            className="inline-flex h-[58px] items-center justify-center px-5 text-[17px] font-semibold text-foreground underline decoration-border decoration-2 underline-offset-[7px] transition-colors hover:decoration-primary"
+          >
+            Запросить демонстрацию
+          </a>
+        </Reveal>
+
+        <Reveal delay={650} className="mt-6 text-[14px] text-text-3">
+          Есть вопросы по внедрению в сеть школ? Напишите — покажем на вашем материале.
         </Reveal>
       </div>
     </section>
