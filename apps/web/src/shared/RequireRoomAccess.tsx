@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { GraduationCap } from "lucide-react";
 
-import { refreshAccessToken, setGuestMode } from "./api-client.js";
+import { refreshAccessTokenDetailed, setGuestMode } from "./api-client.js";
 import { useAuthStore } from "./auth-store.js";
 import { useGuestSessionStore } from "@/features/guest/guest-session-store";
 import { restoreGuestSession } from "@/features/guest/guest-api";
@@ -60,9 +60,15 @@ export function RequireRoomAccess({ children }: { children: ReactNode }) {
       // принял её за личность здесь.
       useGuestSessionStore.getState().clearSession();
       setGuestMode(false);
-      const ok = await refreshAccessToken();
+      // Сервер недоступен (деплой, обрыв сети) — ждём, а не показываем «нет доступа».
+      let outcome = await refreshAccessTokenDetailed();
+      while (outcome === "unavailable" && !cancelled) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        if (cancelled) return;
+        outcome = await refreshAccessTokenDetailed();
+      }
       if (cancelled) return;
-      setAccess(ok ? "allowed" : "denied");
+      setAccess(outcome === "ok" ? "allowed" : "denied");
     })();
     return () => {
       cancelled = true;

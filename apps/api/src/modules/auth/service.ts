@@ -8,6 +8,8 @@ import * as repo from "./repo.js";
 
 const ACCESS_TOKEN_TTL = "15m";
 const REFRESH_TOKEN_TTL_DAYS = 30;
+/** Окно, в которое повторное предъявление только что ротированного refresh-токена считается гонкой вкладок, а не кражей. */
+const REFRESH_REUSE_GRACE_MS = 30_000;
 
 const accessSecret = new TextEncoder().encode(env.JWT_ACCESS_SECRET);
 
@@ -93,10 +95,18 @@ export async function refresh(presentedToken: string) {
     throw new AppError(401, "invalid_refresh_token", "Недействительный refresh-токен");
   }
   if (record.revokedAt) {
-    // Токен уже был использован для ротации — это повторное предъявление,
-    // возможный признак кражи. Отзываем всю цепочку токенов.
-    await repo.revokeFamily(record.familyId);
-    throw new AppError(401, "refresh_token_reused", "Обнаружено повторное использование токена");
+    // Только что ротирован (есть преемник, прошло меньше окна) — это вторая
+    // вкладка или проснувшийся ноутбук, отправившие тот же токен почти
+    // одновременно, а не кража. Раньше такая гонка отзывала всю цепочку и
+    // выбрасывала учителя из всех вкладок посреди урока.
+    const justRotated =
+      record.replacedByHash !== null && Date.now() - record.revokedAt.getTime() < REFRESH_REUSE_GRACE_MS;
+    if (!justRotated) {
+      // Повторное предъявление давно использованного токена — возможный
+      // признак кражи. Отзываем всю цепочку токенов.
+      await repo.revokeFamily(record.familyId);
+      throw new AppError(401, "refresh_token_reused", "Обнаружено повторное использование токена");
+    }
   }
   if (record.expiresAt.getTime() < Date.now()) {
     throw new AppError(401, "refresh_token_expired", "Срок действия токена истёк");
@@ -108,10 +118,12 @@ export async function refresh(presentedToken: string) {
   }
 
   const nextRefresh = await issueRefreshToken(user.id, record.familyId);
-  await repo.rotateRefreshToken({
-    oldTokenHash: presentedHash,
-    newTokenHash: hashOpaqueToken(nextRefresh.token),
-  });
+  if (!record.revokedAt) {
+    await repo.rotateRefreshToken({
+      oldTokenHash: presentedHash,
+      newTokenHash: hashOpaqueToken(nextRefresh.token),
+    });
+  }
 
   const accessToken = await issueAccessToken({
     sub: user.id,

@@ -50,7 +50,9 @@ export async function rotateRefreshToken(input: {
   await db
     .update(refreshTokens)
     .set({ revokedAt: new Date(), replacedByHash: input.newTokenHash })
-    .where(eq(refreshTokens.tokenHash, input.oldTokenHash));
+    // Только ещё действующий: одновременная ротация тем же токеном не
+    // перезаписывает момент первой ротации (от него считается окно гонки).
+    .where(and(eq(refreshTokens.tokenHash, input.oldTokenHash), isNull(refreshTokens.revokedAt)));
 }
 
 export async function revokeFamily(familyId: string) {

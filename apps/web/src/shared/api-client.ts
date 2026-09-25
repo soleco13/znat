@@ -29,27 +29,51 @@ export function setGuestMode(on: boolean): void {
   guestMode = on;
 }
 
-let refreshInFlight: Promise<boolean> | null = null;
+export type RefreshOutcome = "ok" | "unauthorized" | "unavailable";
 
-export async function refreshAccessToken(): Promise<boolean> {
+let refreshInFlight: Promise<RefreshOutcome> | null = null;
+
+async function requestRefresh(): Promise<RefreshOutcome> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/auth/refresh`, { method: "POST", credentials: "include" });
+  } catch {
+    return "unavailable";
+  }
+  // Выходим только когда сервер точно сказал «сессии нет». 502 во время
+  // деплоя, 429 или обрыв сети раньше тоже стирали вход — учителя
+  // выбрасывало на страницу логина посреди урока.
+  if (res.status === 401 || res.status === 403) {
+    useAuthStore.getState().clearAuth();
+    return "unauthorized";
+  }
+  if (!res.ok) return "unavailable";
+  const data = await res.json();
+  useAuthStore.getState().setAuth(data.accessToken, data.user);
+  return "ok";
+}
+
+/**
+ * Обновление access-токена с учётом других вкладок: refresh-кука у них
+ * общая, и одновременная ротация одним токеном выглядела для сервера как
+ * кража. Web Locks выстраивает вкладки в очередь — следующая идёт уже с
+ * новой кукой.
+ */
+export async function refreshAccessTokenDetailed(): Promise<RefreshOutcome> {
   if (!refreshInFlight) {
-    refreshInFlight = (async () => {
-      const res = await fetch(`${API_BASE}/auth/refresh`, {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!res.ok) {
-        useAuthStore.getState().clearAuth();
-        return false;
-      }
-      const data = await res.json();
-      useAuthStore.getState().setAuth(data.accessToken, data.user);
-      return true;
-    })().finally(() => {
+    const locks = typeof navigator !== "undefined" ? navigator.locks : undefined;
+    const run: Promise<RefreshOutcome> = locks
+      ? locks.request("auth-refresh", requestRefresh).then((outcome) => outcome)
+      : requestRefresh();
+    refreshInFlight = run.finally(() => {
       refreshInFlight = null;
     });
   }
   return refreshInFlight;
+}
+
+export async function refreshAccessToken(): Promise<boolean> {
+  return (await refreshAccessTokenDetailed()) === "ok";
 }
 
 /** Запас до истечения, при котором токен уже считаем протухшим — переподключение не должно улететь с токеном, истекающим в пути. */
