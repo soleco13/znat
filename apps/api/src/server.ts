@@ -49,7 +49,7 @@ import { startCanvasUnloadSweep, stopCanvasUnloadSweep } from "./modules/canvas/
 import { startPresenceSweep, stopPresenceSweep } from "./modules/rooms/service.js";
 import { startRefreshTokenCleanup, stopRefreshTokenCleanup } from "./modules/auth/service.js";
 import { startUnverifiedCleanup, stopUnverifiedCleanup } from "./modules/registration/service.js";
-import { assetsRoutes, filesRoutes } from "./modules/storage/routes.js";
+import { filesRoutes } from "./modules/storage/routes.js";
 import { pool } from "./db/client.js";
 import { rateLimitRedis, redis } from "./db/redis.js";
 
@@ -122,7 +122,6 @@ export function buildServer() {
       api.register(schoolSettingsRoutes);
       api.register(registrationRoutes);
       api.register(invitesRoutes);
-      api.register(assetsRoutes);
     },
     { prefix: "/api/v1" },
   );

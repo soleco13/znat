@@ -1,6 +1,28 @@
+# Защитные заголовки. CSP для страниц приложения: скрипты только свои —
+# даже если в страницу попадёт чужая разметка, её скрипт не выполнится и не
+# доберётся до /auth/refresh. Лендинг (свой inline-скрипт) CSP не получает.
+# /files/* — пользовательские файлы: sandbox и никаких скриптов, чтобы
+# загруженный документ не мог работать от имени нашего домена.
+(security_headers) {
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+	@app_pages not path / /landing/* /files/*
+	header @app_pages Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' blob:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'"
+	@user_files path /files/*
+	header @user_files Content-Security-Policy "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'; sandbox"
+}
+
 # Продовый конфиг (Э0.8). Подставляется на сервере через переменную окружения CADDY_DOMAIN.
 # Пример: CADDY_DOMAIN=school.example.ru
 {$CADDY_DOMAIN} {
+	import security_headers
+	# Только по HTTPS: браузер не пойдёт на http:// даже по старой ссылке.
+	header Strict-Transport-Security "max-age=31536000"
+
 	# /metrics — только для Prometheus внутри docker-сети (app:3000/metrics
 	# напрямую, минуя Caddy). Наружу закрыт защитой в глубину.
 	@metrics path /metrics

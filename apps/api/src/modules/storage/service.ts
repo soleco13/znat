@@ -9,12 +9,42 @@ const adapter: StorageAdapter = new LocalFsStorageAdapter(env.STORAGE_ROOT);
 
 const SIGNED_URL_TTL_SECONDS = 60 * 60; // 1 час
 
+/**
+ * Расширения, с которыми файл попадает в хранилище. Файлы `/files/*` отдаёт
+ * Caddy, и тип содержимого он берёт по расширению: `evil.html` или `.svg` из
+ * загрузки открылся бы страницей на домене приложения (хранимый XSS → угон
+ * сессии через `/auth/refresh`). Всё, чего нет в списке, хранится как `.bin`
+ * и отдаётся `application/octet-stream`.
+ */
+const SAFE_EXTENSIONS = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".webp",
+  ".gif",
+  ".mp3",
+  ".wav",
+  ".ogg",
+  ".m4a",
+  ".webm",
+  ".mp4",
+  ".pdf",
+  ".pptx",
+  ".odp",
+  ".docx",
+]);
+
+export function safeStorageName(suggestedName: string): string {
+  const ext = path.extname(suggestedName).toLowerCase();
+  return `file${SAFE_EXTENSIONS.has(ext) ? ext : ".bin"}`;
+}
+
 export async function uploadFile(input: {
   stream: NodeJS.ReadableStream;
   suggestedName: string;
   schoolId: string;
 }) {
-  return adapter.put(input);
+  return adapter.put({ ...input, suggestedName: safeStorageName(input.suggestedName) });
 }
 
 /**

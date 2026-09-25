@@ -1,21 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { env } from "../../plugins/env.js";
 import { AppError } from "../../plugins/errors.js";
-import { UPLOAD_LIMITS, openStreamedUpload } from "../../plugins/uploads.js";
 import * as storageService from "./service.js";
-
-/** Монтируется под /api/v1 — требует аутентификации. */
-export async function assetsRoutes(app: FastifyInstance) {
-  app.post("/assets", { preHandler: app.authenticate }, async (request, reply) => {
-    const file = await openStreamedUpload(request, UPLOAD_LIMITS.generic);
-    const { storageKey, sizeBytes } = await storageService.uploadFile({
-      stream: file.stream,
-      suggestedName: file.filename,
-      schoolId: request.user.schoolId,
-    });
-    return reply.send({ storageKey, sizeBytes, url: storageService.getSignedFileUrl(storageKey) });
-  });
-}
 
 /** Монтируется на верхнем уровне как /files/* (§4.1 ТЗ) — доступ по HMAC-подписи, без JWT. */
 export async function filesRoutes(app: FastifyInstance) {
@@ -38,7 +24,7 @@ export async function filesRoutes(app: FastifyInstance) {
         return reply.header("X-Accel-Redirect", proxyPath).status(200).send();
       }
       const stream = await storageService.openFile(storageKey);
-      return reply.send(stream);
+      return reply.header("X-Content-Type-Options", "nosniff").send(stream);
     },
   );
 }

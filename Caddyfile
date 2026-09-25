@@ -5,6 +5,24 @@
 	default_sni 213.21.241.28
 }
 
+# Защитные заголовки. CSP для страниц приложения: скрипты только свои —
+# даже если в страницу попадёт чужая разметка, её скрипт не выполнится и не
+# доберётся до /auth/refresh. Лендинг (свой inline-скрипт) CSP не получает.
+# /files/* — пользовательские файлы: sandbox и никаких скриптов, чтобы
+# загруженный документ не мог работать от имени нашего домена.
+(security_headers) {
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+	@app_pages not path / /landing/* /files/*
+	header @app_pages Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' blob:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'"
+	@user_files path /files/*
+	header @user_files Content-Security-Policy "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'; sandbox"
+}
+
 # Файлы /files/* (слайды, картинки, MP4 записей) отдаёт Caddy, а не Node:
 # приложение проверяет HMAC-подпись ссылки и отвечает пустым телом с
 # заголовком X-Accel-Redirect (FILES_VIA_PROXY=true), Caddy берёт файл с
@@ -12,6 +30,8 @@
 # Заголовок видит только Caddy: клиент подставить его не может, это ответ
 # upstream, а не запрос.
 (app_proxy) {
+	import security_headers
+
 	reverse_proxy app:3000 {
 		@accel header X-Accel-Redirect *
 		handle_response @accel {
