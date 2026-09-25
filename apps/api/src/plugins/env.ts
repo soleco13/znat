@@ -30,6 +30,13 @@ const envSchema = z.object({
     .default("false")
     .transform((v) => v === "true"),
   STORAGE_HMAC_SECRET: z.string().min(32),
+  /**
+   * Загрузки отклоняются, когда на диске хранилища свободно меньше этого.
+   * Диск общий с Postgres: забитый загрузками диск остановил бы базу.
+   */
+  STORAGE_MIN_FREE_GB: z.coerce.number().min(0).default(5),
+  /** Сколько одна школа может загрузить за сутки — регистрация открыта, загрузка не должна быть бесконечной. */
+  SCHOOL_DAILY_UPLOAD_MB: z.coerce.number().int().min(1).default(2048),
   PUBLIC_ORIGIN: z.string().url().default("http://localhost:3000"),
   WEB_DIST_DIR: z.string().min(1).default("apps/web/dist"),
   GLITCHTIP_DSN: z.string().url().optional(),

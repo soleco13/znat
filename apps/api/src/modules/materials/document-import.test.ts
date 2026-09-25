@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { importQuestionsFromDocument } from "./document-import.js";
+import { docxUnpackedSize, importQuestionsFromDocument } from "./document-import.js";
 
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const PDF_MIME = "application/pdf";
@@ -156,5 +156,28 @@ describe("importQuestionsFromDocument (Э9.11, §7 ТЗ: полуавтомат�
     const result = await importQuestionsFromDocument(pdf, PDF_MIME);
     expect(result.blocks).toHaveLength(200);
     expect(result.truncated).toBe(true);
+  });
+});
+
+describe("docxUnpackedSize (защита от zip-бомбы до распаковки)", () => {
+  it("суммирует распакованные размеры файлов из центрального каталога", () => {
+    const size = docxUnpackedSize(Buffer.from(MINIMAL_DOCX_BASE64, "base64"));
+    expect(size).toBeGreaterThan(0);
+    expect(size).toBeLessThan(10_000);
+  });
+
+  it("не zip — null (документ отклоняется)", () => {
+    expect(docxUnpackedSize(Buffer.from("not a zip at all"))).toBeNull();
+  });
+
+  it("распакованный размер больше лимита — импорт отклоняется без разбора", async () => {
+    const docx = Buffer.from(MINIMAL_DOCX_BASE64, "base64");
+    // Подменяем распакованный размер первого файла в центральном каталоге на 200 МБ.
+    const cd = docx.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02]));
+    docx.writeUInt32LE(200 * 1024 * 1024, cd + 24);
+    await expect(importQuestionsFromDocument(docx, DOCX_MIME)).rejects.toMatchObject({
+      statusCode: 422,
+      code: "document_too_complex",
+    });
   });
 });

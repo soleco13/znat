@@ -4,6 +4,8 @@ import type { StorageAdapter } from "./adapter.js";
 import { LocalFsStorageAdapter } from "./local-fs.js";
 import { signStorageUrl, verifyStorageSignature } from "./hmac.js";
 import { env } from "../../plugins/env.js";
+import { AppError } from "../../plugins/errors.js";
+import { redis } from "../../db/redis.js";
 
 const adapter: StorageAdapter = new LocalFsStorageAdapter(env.STORAGE_ROOT);
 
@@ -39,12 +41,54 @@ export function safeStorageName(suggestedName: string): string {
   return `file${SAFE_EXTENSIONS.has(ext) ? ext : ".bin"}`;
 }
 
+const GB = 1024 * 1024 * 1024;
+const MB = 1024 * 1024;
+
+function dailyUploadKey(schoolId: string, now: Date): string {
+  return `upload:bytes:${schoolId}:${now.toISOString().slice(0, 10)}`;
+}
+
+/**
+ * Две границы перед записью: свободное место на диске (общем с Postgres) и
+ * суточный объём загрузок школы. Недоступный Redis суточный счётчик не
+ * проверяет — загрузка картинки на урок важнее учёта.
+ */
+async function assertUploadAllowed(schoolId: string, now: Date): Promise<void> {
+  const { freeBytes } = await getDiskUsage();
+  if (freeBytes < env.STORAGE_MIN_FREE_GB * GB) {
+    throw new AppError(507, "storage_full", "Хранилище заполнено — загрузка временно недоступна");
+  }
+  let used = 0;
+  try {
+    used = Number(await redis.get(dailyUploadKey(schoolId, now))) || 0;
+  } catch {
+    return;
+  }
+  if (used >= env.SCHOOL_DAILY_UPLOAD_MB * MB) {
+    throw new AppError(429, "upload_quota_exceeded", "Школа исчерпала суточный объём загрузок — попробуйте завтра");
+  }
+}
+
+async function recordUpload(schoolId: string, bytes: number, now: Date): Promise<void> {
+  const key = dailyUploadKey(schoolId, now);
+  try {
+    await redis.incrby(key, bytes);
+    await redis.expire(key, 2 * 24 * 60 * 60);
+  } catch {
+    // учёт — не критичный путь
+  }
+}
+
 export async function uploadFile(input: {
   stream: NodeJS.ReadableStream;
   suggestedName: string;
   schoolId: string;
 }) {
-  return adapter.put({ ...input, suggestedName: safeStorageName(input.suggestedName) });
+  const now = new Date();
+  await assertUploadAllowed(input.schoolId, now);
+  const result = await adapter.put({ ...input, suggestedName: safeStorageName(input.suggestedName) });
+  await recordUpload(input.schoolId, result.sizeBytes, now);
+  return result;
 }
 
 /**
