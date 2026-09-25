@@ -522,6 +522,12 @@ export const activities = pgTable(
       .references(() => users.id, { onDelete: "restrict" }),
     deadline: timestamp("deadline", { withTimezone: true }),
     timerSeconds: integer("timer_seconds"),
+    /**
+     * Показывать ли ученику баллы и правильность сразу после сдачи. Выключено —
+     * ученик видит только «работа сдана»: иначе, зайдя по ссылке под новым
+     * именем, он получал бы свежую попытку и подбирал ответы по подсказке.
+     */
+    revealResults: boolean("reveal_results").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /** Момент, когда учитель начал разбор (Э8.10, §7.3 ТЗ) — до этого момента полный материал (с ключами ответов) не отдаётся никому, кроме учителя (аналитика, Э8.9). `null` — разбор ещё не начат. */
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),

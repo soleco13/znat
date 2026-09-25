@@ -148,7 +148,10 @@ function SubmitBar({
         <p className="font-semibold text-foreground">
           Работа сдана {new Date(submittedAt).toLocaleString("ru-RU")}
         </p>
-        {result && (
+        {result && !result.revealed && (
+          <p className="mt-0.5 text-xs text-muted-foreground">Результаты покажет учитель.</p>
+        )}
+        {result && result.revealed && (
           <p className="mt-0.5 text-xs text-muted-foreground">
             {result.score} из {result.maxScore} баллов автопроверкой
             {result.feedback.some((f) => !f.autoGraded) &&

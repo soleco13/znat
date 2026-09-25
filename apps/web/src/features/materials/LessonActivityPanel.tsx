@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { Alert, AlertDescription } from "@/shared/ui/alert";
 import { Button } from "@/shared/ui/button";
+import { Checkbox } from "@/shared/ui/checkbox";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { MaterialPicker } from "./MaterialPicker.js";
@@ -60,6 +61,7 @@ function LaunchForm({
 }) {
   const [materialId, setMaterialId] = useState("");
   const [timerSeconds, setTimerSeconds] = useState("");
+  const [revealResults, setRevealResults] = useState(true);
   const [launching, setLaunching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,6 +74,7 @@ function LaunchForm({
       const dto = await createActivity(lessonId, {
         materialId,
         timerSeconds: timerSeconds.trim() ? Number(timerSeconds) : undefined,
+        revealResults,
       });
       onLaunched(dto.id);
     } catch {
@@ -99,6 +102,19 @@ function LaunchForm({
           placeholder="без лимита"
         />
       </div>
+      <label className="flex items-start gap-2 text-xs">
+        <Checkbox
+          checked={revealResults}
+          onCheckedChange={(v) => setRevealResults(v === true)}
+          className="mt-0.5"
+        />
+        <span>
+          Показать ученику баллы сразу после сдачи
+          <span className="block text-muted-foreground">
+            Выключите для контрольной: иначе ответы можно подобрать, зайдя заново под другим именем.
+          </span>
+        </span>
+      </label>
       <Button type="submit" className="w-full" loading={launching} disabled={!materialId}>
         {launching ? "Запускаем…" : activityId ? "Выдать заново" : "Выдать классу"}
       </Button>

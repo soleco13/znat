@@ -204,6 +204,13 @@
       "when": 1790354720971,
       "tag": "0028_password_reset_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1790354951413,
+      "tag": "0029_activity_reveal_results",
+      "breakpoints": true
     }
   ]
 }

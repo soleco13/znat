@@ -150,6 +150,7 @@ const activityRow = {
   // сравнивает его с `Date.now()`, фиксированный «2026-09-05» стал бы time-bomb'ом.
   deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
   timerSeconds: 600,
+  revealResults: true,
   createdAt: new Date("2026-09-04T09:00:00.000Z"),
   reviewedAt: null,
 };
@@ -302,6 +303,22 @@ describe("getMyActivity (Э12.5) — индивидуальный канал", (
 });
 
 describe("saveResponse (Э8.7) — автосохранение черновика", () => {
+  // Попытка стартовала только что — таймер (600 с) ещё идёт.
+  beforeEach(() => {
+    redisMock.get.mockResolvedValue(new Date().toISOString());
+  });
+
+  it("таймер истёк (+30 с запаса) — черновик не принимается", async () => {
+    redisMock.get.mockResolvedValue(new Date(Date.now() - 700_000).toISOString());
+    await expect(
+      saveResponse(guestA, ACTIVITY, {
+        questionId: "q1",
+        response: { type: "single_choice", selectedOptionId: "o2" },
+      }),
+    ).rejects.toMatchObject({ statusCode: 409, code: "time_is_up" });
+    expect(repoMock.upsertDraftResponse).not.toHaveBeenCalled();
+  });
+
   const draft = { type: "single_choice" as const, selectedOptionId: "o2" };
 
   it("гость-ученик: upsert по своему attemptId + participantId, { saved: true }", async () => {
@@ -861,6 +878,18 @@ describe("submitActivity (Э8.12, §8 ТЗ: POST /activities/:id/submit)", () =>
       { questionId: "q1", score: 1, maxScore: 1, correct: true, autoGraded: true },
       { questionId: "q2", score: 0, maxScore: 2, correct: null, autoGraded: false },
     ]);
+  });
+
+  it("учитель скрыл результаты — ответы оценены и сохранены, но ученик не видит ни баллов, ни правильности", async () => {
+    repoMock.findActivityById.mockResolvedValue({ ...activityRow, revealResults: false });
+    repoMock.findResponsesByAttempt.mockResolvedValue([
+      { questionId: "q1", response: { type: "single_choice", selectedOptionId: "o2" } },
+    ]);
+
+    const result = await submitActivity(guestA, ACTIVITY);
+
+    expect(result).toMatchObject({ revealed: false, score: 0, maxScore: 0, feedback: [] });
+    expect(repoMock.upsertGradedResponse).toHaveBeenCalled();
   });
 
   it("неотвеченный вопрос — пустой ответ своего типа, 0 баллов, но НЕ пропуск (тот же движок)", async () => {

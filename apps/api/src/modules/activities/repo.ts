@@ -25,6 +25,7 @@ export interface ActivityRow {
   assignedBy: string;
   deadline: Date | null;
   timerSeconds: number | null;
+  revealResults: boolean;
   createdAt: Date;
   reviewedAt: Date | null;
 }
@@ -39,6 +40,7 @@ const activitySelection = {
   assignedBy: activities.assignedBy,
   deadline: activities.deadline,
   timerSeconds: activities.timerSeconds,
+  revealResults: activities.revealResults,
   createdAt: activities.createdAt,
   reviewedAt: activities.reviewedAt,
 };
@@ -57,6 +59,7 @@ export async function insertActivity(input: {
   assignedBy: string;
   deadline: Date | null;
   timerSeconds: number | null;
+  revealResults: boolean;
 }): Promise<string> {
   const [row] = await db.insert(activities).values(input).returning({ id: activities.id });
   return row!.id;
@@ -241,6 +244,10 @@ export async function upsertDraftResponse(input: {
         timeSpentMs: sql`greatest(${responses.timeSpentMs}, ${input.timeSpentMs})`,
         submittedAt: now,
       },
+      // Черновик, прилетевший одновременно со сдачей, не перезаписывает уже
+      // оценённый ответ: иначе в БД остался бы другой ответ, чем тот, за
+      // который поставлен балл.
+      where: eq(responses.submitted, false),
     })
     .returning({ submittedAt: responses.submittedAt });
   return row?.submittedAt ?? now;

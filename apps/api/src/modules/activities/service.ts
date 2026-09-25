@@ -104,6 +104,7 @@ function toDto(row: ActivityRow): ActivityDto {
     materialVersion: row.materialVersion,
     deadline: row.deadline ? row.deadline.toISOString() : null,
     timerSeconds: row.timerSeconds,
+    revealResults: row.revealResults,
     createdAt: row.createdAt.toISOString(),
     reviewedAt: row.reviewedAt ? row.reviewedAt.toISOString() : null,
   };
@@ -217,6 +218,7 @@ export async function createActivity(
     assignedBy: user.sub,
     deadline,
     timerSeconds: input.timerSeconds ?? null,
+    revealResults: input.revealResults ?? true,
   });
 
   const row = await repo.findActivityById(id);
@@ -337,7 +339,10 @@ export async function saveResponse(
   if (await repo.attemptSubmittedAt(attemptId)) {
     throw new AppError(409, "already_submitted", "Работа уже сдана — ответы больше нельзя менять");
   }
-  await ensureAttemptStart(attemptId);
+  const startedAt = await ensureAttemptStart(attemptId);
+  if (isTimerExpired(activity.timerSeconds, startedAt, Date.now())) {
+    throw new AppError(409, "time_is_up", "Время на задание вышло — сдайте работу");
+  }
 
   const savedAt = await repo.upsertDraftResponse({
     attemptId,
@@ -352,6 +357,21 @@ export async function saveResponse(
   });
 
   return { saved: true, savedAt: savedAt.toISOString() };
+}
+
+/** Запас на задержку сети: автосохранение, отправленное в последнюю секунду, не теряется. */
+const TIMER_GRACE_MS = 30_000;
+
+/**
+ * Таймер раньше считал только клиент — ответы принимались и после конца
+ * времени. Сдать работу после таймера можно (клиент сдаёт её сам по
+ * истечении), менять ответы — нет.
+ */
+export function isTimerExpired(timerSeconds: number | null, startedAtIso: string, nowMs: number): boolean {
+  if (timerSeconds == null) return false;
+  const startedMs = Date.parse(startedAtIso);
+  if (Number.isNaN(startedMs)) return false;
+  return nowMs > startedMs + timerSeconds * 1000 + TIMER_GRACE_MS;
 }
 
 function attemptStartKey(attemptId: string): string {
@@ -962,7 +982,10 @@ export async function submitActivity(
     if (result.autoGraded) score += result.score;
   }
 
-  return { attemptId, score, maxScore, feedback };
+  if (!activity.revealResults) {
+    return { attemptId, revealed: false, score: 0, maxScore: 0, feedback: [] };
+  }
+  return { attemptId, revealed: true, score, maxScore, feedback };
 }
 
 // ─── Ручная проверка (Э8.12, §6.4/§8 ТЗ) ─────────────────────────────────

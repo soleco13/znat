@@ -33,6 +33,8 @@ export const createActivityRequestSchema = z.object({
   deadline: z.string().datetime({ offset: true }).optional(),
   /** Таймер на выполнение, секунды; отсчитывается у каждого ученика от старта его попытки. */
   timerSeconds: z.number().int().positive().max(24 * 60 * 60).optional(),
+  /** Показывать ученику баллы сразу после сдачи (по умолчанию — да). */
+  revealResults: z.boolean().optional(),
 });
 export type CreateActivityRequest = z.infer<typeof createActivityRequestSchema>;
 
@@ -45,6 +47,7 @@ export interface ActivityDto {
   materialVersion: number;
   deadline: string | null;
   timerSeconds: number | null;
+  revealResults: boolean;
   createdAt: string;
   /** Момент старта разбора (Э8.10), либо `null` — разбор ещё не начат. */
   reviewedAt: string | null;
@@ -257,6 +260,8 @@ export interface SubmitFeedbackItem {
  */
 export interface SubmitActivityResult {
   attemptId: string;
+  /** `false` — учитель скрыл результаты: `score`/`maxScore` = 0, `feedback` пуст. */
+  revealed: boolean;
   score: number;
   maxScore: number;
   feedback: SubmitFeedbackItem[];

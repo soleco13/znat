@@ -1,0 +1,1 @@
+ALTER TABLE "activities" ADD COLUMN "reveal_results" boolean DEFAULT true NOT NULL;
