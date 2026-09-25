@@ -88,7 +88,9 @@ services:
   # host-сеть не поддерживается штатно — эти два сервиса локально на
   # Windows-машине разработчика не поднимутся, только на проде/Linux-CI.
   livekit:
-    image: livekit/livekit-server:latest
+    # Версии медиа закреплены: `:latest` обновил бы медиа-сервер на любом pull.
+    # Обновлять осознанно, с проверкой урока (CLAUDE.md: конфиги LiveKit — читать построчно).
+    image: livekit/livekit-server:v1.13.6
     restart: unless-stopped
     network_mode: host
     # Медиа-путь в реальном времени — приоритет над CPU остальных контейнеров
@@ -168,7 +170,8 @@ services:
   # боевом домене заменить на реальный сертификат (Let's Encrypt и т.п.), см.
   # "Известные пробелы" в docs/CURRENT_STAGE.md.
   coturn:
-    image: coturn/coturn:latest
+    # Версия закреплена по той же причине, что у livekit.
+    image: coturn/coturn:4.18.0-r0
     restart: unless-stopped
     network_mode: host
     # Тот же приоритет, что у livekit — TURN relay на пути реального времени.
