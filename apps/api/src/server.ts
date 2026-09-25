@@ -52,6 +52,8 @@ import { assetsRoutes, filesRoutes } from "./modules/storage/routes.js";
 import { pool } from "./db/client.js";
 import { redis } from "./db/redis.js";
 
+const WS_MAX_PAYLOAD_BYTES = 5 * 1024 * 1024;
+
 export function buildServer() {
   initErrorReporting();
 
@@ -70,7 +72,10 @@ export function buildServer() {
     limits: { fileSize: UPLOAD_LIMITS.canvasImage, files: 1, fields: 10, parts: 20 },
   });
   app.register(rateLimit, { max: rateLimitMax, keyGenerator: rateLimitKey, timeWindow: "1 minute" });
-  app.register(websocket);
+  // Без опций ws принимает сообщения до 100 МБ, и разбираются они до проверки
+  // прав. Документ доски целиком — десятки КБ (картинки лежат ссылками), 5 МБ —
+  // запас на первую синхронизацию большой доски.
+  app.register(websocket, { options: { maxPayload: WS_MAX_PAYLOAD_BYTES } });
 
   app.register(errorsPlugin);
   app.register(authenticatePlugin);
