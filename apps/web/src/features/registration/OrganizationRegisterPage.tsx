@@ -1,17 +1,31 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Building2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { slugify, validateInn, validateOgrn } from "@school/shared";
 
+import { cn } from "@/lib/utils";
 import { ApiError } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
 import { PersonalDataConsent } from "@/shared/PersonalDataConsent";
 import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
+import {
+  AuthHeading,
+  AuthLayout,
+  Field,
+  FormError,
+  PasswordInput,
+  PasswordStrength,
+  StepsAside,
+  authInput,
+  stagger,
+} from "../auth/AuthLayout.js";
 import { registerOrganization } from "./registration-api.js";
 
-/** Э14.1 — self-signup ООО: создаёт новое именованное пространство (§ план-ТЗ Э14). */
+const STEP_LABELS = ["Организация", "Вы"];
+
+/** Э14.1 — self-signup ООО: создаёт новое именованное пространство (§ план-ТЗ Э14). Две страницы формы: организация → вы. */
 export function OrganizationRegisterPage() {
+  const [step, setStep] = useState<0 | 1>(0);
   const [orgName, setOrgName] = useState("");
   const [inn, setInn] = useState("");
   const [ogrn, setOgrn] = useState("");
@@ -26,16 +40,41 @@ export function OrganizationRegisterPage() {
   const slugPreview = useMemo(() => slugify(orgName), [orgName]);
   const innValid = inn === "" || validateInn(inn);
   const ogrnValid = ogrn === "" || validateOgrn(ogrn);
+  const innOk = inn !== "" && validateInn(inn);
+  const ogrnOk = ogrn !== "" && validateOgrn(ogrn);
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
+  function goNext() {
     setError(null);
+    if (orgName.trim() === "") {
+      setError("Укажите название пространства");
+      return;
+    }
     if (!validateInn(inn)) {
       setError("Некорректный ИНН");
       return;
     }
     if (!validateOgrn(ogrn)) {
       setError("Некорректный ОГРН");
+      return;
+    }
+    setStep(1);
+  }
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (step === 0) {
+      goNext();
+      return;
+    }
+    setError(null);
+    if (!validateInn(inn)) {
+      setError("Некорректный ИНН");
+      setStep(0);
+      return;
+    }
+    if (!validateOgrn(ogrn)) {
+      setError("Некорректный ОГРН");
+      setStep(0);
       return;
     }
     setSubmitting(true);
@@ -49,108 +88,163 @@ export function OrganizationRegisterPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-[#eff6ff] to-[#f0fdfa] p-6">
-      <div className="w-full max-w-[420px] rounded-xl border border-border bg-card p-9 shadow-lg">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <span className="mb-3.5 flex size-14 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Building2 className="size-7" aria-hidden />
-          </span>
-          <h1 className="text-[22px] font-heavy tracking-tight">Регистрация организации</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">Создайте пространство своей школы</p>
-        </div>
+    <AuthLayout aside={<StepsAside current={0} />}>
+      <AuthHeading
+        title="Пространство школы"
+        subtitle="Учителя, ученики, материалы и записи — под одной крышей."
+      />
 
-        <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="org-name">Название пространства</Label>
-            <Input
+      {/* Шаги формы */}
+      <ol className="auth-rise mb-6 flex items-center gap-3" style={stagger(220)} aria-label="Шаги формы">
+        {STEP_LABELS.map((label, i) => (
+          <li key={label} className="flex flex-1 flex-col gap-1.5" aria-current={i === step ? "step" : undefined}>
+            <span className="relative h-1 overflow-hidden rounded-full bg-border">
+              <span
+                className="absolute inset-0 origin-left rounded-full bg-primary transition-transform duration-500"
+                style={{ transform: i <= step ? "scaleX(1)" : "scaleX(0)", transitionTimingFunction: "var(--ease)" }}
+              />
+            </span>
+            <span className={cn("text-xs font-semibold transition-colors duration-300", i <= step ? "text-foreground" : "text-text-3")}>
+              {i + 1}. {label}
+            </span>
+          </li>
+        ))}
+      </ol>
+
+      <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
+        {step === 0 ? (
+          <div key="s0" className="auth-step flex flex-col gap-5">
+            <Field
               id="org-name"
-              autoComplete="organization"
-              value={orgName}
-              onChange={(e) => setOrgName(e.target.value)}
-              required
-            />
-            {slugPreview ? (
-              <p className="text-xs text-muted-foreground">Адрес пространства: /s/{slugPreview}</p>
-            ) : null}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="org-inn">ИНН</Label>
-            <Input
-              id="org-inn"
-              inputMode="numeric"
-              value={inn}
-              onChange={(e) => setInn(e.target.value.trim())}
-              aria-invalid={!innValid}
-              required
-            />
-            {!innValid ? <p className="text-xs text-destructive">Некорректный ИНН</p> : null}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="org-ogrn">ОГРН</Label>
-            <Input
-              id="org-ogrn"
-              inputMode="numeric"
-              value={ogrn}
-              onChange={(e) => setOgrn(e.target.value.trim())}
-              aria-invalid={!ogrnValid}
-              required
-            />
-            {!ogrnValid ? <p className="text-xs text-destructive">Некорректный ОГРН</p> : null}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="org-fullname">Ваше имя и фамилия</Label>
-            <Input
-              id="org-fullname"
-              autoComplete="name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="org-email">Email</Label>
-            <Input
-              id="org-email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="org-password">Пароль</Label>
-            <Input
-              id="org-password"
-              type="password"
-              autoComplete="new-password"
-              minLength={8}
-              placeholder="Минимум 8 символов"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
+              label="Название пространства"
+              hint={slugPreview ? <>Адрес пространства: <span className="font-mono">/s/{slugPreview}</span></> : undefined}
+            >
+              <Input
+                id="org-name"
+                autoComplete="organization"
+                value={orgName}
+                onChange={(e) => setOrgName(e.target.value)}
+                className={authInput}
+                autoFocus
+                required
+              />
+            </Field>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field id="org-inn" label="ИНН" error={!innValid ? "Некорректный ИНН" : undefined}>
+                <div className="relative">
+                  <Input
+                    id="org-inn"
+                    inputMode="numeric"
+                    value={inn}
+                    onChange={(e) => setInn(e.target.value.trim())}
+                    aria-invalid={!innValid}
+                    className={cn(authInput, "pr-10")}
+                    required
+                  />
+                  <Tick show={innOk} />
+                </div>
+              </Field>
+              <Field id="org-ogrn" label="ОГРН" error={!ogrnValid ? "Некорректный ОГРН" : undefined}>
+                <div className="relative">
+                  <Input
+                    id="org-ogrn"
+                    inputMode="numeric"
+                    value={ogrn}
+                    onChange={(e) => setOgrn(e.target.value.trim())}
+                    aria-invalid={!ogrnValid}
+                    className={cn(authInput, "pr-10")}
+                    required
+                  />
+                  <Tick show={ogrnOk} />
+                </div>
+              </Field>
+            </div>
 
-          <PersonalDataConsent checked={consent} onChange={setConsent} />
+            <FormError message={error} />
 
-          {error ? (
-            <p className="text-sm font-medium text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
+            <Button type="button" size="lg" className="group h-12 w-full text-[16px]" onClick={goNext}>
+              Далее
+              <ArrowRight className="transition-transform duration-300 group-hover:translate-x-1" aria-hidden />
+            </Button>
+          </div>
+        ) : (
+          <div key="s1" className="auth-step flex flex-col gap-5">
+            <Field id="org-fullname" label="Ваше имя и фамилия">
+              <Input
+                id="org-fullname"
+                autoComplete="name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className={authInput}
+                autoFocus
+                required
+              />
+            </Field>
+            <Field id="org-email" label="Email">
+              <Input
+                id="org-email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={authInput}
+                required
+              />
+            </Field>
+            <Field id="org-password" label="Пароль">
+              <PasswordInput
+                id="org-password"
+                autoComplete="new-password"
+                minLength={8}
+                placeholder="Минимум 8 символов"
+                value={password}
+                onChange={setPassword}
+              />
+              <PasswordStrength value={password} />
+            </Field>
 
-          <Button type="submit" size="lg" className="mt-1 w-full" loading={submitting} disabled={!consent}>
-            {submitting ? "Регистрируем…" : "Создать пространство"}
-          </Button>
-        </form>
+            <PersonalDataConsent checked={consent} onChange={setConsent} />
 
-        <p className="mt-5 text-center text-sm text-muted-foreground">
-          <Link to="/register" className="font-medium text-primary hover:underline">
-            ← Назад к выбору
-          </Link>
-        </p>
-      </div>
-    </div>
+            <FormError message={error} />
+
+            <div className="flex gap-3">
+              <Button type="button" variant="secondary" size="lg" className="h-12 px-5" onClick={() => setStep(0)}>
+                <ArrowLeft aria-hidden />
+                Назад
+              </Button>
+              <Button type="submit" size="lg" className="h-12 flex-1 text-[16px]" loading={submitting} disabled={!consent}>
+                {submitting ? "Регистрируем…" : "Создать пространство"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </form>
+
+      <p className="auth-rise mt-7 text-[14.5px]" style={stagger(400)}>
+        <Link
+          to="/register"
+          className="group inline-flex items-center gap-1.5 font-semibold text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="size-4 transition-transform duration-300 group-hover:-translate-x-1" aria-hidden />
+          Назад к выбору
+        </Link>
+      </p>
+    </AuthLayout>
+  );
+}
+
+/** Зелёная галочка в конце поля: появляется, когда значение прошло проверку. */
+function Tick({ show }: { show: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "pointer-events-none absolute right-3 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full bg-success text-white transition-[transform,opacity] duration-300",
+        show ? "scale-100 opacity-100" : "scale-50 opacity-0",
+      )}
+      style={{ transitionTimingFunction: "var(--ease-spring, cubic-bezier(0.34,1.4,0.64,1))" }}
+    >
+      <Check className="size-3" />
+    </span>
   );
 }

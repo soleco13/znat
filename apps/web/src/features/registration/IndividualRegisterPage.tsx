@@ -1,12 +1,22 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { User } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 import { ApiError } from "@/shared/api-client";
 import { Button } from "@/shared/ui/button";
 import { PersonalDataConsent } from "@/shared/PersonalDataConsent";
 import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
+import {
+  AuthHeading,
+  AuthLayout,
+  Field,
+  FormError,
+  PasswordInput,
+  PasswordStrength,
+  StepsAside,
+  authInput,
+  stagger,
+} from "../auth/AuthLayout.js";
 import { registerIndividual } from "./registration-api.js";
 
 /** Э14.1 — self-signup репетитора: без организации, личное пространство создаётся под капотом. */
@@ -33,72 +43,67 @@ export function IndividualRegisterPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-[#eff6ff] to-[#f0fdfa] p-6">
-      <div className="w-full max-w-[400px] rounded-xl border border-border bg-card p-9 shadow-lg">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <span className="mb-3.5 flex size-14 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <User className="size-7" aria-hidden />
-          </span>
-          <h1 className="text-[22px] font-heavy tracking-tight">Регистрация репетитора</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">Личный кабинет без организации</p>
+    <AuthLayout aside={<StepsAside current={0} />}>
+      <AuthHeading title="Кабинет репетитора" subtitle="Свои уроки, материалы и ученики — без организации." />
+
+      <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
+        <Field id="reg-name" label="Имя и фамилия" delay={240}>
+          <Input
+            id="reg-name"
+            autoComplete="name"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            className={authInput}
+            autoFocus
+            required
+          />
+        </Field>
+        <Field id="reg-email" label="Email" delay={300}>
+          <Input
+            id="reg-email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={authInput}
+            required
+          />
+        </Field>
+        <Field id="reg-password" label="Пароль" delay={360}>
+          <PasswordInput
+            id="reg-password"
+            autoComplete="new-password"
+            minLength={8}
+            placeholder="Минимум 8 символов"
+            value={password}
+            onChange={setPassword}
+          />
+          <PasswordStrength value={password} />
+        </Field>
+
+        <div className="auth-rise" style={stagger(400)}>
+          <PersonalDataConsent checked={consent} onChange={setConsent} />
         </div>
 
-        <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="reg-name">Имя и фамилия</Label>
-            <Input
-              id="reg-name"
-              autoComplete="name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="reg-email">Email</Label>
-            <Input
-              id="reg-email"
-              type="email"
-              autoComplete="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="reg-password">Пароль</Label>
-            <Input
-              id="reg-password"
-              type="password"
-              autoComplete="new-password"
-              minLength={8}
-              placeholder="Минимум 8 символов"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
+        <FormError message={error} />
 
-          <PersonalDataConsent checked={consent} onChange={setConsent} />
-
-          {error ? (
-            <p className="text-sm font-medium text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
-
-          <Button type="submit" size="lg" className="mt-1 w-full" loading={submitting} disabled={!consent}>
+        <div className="auth-rise" style={stagger(430)}>
+          <Button type="submit" size="lg" className="h-12 w-full text-[16px]" loading={submitting} disabled={!consent}>
             {submitting ? "Регистрируем…" : "Зарегистрироваться"}
           </Button>
-        </form>
+        </div>
+      </form>
 
-        <p className="mt-5 text-center text-sm text-muted-foreground">
-          <Link to="/register" className="font-medium text-primary hover:underline">
-            ← Назад к выбору
-          </Link>
-        </p>
-      </div>
-    </div>
+      <p className="auth-rise mt-7 text-[14.5px]" style={stagger(500)}>
+        <Link
+          to="/register"
+          className="group inline-flex items-center gap-1.5 font-semibold text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="size-4 transition-transform duration-300 group-hover:-translate-x-1" aria-hidden />
+          Назад к выбору
+        </Link>
+      </p>
+    </AuthLayout>
   );
 }

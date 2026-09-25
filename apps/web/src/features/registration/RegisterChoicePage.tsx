@@ -1,5 +1,22 @@
 import { Link } from "react-router-dom";
-import { Building2, GraduationCap, User } from "lucide-react";
+import { ArrowRight, Building2, User } from "lucide-react";
+
+import { AuthHeading, AuthLayout, StepsAside, stagger } from "../auth/AuthLayout.js";
+
+const OPTIONS = [
+  {
+    to: "/register/individual",
+    icon: User,
+    title: "Я репетитор",
+    text: "Личный кабинет для одного преподавателя",
+  },
+  {
+    to: "/register/organization",
+    icon: Building2,
+    title: "Я представляю организацию",
+    text: "Пространство школы (ООО) с учителями и уроками",
+  },
+];
 
 /**
  * Э14.1 — точка входа в публичную self-signup регистрацию (§ план-ТЗ Э14):
@@ -9,55 +26,38 @@ import { Building2, GraduationCap, User } from "lucide-react";
  */
 export function RegisterChoicePage() {
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-[#eff6ff] to-[#f0fdfa] p-6">
-      <div className="w-full max-w-[440px] rounded-xl border border-border bg-card p-9 shadow-lg">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <span className="mb-3.5 flex size-14 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <GraduationCap className="size-7" aria-hidden />
-          </span>
-          <h1 className="text-[22px] font-heavy tracking-tight">Регистрация</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">Как вы будете использовать платформу?</p>
-        </div>
+    <AuthLayout aside={<StepsAside current={0} />}>
+      <AuthHeading title="Начнём?" subtitle="Как вы будете использовать платформу?" />
 
-        <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3.5">
+        {OPTIONS.map((o, i) => (
           <Link
-            to="/register/individual"
-            className="flex items-center gap-4 rounded-lg border border-border p-4 transition-colors hover:bg-accent"
+            key={o.to}
+            to={o.to}
+            className="auth-rise group flex items-center gap-4 rounded-2xl border border-border bg-card p-4 shadow-xs transition-[transform,box-shadow,border-color] duration-300 [transition-timing-function:var(--ease)] hover:-translate-y-0.5 hover:border-primary-muted hover:shadow-md active:translate-y-0 active:scale-[0.99]"
+            style={stagger(240 + i * 120)}
           >
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <User className="size-5" aria-hidden />
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
+              <o.icon className="size-[22px]" aria-hidden />
             </span>
-            <span>
-              <span className="block font-medium">Я репетитор</span>
-              <span className="block text-sm text-muted-foreground">
-                Личный кабинет для одного преподавателя
-              </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[16.5px] font-bold tracking-[-.01em]">{o.title}</span>
+              <span className="mt-0.5 block text-sm text-muted-foreground">{o.text}</span>
             </span>
+            <ArrowRight
+              className="size-5 shrink-0 text-text-3 transition-[transform,color] duration-300 [transition-timing-function:var(--ease)] group-hover:translate-x-1 group-hover:text-primary"
+              aria-hidden
+            />
           </Link>
-
-          <Link
-            to="/register/organization"
-            className="flex items-center gap-4 rounded-lg border border-border p-4 transition-colors hover:bg-accent"
-          >
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Building2 className="size-5" aria-hidden />
-            </span>
-            <span>
-              <span className="block font-medium">Я представляю организацию</span>
-              <span className="block text-sm text-muted-foreground">
-                Создать пространство школы (ООО) с учителями и уроками
-              </span>
-            </span>
-          </Link>
-        </div>
-
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          Уже есть аккаунт?{" "}
-          <Link to="/login" className="font-medium text-primary hover:underline">
-            Войти
-          </Link>
-        </p>
+        ))}
       </div>
-    </div>
+
+      <p className="auth-rise mt-7 text-[14.5px] text-muted-foreground" style={stagger(520)}>
+        Уже есть аккаунт?{" "}
+        <Link to="/login" className="font-semibold text-primary underline-offset-4 hover:underline">
+          Войти
+        </Link>
+      </p>
+    </AuthLayout>
   );
 }

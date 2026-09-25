@@ -1,13 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { GraduationCap } from "lucide-react";
 import type { LoginRequest, MeResponse } from "@school/shared";
 
 import { apiFetch, ApiError } from "@/shared/api-client";
 import { useAuthStore } from "@/shared/auth-store";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
+import { AuthHeading, AuthLayout, Field, FormError, LobbyAside, PasswordInput, authInput, stagger } from "./AuthLayout.js";
 import { ResendVerificationButton } from "@/features/registration/ResendVerificationButton";
 
 export function LoginPage() {
@@ -41,68 +40,60 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-[#eff6ff] to-[#f0fdfa] p-6">
-      <div className="w-full max-w-[400px] rounded-xl border border-border bg-card p-9 shadow-lg">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <span className="mb-3.5 flex size-14 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <GraduationCap className="size-7" aria-hidden />
-          </span>
-          <h1 className="text-[22px] font-heavy tracking-tight">Школа онлайн</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">Вход в платформу</p>
-        </div>
+    <AuthLayout aside={<LobbyAside />}>
+      <AuthHeading title="С возвращением" subtitle="Войдите, чтобы вести уроки и проверять работы." />
 
-        <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="login-email">Email</Label>
-            <Input
-              id="login-email"
-              type="email"
-              autoComplete="email"
-              placeholder="you@school.ru"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              aria-invalid={error != null}
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-baseline justify-between">
-              <Label htmlFor="login-password">Пароль</Label>
-              <Link to="/forgot-password" className="text-xs font-medium text-primary hover:underline">
-                Забыли пароль?
-              </Link>
-            </div>
-            <Input
-              id="login-password"
-              type="password"
-              autoComplete="current-password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              aria-invalid={error != null}
-              required
-            />
-          </div>
+      <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
+        <Field id="login-email" label="Email" delay={240}>
+          <Input
+            id="login-email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@school.ru"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            aria-invalid={error != null}
+            className={authInput}
+            autoFocus
+            required
+          />
+        </Field>
+        <Field
+          id="login-password"
+          label="Пароль"
+          delay={320}
+          aside={
+            <Link to="/forgot-password" className="text-xs font-semibold text-primary underline-offset-4 hover:underline">
+              Забыли пароль?
+            </Link>
+          }
+        >
+          <PasswordInput
+            id="login-password"
+            autoComplete="current-password"
+            placeholder="••••••••"
+            value={password}
+            onChange={setPassword}
+            invalid={error != null}
+          />
+        </Field>
 
-          {error ? (
-            <p className="text-sm font-medium text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
-          {unverifiedEmail ? <ResendVerificationButton email={unverifiedEmail} /> : null}
+        <FormError message={error} />
+        {unverifiedEmail ? <ResendVerificationButton email={unverifiedEmail} /> : null}
 
-          <Button type="submit" size="lg" className="mt-1 w-full" loading={submitting}>
+        <div className="auth-rise" style={stagger(400)}>
+          <Button type="submit" size="lg" className="h-12 w-full text-[16px]" loading={submitting}>
             {submitting ? "Входим…" : "Войти"}
           </Button>
-        </form>
+        </div>
+      </form>
 
-        <p className="mt-5 text-center text-sm text-muted-foreground">
-          Нет аккаунта?{" "}
-          <Link to="/register" className="font-medium text-primary hover:underline">
-            Зарегистрироваться
-          </Link>
-        </p>
-      </div>
-    </div>
+      <p className="auth-rise mt-7 text-[14.5px] text-muted-foreground" style={stagger(480)}>
+        Нет аккаунта?{" "}
+        <Link to="/register" className="font-semibold text-primary underline-offset-4 hover:underline">
+          Зарегистрироваться
+        </Link>
+      </p>
+    </AuthLayout>
   );
 }
