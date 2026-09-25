@@ -54,7 +54,14 @@ async function upsertUser(
   }
   const [created] = await db
     .insert(users)
-    .values({ schoolId, email: acc.email, passwordHash, fullName: acc.fullName, role: acc.role })
+    .values({
+      schoolId,
+      email: acc.email,
+      passwordHash,
+      fullName: acc.fullName,
+      role: acc.role,
+      emailVerifiedAt: new Date(),
+    })
     .returning();
   return created!;
 }

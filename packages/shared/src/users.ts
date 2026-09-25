@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { roleSchema } from "./roles.js";
+import { emailSchema } from "./auth.js";
 
 export const createUserRequestSchema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
   fullName: z.string().min(1).max(200),
   role: roleSchema,
   password: z.string().min(8).max(200),

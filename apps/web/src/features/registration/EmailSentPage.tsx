@@ -1,6 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
 import { MailCheck } from "lucide-react";
 
+import { ResendVerificationButton } from "./ResendVerificationButton.js";
+
 /** Э14.1 — экран после успешной self-signup регистрации: письмо отправлено, ждём подтверждения. */
 export function EmailSentPage() {
   const location = useLocation();
@@ -17,6 +19,11 @@ export function EmailSentPage() {
           Мы отправили письмо с подтверждением{email ? <> на <strong>{email}</strong></> : null}. Перейдите
           по ссылке из письма, чтобы активировать аккаунт.
         </p>
+        {email ? (
+          <div className="mt-5">
+            <ResendVerificationButton email={email} />
+          </div>
+        ) : null}
         <p className="mt-5 text-sm text-muted-foreground">
           <Link to="/login" className="font-medium text-primary hover:underline">
             Вернуться ко входу

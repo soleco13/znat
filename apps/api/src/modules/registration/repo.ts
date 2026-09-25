@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
+import { and, count, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { schools, users, emailVerificationTokens, schoolInvites } from "../../db/schema.js";
 import type { Role, SchoolKind } from "@school/shared";
@@ -122,7 +122,14 @@ export async function findEmailVerificationTokenByHash(tokenHash: string) {
 /** Помечает токен использованным и почту подтверждённой одной транзакцией. */
 export async function consumeVerificationToken(tokenId: string, userId: string) {
   return db.transaction(async (tx) => {
-    await tx.update(emailVerificationTokens).set({ consumedAt: new Date() }).where(eq(emailVerificationTokens.id, tokenId));
+    // Условие на consumedAt — два одновременных перехода по одной ссылке не
+    // выдают две сессии: второй не найдёт строку и получит null.
+    const [token] = await tx
+      .update(emailVerificationTokens)
+      .set({ consumedAt: new Date() })
+      .where(and(eq(emailVerificationTokens.id, tokenId), isNull(emailVerificationTokens.consumedAt)))
+      .returning({ id: emailVerificationTokens.id });
+    if (!token) return null;
     const [user] = await tx
       .update(users)
       .set({ emailVerifiedAt: new Date() })
@@ -130,4 +137,72 @@ export async function consumeVerificationToken(tokenId: string, userId: string) 
       .returning();
     return user ?? null;
   });
+}
+
+export async function findUnverifiedUserByEmail(email: string) {
+  const rows = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.email, email), isNull(users.emailVerifiedAt)))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function insertVerificationToken(input: { userId: string; tokenHash: string; expiresAt: Date }) {
+  await db.insert(emailVerificationTokens).values(input);
+}
+
+function isForeignKeyViolation(err: unknown): boolean {
+  return typeof err === "object" && err !== null && (err as { code?: string }).code === "23503";
+}
+
+/**
+ * Удаляет неподтверждённый аккаунт, если у него не осталось действующей
+ * ссылки подтверждения, и его пространство, если в нём больше никого нет.
+ * Так чужой email, на который кто-то зарегистрировался и бросил, через сутки
+ * снова свободен для настоящего владельца. Аккаунт, успевший что-то создать
+ * (до проверки почты при входе это было возможно), не трогаем — внешние
+ * ключи `restrict` откатят удаление, возвращаем `false`.
+ */
+export async function deleteStaleUnverifiedUser(userId: string, now: Date): Promise<boolean> {
+  try {
+    return await db.transaction(async (tx) => {
+      const [user] = await tx
+        .select({ id: users.id, schoolId: users.schoolId })
+        .from(users)
+        .where(and(eq(users.id, userId), isNull(users.emailVerifiedAt)))
+        .limit(1);
+      if (!user) return false;
+      const [live] = await tx
+        .select({ n: count() })
+        .from(emailVerificationTokens)
+        .where(
+          and(
+            eq(emailVerificationTokens.userId, userId),
+            isNull(emailVerificationTokens.consumedAt),
+            gt(emailVerificationTokens.expiresAt, now),
+          ),
+        );
+      if ((live?.n ?? 0) > 0) return false;
+      await tx.delete(users).where(eq(users.id, userId));
+      const [rest] = await tx.select({ n: count() }).from(users).where(eq(users.schoolId, user.schoolId));
+      if ((rest?.n ?? 0) === 0) {
+        await tx.delete(schools).where(eq(schools.id, user.schoolId));
+      }
+      return true;
+    });
+  } catch (err) {
+    if (isForeignKeyViolation(err)) return false;
+    throw err;
+  }
+}
+
+/** Неподтверждённые аккаунты старше `before` — кандидаты на удаление фоновой чисткой. */
+export async function listUnverifiedUsersCreatedBefore(before: Date, limit: number): Promise<string[]> {
+  const rows = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(isNull(users.emailVerifiedAt), lt(users.createdAt, before)))
+    .limit(limit);
+  return rows.map((r) => r.id);
 }

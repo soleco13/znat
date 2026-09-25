@@ -8,11 +8,13 @@ import { useAuthStore } from "@/shared/auth-store";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { ResendVerificationButton } from "@/features/registration/ResendVerificationButton";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const setAuth = useAuthStore((s) => s.setAuth);
   const navigate = useNavigate();
@@ -20,6 +22,7 @@ export function LoginPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setUnverifiedEmail(null);
     setSubmitting(true);
     try {
       const body: LoginRequest = { email, password };
@@ -31,6 +34,7 @@ export function LoginPage() {
       navigate("/lessons");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Не удалось войти");
+      if (err instanceof ApiError && err.code === "email_not_verified") setUnverifiedEmail(email);
     } finally {
       setSubmitting(false);
     }
@@ -80,6 +84,7 @@ export function LoginPage() {
               {error}
             </p>
           ) : null}
+          {unverifiedEmail ? <ResendVerificationButton email={unverifiedEmail} /> : null}
 
           <Button type="submit" size="lg" className="mt-1 w-full" loading={submitting}>
             {submitting ? "Входим…" : "Войти"}

@@ -48,6 +48,7 @@ import { startConvertEvents, stopConvertEvents } from "./modules/jobs/service.js
 import { startCanvasUnloadSweep, stopCanvasUnloadSweep } from "./modules/canvas/service.js";
 import { startPresenceSweep, stopPresenceSweep } from "./modules/rooms/service.js";
 import { startRefreshTokenCleanup, stopRefreshTokenCleanup } from "./modules/auth/service.js";
+import { startUnverifiedCleanup, stopUnverifiedCleanup } from "./modules/registration/service.js";
 import { assetsRoutes, filesRoutes } from "./modules/storage/routes.js";
 import { pool } from "./db/client.js";
 import { rateLimitRedis, redis } from "./db/redis.js";
@@ -162,6 +163,7 @@ async function main() {
   startDeckReconcileSweep();
   startRecordingRetentionSweep();
   startRefreshTokenCleanup();
+  startUnverifiedCleanup();
 
   const shutdown = async (signal: string) => {
     app.log.info({ signal }, "Shutting down");
@@ -170,6 +172,7 @@ async function main() {
     stopDeckReconcileSweep();
     stopRecordingRetentionSweep();
     stopRefreshTokenCleanup();
+    stopUnverifiedCleanup();
     await stopConvertEvents();
     await app.close();
     await pool.end();

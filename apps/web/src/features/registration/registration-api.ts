@@ -32,6 +32,14 @@ export function verifyEmail(token: string): Promise<VerifyEmailResponse> {
   });
 }
 
+/** Повторная отправка письма подтверждения — ответ одинаковый, есть аккаунт или нет. */
+export function resendVerification(email: string): Promise<{ ok: true }> {
+  return apiFetch<{ ok: true }>("/auth/resend-verification", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
 /** Публичная визитка пространства (`/s/:slug`). */
 export function getSpacePublicInfo(slug: string): Promise<SchoolPublicInfo> {
   return apiFetch<SchoolPublicInfo>(`/spaces/${encodeURIComponent(slug)}`);

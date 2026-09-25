@@ -3,6 +3,7 @@ import {
   individualRegisterRequestSchema,
   organizationRegisterRequestSchema,
   verifyEmailRequestSchema,
+  resendVerificationRequestSchema,
   meResponseSchema,
 } from "@school/shared";
 import { env } from "../../plugins/env.js";
@@ -21,18 +22,34 @@ export default async function registrationRoutes(app: FastifyInstance) {
   const rateLimited = {
     config: { rateLimit: { max: 20, timeWindow: "1 minute" } },
   };
+  // Каждая регистрация — новое пространство и письмо с нашего SMTP: 20 в
+  // минуту с одного адреса — это рассылка спама на чужие адреса и порча
+  // репутации IP. Человеку хватает пары попыток.
+  const registerLimited = {
+    config: { rateLimit: { max: 10, timeWindow: "1 hour" } },
+  };
 
-  app.post("/auth/register/individual", rateLimited, async (request, reply) => {
+  app.post("/auth/register/individual", registerLimited, async (request, reply) => {
     const body = individualRegisterRequestSchema.parse(request.body);
     const result = await registrationService.registerIndividual(body);
     return reply.status(201).send(result);
   });
 
-  app.post("/auth/register/organization", rateLimited, async (request, reply) => {
+  app.post("/auth/register/organization", registerLimited, async (request, reply) => {
     const body = organizationRegisterRequestSchema.parse(request.body);
     const result = await registrationService.registerOrganization(body);
     return reply.status(201).send(result);
   });
+
+  app.post(
+    "/auth/resend-verification",
+    { config: { rateLimit: { max: 5, timeWindow: "1 minute" } } },
+    async (request, reply) => {
+      const body = resendVerificationRequestSchema.parse(request.body);
+      await registrationService.resendVerification(body.email);
+      return reply.status(202).send({ ok: true });
+    },
+  );
 
   app.post("/auth/verify-email", rateLimited, async (request, reply) => {
     const body = verifyEmailRequestSchema.parse(request.body);

@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { repoMock, authServiceMock, mailServiceMock, invitesServiceMock } = vi.hoisted(() => ({
+const { repoMock, authServiceMock, mailServiceMock, invitesServiceMock, redisMock } = vi.hoisted(() => ({
+  redisMock: { set: vi.fn().mockResolvedValue("OK") },
   repoMock: {
+    findUnverifiedUserByEmail: vi.fn().mockResolvedValue(null),
+    deleteStaleUnverifiedUser: vi.fn().mockResolvedValue(false),
+    insertVerificationToken: vi.fn().mockResolvedValue(undefined),
+    listUnverifiedUsersCreatedBefore: vi.fn().mockResolvedValue([]),
     slugExists: vi.fn().mockResolvedValue(false),
     findSchoolBySlug: vi.fn(),
     registerSchoolWithAdmin: vi.fn(),
@@ -22,13 +27,19 @@ const { repoMock, authServiceMock, mailServiceMock, invitesServiceMock } = vi.ho
 }));
 
 vi.mock("./repo.js", () => repoMock);
+vi.mock("../../db/redis.js", () => ({ redis: redisMock }));
 vi.mock("../auth/service.js", () => authServiceMock);
 vi.mock("../mail/service.js", () => mailServiceMock);
 vi.mock("../invites/service.js", () => invitesServiceMock);
 
-const { registerIndividual, registerOrganization, confirmEmail, getSpacePublicInfo } = await import(
-  "./service.js"
-);
+const {
+  registerIndividual,
+  registerOrganization,
+  confirmEmail,
+  getSpacePublicInfo,
+  resendVerification,
+  runUnverifiedCleanupOnce,
+} = await import("./service.js");
 
 const SCHOOL_ID = "11111111-1111-1111-1111-111111111111";
 const USER_ID = "22222222-2222-2222-2222-222222222222";
@@ -47,6 +58,72 @@ function userRow(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   repoMock.slugExists.mockResolvedValue(false);
+  repoMock.findUnverifiedUserByEmail.mockResolvedValue(null);
+  repoMock.deleteStaleUnverifiedUser.mockResolvedValue(false);
+  redisMock.set.mockResolvedValue("OK");
+  mailServiceMock.sendVerificationEmail.mockResolvedValue(undefined);
+});
+
+describe("занятый неподтверждённым аккаунтом email", () => {
+  it("перед регистрацией пытается освободить адрес от брошенного неподтверждённого аккаунта", async () => {
+    repoMock.findUnverifiedUserByEmail.mockResolvedValue(userRow({ id: "stale" }));
+    repoMock.registerSchoolWithAdmin.mockResolvedValue({ school: { id: SCHOOL_ID }, user: userRow() });
+
+    await registerIndividual({ fullName: "Иван Петров", email: "tutor@example.com", password: "password123" });
+
+    expect(repoMock.deleteStaleUnverifiedUser).toHaveBeenCalledWith("stale", expect.any(Date));
+    expect(repoMock.deleteStaleUnverifiedUser.mock.invocationCallOrder[0]).toBeLessThan(
+      repoMock.registerSchoolWithAdmin.mock.invocationCallOrder[0]!,
+    );
+  });
+
+  it("сбой SMTP не превращает созданный аккаунт в 500 — письмо можно запросить снова", async () => {
+    repoMock.registerSchoolWithAdmin.mockResolvedValue({ school: { id: SCHOOL_ID }, user: userRow() });
+    mailServiceMock.sendVerificationEmail.mockRejectedValue(new Error("ECONNREFUSED"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(
+      registerIndividual({ fullName: "Иван Петров", email: "tutor@example.com", password: "password123" }),
+    ).resolves.toEqual({ status: "pending_verification", email: "tutor@example.com" });
+  });
+});
+
+describe("resendVerification", () => {
+  it("неподтверждённый аккаунт — новый токен и письмо", async () => {
+    repoMock.findUnverifiedUserByEmail.mockResolvedValue(userRow());
+    await resendVerification("tutor@example.com");
+    expect(repoMock.insertVerificationToken).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: USER_ID, tokenHash: expect.any(String) }),
+    );
+    expect(mailServiceMock.sendVerificationEmail).toHaveBeenCalledOnce();
+  });
+
+  it("нет такого аккаунта — молча ничего не делает (без перебора адресов)", async () => {
+    await expect(resendVerification("nobody@example.com")).resolves.toBeUndefined();
+    expect(mailServiceMock.sendVerificationEmail).not.toHaveBeenCalled();
+  });
+
+  it("повтор в течение минуты — письмо не уходит", async () => {
+    redisMock.set.mockResolvedValue(null);
+    repoMock.findUnverifiedUserByEmail.mockResolvedValue(userRow());
+    await resendVerification("tutor@example.com");
+    expect(repoMock.findUnverifiedUserByEmail).not.toHaveBeenCalled();
+    expect(mailServiceMock.sendVerificationEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe("runUnverifiedCleanupOnce", () => {
+  it("удаляет неподтверждённые аккаунты старше недели и считает только реально удалённые", async () => {
+    repoMock.listUnverifiedUsersCreatedBefore.mockResolvedValue(["a", "b"]);
+    repoMock.deleteStaleUnverifiedUser.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    const now = new Date("2026-09-25T00:00:00Z");
+
+    await expect(runUnverifiedCleanupOnce(now)).resolves.toBe(1);
+    expect(repoMock.listUnverifiedUsersCreatedBefore).toHaveBeenCalledWith(
+      new Date("2026-09-18T00:00:00Z"),
+      expect.any(Number),
+    );
+  });
 });
 
 describe("registerIndividual", () => {

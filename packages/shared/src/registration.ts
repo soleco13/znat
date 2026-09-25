@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { validateInn, validateOgrn } from "./inn-ogrn.js";
-import { meResponseSchema } from "./auth.js";
+import { emailSchema, meResponseSchema } from "./auth.js";
 
 /**
  * Э14.1 — публичная self-signup регистрация репетитора (физлицо, без
@@ -10,7 +10,7 @@ import { meResponseSchema } from "./auth.js";
  */
 export const individualRegisterRequestSchema = z.object({
   fullName: z.string().min(1).max(200),
-  email: z.string().email(),
+  email: emailSchema,
   password: z.string().min(8).max(200),
   inviteCode: z.string().min(1).optional(),
 });
@@ -19,7 +19,7 @@ export type IndividualRegisterRequest = z.infer<typeof individualRegisterRequest
 /** Э14.1 — регистрация ООО: создаёт новое именованное пространство. ИНН/ОГРН — формат+контрольная сумма, без сверки с ЕГРЮЛ. */
 export const organizationRegisterRequestSchema = z.object({
   fullName: z.string().min(1).max(200),
-  email: z.string().email(),
+  email: emailSchema,
   password: z.string().min(8).max(200),
   orgName: z.string().min(1).max(200),
   inn: z.string().refine(validateInn, { message: "Некорректный ИНН" }),
@@ -33,6 +33,12 @@ export const registerResponseSchema = z.object({
   email: z.string().email(),
 });
 export type RegisterResponse = z.infer<typeof registerResponseSchema>;
+
+/** Повторная отправка письма подтверждения — ответ одинаковый, есть такой аккаунт или нет. */
+export const resendVerificationRequestSchema = z.object({
+  email: emailSchema,
+});
+export type ResendVerificationRequest = z.infer<typeof resendVerificationRequestSchema>;
 
 export const verifyEmailRequestSchema = z.object({
   token: z.string().min(1),

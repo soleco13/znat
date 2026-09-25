@@ -76,6 +76,12 @@ export async function login(email: string, password: string) {
   if (!valid) {
     throw new AppError(401, "invalid_credentials", "Неверный email или пароль");
   }
+  // Проверка после пароля: иначе ответ выдавал бы, что аккаунт с таким
+  // email существует. Без неё подтверждение почты ничего не значило —
+  // зарегистрироваться на чужой адрес и сразу войти мог кто угодно.
+  if (!user.emailVerifiedAt) {
+    throw new AppError(403, "email_not_verified", "Почта не подтверждена — перейдите по ссылке из письма");
+  }
   return issueSessionForUser(user);
 }
 

@@ -190,6 +190,13 @@
       "when": 1790147865961,
       "tag": "0026_pg_stat_statements",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1790353166687,
+      "tag": "0027_email_verified_backfill",
+      "breakpoints": true
     }
   ]
 }
