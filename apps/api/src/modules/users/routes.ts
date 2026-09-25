@@ -17,19 +17,19 @@ export default async function usersRoutes(app: FastifyInstance) {
     adminApp.get("/users", async (request, reply) => {
       const query = listUsersQuerySchema.parse(request.query);
       const { rows, total } = await usersService.listUsers(request.user.schoolId, query);
-      return reply.send({ items: rows, total, page: query.page, pageSize: query.pageSize });
+      return reply.send({ items: rows.map(usersService.toUserResponse), total, page: query.page, pageSize: query.pageSize });
     });
 
     adminApp.post("/users", async (request, reply) => {
       const body = createUserRequestSchema.parse(request.body);
       const user = await usersService.createUser(request.user.schoolId, body);
-      return reply.status(201).send(user);
+      return reply.status(201).send(usersService.toUserResponse(user));
     });
 
     adminApp.patch<{ Params: { id: string } }>("/users/:id", async (request, reply) => {
       const body = updateUserRequestSchema.parse(request.body);
       const user = await usersService.updateUser(request.user.schoolId, request.params.id, body);
-      return reply.send(user);
+      return reply.send(usersService.toUserResponse(user));
     });
 
   });

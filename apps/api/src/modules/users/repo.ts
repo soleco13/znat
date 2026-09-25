@@ -1,4 +1,4 @@
-import { eq, and, ilike, or, count, inArray } from "drizzle-orm";
+import { eq, and, ilike, or, count, inArray, ne, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { users } from "../../db/schema.js";
 import type { Role } from "@school/shared";
@@ -12,20 +12,48 @@ export async function insertUser(input: {
   emailVerifiedAt?: Date;
 }) {
   const [row] = await db.insert(users).values(input).returning();
-  return row;
+  return row!;
 }
 
+/**
+ * Изменение пользователя с защитой от школы без администратора: если правка
+ * снимает с активного админа роль или отключает его, в школе должен
+ * остаться другой активный админ. Advisory-lock на школу — два админа,
+ * одновременно разжалующие друг друга, не оставят школу пустой.
+ */
 export async function updateUser(
   id: string,
   schoolId: string,
   patch: Partial<{ fullName: string; role: Role; isActive: boolean }>,
-) {
-  const [row] = await db
-    .update(users)
-    .set(patch)
-    .where(and(eq(users.id, id), eq(users.schoolId, schoolId)))
-    .returning();
-  return row ?? null;
+): Promise<{ row: typeof users.$inferSelect } | { row: null } | { lastAdmin: true }> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${schoolId}))`);
+    const [current] = await tx
+      .select()
+      .from(users)
+      .where(and(eq(users.id, id), eq(users.schoolId, schoolId)))
+      .limit(1);
+    if (!current) return { row: null };
+    const losesAdmin =
+      current.role === "admin" &&
+      current.isActive &&
+      ((patch.role !== undefined && patch.role !== "admin") || patch.isActive === false);
+    if (losesAdmin) {
+      const [other] = await tx
+        .select({ n: count() })
+        .from(users)
+        .where(
+          and(eq(users.schoolId, schoolId), eq(users.role, "admin"), eq(users.isActive, true), ne(users.id, id)),
+        );
+      if ((other?.n ?? 0) === 0) return { lastAdmin: true as const };
+    }
+    const [row] = await tx
+      .update(users)
+      .set(patch)
+      .where(and(eq(users.id, id), eq(users.schoolId, schoolId)))
+      .returning();
+    return { row: row ?? null };
+  });
 }
 
 export async function findUserById(id: string, schoolId: string) {

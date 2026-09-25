@@ -1,7 +1,40 @@
-import type { CreateUserRequest, UpdateUserRequest, ListUsersQuery, Role } from "@school/shared";
+import {
+  userResponseSchema,
+  type CreateUserRequest,
+  type UpdateUserRequest,
+  type ListUsersQuery,
+  type Role,
+  type UserResponse,
+} from "@school/shared";
 import { hashPassword } from "../auth/service.js";
 import { AppError } from "../../plugins/errors.js";
 import * as repo from "./repo.js";
+
+/**
+ * Наружу — только поля ответа: раньше `/users` отдавал строку БД целиком,
+ * вместе с хэшем пароля (админ школы мог выгрузить хэши сотрудников).
+ */
+export function toUserResponse(row: {
+  id: string;
+  schoolId: string;
+  email: string;
+  fullName: string;
+  role: Role;
+  isActive: boolean;
+  lastLoginAt: Date | null;
+  createdAt: Date;
+}): UserResponse {
+  return userResponseSchema.parse({
+    id: row.id,
+    schoolId: row.schoolId,
+    email: row.email,
+    fullName: row.fullName,
+    role: row.role,
+    isActive: row.isActive,
+    lastLoginAt: row.lastLoginAt ? row.lastLoginAt.toISOString() : null,
+    createdAt: row.createdAt.toISOString(),
+  });
+}
 
 export async function createUser(schoolId: string, input: CreateUserRequest) {
   const passwordHash = await hashPassword(input.password);
@@ -26,11 +59,18 @@ export async function createUser(schoolId: string, input: CreateUserRequest) {
 }
 
 export async function updateUser(schoolId: string, id: string, patch: UpdateUserRequest) {
-  const row = await repo.updateUser(id, schoolId, patch);
-  if (!row) {
+  const result = await repo.updateUser(id, schoolId, patch);
+  if ("lastAdmin" in result) {
+    throw new AppError(
+      409,
+      "last_admin",
+      "Это единственный администратор школы — сначала назначьте другого администратора",
+    );
+  }
+  if (!result.row) {
     throw new AppError(404, "not_found", "Пользователь не найден");
   }
-  return row;
+  return result.row;
 }
 
 export async function listUsers(schoolId: string, query: ListUsersQuery) {
