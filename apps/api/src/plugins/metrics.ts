@@ -148,7 +148,12 @@ export default fp(async function metricsPlugin(app: FastifyInstance) {
     );
   });
 
-  app.get("/metrics", async (_request, reply) => {
+  app.get("/metrics", async (request, reply) => {
+    // Защита в глубину: запрос пришёл через реверс-прокси — значит снаружи,
+    // даже если в Caddyfile забыли закрыть путь. Prometheus ходит напрямую.
+    if (request.headers["x-forwarded-for"]) {
+      return reply.status(404).send({ error: "not_found", message: "Route not found" });
+    }
     reply.header("Content-Type", register.contentType);
     return register.metrics();
   });

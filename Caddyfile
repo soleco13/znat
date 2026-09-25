@@ -8,6 +8,11 @@
 # Локальная разработка (docker-compose up): без TLS, без домена.
 # Продовый конфиг с доменом и Let's Encrypt — Caddyfile.prod (Э0.8, деплой на боевой сервер).
 :80 {
+	# /metrics — только для Prometheus внутри docker-сети (app:3000/metrics
+	# напрямую, минуя Caddy); наружу закрыт, как в Caddyfile.prod.
+	@metrics path /metrics
+	respond @metrics 404
+
 	# Лендинг — см. подробный комментарий в https-блоке ниже, тот же приём.
 	handle / {
 		root * /srv/landing
@@ -28,6 +33,11 @@
 # браузер один раз попросит подтвердить исключение.
 https://213.21.241.28 {
 	tls internal
+
+	# /metrics — только для Prometheus внутри docker-сети (app:3000/metrics
+	# напрямую, минуя Caddy); наружу закрыт, как в Caddyfile.prod.
+	@metrics path /metrics
+	respond @metrics 404
 
 	# LiveKit signaling под тем же сертификатом/портом, что и сайт — livekit-
 	# client сам добавляет "/rtc"("/validate") к переданному serverUrl
