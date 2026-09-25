@@ -102,6 +102,30 @@ vi.mock("./presence.js", async () => {
     removeParticipant: vi.fn(async (lessonId: string, userId: string) => {
       roomMap(lessonId).delete(userId);
     }),
+    // Атомарные изменения в Redis — здесь та же логика через чистую applyPresencePatch.
+    patchParticipant: vi.fn(
+      async (
+        lessonId: string,
+        userId: string,
+        patch: Parameters<typeof actual.applyPresencePatch>[1],
+        condition?: Parameters<typeof actual.applyPresencePatch>[2],
+      ) => {
+        const before = roomMap(lessonId).get(userId) as Parameters<typeof actual.applyPresencePatch>[0] | undefined;
+        if (!before) return null;
+        const after = actual.applyPresencePatch(before, patch, condition);
+        if (!after) return null;
+        roomMap(lessonId).set(userId, after);
+        return { before, after };
+      },
+    ),
+    removeParticipantIf: vi.fn(
+      async (lessonId: string, userId: string, condition: Parameters<typeof actual.applyPresencePatch>[2]) => {
+        const entry = roomMap(lessonId).get(userId) as Parameters<typeof actual.applyPresencePatch>[0] | undefined;
+        if (!entry || !actual.applyPresencePatch(entry, {}, condition)) return false;
+        roomMap(lessonId).delete(userId);
+        return true;
+      },
+    ),
     listParticipants: vi.fn(async (lessonId: string) => new Map(roomMap(lessonId))),
     listRoomIds: vi.fn(async () => [...rooms.entries()].filter(([, m]) => m.size > 0).map(([id]) => id)),
     getGrantedPermissions: vi.fn(async (lessonId: string, userId: string) => grants.get(`${lessonId}:${userId}`) ?? null),

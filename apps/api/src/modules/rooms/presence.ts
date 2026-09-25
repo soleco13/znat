@@ -41,6 +41,96 @@ export async function getParticipant(lessonId: string, userId: string): Promise<
   return raw ? (JSON.parse(raw) as PresenceEntry) : null;
 }
 
+/** Изменение части полей записи участника; права сливаются по ключам. */
+export type PresencePatch = Partial<Omit<PresenceEntry, "permissions">> & {
+  permissions?: Partial<ParticipantPermissions>;
+};
+
+/** Условие для изменения: запись меняется, только если оно ещё выполняется (зачистка «молчащих»). */
+export interface PresenceCondition {
+  connected?: boolean;
+  /** Запись не трогаем, если участник подал признак жизни позже этого момента. */
+  maxLastSeenAt?: number;
+}
+
+/** Чистая версия того, что делает `PATCH_PARTICIPANT_SCRIPT` в Redis, — для тестов и in-memory моков. */
+export function applyPresencePatch(
+  entry: PresenceEntry,
+  patch: PresencePatch,
+  condition: PresenceCondition = {},
+): PresenceEntry | null {
+  if (condition.connected !== undefined && entry.connected !== condition.connected) return null;
+  if (condition.maxLastSeenAt !== undefined && entry.lastSeenAt > condition.maxLastSeenAt) return null;
+  const { permissions, ...rest } = patch;
+  return { ...entry, ...rest, permissions: { ...entry.permissions, ...permissions } };
+}
+
+/**
+ * Атомарное изменение записи участника внутри Redis. Раньше каждый шаг
+ * читал JSON целиком, менял поле и записывал обратно — пинг раз в 20 с
+ * затирал только что выданное учителем право, а «удалить из урока» могло
+ * «воскресить» ученика, если пинг пришёл в тот же момент. Скрипт меняет
+ * только переданные поля и не создаёт запись, которой уже нет.
+ * Возвращает {старое, новое} или nil (записи нет / условие не выполнено).
+ */
+const PATCH_PARTICIPANT_SCRIPT = `
+local raw = redis.call("HGET", KEYS[1], ARGV[1])
+if not raw then return false end
+local entry = cjson.decode(raw)
+local patch = cjson.decode(ARGV[2])
+local cond = cjson.decode(ARGV[3])
+if cond.connected ~= nil and entry.connected ~= cond.connected then return false end
+if cond.maxLastSeenAt ~= nil and entry.lastSeenAt > cond.maxLastSeenAt then return false end
+for k, v in pairs(patch) do
+  if k == "permissions" then
+    for pk, pv in pairs(v) do entry.permissions[pk] = pv end
+  else
+    entry[k] = v
+  end
+end
+local out = cjson.encode(entry)
+redis.call("HSET", KEYS[1], ARGV[1], out)
+return {raw, out}
+`;
+
+export async function patchParticipant(
+  lessonId: string,
+  userId: string,
+  patch: PresencePatch,
+  condition: PresenceCondition = {},
+): Promise<{ before: PresenceEntry; after: PresenceEntry } | null> {
+  const result = (await redis.eval(
+    PATCH_PARTICIPANT_SCRIPT,
+    1,
+    key(lessonId),
+    userId,
+    JSON.stringify(patch),
+    JSON.stringify(condition),
+  )) as [string, string] | null;
+  if (!result) return null;
+  return { before: JSON.parse(result[0]) as PresenceEntry, after: JSON.parse(result[1]) as PresenceEntry };
+}
+
+const REMOVE_PARTICIPANT_IF_SCRIPT = `
+local raw = redis.call("HGET", KEYS[1], ARGV[1])
+if not raw then return 0 end
+local entry = cjson.decode(raw)
+local cond = cjson.decode(ARGV[2])
+if cond.connected ~= nil and entry.connected ~= cond.connected then return 0 end
+if cond.maxLastSeenAt ~= nil and entry.lastSeenAt > cond.maxLastSeenAt then return 0 end
+return redis.call("HDEL", KEYS[1], ARGV[1])
+`;
+
+/** Удаляет участника, только если условие ещё выполняется (зачистка не удаляет того, кто только что вернулся). */
+export async function removeParticipantIf(
+  lessonId: string,
+  userId: string,
+  condition: PresenceCondition,
+): Promise<boolean> {
+  const removed = await redis.eval(REMOVE_PARTICIPANT_IF_SCRIPT, 1, key(lessonId), userId, JSON.stringify(condition));
+  return removed === 1;
+}
+
 export async function removeParticipant(lessonId: string, userId: string): Promise<void> {
   await redis.hdel(key(lessonId), userId);
 }

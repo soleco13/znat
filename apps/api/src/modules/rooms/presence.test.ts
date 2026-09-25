@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultPermissions, isStaleEntry, type PresenceEntry } from "./presence.js";
+import { applyPresencePatch, defaultPermissions, isStaleEntry, type PresenceEntry } from "./presence.js";
 
 const GRACE_MS = 30_000;
 const HEARTBEAT_TIMEOUT_MS = 60_000;
@@ -58,5 +58,23 @@ describe("isStaleEntry", () => {
   it("отключённый участник зачищается после истечения grace-периода", () => {
     const e = entry({ connected: false, lastSeenAt: Date.now() - GRACE_MS - 1000 });
     expect(isStaleEntry(e, Date.now(), GRACE_MS, HEARTBEAT_TIMEOUT_MS)).toBe(true);
+  });
+});
+
+describe("applyPresencePatch", () => {
+  it("меняет только переданные поля, права сливаются по ключам", () => {
+    const before = entry({ handRaised: true, permissions: { ...defaultPermissions("guest"), canSpeak: true } });
+    const after = applyPresencePatch(before, { permissions: { canDraw: true }, lastSeenAt: 5 });
+    expect(after).toMatchObject({ handRaised: true, lastSeenAt: 5 });
+    expect(after?.permissions).toMatchObject({ canDraw: true, canSpeak: true });
+  });
+
+  it("условие не выполнено — изменения нет (зачистка не трогает вернувшегося)", () => {
+    const e = entry({ connected: true, lastSeenAt: 2_000 });
+    expect(applyPresencePatch(e, { connected: false }, { maxLastSeenAt: 1_000 })).toBeNull();
+    expect(applyPresencePatch(e, { connected: false }, { connected: false })).toBeNull();
+    expect(applyPresencePatch(e, { connected: false }, { connected: true, maxLastSeenAt: 2_000 })).toMatchObject({
+      connected: false,
+    });
   });
 });

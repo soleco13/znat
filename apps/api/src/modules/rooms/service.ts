@@ -368,11 +368,13 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
   // «комната только что открылась» — в ней ещё никого не было.
   const roomWasEmpty = (await presence.countConnected(lessonId)) === 0;
 
-  const existing = await presence.getParticipant(lessonId, participantId);
+  const existing = (
+    await presence.patchParticipant(lessonId, participantId, { connected: true, lastSeenAt: Date.now() })
+  )?.after;
   if (!existing && !isStaff) await assertGuestCanEnter(lessonId, participantId);
   const granted = existing || isStaff ? null : await presence.getGrantedPermissions(lessonId, participantId);
   const entry: PresenceEntry = existing
-    ? { ...existing, connected: true, lastSeenAt: Date.now() }
+    ? existing
     : {
         fullName: actor.displayName,
         kind: actor.kind,
@@ -394,7 +396,7 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
         joinedAt: new Date().toISOString(),
         lastSeenAt: Date.now(),
       };
-  await presence.setParticipant(lessonId, participantId, entry);
+  if (!existing) await presence.setParticipant(lessonId, participantId, entry);
   // Без явного пуша доска знает только дефолт по роли (гость — read-only), а
   // presence гостя берёт canDraw из настроек урока или сохранённого гранта —
   // клиент рисует, а сервер доски молча отбрасывает штрихи.
@@ -517,24 +519,24 @@ export async function releaseScreenShareClaim(actor: LessonActor, lessonId: stri
  * Возвращает null, если участник ещё не входил в урок через HTTP — сокет должен закрыться.
  */
 export async function attachSocket(lessonId: string, userId: string): Promise<ParticipantSnapshot | null> {
-  const entry = await presence.getParticipant(lessonId, userId);
-  if (!entry) return null;
-  const wasDisconnected = !entry.connected;
-  const updated: PresenceEntry = { ...entry, connected: true, lastSeenAt: Date.now() };
-  await presence.setParticipant(lessonId, userId, updated);
-  if (wasDisconnected) {
-    emitRoomEvent(lessonId, { type: "participant_updated", participant: toSnapshot(userId, updated) });
+  const result = await presence.patchParticipant(lessonId, userId, { connected: true, lastSeenAt: Date.now() });
+  if (!result) return null;
+  if (!result.before.connected) {
+    emitRoomEvent(lessonId, { type: "participant_updated", participant: toSnapshot(userId, result.after) });
   }
-  return toSnapshot(userId, updated);
+  return toSnapshot(userId, result.after);
 }
 
 /** Разрыв WS-соединения (не намеренный выход) — даём grace-период на переподключение. */
 export async function markDisconnected(lessonId: string, userId: string): Promise<void> {
-  const entry = await presence.getParticipant(lessonId, userId);
-  if (!entry || !entry.connected) return;
-  const updated: PresenceEntry = { ...entry, connected: false, lastSeenAt: Date.now() };
-  await presence.setParticipant(lessonId, userId, updated);
-  emitRoomEvent(lessonId, { type: "participant_updated", participant: toSnapshot(userId, updated) });
+  const result = await presence.patchParticipant(
+    lessonId,
+    userId,
+    { connected: false, lastSeenAt: Date.now() },
+    { connected: true },
+  );
+  if (!result) return;
+  emitRoomEvent(lessonId, { type: "participant_updated", participant: toSnapshot(userId, result.after) });
 }
 
 /**
@@ -543,16 +545,13 @@ export async function markDisconnected(lessonId: string, userId: string): Promis
  * клиент вошёл заново, иначе он висит «на связи», невидимый для остальных.
  */
 export async function touchHeartbeat(lessonId: string, userId: string): Promise<boolean> {
-  const entry = await presence.getParticipant(lessonId, userId);
-  if (!entry) return false;
+  const result = await presence.patchParticipant(lessonId, userId, { connected: true, lastSeenAt: Date.now() });
+  if (!result) return false;
   // Sweep мог снять `connected` за пропуск pong-ов (короткий обрыв сети), а
   // сокет при этом выжил — без восстановления участник остаётся скрытым из
   // сетки камер до перезагрузки страницы.
-  const wasDisconnected = !entry.connected;
-  const updated: PresenceEntry = { ...entry, connected: true, lastSeenAt: Date.now() };
-  await presence.setParticipant(lessonId, userId, updated);
-  if (wasDisconnected) {
-    emitRoomEvent(lessonId, { type: "participant_updated", participant: toSnapshot(userId, updated) });
+  if (!result.before.connected) {
+    emitRoomEvent(lessonId, { type: "participant_updated", participant: toSnapshot(userId, result.after) });
   }
   return true;
 }
@@ -563,13 +562,13 @@ export async function setHandRaised(
   raised: boolean,
 ): Promise<void> {
   await assertMembership(actor, lessonId);
-  const entry = await presence.getParticipant(lessonId, actor.participantId);
-  if (!entry) {
+  const result = await presence.patchParticipant(lessonId, actor.participantId, {
+    handRaised: raised,
+    lastSeenAt: Date.now(),
+  });
+  if (!result) {
     throw new AppError(409, "not_in_room", "Сначала войдите в урок");
   }
-  entry.handRaised = raised;
-  entry.lastSeenAt = Date.now();
-  await presence.setParticipant(lessonId, actor.participantId, entry);
   emitRoomEvent(lessonId, { type: "hand_raised", userId: actor.participantId, raised });
 }
 
@@ -593,12 +592,10 @@ export async function setPinned(
   if (requester.role !== "admin" && !isOwnerTeacher) {
     throw new AppError(403, "forbidden", "Только учитель урока может закреплять участников в сетке видео");
   }
-  const entry = await presence.getParticipant(lessonId, targetUserId);
-  if (!entry) {
+  const result = await presence.patchParticipant(lessonId, targetUserId, { pinned });
+  if (!result) {
     throw new AppError(404, "not_found", "Участник не найден в комнате");
   }
-  entry.pinned = pinned;
-  await presence.setParticipant(lessonId, targetUserId, entry);
   emitRoomEvent(lessonId, { type: "participant_pinned", userId: targetUserId, pinned });
 }
 
@@ -707,8 +704,10 @@ export async function updatePermissions(
   const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
   await mediaService.updateLivePermissions(livekitRoom, targetUserId, permissions, entry.kind);
 
-  entry.permissions = permissions;
-  await presence.setParticipant(lessonId, targetUserId, entry);
+  const result = await presence.patchParticipant(lessonId, targetUserId, { permissions });
+  if (!result) {
+    throw new AppError(404, "not_found", "Участник не найден в комнате");
+  }
   if (entry.kind === "guest") await presence.setGrantedPermissions(lessonId, targetUserId, permissions);
   // Э3.8: живой пуш canDraw в canvas — тем же способом (rooms → canvas,
   // не наоборот, см. заметки Э3.2), что closeCanvasDocument. Только когда
@@ -717,7 +716,7 @@ export async function updatePermissions(
   if (patch.canDraw !== undefined) {
     canvasService.setDrawPermission(lessonId, targetUserId, permissions.canDraw);
   }
-  emitRoomEvent(lessonId, { type: "permissions_updated", userId: targetUserId, permissions: entry.permissions });
+  emitRoomEvent(lessonId, { type: "permissions_updated", userId: targetUserId, permissions: result.after.permissions });
 }
 
 /**
@@ -741,9 +740,9 @@ export async function setDrawForAllStudents(
   const participants = await presence.listParticipants(lessonId);
   for (const [userId, entry] of participants) {
     if (entry.kind !== "guest") continue;
-    entry.permissions = { ...entry.permissions, canDraw };
-    await presence.setParticipant(lessonId, userId, entry);
-    await presence.setGrantedPermissions(lessonId, userId, entry.permissions);
+    const result = await presence.patchParticipant(lessonId, userId, { permissions: { canDraw } });
+    if (!result) continue;
+    await presence.setGrantedPermissions(lessonId, userId, result.after.permissions);
     canvasService.setDrawPermission(lessonId, userId, canDraw);
   }
   emitRoomEvent(lessonId, { type: "presence", participants: await listParticipantsSnapshot(lessonId) });
@@ -1049,12 +1048,20 @@ async function sweepRoom(lessonId: string): Promise<void> {
   let changed = false;
   for (const [userId, entry] of participants) {
     if (!isStaleEntry(entry, now)) continue;
+    // Условие на lastSeenAt: пока sweep думал, участник мог прислать pong —
+    // тогда его не трогаем (раньше запись перетиралась устаревшей копией).
+    const stillStale = { connected: entry.connected, maxLastSeenAt: entry.lastSeenAt };
     if (entry.connected) {
-      const updated: PresenceEntry = { ...entry, connected: false, lastSeenAt: now };
-      await presence.setParticipant(lessonId, userId, updated);
-      emitRoomEvent(lessonId, { type: "participant_updated", participant: toSnapshot(userId, updated) });
+      const result = await presence.patchParticipant(
+        lessonId,
+        userId,
+        { connected: false, lastSeenAt: now },
+        stillStale,
+      );
+      if (!result) continue;
+      emitRoomEvent(lessonId, { type: "participant_updated", participant: toSnapshot(userId, result.after) });
     } else {
-      await presence.removeParticipant(lessonId, userId);
+      if (!(await presence.removeParticipantIf(lessonId, userId, stillStale))) continue;
       await repo.closeOpenSession(lessonId, userId);
       emitRoomEvent(lessonId, { type: "participant_left", userId });
     }
