@@ -17,7 +17,7 @@ import {
   Undo2,
   X,
 } from "lucide-react";
-import { GUEST_CANVAS_TOKEN_MARKER } from "@school/shared";
+import { CANVAS_IMAGE_MAX_BYTES, GUEST_CANVAS_TOKEN_MARKER } from "@school/shared";
 import type { CanvasImageUploadResponse, Deck } from "@school/shared";
 
 import { cn } from "@/lib/utils";
@@ -884,6 +884,10 @@ export function Board({
     }
     if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
       setUploadError("Поддерживаются только PNG, JPEG, WebP");
+      return;
+    }
+    if (file.size > CANVAS_IMAGE_MAX_BYTES) {
+      setUploadError(`Картинка больше ${CANVAS_IMAGE_MAX_BYTES / 1024 / 1024} МБ`);
       return;
     }
     setUploadError(null);

@@ -1,16 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import { AppError } from "../../plugins/errors.js";
+import { UPLOAD_LIMITS, openStreamedUpload } from "../../plugins/uploads.js";
 import * as storageService from "./service.js";
 
 /** Монтируется под /api/v1 — требует аутентификации. */
 export async function assetsRoutes(app: FastifyInstance) {
   app.post("/assets", { preHandler: app.authenticate }, async (request, reply) => {
-    const file = await request.file();
-    if (!file) {
-      throw new AppError(400, "no_file", "Файл не передан");
-    }
+    const file = await openStreamedUpload(request, UPLOAD_LIMITS.generic);
     const { storageKey, sizeBytes } = await storageService.uploadFile({
-      stream: file.file,
+      stream: file.stream,
       suggestedName: file.filename,
       schoolId: request.user.schoolId,
     });

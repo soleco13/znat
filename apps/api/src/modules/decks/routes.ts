@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { deckSchema, deckUploadResponseSchema, type Deck } from "@school/shared";
 import { z } from "zod";
 import { AppError } from "../../plugins/errors.js";
+import { UPLOAD_LIMITS, openStreamedUpload } from "../../plugins/uploads.js";
 import * as decksService from "./service.js";
 
 const jobStatusResponseSchema = deckSchema.pick({
@@ -20,15 +21,11 @@ export default async function decksRoutes(app: FastifyInstance) {
   app.addHook("preHandler", app.authenticate);
 
   app.post<{ Params: { id: string } }>("/lessons/:id/uploads", async (request, reply) => {
-    const file = await request.file();
-    if (!file) {
-      throw new AppError(400, "no_file", "Файл не передан");
-    }
-    const buffer = await file.toBuffer();
+    const file = await openStreamedUpload(request, UPLOAD_LIMITS.deck);
     const result = await decksService.createDeckFromUpload({
       user: request.user,
       lessonId: request.params.id,
-      buffer,
+      stream: file.stream,
       filename: file.filename,
       mimeType: file.mimetype,
     });

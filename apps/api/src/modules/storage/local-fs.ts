@@ -25,7 +25,13 @@ export class LocalFsStorageAdapter implements StorageAdapter {
     const storageKey = path.posix.join(input.schoolId, `${randomUUID()}${ext}`);
     const destPath = this.resolve(storageKey);
     await mkdir(path.dirname(destPath), { recursive: true });
-    await pipeline(input.stream, createWriteStream(destPath));
+    try {
+      await pipeline(input.stream, createWriteStream(destPath));
+    } catch (err) {
+      // Оборванная загрузка (клиент ушёл, превышен лимит) не оставляет огрызок на диске.
+      await rm(destPath, { force: true });
+      throw err;
+    }
     const { size } = await stat(destPath);
     return { storageKey, sizeBytes: size };
   }

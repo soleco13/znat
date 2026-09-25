@@ -16,6 +16,7 @@ import recorderAccessPlugin from "./plugins/recorder-access.js";
 import metricsPlugin from "./plugins/metrics.js";
 import { rateLimitKey, rateLimitMax } from "./plugins/rate-limit-key.js";
 import { serializeRequest } from "./plugins/log-redact.js";
+import { UPLOAD_LIMITS } from "./plugins/uploads.js";
 import { checkHealth } from "./plugins/health.js";
 import { initErrorReporting } from "./plugins/sentry.js";
 import authRoutes from "./modules/auth/routes.js";
@@ -63,7 +64,11 @@ export function buildServer() {
   });
 
   app.register(cookie, { secret: env.COOKIE_SECRET });
-  app.register(multipart, { limits: { fileSize: 200 * 1024 * 1024 } });
+  // Маршруты передают свой лимит (plugins/uploads.ts); здесь — самый строгий
+  // на случай, если новый маршрут его забудет.
+  app.register(multipart, {
+    limits: { fileSize: UPLOAD_LIMITS.canvasImage, files: 1, fields: 10, parts: 20 },
+  });
   app.register(rateLimit, { max: rateLimitMax, keyGenerator: rateLimitKey, timeWindow: "1 minute" });
   app.register(websocket);
 

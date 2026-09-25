@@ -8,6 +8,7 @@ import {
 } from "../modules/canvas/service.js";
 import { getActiveLessonTrafficSnapshot } from "../modules/rooms/service.js";
 import { getRecordingLoadSnapshot } from "../modules/recordings/service.js";
+import { uploadsInMemoryBytes } from "./uploads.js";
 
 const register = new client.Registry();
 client.collectDefaultMetrics({ register });
@@ -53,6 +54,15 @@ new client.Gauge({
   registers: [register],
   collect() {
     this.set(getCanvasDocumentsWithPendingUpdatesCount());
+  },
+});
+
+new client.Gauge({
+  name: "uploads_in_memory_bytes",
+  help: "Байт загрузок, которые процесс сейчас держит в памяти (занятая часть бюджета uploads.ts)",
+  registers: [register],
+  collect() {
+    this.set(uploadsInMemoryBytes());
   },
 });
 

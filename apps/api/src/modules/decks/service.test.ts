@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { Readable } from "node:stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AccessTokenPayload } from "@school/shared";
 
@@ -66,7 +67,11 @@ beforeEach(() => {
     schoolId: SCHOOL,
     teacherId: TEACHER,
   });
-  storageServiceMock.uploadFile.mockResolvedValue({ storageKey: `${SCHOOL}/src.pptx`, sizeBytes: 10 });
+  // Как настоящее хранилище — дочитывает поток (sha256 считается по пути).
+  storageServiceMock.uploadFile.mockImplementation(async ({ stream }: { stream: NodeJS.ReadableStream }) => {
+    for await (const _chunk of stream) void _chunk;
+    return { storageKey: `${SCHOOL}/src.pptx`, sizeBytes: 10 };
+  });
   storageServiceMock.deleteFile.mockResolvedValue(undefined);
   storageServiceMock.copyFile.mockImplementation((input: { sourceKey: string }) =>
     Promise.resolve({ storageKey: `${SCHOOL}/copy-of-${input.sourceKey}`, sizeBytes: 5 }),
@@ -105,7 +110,7 @@ describe("createDeckFromUpload (Э4.3)", () => {
       createDeckFromUpload({
         user: teacher,
         lessonId: LESSON,
-        buffer: Buffer.from("x"),
+        stream: Readable.from([Buffer.from("x")]),
         filename: "a.txt",
         mimeType: "text/plain",
       }),
@@ -119,7 +124,7 @@ describe("createDeckFromUpload (Э4.3)", () => {
       createDeckFromUpload({
         user: otherTeacher,
         lessonId: LESSON,
-        buffer: Buffer.from("x"),
+        stream: Readable.from([Buffer.from("x")]),
         filename: "a.pptx",
         mimeType: PPTX,
       }),
@@ -133,7 +138,7 @@ describe("createDeckFromUpload (Э4.3)", () => {
     const res = await createDeckFromUpload({
       user: teacher,
       lessonId: LESSON,
-      buffer,
+      stream: Readable.from([buffer]),
       filename: "Урок 1.pptx",
       mimeType: PPTX,
     });
@@ -164,7 +169,7 @@ describe("createDeckFromUpload (Э4.3)", () => {
     await createDeckFromUpload({
       user: teacher,
       lessonId: LESSON,
-      buffer: Buffer.from("x"),
+      stream: Readable.from([Buffer.from("x")]),
       filename: "Урок 1.pptx",
       mimeType: PPTX,
     });
@@ -191,7 +196,7 @@ describe("createDeckFromUpload — дедуп по sha256 (Э4.5)", () => {
     const res = await createDeckFromUpload({
       user: teacher,
       lessonId: LESSON,
-      buffer: Buffer.from("same-bytes"),
+      stream: Readable.from([Buffer.from("same-bytes")]),
       filename: "Повтор.pptx",
       mimeType: PPTX,
     });
@@ -217,7 +222,7 @@ describe("createDeckFromUpload — дедуп по sha256 (Э4.5)", () => {
     await createDeckFromUpload({
       user: teacher,
       lessonId: LESSON,
-      buffer: Buffer.from("same-bytes"),
+      stream: Readable.from([Buffer.from("same-bytes")]),
       filename: "Повтор.pptx",
       mimeType: PPTX,
     });
@@ -239,7 +244,7 @@ describe("createDeckFromUpload — дедуп по sha256 (Э4.5)", () => {
     const res = await createDeckFromUpload({
       user: teacher,
       lessonId: LESSON,
-      buffer: Buffer.from("same-pdf-bytes"),
+      stream: Readable.from([Buffer.from("same-pdf-bytes")]),
       filename: "Повтор.pdf",
       mimeType: "application/pdf",
     });
@@ -263,7 +268,7 @@ describe("createDeckFromUpload — дедуп по sha256 (Э4.5)", () => {
     await createDeckFromUpload({
       user: teacher,
       lessonId: LESSON,
-      buffer,
+      stream: Readable.from([buffer]),
       filename: "Повтор.pptx",
       mimeType: PPTX,
     });

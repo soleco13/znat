@@ -8,7 +8,7 @@
  * `buildConvertJobHandlers()`, которые пишут слайды в БД. Воркер БД не видит.
  */
 import { createHash } from "node:crypto";
-import { Readable } from "node:stream";
+import { Transform, pipeline } from "node:stream";
 import {
   deckSourceMimeTypeSchema,
   type AccessTokenPayload,
@@ -83,7 +83,7 @@ function broadcastDeckStatus(row: Awaited<ReturnType<typeof repo.setDeckStatus>>
 export async function createDeckFromUpload(input: {
   user: AccessTokenPayload;
   lessonId: string;
-  buffer: Buffer;
+  stream: NodeJS.ReadableStream;
   filename: string;
   mimeType: string;
 }): Promise<DeckUploadResponse> {
@@ -99,14 +99,25 @@ export async function createDeckFromUpload(input: {
   }
   const mimeType = parsedMime.data;
 
-  const sha256 = createHash("sha256").update(input.buffer).digest("hex");
   const ext = EXT_BY_MIME[mimeType] ?? "";
 
+  // Исходник до 100 МБ идёт на диск потоком, sha256 считается по пути —
+  // в памяти процесса файл целиком не лежит.
+  const hash = createHash("sha256");
+  const hashing = new Transform({
+    transform(chunk: Buffer, _encoding, callback) {
+      hash.update(chunk);
+      callback(null, chunk);
+    },
+  });
+  // Ошибка источника (в т.ч. 413 за лимит) рвёт hashing, и её видит uploadFile.
+  pipeline(input.stream, hashing, () => {});
   const { storageKey } = await storageService.uploadFile({
-    stream: Readable.from(input.buffer),
+    stream: hashing,
     suggestedName: `deck${ext}`,
     schoolId: input.user.schoolId,
   });
+  const sha256 = hash.digest("hex");
 
   // Э4.5: та же презентация (совпал sha256 исходника) уже сконвертирована в
   // этой школе — не гоняем LibreOffice второй раз, копируем готовые слайды.

@@ -17,6 +17,7 @@ import {
   updateMaterialResultSchema,
 } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
+import { UPLOAD_LIMITS, withBufferedUpload } from "../../plugins/uploads.js";
 import * as materialsService from "./service.js";
 
 const uuidParam = z.string().uuid();
@@ -156,10 +157,9 @@ export default async function materialsRoutes(app: FastifyInstance) {
     "/materials/import",
     authorOnly,
     async (request, reply) => {
-      const file = await request.file();
-      if (!file) throw new AppError(400, "no_file", "Файл не передан");
-      const buffer = await file.toBuffer();
-      const result = await materialsService.importQuestionsFromDocument(buffer, file.mimetype);
+      const result = await withBufferedUpload(request, UPLOAD_LIMITS.documentImport, (file) =>
+        materialsService.importQuestionsFromDocument(file.buffer, file.mimetype),
+      );
       return reply.send(importedQuestionsResultSchema.parse(result));
     },
   );
@@ -176,16 +176,15 @@ export default async function materialsRoutes(app: FastifyInstance) {
     "/materials/media",
     authorOnly,
     async (request, reply) => {
-      const file = await request.file();
-      if (!file) throw new AppError(400, "no_file", "Файл не передан");
-      const buffer = await file.toBuffer();
-      const asset = await materialsService.uploadMediaAsset({
-        buffer,
-        mimeType: file.mimetype,
-        originalName: file.filename,
-        schoolId: request.user.schoolId,
-        uploadedBy: request.user.sub,
-      });
+      const asset = await withBufferedUpload(request, UPLOAD_LIMITS.mediaAsset, (file) =>
+        materialsService.uploadMediaAsset({
+          buffer: file.buffer,
+          mimeType: file.mimetype,
+          originalName: file.filename,
+          schoolId: request.user.schoolId,
+          uploadedBy: request.user.sub,
+        }),
+      );
       return reply.send(mediaAssetSchema.parse(asset));
     },
   );

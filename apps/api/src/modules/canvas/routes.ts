@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { canvasImageUploadResponseSchema } from "@school/shared";
-import { AppError } from "../../plugins/errors.js";
+import { UPLOAD_LIMITS, withBufferedUpload } from "../../plugins/uploads.js";
 import { assertCanDrawForLesson } from "./hocuspocus.js";
 import { uploadCanvasImage } from "./images.js";
 
@@ -11,16 +11,13 @@ export default async function canvasRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string } }>("/lessons/:id/canvas-images", async (request, reply) => {
     await assertCanDrawForLesson(request.user, request.params.id);
 
-    const file = await request.file();
-    if (!file) {
-      throw new AppError(400, "no_file", "Файл не передан");
-    }
-    const buffer = await file.toBuffer();
-    const result = await uploadCanvasImage({
-      buffer,
-      mimeType: file.mimetype,
-      schoolId: request.user.schoolId,
-    });
+    const result = await withBufferedUpload(request, UPLOAD_LIMITS.canvasImage, (file) =>
+      uploadCanvasImage({
+        buffer: file.buffer,
+        mimeType: file.mimetype,
+        schoolId: request.user.schoolId,
+      }),
+    );
     return reply.send(canvasImageUploadResponseSchema.parse(result));
   });
 }

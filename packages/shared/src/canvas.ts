@@ -8,6 +8,10 @@ import { z } from "zod";
 export const canvasImageMimeTypeSchema = z.enum(["image/png", "image/jpeg", "image/webp"]);
 export type CanvasImageMimeType = z.infer<typeof canvasImageMimeTypeSchema>;
 
+/** Потолок размера картинки на доску. Грузит любой участник с правом рисовать,
+ *  а сервер держит файл в памяти на время ресайза — лимит жёсткий. */
+export const CANVAS_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
+
 export const canvasImageUploadResponseSchema = z.object({
   storageKey: z.string(),
   url: z.string(),
