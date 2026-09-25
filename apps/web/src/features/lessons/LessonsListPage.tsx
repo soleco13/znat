@@ -175,9 +175,10 @@ function LessonFormDialog({
             scheduledAt: toLocalInput(editing.scheduledAt),
             settings: { ...editing.settings },
           }
-        : { title: "", teacherId: "", scheduledAt: "", settings: {} },
+        : // Единственный, кто может вести урок (репетитор-одиночка), — выбран сразу.
+          { title: "", teacherId: teachers.length === 1 ? teachers[0]!.id : "", scheduledAt: "", settings: {} },
     );
-  }, [open, editing]);
+  }, [open, editing, teachers]);
 
   async function submit() {
     if (!value.title.trim() || !value.teacherId) return;
@@ -243,12 +244,13 @@ function LessonFormDialog({
               <SelectContent>
                 {teachers.length === 0 ? (
                   <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                    Нет активных учителей
+                    Нет активных учителей и администраторов
                   </div>
                 ) : (
                   teachers.map((t) => (
                     <SelectItem key={t.id} value={t.id}>
                       {t.fullName}
+                      {t.role === "admin" ? " (администратор)" : ""}
                     </SelectItem>
                   ))
                 )}

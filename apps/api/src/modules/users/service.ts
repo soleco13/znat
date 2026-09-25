@@ -48,10 +48,15 @@ export async function getUserNames(schoolId: string, ids: string[]) {
 }
 
 /** Проверяет, что пользователь существует в школе и он учитель (Э12: назначение учителя уроку). */
+/**
+ * Кто может вести урок: учитель или администратор. Репетитор после
+ * самостоятельной регистрации — администратор своего пространства, и без
+ * этого не мог создать ни одного урока («Нет активных учителей»).
+ */
 export async function assertTeacher(schoolId: string, teacherId: string) {
   const user = await repo.findUserById(teacherId, schoolId);
-  if (!user || user.role !== "teacher") {
-    throw new AppError(400, "invalid_teacher", "Указанный пользователь не является учителем");
+  if (!user || !user.isActive || (user.role !== "teacher" && user.role !== "admin")) {
+    throw new AppError(400, "invalid_teacher", "Указанный пользователь не может вести урок");
   }
   return user;
 }

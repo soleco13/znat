@@ -15,10 +15,14 @@ export function listLessons(): Promise<{ items: LessonSummary[] }> {
 }
 
 /** Список учителей для закрепления урока (только admin). */
-export function listTeachers(): Promise<UserResponse[]> {
-  return apiFetch<{ items: UserResponse[]; total: number }>(
-    "/users?role=teacher&pageSize=200",
-  ).then((r) => r.items.filter((u) => u.isActive));
+/** Кто может вести урок: учителя и администраторы (репетитор-одиночка — администратор своего пространства). */
+export async function listTeachers(): Promise<UserResponse[]> {
+  const [teachers, admins] = await Promise.all(
+    (["teacher", "admin"] as const).map((role) =>
+      apiFetch<{ items: UserResponse[]; total: number }>(`/users?role=${role}&pageSize=200`),
+    ),
+  );
+  return [...teachers!.items, ...admins!.items].filter((u) => u.isActive);
 }
 
 export function createLesson(body: AdminCreateLessonRequest): Promise<LessonSummary> {
