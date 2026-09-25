@@ -103,6 +103,36 @@ export async function setGrantedPermissions(
   await redis.expire(grantsKey(lessonId), GRANTS_TTL_SECONDS);
 }
 
+export async function clearGrantedPermissions(lessonId: string, userId: string): Promise<void> {
+  await redis.hdel(grantsKey(lessonId), userId);
+}
+
+export async function countGuests(lessonId: string): Promise<number> {
+  const all = await listParticipants(lessonId);
+  let n = 0;
+  for (const entry of all.values()) if (entry.kind === "guest") n++;
+  return n;
+}
+
+function entryLockKey(lessonId: string): string {
+  return `room:${lessonId}:entryLocked`;
+}
+
+/** Урок постоянный: забытый замок не должен закрыть вход на следующее занятие. */
+const ENTRY_LOCK_TTL_SECONDS = 12 * 60 * 60;
+
+export async function isEntryLocked(lessonId: string): Promise<boolean> {
+  return (await redis.exists(entryLockKey(lessonId))) === 1;
+}
+
+export async function setEntryLocked(lessonId: string, locked: boolean): Promise<void> {
+  if (locked) {
+    await redis.set(entryLockKey(lessonId), "1", "EX", ENTRY_LOCK_TTL_SECONDS);
+  } else {
+    await redis.del(entryLockKey(lessonId));
+  }
+}
+
 function modeKey(lessonId: string): string {
   return `room:${lessonId}:mode`;
 }

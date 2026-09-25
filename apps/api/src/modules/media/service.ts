@@ -124,6 +124,15 @@ export async function updateLivePermissions(
   }
 }
 
+/** Выкидывает участника из комнаты LiveKit (учитель удалил его из урока). Не был подключён — не ошибка. */
+export async function removeParticipant(livekitRoom: string, userId: string): Promise<void> {
+  try {
+    await roomService.removeParticipant(livekitRoom, userId);
+  } catch (err) {
+    if (!isNotFoundError(err)) throw err;
+  }
+}
+
 /** Общий поиск+мьют трека по источнику — используется и микрофоном (Э2.5), и демонстрацией экрана (Э7.2). */
 async function muteTrackBySource(
   livekitRoom: string,

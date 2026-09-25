@@ -16,6 +16,8 @@ const envSchema = z.object({
   JWT_GUEST_SECRET: z.string().min(32),
   /** Э12.4 — срок жизни гостевой сессии урока (§1.6 план-ТЗ: «~6 ч, без refresh»). Истекла → перезаход по ссылке. */
   GUEST_SESSION_TTL_HOURS: z.coerce.number().int().min(1).max(24).default(6),
+  /** Потолок учеников в одном уроке (§ ТЗ: класс до 30) — утёкшая ссылка не заведёт в урок сотни гостей. */
+  LESSON_MAX_GUESTS: z.coerce.number().int().min(1).max(1000).default(50),
   COOKIE_SECRET: z.string().min(32),
   STORAGE_ROOT: z.string().min(1).default("/data/assets"),
   STORAGE_HMAC_SECRET: z.string().min(32),

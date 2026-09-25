@@ -20,6 +20,8 @@ import {
   Hand,
   LayoutGrid,
   Link as LinkIcon,
+  Lock,
+  LockOpen,
   LogOut,
   Maximize,
   MessageSquare,
@@ -51,7 +53,17 @@ import type {
 } from "@school/shared";
 
 import { cn } from "@/lib/utils";
-import { apiFetch, setGuestMode } from "@/shared/api-client";
+import { ApiError, apiFetch, setGuestMode } from "@/shared/api-client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/ui/alert-dialog";
 import { useGuestSessionStore } from "@/features/guest/guest-session-store";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
@@ -196,6 +208,26 @@ const ICON_BTN =
 
 type PermissionKey = "canDraw" | "canSpeak" | "canShareScreen" | "canPublishVideo";
 
+const REMOVED_SCREEN = {
+  title: "Вас удалили из урока",
+  text: "Учитель удалил вас из урока. Если это ошибка — напишите учителю.",
+};
+
+/** Отказ во входе, который повтором не исправить, — экран вместо «Повторить». */
+function blockedScreenFor(err: unknown): { title: string; text: string } | null {
+  if (!(err instanceof ApiError) || err.status !== 403) return null;
+  switch (err.code) {
+    case "removed_from_lesson":
+      return REMOVED_SCREEN;
+    case "lesson_entry_locked":
+      return { title: "Вход в урок закрыт", text: "Учитель закрыл вход. Попросите его открыть вход и обновите страницу." };
+    case "lesson_full":
+      return { title: "В уроке нет мест", text: err.message };
+    default:
+      return null;
+  }
+}
+
 export function RoomPage() {
   const { id: lessonId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -236,6 +268,10 @@ export function RoomPage() {
   const [recordingActive, setRecordingActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [joinFailed, setJoinFailed] = useState(false);
+  /** Войти нельзя и повтор не поможет: удалили из урока, вход закрыт, урок полон. */
+  const [blocked, setBlocked] = useState<{ title: string; text: string } | null>(null);
+  const [entryLocked, setEntryLocked] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<ParticipantSnapshot | null>(null);
   const [media, setMedia] = useState<MediaConnection | null>(null);
   const [clientMediaSettings, setClientMediaSettings] = useState<ClientMediaSettings | null>(null);
   const [deviceCheckDone, setDeviceCheckDone] = useState(false);
@@ -313,6 +349,17 @@ export function RoomPage() {
         if (message.userId !== selfIdRef.current) playParticipantSound("left");
         setParticipants((prev) => prev.filter((p) => p.userId !== message.userId));
         break;
+      case "participant_removed":
+        if (message.userId === selfIdRef.current) {
+          setBlocked(REMOVED_SCREEN);
+          break;
+        }
+        playParticipantSound("left");
+        setParticipants((prev) => prev.filter((p) => p.userId !== message.userId));
+        break;
+      case "entry_locked":
+        setEntryLocked(message.locked);
+        break;
       case "permissions_updated":
         setParticipants((prev) =>
           prev.map((p) =>
@@ -381,13 +428,17 @@ export function RoomPage() {
   const joinedRef = useRef(false);
   const rejoinAfterEviction = useCallback(async () => {
     if (!lessonId || !joinedRef.current) return;
-    await apiFetch<JoinLessonResponse>(`/lessons/${lessonId}/join`, { method: "POST" });
+    await apiFetch<JoinLessonResponse>(`/lessons/${lessonId}/join`, { method: "POST" }).catch((err) => {
+      const screen = blockedScreenFor(err);
+      if (screen) setBlocked(screen);
+      throw err;
+    });
   }, [lessonId]);
 
   const status = useRoomSocket(
     lessonId ?? "",
     handleMessage,
-    deviceCheckDone,
+    deviceCheckDone && !blocked,
     isGuest ? "guest" : "staff",
     undefined,
     rejoinAfterEviction,
@@ -410,8 +461,13 @@ export function RoomPage() {
         setClientMediaSettings(data.clientMediaSettings);
         setSharedStage(data.stage);
         setStageView((v) => (v === "activity" ? v : data.stage));
+        setEntryLocked(data.entryLocked);
       })
-      .catch(() => setJoinFailed(true));
+      .catch((err) => {
+        const screen = blockedScreenFor(err);
+        if (screen) setBlocked(screen);
+        else setJoinFailed(true);
+      });
   }, [lessonId]);
 
   useEffect(() => {
@@ -542,6 +598,21 @@ export function RoomPage() {
     );
   }
 
+  async function removeParticipant(userId: string) {
+    if (!lessonId) return;
+    await apiFetch(`/lessons/${lessonId}/participants/${userId}/remove`, { method: "POST" }).catch((e) =>
+      setError(e instanceof Error ? e.message : "Не удалось удалить участника"),
+    );
+  }
+
+  async function toggleEntryLocked() {
+    if (!lessonId) return;
+    await apiFetch(`/lessons/${lessonId}/entry`, {
+      method: "PATCH",
+      body: JSON.stringify({ locked: !entryLocked }),
+    }).catch(() => setError(entryLocked ? "Не удалось открыть вход" : "Не удалось закрыть вход"));
+  }
+
   /** Э6.3, §5.3 ТЗ. */
   async function togglePin(userId: string, pinned: boolean) {
     if (!lessonId) return;
@@ -624,6 +695,7 @@ export function RoomPage() {
     onTogglePermission: togglePermission,
     onMute: muteParticipant,
     onTogglePin: togglePin,
+    onRemove: setRemoveTarget,
   };
 
   const peoplePanel = (sheet: boolean) => (
@@ -1146,6 +1218,10 @@ export function RoomPage() {
         <PenLine aria-hidden />
         Разрешить рисовать всем
       </DropdownMenuItem>
+      <DropdownMenuItem className={MENU_ITEM} onSelect={toggleEntryLocked}>
+        {entryLocked ? <LockOpen aria-hidden /> : <Lock aria-hidden />}
+        {entryLocked ? "Открыть вход" : "Закрыть вход"}
+      </DropdownMenuItem>
     </>
   ) : null;
 
@@ -1503,6 +1579,29 @@ export function RoomPage() {
 
       {media ? <DeviceSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} /> : null}
 
+      <AlertDialog open={Boolean(removeTarget)} onOpenChange={(v) => !v && setRemoveTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить «{removeTarget?.fullName}» из урока?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ученик сразу выйдет из урока и не сможет вернуться с этого устройства. Войти по ссылке
+              заново под другим именем он сможет, пока вход не закрыт.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (removeTarget) void removeParticipant(removeTarget.userId);
+                setRemoveTarget(null);
+              }}
+            >
+              Удалить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Только WS-канал (`status`), НЕ LiveKit-медиа — оно продолжает
           работать под оверлеем, урок не прерывается. */}
       {status === "reconnecting" && everConnectedRef.current ? (
@@ -1524,6 +1623,17 @@ export function RoomPage() {
       ) : null}
     </div>
   );
+
+  if (blocked) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-[#eff6ff] to-[#f0fdfa] p-6">
+        <div className="w-full max-w-[400px] rounded-xl border border-border bg-card p-9 text-center shadow-lg">
+          <h1 className="text-[22px] font-heavy tracking-tight">{blocked.title}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{blocked.text}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (leftAsGuest) {
     return (
@@ -1700,6 +1810,7 @@ type PeopleListProps = {
   onTogglePermission: (userId: string, key: PermissionKey, value: boolean) => void;
   onMute: (userId: string) => void;
   onTogglePin: (userId: string, pinned: boolean) => void;
+  onRemove: (participant: ParticipantSnapshot) => void;
 };
 
 /** Список участников с живым состоянием микрофона/связи из LiveKit (только внутри `<LiveKitRoom>`). */
@@ -1731,6 +1842,7 @@ function PeopleList({
   onTogglePermission,
   onMute,
   onTogglePin,
+  onRemove,
 }: PeopleListProps) {
   const q = query.trim().toLowerCase();
   const rows = participants
@@ -1798,6 +1910,7 @@ function PeopleList({
                   onTogglePermission={onTogglePermission}
                   onMute={onMute}
                   onTogglePin={onTogglePin}
+                  onRemove={onRemove}
                 />
               ) : null}
             </span>

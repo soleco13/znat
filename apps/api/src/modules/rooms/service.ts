@@ -13,8 +13,10 @@ import type {
   UpdateParticipantPermissionsRequest,
 } from "@school/shared";
 import { lessonSettingsSchema } from "@school/shared";
+import { env } from "../../plugins/env.js";
 import { AppError } from "../../plugins/errors.js";
 import * as canvasService from "../canvas/service.js";
+import * as guestsService from "../guests/service.js";
 import type { LessonActor } from "../guests/service.js";
 import * as lessonsService from "../lessons/service.js";
 import * as mediaService from "../media/service.js";
@@ -178,6 +180,8 @@ async function scheduleAutoEndIfEmpty(lessonId: string): Promise<void> {
         const stillEmpty = (await presence.listParticipants(lessonId)).size === 0;
         if (!stillEmpty) return;
         canvasService.closeCanvasDocument(lessonId);
+        // Урок постоянный: закрытый вход не переносится на следующее занятие.
+        await presence.setEntryLocked(lessonId, false);
         activeLessons.delete(lessonId);
       } catch (err) {
         console.error("rooms: room cleanup failed", lessonId, err);
@@ -320,6 +324,26 @@ function guestPermissionsFromSettings(rawSettings: unknown): ParticipantPermissi
   };
 }
 
+/**
+ * Новый гость (его нет в presence) — два гейта от утёкшей ссылки:
+ *  - учитель закрыл вход → пускаем только того, кто уже был на этом уроке
+ *    (заснувший телефон, перезагрузка страницы), а не нового человека;
+ *  - потолок учеников в уроке (`LESSON_MAX_GUESTS`).
+ * Гонка двух одновременных входов может превысить потолок на единицы — это
+ * защита от сотен фейковых гостей, а не точный счётчик.
+ */
+async function assertGuestCanEnter(lessonId: string, guestId: string): Promise<void> {
+  if (await presence.isEntryLocked(lessonId)) {
+    const wasHere = await repo.findCanonicalParticipant(lessonId, { userId: null, guestId });
+    if (!wasHere) {
+      throw new AppError(403, "lesson_entry_locked", "Учитель закрыл вход в урок");
+    }
+  }
+  if ((await presence.countGuests(lessonId)) >= env.LESSON_MAX_GUESTS) {
+    throw new AppError(403, "lesson_full", `В уроке уже ${env.LESSON_MAX_GUESTS} учеников — это максимум`);
+  }
+}
+
 export async function join(actor: LessonActor, lessonId: string): Promise<JoinLessonResponse> {
   const lesson = await assertMembership(actor, lessonId);
   // Э12 (§0 план-ТЗ): урок постоянный, без статуса — войти можно всегда,
@@ -338,6 +362,7 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
   const roomWasEmpty = (await presence.countConnected(lessonId)) === 0;
 
   const existing = await presence.getParticipant(lessonId, participantId);
+  if (!existing && !isStaff) await assertGuestCanEnter(lessonId, participantId);
   const granted = existing || isStaff ? null : await presence.getGrantedPermissions(lessonId, participantId);
   const entry: PresenceEntry = existing
     ? { ...existing, connected: true, lastSeenAt: Date.now() }
@@ -409,6 +434,7 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
 
   const lessonMode = await presence.getLessonMode(lessonId);
   const stage = await presence.getLessonStage(lessonId);
+  const entryLocked = await presence.isEntryLocked(lessonId);
   // Параметры школы (§10.10 ТЗ, запрос 2026-09-14) — мягкие дефолты
   // качества медиа + флаги демонстрации/PiP, и staff, и гостю.
   const clientMediaSettings = await schoolSettingsService.getClientMediaSettings(schoolId);
@@ -420,6 +446,7 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
     self: snapshot,
     media,
     clientMediaSettings,
+    entryLocked,
   };
 }
 
@@ -742,6 +769,77 @@ export async function muteAllNow(schoolId: string, lessonId: string, requester: 
     .filter(([, entry]) => entry.kind === "guest")
     .map(([userId]) => userId);
   await mediaService.muteMicrophones(livekitRoom, studentIds);
+}
+
+async function assertLessonTeacher(
+  schoolId: string,
+  lessonId: string,
+  requester: AccessTokenPayload,
+  message: string,
+): Promise<void> {
+  const lesson = await lessonsService.getLesson(schoolId, lessonId);
+  const isOwnerTeacher = requester.role === "teacher" && lesson.teacherId === requester.sub;
+  if (requester.role !== "admin" && !isOwnerTeacher) {
+    throw new AppError(403, "forbidden", message);
+  }
+}
+
+/**
+ * «Удалить из урока» — только ученика (гостя). Читать построчно: это гейт
+ * доступа. Гостевая сессия отзывается первой — после этого ученик не пройдёт
+ * ни `POST /join`, ни WS, ни доску, ни задания, даже если какой-то шаг ниже
+ * упадёт. Дальше — выкинуть из presence, LiveKit и доски. Вернуться по ссылке
+ * с новым именем он может, пока вход не закрыт (`setEntryLocked`).
+ */
+export async function removeParticipant(
+  schoolId: string,
+  lessonId: string,
+  requester: AccessTokenPayload,
+  targetUserId: string,
+): Promise<void> {
+  await assertLessonTeacher(schoolId, lessonId, requester, "Только учитель урока может удалять участников");
+  const entry = await presence.getParticipant(lessonId, targetUserId);
+  if (!entry) {
+    throw new AppError(404, "not_found", "Участник не найден в комнате");
+  }
+  if (entry.kind !== "guest") {
+    throw new AppError(409, "cannot_remove_staff", "Из урока можно удалить только ученика");
+  }
+
+  await guestsService.revokeGuestSession(targetUserId);
+  await presence.removeParticipant(lessonId, targetUserId);
+  await presence.clearGrantedPermissions(lessonId, targetUserId);
+  await presence.releaseScreenShare(lessonId, targetUserId);
+  await repo.closeOpenSession(lessonId, targetUserId);
+  // Сначала сообщение: WS удалённого закрывается по нему (rooms/ws.ts), и
+  // клиент показывает «вас удалили», а не переподключается.
+  emitRoomEvent(lessonId, { type: "participant_removed", userId: targetUserId });
+  canvasService.disconnectCanvasParticipant(lessonId, targetUserId);
+  const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
+  await mediaService.removeParticipant(livekitRoom, targetUserId);
+  await scheduleAutoEndIfEmpty(lessonId);
+}
+
+/** «Закрыть вход» — новые ученики по ссылке не попадут, уже бывшие на уроке вернуться могут. */
+export async function setEntryLocked(
+  schoolId: string,
+  lessonId: string,
+  requester: AccessTokenPayload,
+  locked: boolean,
+): Promise<void> {
+  await assertLessonTeacher(schoolId, lessonId, requester, "Только учитель урока может закрывать вход");
+  await presence.setEntryLocked(lessonId, locked);
+  emitRoomEvent(lessonId, { type: "entry_locked", locked });
+}
+
+/**
+ * LiveKit-вебхук `participant_joined`: медиа-токен гостя живёт до конца его
+ * сессии, и удалённый ученик мог бы подключиться к комнате им напрямую, в
+ * обход приложения. Выкидываем такого сразу после входа.
+ */
+export async function handleParticipantJoinedWebhook(livekitRoom: string, userId: string): Promise<void> {
+  if (!(await guestsService.isGuestSessionRevoked(userId))) return;
+  await mediaService.removeParticipant(livekitRoom, userId);
 }
 
 /**

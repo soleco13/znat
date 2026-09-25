@@ -5,6 +5,7 @@ import {
   pinParticipantRequestSchema,
   sendChatMessageRequestSchema,
   setDrawForAllRequestSchema,
+  setEntryLockedRequestSchema,
   setLessonModeRequestSchema,
   setLessonStageRequestSchema,
   updateParticipantPermissionsRequestSchema,
@@ -127,6 +128,26 @@ export default async function roomsRoutes(app: FastifyInstance) {
       return reply.status(204).send();
     },
   );
+
+  app.post<{ Params: { id: string; userId: string } }>(
+    "/lessons/:id/participants/:userId/remove",
+    staff,
+    async (request, reply) => {
+      await roomsService.removeParticipant(
+        request.user.schoolId,
+        request.params.id,
+        request.user,
+        request.params.userId,
+      );
+      return reply.status(204).send();
+    },
+  );
+
+  app.patch<{ Params: { id: string } }>("/lessons/:id/entry", staff, async (request, reply) => {
+    const body = setEntryLockedRequestSchema.parse(request.body);
+    await roomsService.setEntryLocked(request.user.schoolId, request.params.id, request.user, body.locked);
+    return reply.status(204).send();
+  });
 
   app.post<{ Params: { id: string } }>("/lessons/:id/mute-all", staff, async (request, reply) => {
     await roomsService.muteAllNow(request.user.schoolId, request.params.id, request.user);

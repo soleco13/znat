@@ -2,7 +2,8 @@ import { createHash } from "node:crypto";
 import { SignJWT } from "jose";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { lessonsServiceMock, schoolSettingsServiceMock } = vi.hoisted(() => ({
+const { lessonsServiceMock, schoolSettingsServiceMock, redisMock } = vi.hoisted(() => ({
+  redisMock: { set: vi.fn(), exists: vi.fn().mockResolvedValue(0) },
   lessonsServiceMock: {
     resolveJoinToken: vi.fn(),
     getLessonForGuestSession: vi.fn(),
@@ -17,6 +18,7 @@ const { lessonsServiceMock, schoolSettingsServiceMock } = vi.hoisted(() => ({
 
 vi.mock("../lessons/service.js", () => lessonsServiceMock);
 vi.mock("../school-settings/service.js", () => schoolSettingsServiceMock);
+vi.mock("../../db/redis.js", () => ({ redis: redisMock }));
 
 const {
   enterAsGuest,
@@ -121,6 +123,18 @@ describe("resolveGuestSession — гейт доступа гостя к урок
     await expect(resolveGuestSession(token)).rejects.toMatchObject({
       statusCode: 401,
       code: "guest_link_rotated",
+    });
+  });
+
+  it("учитель удалил ученика из урока — 403, хотя кука ещё жива", async () => {
+    lessonsServiceMock.resolveJoinToken.mockResolvedValue(lessonRow());
+    lessonsServiceMock.getLessonForGuestSession.mockResolvedValue(lessonRow());
+    const { token } = await enterAsGuest(JOIN_TOKEN, "Аня");
+    redisMock.exists.mockResolvedValueOnce(1);
+
+    await expect(resolveGuestSession(token)).rejects.toMatchObject({
+      statusCode: 403,
+      code: "removed_from_lesson",
     });
   });
 

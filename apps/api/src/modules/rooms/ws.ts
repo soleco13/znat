@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { ServerRoomMessage } from "@school/shared";
 import { verifyAccessToken } from "../auth/service.js";
-import { GUEST_COOKIE_NAME, verifyGuestToken } from "../guests/service.js";
+import { GUEST_COOKIE_NAME, isGuestSessionRevoked, verifyGuestToken } from "../guests/service.js";
 import { verifyRecorderToken } from "../recorder-auth/service.js";
 import * as recordingsService from "../recordings/service.js";
 import { roomEvents } from "./events.js";
@@ -44,7 +44,9 @@ async function resolveParticipantId(
   if (cookieToken) {
     try {
       const payload = await verifyGuestToken(cookieToken);
-      return payload.lessonId === query.lessonId ? payload.guestId : null;
+      if (payload.lessonId !== query.lessonId) return null;
+      if (await isGuestSessionRevoked(payload.guestId)) return null;
+      return payload.guestId;
     } catch {
       return null;
     }
@@ -135,7 +137,12 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
       send({ type: "recording_status", active: true });
     }
 
-    const onEvent = (message: ServerRoomMessage) => send(message);
+    const onEvent = (message: ServerRoomMessage) => {
+      send(message);
+      if (message.type === "participant_removed" && message.userId === userId) {
+        socket.close(4005, "removed_from_lesson");
+      }
+    };
     roomEvents.on(lessonId, onEvent);
 
     const pingTimer = setInterval(() => {

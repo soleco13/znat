@@ -1,4 +1,5 @@
 import {
+  disconnectCanvasParticipant,
   getActiveCanvasDocumentsCount,
   getCanvasDocumentsWithPendingUpdatesCount,
   getRejectedReadOnlyUpdatesCount,
@@ -34,6 +35,7 @@ export function closeCanvasDocument(lessonId: string): void {
 }
 
 export {
+  disconnectCanvasParticipant,
   getActiveCanvasDocumentsCount,
   getCanvasDocumentsWithPendingUpdatesCount,
   getRejectedReadOnlyUpdatesCount,

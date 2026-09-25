@@ -37,7 +37,9 @@ export default async function livekitWebhookRoutes(app: FastifyInstance) {
       const roomName = event.room?.name;
       const userId = event.participant?.identity;
 
-      if (event.event === "participant_left" && roomName && userId) {
+      if (event.event === "participant_joined" && roomName && userId) {
+        await roomsService.handleParticipantJoinedWebhook(roomName, userId);
+      } else if (event.event === "participant_left" && roomName && userId) {
         await roomsService.handleParticipantLeftWebhook(roomName, userId);
       } else if (event.event === "room_finished" && roomName) {
         await roomsService.handleRoomFinishedWebhook(roomName);

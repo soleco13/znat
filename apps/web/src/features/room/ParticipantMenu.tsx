@@ -1,4 +1,14 @@
-import { Megaphone, MicOff, MonitorUp, MoreHorizontal, PenLine, Pin, PinOff, Video } from "lucide-react";
+import {
+  Megaphone,
+  MicOff,
+  MonitorUp,
+  MoreHorizontal,
+  PenLine,
+  Pin,
+  PinOff,
+  UserX,
+  Video,
+} from "lucide-react";
 import type { ParticipantSnapshot } from "@school/shared";
 
 import { UserAvatar } from "@/shared/ui/avatar";
@@ -8,6 +18,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
 
@@ -29,6 +40,7 @@ export function ParticipantMenu({
   onTogglePermission,
   onMute,
   onTogglePin,
+  onRemove,
 }: {
   participant: ParticipantSnapshot;
   /** До подключения LiveKit мьют/пин недоступны. */
@@ -36,6 +48,7 @@ export function ParticipantMenu({
   onTogglePermission: (userId: string, key: PermissionKey, value: boolean) => void;
   onMute: (userId: string) => void;
   onTogglePin: (userId: string, pinned: boolean) => void;
+  onRemove: (participant: ParticipantSnapshot) => void;
 }) {
   const p = participant;
   return (
@@ -80,6 +93,18 @@ export function ParticipantMenu({
             </DropdownMenuItem>
           );
         })}
+        {p.kind === "guest" ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className={`${ITEM} text-danger focus:text-danger [&>svg]:text-danger`}
+              onSelect={() => onRemove(p)}
+            >
+              <UserX aria-hidden />
+              Удалить из урока
+            </DropdownMenuItem>
+          </>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );

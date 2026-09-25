@@ -18,7 +18,12 @@ import { GUEST_CANVAS_TOKEN_MARKER } from "@school/shared";
 import type { AccessTokenPayload, ParticipantKind } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
 import { verifyAccessToken } from "../auth/service.js";
-import { GUEST_COOKIE_NAME, verifyGuestToken } from "../guests/service.js";
+import {
+  GUEST_COOKIE_NAME,
+  isGuestSessionRevoked,
+  REMOVED_FROM_LESSON_MESSAGE,
+  verifyGuestToken,
+} from "../guests/service.js";
 import { verifyRecorderToken } from "../recorder-auth/service.js";
 import * as lessonsService from "../lessons/service.js";
 import * as repo from "./repo.js";
@@ -70,6 +75,21 @@ export function setDrawPermission(lessonId: string, userId: string, canDraw: boo
   for (const connection of document.getConnections()) {
     if ((connection.context as { userId?: string } | undefined)?.userId === userId) {
       connection.readOnly = !canDraw;
+    }
+  }
+}
+
+/** Рвёт подключения участника к доске урока — учитель удалил его из урока. */
+export function disconnectCanvasParticipant(lessonId: string, userId: string): void {
+  drawPermissionOverrides.get(lessonId)?.delete(userId);
+  const document = hocuspocus.documents.get(lessonId);
+  if (!document) return;
+  for (const connection of document.getConnections()) {
+    if ((connection.context as { userId?: string } | undefined)?.userId === userId) {
+      connection.close();
+      // `close()` только отписывает от документа и шлёт клиенту сообщение —
+      // сам сокет остаётся открытым; закрываем, чтобы правки дальше не шли.
+      connection.webSocket.close(4403, "removed_from_lesson");
     }
   }
 }
@@ -230,6 +250,11 @@ async function resolveCanvasConnectionActor(
   }
   if (guest.lessonId !== lessonId) {
     throw new AppError(403, "forbidden", "Гостевая сессия относится к другому уроку");
+  }
+  // Удалённый учителем ученик: провайдер сам переподключается после
+  // `disconnectCanvasParticipant` — здесь его и останавливаем.
+  if (await isGuestSessionRevoked(guest.guestId)) {
+    throw new AppError(403, "removed_from_lesson", REMOVED_FROM_LESSON_MESSAGE);
   }
   return { kind: "guest", participantId: guest.guestId, role: "guest" };
 }

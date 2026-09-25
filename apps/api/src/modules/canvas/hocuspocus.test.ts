@@ -23,6 +23,8 @@ const { authServiceMock, lessonsServiceMock, guestsServiceMock, repoMock } = vi.
   },
   guestsServiceMock: {
     GUEST_COOKIE_NAME: "guest_session",
+    REMOVED_FROM_LESSON_MESSAGE: "removed",
+    isGuestSessionRevoked: vi.fn().mockResolvedValue(false),
     verifyGuestToken: vi.fn(),
   },
   repoMock: {

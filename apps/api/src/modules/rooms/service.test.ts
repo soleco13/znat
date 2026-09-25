@@ -9,10 +9,16 @@ const {
   mediaServiceMock,
   canvasServiceMock,
   schoolSettingsServiceMock,
+  guestsServiceMock,
 } = vi.hoisted(() => ({
+  guestsServiceMock: {
+    revokeGuestSession: vi.fn(),
+    isGuestSessionRevoked: vi.fn().mockResolvedValue(false),
+  },
   canvasServiceMock: {
     closeCanvasDocument: vi.fn(),
     setDrawPermission: vi.fn(),
+    disconnectCanvasParticipant: vi.fn(),
   },
   lessonsServiceMock: {
     getLesson: vi.fn(),
@@ -30,6 +36,7 @@ const {
     softDeleteChatMessage: vi.fn(),
     countOpenSessions: vi.fn(),
     findChatAuthor: vi.fn(),
+    findCanonicalParticipant: vi.fn().mockResolvedValue(null),
   },
   mediaServiceMock: {
     createParticipantConnection: vi.fn().mockResolvedValue({ token: "fake-token", url: "ws://localhost:7880" }),
@@ -38,6 +45,7 @@ const {
     muteMicrophones: vi.fn(),
     findOtherActiveScreenShares: vi.fn().mockResolvedValue([]),
     muteScreenShare: vi.fn(),
+    removeParticipant: vi.fn(),
   },
   schoolSettingsServiceMock: {
     // Параметры школы (запрос 2026-09-14) — `join()` подмешивает мягкие
@@ -63,6 +71,7 @@ vi.mock("./repo.js", () => repoMock);
 vi.mock("../media/service.js", () => mediaServiceMock);
 vi.mock("../canvas/service.js", () => canvasServiceMock);
 vi.mock("../school-settings/service.js", () => schoolSettingsServiceMock);
+vi.mock("../guests/service.js", () => guestsServiceMock);
 
 // presence.ts общается с реальным Redis — подменяем на in-memory реализацию,
 // оставляя чистые функции (defaultPermissions, isStaleEntry) настоящими.
@@ -74,6 +83,7 @@ vi.mock("./presence.js", async () => {
   const stages = new Map<string, string>();
   const screenShareLocks = new Map<string, string>();
   const grants = new Map<string, unknown>();
+  const entryLocks = new Set<string>();
   const roomMap = (lessonId: string) => {
     let m = rooms.get(lessonId);
     if (!m) {
@@ -96,6 +106,18 @@ vi.mock("./presence.js", async () => {
     getGrantedPermissions: vi.fn(async (lessonId: string, userId: string) => grants.get(`${lessonId}:${userId}`) ?? null),
     setGrantedPermissions: vi.fn(async (lessonId: string, userId: string, permissions: unknown) => {
       grants.set(`${lessonId}:${userId}`, permissions);
+    }),
+    clearGrantedPermissions: vi.fn(async (lessonId: string, userId: string) => {
+      grants.delete(`${lessonId}:${userId}`);
+    }),
+    countGuests: vi.fn(
+      async (lessonId: string) =>
+        [...roomMap(lessonId).values()].filter((e) => (e as { kind: string }).kind === "guest").length,
+    ),
+    isEntryLocked: vi.fn(async (lessonId: string) => entryLocks.has(lessonId)),
+    setEntryLocked: vi.fn(async (lessonId: string, locked: boolean) => {
+      if (locked) entryLocks.add(lessonId);
+      else entryLocks.delete(lessonId);
     }),
     countConnected: vi.fn(
       async (lessonId: string) =>
@@ -137,6 +159,7 @@ vi.mock("./presence.js", async () => {
       stages.clear();
       screenShareLocks.clear();
       grants.clear();
+      entryLocks.clear();
     },
   };
 });
@@ -250,6 +273,85 @@ describe("join: контроль доступа", () => {
 
     expect(result).toMatchObject({ participants: expect.any(Array) });
     expect(result).not.toHaveProperty("lessonStatus");
+  });
+});
+
+describe("защита от утёкшей ссылки: лимит, закрытый вход, удаление", () => {
+  beforeEach(() => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+  });
+
+  it("закрытый вход не пускает нового ученика, но пускает бывшего на уроке", async () => {
+    await roomsService.join(staffActor(), LESSON_ID);
+    await roomsService.setEntryLocked(SCHOOL_ID, LESSON_ID, teacherToken(), true);
+
+    await expect(roomsService.join(guestActor("guest-new"), LESSON_ID)).rejects.toMatchObject({
+      statusCode: 403,
+      code: "lesson_entry_locked",
+    });
+
+    repoMock.findCanonicalParticipant.mockResolvedValueOnce({ id: "row", kind: "guest", displayName: "Ученик" });
+    const result = await roomsService.join(guestActor("guest-returning"), LESSON_ID);
+    expect(result.entryLocked).toBe(true);
+  });
+
+  it("ученик не может закрыть вход", async () => {
+    await expect(
+      roomsService.setEntryLocked(SCHOOL_ID, LESSON_ID, studentToken(), true),
+    ).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("новый гость сверх LESSON_MAX_GUESTS получает 403, персонал входит", async () => {
+    const { env } = await import("../../plugins/env.js");
+    for (let i = 0; i < env.LESSON_MAX_GUESTS; i++) {
+      await roomsService.join(guestActor(`guest-${i}`), LESSON_ID);
+    }
+    await expect(roomsService.join(guestActor("guest-extra"), LESSON_ID)).rejects.toMatchObject({
+      statusCode: 403,
+      code: "lesson_full",
+    });
+    // Уже вошедший — переподключается без проверки лимита.
+    await expect(roomsService.join(guestActor("guest-0"), LESSON_ID)).resolves.toBeTruthy();
+    await expect(roomsService.join(staffActor(), LESSON_ID)).resolves.toBeTruthy();
+  });
+
+  it("удаление: сессия отозвана, presence/доска/LiveKit очищены, WS получает participant_removed", async () => {
+    await roomsService.join(guestActor("guest-1"), LESSON_ID);
+    const events: unknown[] = [];
+    const listener = (m: unknown) => events.push(m);
+    roomEvents.on(LESSON_ID, listener);
+
+    await roomsService.removeParticipant(SCHOOL_ID, LESSON_ID, teacherToken(), "guest-1");
+    roomEvents.off(LESSON_ID, listener);
+
+    expect(guestsServiceMock.revokeGuestSession).toHaveBeenCalledWith("guest-1");
+    expect(await presenceModule.getParticipant(LESSON_ID, "guest-1")).toBeNull();
+    expect(repoMock.closeOpenSession).toHaveBeenCalledWith(LESSON_ID, "guest-1");
+    expect(canvasServiceMock.disconnectCanvasParticipant).toHaveBeenCalledWith(LESSON_ID, "guest-1");
+    expect(mediaServiceMock.removeParticipant).toHaveBeenCalledWith(`lesson-${LESSON_ID}`, "guest-1");
+    expect(events).toContainEqual({ type: "participant_removed", userId: "guest-1" });
+  });
+
+  it("удалить можно только ученика и только учителю урока", async () => {
+    await roomsService.join(staffActor(), LESSON_ID);
+    await roomsService.join(guestActor("guest-1"), LESSON_ID);
+
+    await expect(
+      roomsService.removeParticipant(SCHOOL_ID, LESSON_ID, teacherToken(), TEACHER_ID),
+    ).rejects.toMatchObject({ statusCode: 409 });
+    await expect(
+      roomsService.removeParticipant(SCHOOL_ID, LESSON_ID, studentToken(), "guest-1"),
+    ).rejects.toMatchObject({ statusCode: 403 });
+    expect(guestsServiceMock.revokeGuestSession).not.toHaveBeenCalled();
+  });
+
+  it("вебхук LiveKit выкидывает удалённого, подключившегося старым медиа-токеном", async () => {
+    guestsServiceMock.isGuestSessionRevoked.mockResolvedValueOnce(true);
+    await roomsService.handleParticipantJoinedWebhook("room-1", "guest-1");
+    expect(mediaServiceMock.removeParticipant).toHaveBeenCalledWith("room-1", "guest-1");
+
+    await roomsService.handleParticipantJoinedWebhook("room-1", "guest-2");
+    expect(mediaServiceMock.removeParticipant).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -587,8 +689,19 @@ describe("оценка трафика платформы (Э6.5)", () => {
     // "Другой" урок — Обсуждение с большим классом, суммарно > 600 Мбит/с (106 × 6 = 636).
     await roomsService.join(staffActor({ lessonId: SECOND_LESSON_ID }), SECOND_LESSON_ID);
     await roomsService.setLessonMode(SCHOOL_ID, SECOND_LESSON_ID, teacherToken(), "discussion");
+    // Напрямую в presence: через join столько гостей не пустит LESSON_MAX_GUESTS.
     for (let i = 0; i < 105; i++) {
-      await roomsService.join(guestActor(`traffic-student-${i}`, SECOND_LESSON_ID), SECOND_LESSON_ID);
+      await presenceModule.setParticipant(SECOND_LESSON_ID, `traffic-student-${i}`, {
+        fullName: "Ученик",
+        kind: "guest",
+        role: null,
+        connected: true,
+        handRaised: false,
+        pinned: false,
+        permissions: presenceModule.defaultPermissions("guest"),
+        joinedAt: new Date().toISOString(),
+        lastSeenAt: Date.now(),
+      });
     }
 
     // Новая комната LESSON_ID должна открыться в Лекции, даже если её режим

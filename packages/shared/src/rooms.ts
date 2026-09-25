@@ -72,6 +72,8 @@ export const joinLessonResponseSchema = z.object({
   media: mediaConnectionSchema,
   /** Параметры школы (§10.10 ТЗ, запрос 2026-09-14) — мягкие дефолты качества + флаги демонстрации/PiP. */
   clientMediaSettings: clientMediaSettingsSchema,
+  /** Учитель закрыл вход: новые ученики по ссылке не попадут, вернуться может только тот, кто уже был. */
+  entryLocked: z.boolean(),
 });
 export type JoinLessonResponse = z.infer<typeof joinLessonResponseSchema>;
 
@@ -106,6 +108,9 @@ export type PinParticipantRequest = z.infer<typeof pinParticipantRequestSchema>;
 
 /** Э3.8: глобальный тумблер «ученики могут рисовать» — массово меняет canDraw у всех учеников урока разом. */
 export const setDrawForAllRequestSchema = z.object({ canDraw: z.boolean() });
+
+export const setEntryLockedRequestSchema = z.object({ locked: z.boolean() });
+export type SetEntryLockedRequest = z.infer<typeof setEntryLockedRequestSchema>;
 export type SetDrawForAllRequest = z.infer<typeof setDrawForAllRequestSchema>;
 
 // WS /ws?lessonId=&token= — канал только для пуша от сервера клиенту.
@@ -114,6 +119,9 @@ export const serverRoomMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("presence"), participants: z.array(participantSnapshotSchema) }),
   z.object({ type: z.literal("participant_joined"), participant: participantSnapshotSchema }),
   z.object({ type: z.literal("participant_left"), userId: z.string().uuid() }),
+  /** Учитель удалил ученика из урока — остальные убирают плитку, сам ученик видит экран «вас удалили». */
+  z.object({ type: z.literal("participant_removed"), userId: z.string().uuid() }),
+  z.object({ type: z.literal("entry_locked"), locked: z.boolean() }),
   z.object({
     type: z.literal("permissions_updated"),
     userId: z.string().uuid(),

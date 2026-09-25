@@ -7,6 +7,8 @@ export type SocketStatus = "connecting" | "connected" | "reconnecting" | "closed
 const MAX_BACKOFF_MS = 16_000;
 /** Сервер закрывает так сокет участника, которого нет в комнате (`rooms/ws.ts`). */
 const NOT_JOINED_CLOSE_CODE = 4003;
+/** Учитель удалил участника из урока — переподключаться незачем. */
+const REMOVED_CLOSE_CODE = 4005;
 
 /**
  * WS-канал комнаты урока: только пуш от сервера, переподключение с экспоненциальным
@@ -83,6 +85,10 @@ export function useRoomSocket(
       };
       socket.onclose = (event) => {
         if (stopped) return;
+        if (event.code === REMOVED_CLOSE_CODE) {
+          setStatus("closed");
+          return;
+        }
         setStatus("reconnecting");
         const delay = Math.min(1000 * 2 ** attempt, MAX_BACKOFF_MS);
         attempt += 1;

@@ -7,6 +7,7 @@ import {
   type GuestTokenPayload,
   type Role,
 } from "@school/shared";
+import { redis } from "../../db/redis.js";
 import { env } from "../../plugins/env.js";
 import { AppError } from "../../plugins/errors.js";
 import * as lessonsService from "../lessons/service.js";
@@ -112,6 +113,26 @@ export async function enterAsGuest(joinToken: string, name: string): Promise<Gue
   return { token, payload, expiresAt, ttlSeconds };
 }
 
+function revokedKey(guestId: string): string {
+  return `guest:${guestId}:revoked`;
+}
+
+/**
+ * Учитель удалил ученика из урока — его гостевая сессия больше не пускает
+ * ни в урок, ни на доску, ни в задания. JWT не отозвать, поэтому отметка
+ * живёт в Redis ровно столько, сколько мог бы прожить сам токен. Вернуться
+ * по ссылке с новым именем ученик может — от этого защищает «закрыть вход».
+ */
+export async function revokeGuestSession(guestId: string): Promise<void> {
+  await redis.set(revokedKey(guestId), "1", "EX", env.GUEST_SESSION_TTL_HOURS * 3600);
+}
+
+export async function isGuestSessionRevoked(guestId: string): Promise<boolean> {
+  return (await redis.exists(revokedKey(guestId))) === 1;
+}
+
+export const REMOVED_FROM_LESSON_MESSAGE = "Учитель удалил вас из урока";
+
 /** Только подпись + срок (без похода в БД) — для мест, где актуальность ссылки проверять не нужно (WS-переподключение). */
 export async function verifyGuestToken(token: string): Promise<GuestTokenPayload> {
   const { payload } = await jwtVerify(token, guestSecret);
@@ -129,6 +150,10 @@ export async function resolveGuestSession(token: string): Promise<Extract<Lesson
     payload = await verifyGuestToken(token);
   } catch {
     throw new AppError(401, "invalid_guest_session", "Гостевая сессия недействительна или истекла");
+  }
+
+  if (await isGuestSessionRevoked(payload.guestId)) {
+    throw new AppError(403, "removed_from_lesson", REMOVED_FROM_LESSON_MESSAGE);
   }
 
   const lesson = await lessonsService.getLessonForGuestSession(payload.lessonId);
