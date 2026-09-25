@@ -18,6 +18,7 @@ const {
   canvasServiceMock: {
     closeCanvasDocument: vi.fn(),
     setDrawPermission: vi.fn(),
+    setDrawPermissionResolver: vi.fn(),
     disconnectCanvasParticipant: vi.fn(),
   },
   lessonsServiceMock: {

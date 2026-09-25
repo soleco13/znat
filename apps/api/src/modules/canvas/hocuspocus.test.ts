@@ -54,6 +54,7 @@ const {
   runCanvasUnloadSweepOnce,
   getActiveCanvasDocumentsCount,
   setDrawPermission,
+  setDrawPermissionResolver,
   clearDrawPermissionOverrides,
   postAnswerToBoard,
   hocuspocus,
@@ -154,6 +155,46 @@ describe("authenticateCanvasConnection", () => {
     });
     expect(result).toEqual({ userId: STUDENT_ID, role: "guest" });
     expect(connectionConfig.readOnly).toBe(true);
+  });
+
+  it("после рестарта (в памяти прав нет) право рисовать берётся из presence в Redis", async () => {
+    const lessonId = "66666666-6666-6666-6666-666666666666";
+    guestsServiceMock.verifyGuestToken.mockResolvedValue({
+      typ: "guest",
+      lessonId,
+      guestId: STUDENT_ID,
+      name: "Аня",
+      lt: "l".repeat(64),
+    });
+    const resolver = vi.fn().mockResolvedValue(true);
+    setDrawPermissionResolver(resolver);
+    try {
+      const connectionConfig = fakeConnectionConfig();
+      await authenticateCanvasConnection({
+        token: "",
+        documentName: lessonId,
+        connectionConfig,
+        requestHeaders: guestCookieHeaders("guest-jwt"),
+      });
+      expect(resolver).toHaveBeenCalledWith(lessonId, STUDENT_ID);
+      expect(connectionConfig.readOnly).toBe(false);
+
+      // Живой грант учителя важнее: в памяти уже есть ответ — Redis не спрашиваем.
+      resolver.mockClear();
+      setDrawPermission(lessonId, STUDENT_ID, false);
+      const second = fakeConnectionConfig();
+      await authenticateCanvasConnection({
+        token: "",
+        documentName: lessonId,
+        connectionConfig: second,
+        requestHeaders: guestCookieHeaders("guest-jwt"),
+      });
+      expect(resolver).not.toHaveBeenCalled();
+      expect(second.readOnly).toBe(true);
+    } finally {
+      setDrawPermissionResolver(async () => null);
+      await clearDrawPermissionOverrides({ documentName: lessonId });
+    }
   });
 
   it("Э12.4: гостевая сессия другого урока отклоняется", async () => {

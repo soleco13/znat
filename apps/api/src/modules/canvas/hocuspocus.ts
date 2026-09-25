@@ -54,6 +54,35 @@ function computeCanDraw(kind: ParticipantKind, lessonId: string, participantId: 
 }
 
 /**
+ * Источник права рисовать, переживающий рестарт: presence урока в Redis.
+ * Регистрирует `rooms` (канвас не может импортировать rooms — обратная
+ * зависимость уже есть). Без него после рестарта сервера `drawPermissionOverrides`
+ * пуст, а клиенты переподключаются к доске без повторного входа в урок —
+ * ученик с выданным правом молча становился read-only, штрихи терялись.
+ */
+type DrawPermissionResolver = (lessonId: string, participantId: string) => Promise<boolean | null>;
+let drawPermissionResolver: DrawPermissionResolver | null = null;
+
+export function setDrawPermissionResolver(resolver: DrawPermissionResolver): void {
+  drawPermissionResolver = resolver;
+}
+
+async function resolveCanDraw(kind: ParticipantKind, lessonId: string, participantId: string): Promise<boolean> {
+  if (drawPermissionOverrides.get(lessonId)?.has(participantId) || !drawPermissionResolver) {
+    return computeCanDraw(kind, lessonId, participantId);
+  }
+  const fromPresence = await drawPermissionResolver(lessonId, participantId);
+  if (fromPresence === null) return computeCanDraw(kind, lessonId, participantId);
+  let lessonOverrides = drawPermissionOverrides.get(lessonId);
+  if (!lessonOverrides) {
+    lessonOverrides = new Map();
+    drawPermissionOverrides.set(lessonId, lessonOverrides);
+  }
+  lessonOverrides.set(participantId, fromPresence);
+  return fromPresence;
+}
+
+/**
  * Живой пуш текущего `canDraw` от `rooms/service.ts` (Э3.8) — вызывается
  * при каждом изменении прав, не только при подключении. Если у урока уже
  * есть открытое `/collab`-подключение этого участника, применяется
@@ -286,7 +315,7 @@ export async function authenticateCanvasConnection(
   // per-participant override рисования, к recorder'у неприменимо: он не
   // participantId в presence и никогда не должен рисовать).
   payload.connectionConfig.readOnly =
-    actor.kind === "recorder" ? true : !computeCanDraw(actor.kind, lessonId, actor.participantId);
+    actor.kind === "recorder" ? true : !(await resolveCanDraw(actor.kind, lessonId, actor.participantId));
   return { userId: actor.participantId, role: actor.role };
 }
 

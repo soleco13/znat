@@ -6,6 +6,7 @@ import {
   hocuspocus,
   postAnswerToBoard,
   setDrawPermission,
+  setDrawPermissionResolver,
   startCanvasUnloadSweep,
   stopCanvasUnloadSweep,
 } from "./hocuspocus.js";
@@ -41,6 +42,7 @@ export {
   getRejectedReadOnlyUpdatesCount,
   postAnswerToBoard,
   setDrawPermission,
+  setDrawPermissionResolver,
   startCanvasUnloadSweep,
   stopCanvasUnloadSweep,
 };

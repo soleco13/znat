@@ -44,6 +44,13 @@ const activeLessons = new Set<string>();
 const emptyRoomTimers = new Map<string, NodeJS.Timeout>();
 let sweepInterval: NodeJS.Timeout | null = null;
 
+// Доска спрашивает право рисовать у presence (Redis), если в памяти процесса
+// его нет — например, после рестарта сервера посреди урока.
+canvasService.setDrawPermissionResolver(async (lessonId, participantId) => {
+  const entry = await presence.getParticipant(lessonId, participantId);
+  return entry ? entry.permissions.canDraw : null;
+});
+
 function toSnapshot(participantId: string, entry: PresenceEntry): ParticipantSnapshot {
   return {
     userId: participantId,
