@@ -815,18 +815,52 @@ export async function removeParticipant(
   }
 
   await guestsService.revokeGuestSession(targetUserId);
-  await presence.removeParticipant(lessonId, targetUserId);
-  await presence.clearGrantedPermissions(lessonId, targetUserId);
-  await presence.releaseScreenShare(lessonId, targetUserId);
-  await repo.closeOpenSession(lessonId, targetUserId);
-  // Сначала сообщение: WS удалённого закрывается по нему (rooms/ws.ts), и
-  // клиент показывает «вас удалили», а не переподключается.
-  emitRoomEvent(lessonId, { type: "participant_removed", userId: targetUserId });
-  canvasService.disconnectCanvasParticipant(lessonId, targetUserId);
-  const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
-  await mediaService.removeParticipant(livekitRoom, targetUserId);
+  await evictGuest(schoolId, lessonId, targetUserId, "removed");
   await scheduleAutoEndIfEmpty(lessonId);
 }
+
+/** Убрать гостя из presence, WS, доски и LiveKit. Доступ к уроку уже отозван вызывающим. */
+async function evictGuest(
+  schoolId: string,
+  lessonId: string,
+  guestId: string,
+  reason: "removed" | "link_rotated",
+): Promise<void> {
+  await presence.removeParticipant(lessonId, guestId);
+  await presence.clearGrantedPermissions(lessonId, guestId);
+  await presence.releaseScreenShare(lessonId, guestId);
+  await repo.closeOpenSession(lessonId, guestId);
+  // Сначала сообщение: WS удалённого закрывается по нему (rooms/ws.ts), и
+  // клиент показывает «вас удалили», а не переподключается.
+  emitRoomEvent(lessonId, { type: "participant_removed", userId: guestId, reason });
+  canvasService.disconnectCanvasParticipant(lessonId, guestId);
+  const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
+  await mediaService.removeParticipant(livekitRoom, guestId);
+}
+
+/**
+ * Ссылка урока перевыпущена — все гости выходят: их сессии и так больше не
+ * проходят проверку (хеш ссылки в токене не совпадает), но уже открытые WS,
+ * доска и медиа жили дальше. Персонал остаётся.
+ */
+async function evictAllGuestsAfterLinkRotation(lessonId: string): Promise<void> {
+  const participants = await presence.listParticipants(lessonId);
+  const guests = [...participants.entries()].filter(([, e]) => e.kind === "guest").map(([id]) => id);
+  if (guests.length === 0) return;
+  const lesson = await lessonsService.getLessonForGuestSession(lessonId);
+  if (!lesson) return;
+  for (const guestId of guests) {
+    // Отзыв нужен ради медиа: LiveKit-токен гостя живёт до конца его сессии,
+    // и вебхук participant_joined выкидывает только отозванных.
+    await guestsService.revokeGuestSession(guestId);
+    await evictGuest(lesson.schoolId, lessonId, guestId, "link_rotated").catch((err: unknown) =>
+      console.error("rooms: не удалось вывести гостя после перевыпуска ссылки", lessonId, guestId, err),
+    );
+  }
+  await scheduleAutoEndIfEmpty(lessonId);
+}
+
+lessonsService.onJoinLinkRotated(evictAllGuestsAfterLinkRotation);
 
 /** «Закрыть вход» — новые ученики по ссылке не попадут, уже бывшие на уроке вернуться могут. */
 export async function setEntryLocked(

@@ -151,10 +151,26 @@ export async function deleteLesson(schoolId: string, id: string): Promise<void> 
   if (!ok) throw new AppError(404, "not_found", "Урок не найден");
 }
 
+type JoinLinkRotatedListener = (lessonId: string) => Promise<void>;
+const joinLinkRotatedListeners: JoinLinkRotatedListener[] = [];
+
+/**
+ * Подписка на перевыпуск ссылки урока. Её делает `rooms` (lessons не может
+ * импортировать rooms — обратная зависимость уже есть): при перевыпуске
+ * гостей нужно выкинуть из уже открытых WS, доски и LiveKit, иначе новая
+ * ссылка не защищала от тех, кто уже вошёл по утёкшей.
+ */
+export function onJoinLinkRotated(listener: JoinLinkRotatedListener): void {
+  joinLinkRotatedListeners.push(listener);
+}
+
 export async function rotateJoinLink(schoolId: string, id: string) {
   const token = mintJoinToken();
   const row = await repo.setJoinToken(id, schoolId, token);
   if (!row) throw new AppError(404, "not_found", "Урок не найден");
+  for (const listener of joinLinkRotatedListeners) {
+    await listener(id).catch((err: unknown) => console.error("lessons: join link rotation listener failed", id, err));
+  }
   return { joinToken: token, joinPath: joinPath(token) };
 }
 

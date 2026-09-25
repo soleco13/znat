@@ -152,20 +152,22 @@ export async function resolveGuestSession(token: string): Promise<Extract<Lesson
     throw new AppError(401, "invalid_guest_session", "Гостевая сессия недействительна или истекла");
   }
 
-  if (await isGuestSessionRevoked(payload.guestId)) {
-    throw new AppError(403, "removed_from_lesson", REMOVED_FROM_LESSON_MESSAGE);
-  }
-
   const lesson = await lessonsService.getLessonForGuestSession(payload.lessonId);
   if (!lesson) {
     throw new AppError(401, "invalid_guest_session", "Урок недоступен");
   }
+  // Ссылку проверяем раньше отзыва: при перевыпуске ссылки гостей тоже
+  // отзывают (ради LiveKit), и ученик должен увидеть «ссылка изменилась»,
+  // а не «вас удалили».
   if (hashJoinToken(lesson.joinToken) !== payload.lt) {
     throw new AppError(
       401,
       "guest_link_rotated",
       "Ссылка на урок была перевыпущена — войдите заново по новой ссылке",
     );
+  }
+  if (await isGuestSessionRevoked(payload.guestId)) {
+    throw new AppError(403, "removed_from_lesson", REMOVED_FROM_LESSON_MESSAGE);
   }
 
   return {

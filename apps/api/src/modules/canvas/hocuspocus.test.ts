@@ -26,12 +26,28 @@ const { authServiceMock, lessonsServiceMock, guestsServiceMock, repoMock } = vi.
     REMOVED_FROM_LESSON_MESSAGE: "removed",
     isGuestSessionRevoked: vi.fn().mockResolvedValue(false),
     verifyGuestToken: vi.fn(),
+    resolveGuestSession: vi.fn(),
   },
   repoMock: {
     loadDoc: vi.fn(),
     saveDoc: vi.fn(),
   },
 }));
+
+// Как настоящий resolveGuestSession: подпись/срок → 401, отзыв → 403.
+// Тесты по-прежнему настраивают verifyGuestToken/isGuestSessionRevoked.
+guestsServiceMock.resolveGuestSession.mockImplementation(async (token: string) => {
+  let payload: { lessonId: string; guestId: string; name: string };
+  try {
+    payload = await guestsServiceMock.verifyGuestToken(token);
+  } catch {
+    throw Object.assign(new Error("invalid"), { statusCode: 401, code: "invalid_guest_session" });
+  }
+  if (await guestsServiceMock.isGuestSessionRevoked(payload.guestId)) {
+    throw Object.assign(new Error("removed"), { statusCode: 403, code: "removed_from_lesson" });
+  }
+  return { kind: "guest", participantId: payload.guestId, schoolId: "s", role: null, lessonId: payload.lessonId, displayName: payload.name };
+});
 
 vi.mock("../auth/service.js", () => authServiceMock);
 vi.mock("../lessons/service.js", () => lessonsServiceMock);

@@ -25,6 +25,8 @@ const {
     getLesson: vi.fn(),
     ensureLivekitRoom: vi.fn(),
     getLessonByLivekitRoom: vi.fn(),
+    getLessonForGuestSession: vi.fn(),
+    onJoinLinkRotated: vi.fn(),
   },
   usersServiceMock: {
     getUserForAuth: vi.fn(),
@@ -190,6 +192,10 @@ vi.mock("./presence.js", async () => {
 });
 
 const roomsService = await import("./service.js");
+// Подписка на перевыпуск ссылки делается при загрузке модуля — забираем её до clearAllMocks.
+const onJoinLinkRotatedListener = lessonsServiceMock.onJoinLinkRotated.mock.calls[0]![0] as (
+  lessonId: string,
+) => Promise<void>;
 const presence = (await import("./presence.js")) as unknown as { __clear: () => void };
 const presenceModule = await import("./presence.js");
 const { roomEvents } = await import("./events.js");
@@ -354,7 +360,30 @@ describe("защита от утёкшей ссылки: лимит, закры�
     expect(repoMock.closeOpenSession).toHaveBeenCalledWith(LESSON_ID, "guest-1");
     expect(canvasServiceMock.disconnectCanvasParticipant).toHaveBeenCalledWith(LESSON_ID, "guest-1");
     expect(mediaServiceMock.removeParticipant).toHaveBeenCalledWith(`lesson-${LESSON_ID}`, "guest-1");
-    expect(events).toContainEqual({ type: "participant_removed", userId: "guest-1" });
+    expect(events).toContainEqual({ type: "participant_removed", userId: "guest-1", reason: "removed" });
+  });
+
+  it("перевыпуск ссылки: все гости выведены из presence/WS/доски/LiveKit, персонал остаётся", async () => {
+    await roomsService.join(staffActor(), LESSON_ID);
+    await roomsService.join(guestActor("guest-1"), LESSON_ID);
+    await roomsService.join(guestActor("guest-2"), LESSON_ID);
+    lessonsServiceMock.getLessonForGuestSession.mockResolvedValue({ id: LESSON_ID, schoolId: SCHOOL_ID });
+    const events: unknown[] = [];
+    const listener = (m: unknown) => events.push(m);
+    roomEvents.on(LESSON_ID, listener);
+
+    await onJoinLinkRotatedListener(LESSON_ID);
+    roomEvents.off(LESSON_ID, listener);
+
+    expect(await presenceModule.getParticipant(LESSON_ID, "guest-1")).toBeNull();
+    expect(await presenceModule.getParticipant(LESSON_ID, "guest-2")).toBeNull();
+    expect(await presenceModule.getParticipant(LESSON_ID, TEACHER_ID)).not.toBeNull();
+    expect(events).toContainEqual({ type: "participant_removed", userId: "guest-2", reason: "link_rotated" });
+    expect(mediaServiceMock.removeParticipant).toHaveBeenCalledWith(`lesson-${LESSON_ID}`, "guest-1");
+    expect(canvasServiceMock.disconnectCanvasParticipant).toHaveBeenCalledWith(LESSON_ID, "guest-2");
+    // Отзыв — чтобы старый LiveKit-токен не пустил обратно в медиа (вебхук participant_joined).
+    expect(guestsServiceMock.revokeGuestSession).toHaveBeenCalledWith("guest-1");
+    expect(guestsServiceMock.revokeGuestSession).not.toHaveBeenCalledWith(TEACHER_ID);
   });
 
   it("удалить можно только ученика и только учителю урока", async () => {

@@ -18,12 +18,7 @@ import { GUEST_CANVAS_TOKEN_MARKER } from "@school/shared";
 import type { AccessTokenPayload, ParticipantKind } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
 import { verifyAccessToken } from "../auth/service.js";
-import {
-  GUEST_COOKIE_NAME,
-  isGuestSessionRevoked,
-  REMOVED_FROM_LESSON_MESSAGE,
-  verifyGuestToken,
-} from "../guests/service.js";
+import { GUEST_COOKIE_NAME, resolveGuestSession } from "../guests/service.js";
 import { verifyRecorderToken } from "../recorder-auth/service.js";
 import * as lessonsService from "../lessons/service.js";
 import * as repo from "./repo.js";
@@ -271,21 +266,15 @@ async function resolveCanvasConnectionActor(
   if (!guestToken) {
     throw new AppError(401, "missing_token", "Требуется вход в урок");
   }
-  let guest;
-  try {
-    guest = await verifyGuestToken(guestToken);
-  } catch {
-    throw new AppError(401, "invalid_guest_session", "Гостевая сессия недействительна или истекла");
-  }
+  // Полная проверка: подпись, срок, отзыв учителем (удалённый ученик —
+  // провайдер сам переподключается после `disconnectCanvasParticipant`,
+  // здесь его и останавливаем) и актуальность ссылки урока (после
+  // перевыпуска ссылки старая кука не подключит доску снова).
+  const guest = await resolveGuestSession(guestToken);
   if (guest.lessonId !== lessonId) {
     throw new AppError(403, "forbidden", "Гостевая сессия относится к другому уроку");
   }
-  // Удалённый учителем ученик: провайдер сам переподключается после
-  // `disconnectCanvasParticipant` — здесь его и останавливаем.
-  if (await isGuestSessionRevoked(guest.guestId)) {
-    throw new AppError(403, "removed_from_lesson", REMOVED_FROM_LESSON_MESSAGE);
-  }
-  return { kind: "guest", participantId: guest.guestId, role: "guest" };
+  return { kind: "guest", participantId: guest.participantId, role: "guest" };
 }
 
 /**

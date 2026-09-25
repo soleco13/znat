@@ -213,8 +213,14 @@ const REMOVED_SCREEN = {
   text: "Учитель удалил вас из урока. Если это ошибка — напишите учителю.",
 };
 
+const LINK_ROTATED_SCREEN = {
+  title: "Ссылка на урок изменилась",
+  text: "Учитель выдал новую ссылку на урок. Попросите её у учителя и войдите заново.",
+};
+
 /** Отказ во входе, который повтором не исправить, — экран вместо «Повторить». */
 function blockedScreenFor(err: unknown): { title: string; text: string } | null {
+  if (err instanceof ApiError && err.code === "guest_link_rotated") return LINK_ROTATED_SCREEN;
   if (!(err instanceof ApiError) || err.status !== 403) return null;
   switch (err.code) {
     case "removed_from_lesson":
@@ -358,7 +364,7 @@ export function RoomPage() {
         break;
       case "participant_removed":
         if (message.userId === selfIdRef.current) {
-          setBlocked(REMOVED_SCREEN);
+          setBlocked(message.reason === "link_rotated" ? LINK_ROTATED_SCREEN : REMOVED_SCREEN);
           break;
         }
         playParticipantSound("left");

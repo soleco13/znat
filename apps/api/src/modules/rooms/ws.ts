@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { ServerRoomMessage } from "@school/shared";
 import { verifyAccessToken } from "../auth/service.js";
-import { GUEST_COOKIE_NAME, isGuestSessionRevoked, verifyGuestToken } from "../guests/service.js";
+import { GUEST_COOKIE_NAME, resolveGuestSession } from "../guests/service.js";
 import { verifyRecorderToken } from "../recorder-auth/service.js";
 import * as recordingsService from "../recordings/service.js";
 import { roomEvents } from "./events.js";
@@ -24,10 +24,9 @@ const querySchema = z.object({
 /**
  * Э12.4: presence-ключ (= LiveKit-identity) для WS-канала урока. Персонал —
  * `sub` из access-токена; гость — `guestId` из гостевого JWT в куке, при
- * условии что урок в токене совпадает с запрошенным. Проверяется только
- * подпись+срок гостевого токена (актуальность ссылки не сверяем — вход
- * через `POST /join` это уже сделал, а обрывать живой WS при ротации
- * ссылки не нужно).
+ * условии что урок в токене совпадает с запрошенным. Гостевая сессия
+ * проверяется полностью, включая актуальность ссылки: после перевыпуска
+ * ссылки старая кука не должна снова подключить WS.
  */
 async function resolveParticipantId(
   query: z.infer<typeof querySchema>,
@@ -42,11 +41,11 @@ async function resolveParticipantId(
     }
   }
   if (cookieToken) {
+    // Полная проверка (подпись, срок, отзыв, актуальность ссылки урока):
+    // после перевыпуска ссылки старая кука не должна снова подключить WS.
     try {
-      const payload = await verifyGuestToken(cookieToken);
-      if (payload.lessonId !== query.lessonId) return null;
-      if (await isGuestSessionRevoked(payload.guestId)) return null;
-      return payload.guestId;
+      const actor = await resolveGuestSession(cookieToken);
+      return actor.lessonId === query.lessonId ? actor.participantId : null;
     } catch {
       return null;
     }

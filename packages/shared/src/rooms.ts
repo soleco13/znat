@@ -127,7 +127,12 @@ export const serverRoomMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("participant_updated"), participant: participantSnapshotSchema }),
   z.object({ type: z.literal("participant_left"), userId: z.string().uuid() }),
   /** Учитель удалил ученика из урока — остальные убирают плитку, сам ученик видит экран «вас удалили». */
-  z.object({ type: z.literal("participant_removed"), userId: z.string().uuid() }),
+  // reason: "link_rotated" — учитель перевыпустил ссылку урока, все гости выходят.
+  z.object({
+    type: z.literal("participant_removed"),
+    userId: z.string().uuid(),
+    reason: z.enum(["removed", "link_rotated"]).optional(),
+  }),
   z.object({ type: z.literal("entry_locked"), locked: z.boolean() }),
   z.object({
     type: z.literal("permissions_updated"),
