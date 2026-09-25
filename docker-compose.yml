@@ -66,6 +66,8 @@ services:
       DATABASE_URL: postgres://school:school@postgres:5432/school_dev
       REDIS_URL: redis://redis:6379
       STORAGE_ROOT: /data/assets
+      # /files/* отдаёт Caddy с того же тома (см. Caddyfile, X-Accel-Redirect).
+      FILES_VIA_PROXY: "true"
       # livekit слушает на network_mode: host — из моста (bridge) до него
       # достучаться можно только через шлюз хоста, не по имени сервиса.
       LIVEKIT_URL: ws://host.docker.internal:7880
@@ -238,6 +240,8 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./landing/dist:/srv/landing:ro
+      # Хранилище файлов — только чтение: Caddy отдаёт /files/* после проверки подписи в app.
+      - assets_data:/srv/files:ro
       - caddy_data:/data
       - caddy_config:/config
     ports:

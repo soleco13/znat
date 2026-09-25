@@ -118,7 +118,19 @@ export function buildServer() {
 
   const webDistDir = path.resolve(process.cwd(), env.WEB_DIST_DIR);
   if (existsSync(webDistDir)) {
-    app.register(staticPlugin, { root: webDistDir, wildcard: false });
+    app.register(staticPlugin, {
+      root: webDistDir,
+      wildcard: false,
+      // Vite кладёт в assets/ файлы с хешем содержимого в имени — их можно
+      // кешировать навсегда, без перепроверки (раньше каждая загрузка
+      // страницы давала ~30 запросов с ответом 304). index.html и прочее —
+      // всегда перепроверять, иначе новый деплой не доедет до браузера.
+      cacheControl: false,
+      setHeaders(res, filePath) {
+        const immutable = filePath.startsWith(path.join(webDistDir, "assets") + path.sep);
+        res.setHeader("Cache-Control", immutable ? "public, max-age=31536000, immutable" : "no-cache");
+      },
+    });
     app.setNotFoundHandler(async (request, reply) => {
       if (request.url.startsWith("/api/") || request.url.startsWith("/files/")) {
         return reply.status(404).send({ error: "not_found", message: "Route not found" });

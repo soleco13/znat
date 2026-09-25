@@ -5,6 +5,27 @@
 	default_sni 213.21.241.28
 }
 
+# Файлы /files/* (слайды, картинки, MP4 записей) отдаёт Caddy, а не Node:
+# приложение проверяет HMAC-подпись ссылки и отвечает пустым телом с
+# заголовком X-Accel-Redirect (FILES_VIA_PROXY=true), Caddy берёт файл с
+# того же тома хранилища (read-only). Поддерживает Range — перемотка видео.
+# Заголовок видит только Caddy: клиент подставить его не может, это ответ
+# upstream, а не запрос.
+(app_proxy) {
+	reverse_proxy app:3000 {
+		@accel header X-Accel-Redirect *
+		handle_response @accel {
+			root * /srv/files
+			rewrite * {rp.header.X-Accel-Redirect}
+			file_server
+		}
+	}
+	encode gzip
+
+	@files path /files/*
+	header @files Cache-Control "private, max-age=3600"
+}
+
 # Локальная разработка (docker-compose up): без TLS, без домена.
 # Продовый конфиг с доменом и Let's Encrypt — Caddyfile.prod (Э0.8, деплой на боевой сервер).
 :80 {
@@ -23,8 +44,7 @@
 		file_server
 	}
 
-	reverse_proxy app:3000
-	encode gzip
+	import app_proxy
 }
 
 # Тестовый доступ по IP без домена: самоподписанный сертификат Caddy (internal CA).
@@ -72,6 +92,5 @@ https://213.21.241.28 {
 		file_server
 	}
 
-	reverse_proxy app:3000
-	encode gzip
+	import app_proxy
 }

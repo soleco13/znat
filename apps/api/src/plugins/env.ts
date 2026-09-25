@@ -20,6 +20,15 @@ const envSchema = z.object({
   LESSON_MAX_GUESTS: z.coerce.number().int().min(1).max(1000).default(50),
   COOKIE_SECRET: z.string().min(32),
   STORAGE_ROOT: z.string().min(1).default("/data/assets"),
+  /**
+   * Файлы `/files/*` отдаёт Caddy: приложение проверяет подпись и отвечает
+   * заголовком `X-Accel-Redirect`, сам файл (слайды, MP4 записей) Node не
+   * стримит. Нужен Caddy с тем же томом хранилища (см. Caddyfile).
+   */
+  FILES_VIA_PROXY: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
   STORAGE_HMAC_SECRET: z.string().min(32),
   PUBLIC_ORIGIN: z.string().url().default("http://localhost:3000"),
   WEB_DIST_DIR: z.string().min(1).default("apps/web/dist"),

@@ -1,4 +1,5 @@
 import { statfs } from "node:fs/promises";
+import path from "node:path";
 import type { StorageAdapter } from "./adapter.js";
 import { LocalFsStorageAdapter } from "./local-fs.js";
 import { signStorageUrl, verifyStorageSignature } from "./hmac.js";
@@ -14,6 +15,19 @@ export async function uploadFile(input: {
   schoolId: string;
 }) {
   return adapter.put(input);
+}
+
+/**
+ * Путь файла для `X-Accel-Redirect` — относительно тома хранилища, который
+ * смонтирован в Caddy. Ключ приходит из подписанной ссылки, но подпись — не
+ * повод доверять пути: `..` и абсолютные пути отбрасываем.
+ */
+export function getProxyFilePath(storageKey: string): string {
+  const normalized = path.posix.normalize(storageKey);
+  if (normalized !== storageKey || normalized.startsWith("/") || normalized.split("/").includes("..")) {
+    throw new Error("Invalid storage key");
+  }
+  return "/" + normalized.split("/").map(encodeURIComponent).join("/");
 }
 
 export async function openFile(storageKey: string) {
