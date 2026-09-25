@@ -50,7 +50,7 @@ import { startPresenceSweep, stopPresenceSweep } from "./modules/rooms/service.j
 import { startRefreshTokenCleanup, stopRefreshTokenCleanup } from "./modules/auth/service.js";
 import { assetsRoutes, filesRoutes } from "./modules/storage/routes.js";
 import { pool } from "./db/client.js";
-import { redis } from "./db/redis.js";
+import { rateLimitRedis, redis } from "./db/redis.js";
 
 const WS_MAX_PAYLOAD_BYTES = 5 * 1024 * 1024;
 
@@ -71,7 +71,17 @@ export function buildServer() {
   app.register(multipart, {
     limits: { fileSize: UPLOAD_LIMITS.canvasImage, files: 1, fields: 10, parts: 20 },
   });
-  app.register(rateLimit, { max: rateLimitMax, keyGenerator: rateLimitKey, timeWindow: "1 minute" });
+  // Счётчики в Redis: LRU в памяти процесса держит 5000 ключей, и при большем
+  // числе активных людей вытесняет их — лимит перестаёт работать. Redis
+  // недоступен → пропускаем запрос, а не роняем урок.
+  app.register(rateLimit, {
+    max: rateLimitMax,
+    keyGenerator: rateLimitKey,
+    timeWindow: "1 minute",
+    redis: rateLimitRedis,
+    nameSpace: "rl:",
+    skipOnError: true,
+  });
   // Без опций ws принимает сообщения до 100 МБ, и разбираются они до проверки
   // прав. Документ доски целиком — десятки КБ (картинки лежат ссылками), 5 МБ —
   // запас на первую синхронизацию большой доски.
@@ -164,6 +174,7 @@ async function main() {
     await app.close();
     await pool.end();
     redis.disconnect();
+    rateLimitRedis.disconnect();
     process.exit(0);
   };
   process.on("SIGTERM", () => void shutdown("SIGTERM"));
