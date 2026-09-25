@@ -345,6 +345,13 @@ export function RoomPage() {
           message.participant,
         ]);
         break;
+      case "participant_updated":
+        setParticipants((prev) =>
+          prev.some((p) => p.userId === message.participant.userId)
+            ? prev.map((p) => (p.userId === message.participant.userId ? message.participant : p))
+            : [...prev, message.participant],
+        );
+        break;
       case "participant_left":
         if (message.userId !== selfIdRef.current) playParticipantSound("left");
         setParticipants((prev) => prev.filter((p) => p.userId !== message.userId));

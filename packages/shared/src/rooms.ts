@@ -118,6 +118,13 @@ export type SetDrawForAllRequest = z.infer<typeof setDrawForAllRequestSchema>;
 export const serverRoomMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("presence"), participants: z.array(participantSnapshotSchema) }),
   z.object({ type: z.literal("participant_joined"), participant: participantSnapshotSchema }),
+  /**
+   * Изменилось состояние одного участника (на связи / переподключился).
+   * Раньше на каждое такое событие всем уходил полный список — N² трафика
+   * на старте урока; полный `presence` теперь только при подключении сокета
+   * и массовых изменениях (разрешить рисовать всем).
+   */
+  z.object({ type: z.literal("participant_updated"), participant: participantSnapshotSchema }),
   z.object({ type: z.literal("participant_left"), userId: z.string().uuid() }),
   /** Учитель удалил ученика из урока — остальные убирают плитку, сам ученик видит экран «вас удалили». */
   z.object({ type: z.literal("participant_removed"), userId: z.string().uuid() }),

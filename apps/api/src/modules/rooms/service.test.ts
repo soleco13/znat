@@ -995,7 +995,7 @@ describe("живучесть presence на уроке", () => {
     expect(canvasServiceMock.setDrawPermission).toHaveBeenCalledWith(LESSON_ID, STUDENT_ID, true);
   });
 
-  it("pong живого сокета возвращает connected, снятый sweep-ом, и рассылает presence", async () => {
+  it("pong живого сокета возвращает connected, снятый sweep-ом, и рассылает только этого участника", async () => {
     await roomsService.join(guestActor(), LESSON_ID);
     const entry = await presenceModule.getParticipant(LESSON_ID, STUDENT_ID);
     await presenceModule.setParticipant(LESSON_ID, STUDENT_ID, { ...entry!, connected: false });
@@ -1006,7 +1006,12 @@ describe("живучесть presence на уроке", () => {
 
     expect(present).toBe(true);
     expect((await presenceModule.getParticipant(LESSON_ID, STUDENT_ID))?.connected).toBe(true);
-    expect(received).toEqual([expect.objectContaining({ type: "presence" })]);
+    expect(received).toEqual([
+      {
+        type: "participant_updated",
+        participant: expect.objectContaining({ userId: STUDENT_ID, connected: true }),
+      },
+    ]);
   });
 
   it("pong уже подключённого участника не рассылает лишний presence", async () => {

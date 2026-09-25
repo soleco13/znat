@@ -418,7 +418,7 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
 
   const snapshot = toSnapshot(participantId, entry);
   if (existing) {
-    emitRoomEvent(lessonId, { type: "presence", participants: await listParticipantsSnapshot(lessonId) });
+    emitRoomEvent(lessonId, { type: "participant_updated", participant: snapshot });
   } else {
     emitRoomEvent(lessonId, { type: "participant_joined", participant: snapshot });
   }
@@ -516,7 +516,7 @@ export async function attachSocket(lessonId: string, userId: string): Promise<Pa
   const updated: PresenceEntry = { ...entry, connected: true, lastSeenAt: Date.now() };
   await presence.setParticipant(lessonId, userId, updated);
   if (wasDisconnected) {
-    emitRoomEvent(lessonId, { type: "presence", participants: await listParticipantsSnapshot(lessonId) });
+    emitRoomEvent(lessonId, { type: "participant_updated", participant: toSnapshot(userId, updated) });
   }
   return toSnapshot(userId, updated);
 }
@@ -525,8 +525,9 @@ export async function attachSocket(lessonId: string, userId: string): Promise<Pa
 export async function markDisconnected(lessonId: string, userId: string): Promise<void> {
   const entry = await presence.getParticipant(lessonId, userId);
   if (!entry || !entry.connected) return;
-  await presence.setParticipant(lessonId, userId, { ...entry, connected: false, lastSeenAt: Date.now() });
-  emitRoomEvent(lessonId, { type: "presence", participants: await listParticipantsSnapshot(lessonId) });
+  const updated: PresenceEntry = { ...entry, connected: false, lastSeenAt: Date.now() };
+  await presence.setParticipant(lessonId, userId, updated);
+  emitRoomEvent(lessonId, { type: "participant_updated", participant: toSnapshot(userId, updated) });
 }
 
 /**
@@ -541,9 +542,10 @@ export async function touchHeartbeat(lessonId: string, userId: string): Promise<
   // сокет при этом выжил — без восстановления участник остаётся скрытым из
   // сетки камер до перезагрузки страницы.
   const wasDisconnected = !entry.connected;
-  await presence.setParticipant(lessonId, userId, { ...entry, connected: true, lastSeenAt: Date.now() });
+  const updated: PresenceEntry = { ...entry, connected: true, lastSeenAt: Date.now() };
+  await presence.setParticipant(lessonId, userId, updated);
   if (wasDisconnected) {
-    emitRoomEvent(lessonId, { type: "presence", participants: await listParticipantsSnapshot(lessonId) });
+    emitRoomEvent(lessonId, { type: "participant_updated", participant: toSnapshot(userId, updated) });
   }
   return true;
 }
@@ -1041,8 +1043,9 @@ async function sweepRoom(lessonId: string): Promise<void> {
   for (const [userId, entry] of participants) {
     if (!isStaleEntry(entry, now)) continue;
     if (entry.connected) {
-      await presence.setParticipant(lessonId, userId, { ...entry, connected: false, lastSeenAt: now });
-      emitRoomEvent(lessonId, { type: "presence", participants: await listParticipantsSnapshot(lessonId) });
+      const updated: PresenceEntry = { ...entry, connected: false, lastSeenAt: now };
+      await presence.setParticipant(lessonId, userId, updated);
+      emitRoomEvent(lessonId, { type: "participant_updated", participant: toSnapshot(userId, updated) });
     } else {
       await presence.removeParticipant(lessonId, userId);
       await repo.closeOpenSession(lessonId, userId);
