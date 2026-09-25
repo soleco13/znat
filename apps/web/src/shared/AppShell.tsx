@@ -63,7 +63,7 @@ function Wordmark({ compact = false }: { compact?: boolean }) {
       </span>
       {!compact && (
         <span className="truncate text-[17px] font-heavy tracking-tight text-foreground">
-          Школа <span className="text-primary">онлайн</span>
+          Матис
         </span>
       )}
     </Link>
