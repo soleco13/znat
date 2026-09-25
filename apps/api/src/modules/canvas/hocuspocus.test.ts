@@ -75,6 +75,7 @@ const {
   postAnswerToBoard,
   hocuspocus,
   trackReadOnlyRejection,
+  limitGuestCanvasInbound,
   getRejectedReadOnlyUpdatesCount,
   getCanvasDocumentsWithPendingUpdatesCount,
 } = await import("./hocuspocus.js");
@@ -732,5 +733,30 @@ describe("видимость отброшенных и застрявших пр
     applyUpdate(probe, first);
     expect(getCanvasDocumentsWithPendingUpdatesCount()).toBe(before);
     hocuspocus.documents.delete("lesson-pending-probe");
+  });
+});
+
+describe("limitGuestCanvasInbound", () => {
+  const doc = "77777777-7777-7777-7777-777777777777";
+  const MB = 1024 * 1024;
+
+  it("гость сверх 20 МБ в минуту — соединение закрывается, через минуту бюджет новый", async () => {
+    const ctx = { userId: STUDENT_ID, role: "guest" };
+    const t0 = 1_000_000;
+    await limitGuestCanvasInbound({ update: new Uint8Array(15 * MB), documentName: doc, context: ctx }, t0);
+    await expect(
+      limitGuestCanvasInbound({ update: new Uint8Array(6 * MB), documentName: doc, context: ctx }, t0 + 1_000),
+    ).rejects.toMatchObject({ code: 4429 });
+    await expect(
+      limitGuestCanvasInbound({ update: new Uint8Array(6 * MB), documentName: doc, context: ctx }, t0 + 61_000),
+    ).resolves.toBeUndefined();
+    await clearDrawPermissionOverrides({ documentName: doc });
+  });
+
+  it("персонал не ограничивается", async () => {
+    const ctx = { userId: TEACHER_ID, role: "teacher" };
+    await expect(
+      limitGuestCanvasInbound({ update: new Uint8Array(30 * MB), documentName: doc, context: ctx }),
+    ).resolves.toBeUndefined();
   });
 });

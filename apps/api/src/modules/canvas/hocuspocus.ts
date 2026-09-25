@@ -1,6 +1,7 @@
 import {
   Hocuspocus,
   type afterUnloadDocumentPayload,
+  type beforeHandleMessagePayload,
   type beforeSyncPayload,
   type beforeUnloadDocumentPayload,
   type connectedPayload,
@@ -124,6 +125,9 @@ export async function clearDrawPermissionOverrides(
 ): Promise<void> {
   drawPermissionOverrides.delete(payload.documentName);
   lastRejectionLogAt.delete(payload.documentName);
+  for (const key of canvasInboundBudget.keys()) {
+    if (key.startsWith(`${payload.documentName}:`)) canvasInboundBudget.delete(key);
+  }
 }
 
 /** `messageYjsUpdate` из y-protocols/sync — обычная правка клиента после рукопожатия. */
@@ -155,6 +159,43 @@ export async function trackReadOnlyRejection(
   console.warn(
     `canvas: отброшена правка read-only подключения lesson=${payload.documentName} participant=${userId}`,
   );
+}
+
+/**
+ * Потолок входящих данных доски от одного ученика: WS-сообщения не проходят
+ * через HTTP rate limit, и ученик с правом рисовать мог слать правки без
+ * конца — документ рос, и каждый новый участник скачивал его целиком.
+ * Штрихи и тексты весят килобайты, картинки лежат ссылками — 20 МБ в минуту
+ * живому ученику не достичь. Превысил — соединение закрывается (провайдер
+ * переподключится, а бюджет в памяти по участнику, не по соединению).
+ */
+const GUEST_CANVAS_BYTES_PER_MINUTE = 20 * 1024 * 1024;
+const CANVAS_RATE_WINDOW_MS = 60_000;
+const canvasInboundBudget = new Map<string, { windowStart: number; bytes: number }>();
+let rateLimitedCanvasMessages = 0;
+
+export async function limitGuestCanvasInbound(
+  payload: Pick<beforeHandleMessagePayload, "update" | "documentName" | "context">,
+  now = Date.now(),
+): Promise<void> {
+  const ctx = payload.context as { userId?: string; role?: string } | undefined;
+  if (!ctx?.userId || ctx.role !== "guest") return;
+  const key = `${payload.documentName}:${ctx.userId}`;
+  let budget = canvasInboundBudget.get(key);
+  if (!budget || now - budget.windowStart >= CANVAS_RATE_WINDOW_MS) {
+    budget = { windowStart: now, bytes: 0 };
+    canvasInboundBudget.set(key, budget);
+  }
+  budget.bytes += payload.update.byteLength;
+  if (budget.bytes > GUEST_CANVAS_BYTES_PER_MINUTE) {
+    rateLimitedCanvasMessages++;
+    console.warn(`canvas: превышен объём правок lesson=${payload.documentName} participant=${ctx.userId}`);
+    throw Object.assign(new Error("canvas_rate_limited"), { code: 4429, reason: "too_much_data" });
+  }
+}
+
+export function getRateLimitedCanvasMessagesCount(): number {
+  return rateLimitedCanvasMessages;
 }
 
 export function getRejectedReadOnlyUpdatesCount(): number {
@@ -501,6 +542,7 @@ export const hocuspocus = new Hocuspocus({
   onDisconnect: trackEmptySinceOnDisconnect,
   beforeUnloadDocument: vetoUnloadDuringGracePeriod,
   beforeSync: trackReadOnlyRejection,
+  beforeHandleMessage: limitGuestCanvasInbound,
   afterUnloadDocument: clearDrawPermissionOverrides,
 });
 

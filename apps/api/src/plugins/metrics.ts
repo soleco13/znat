@@ -4,6 +4,7 @@ import client from "prom-client";
 import {
   getActiveCanvasDocumentsCount,
   getCanvasDocumentsWithPendingUpdatesCount,
+  getRateLimitedCanvasMessagesCount,
   getRejectedReadOnlyUpdatesCount,
 } from "../modules/canvas/service.js";
 import { getActiveLessonTrafficSnapshot } from "../modules/rooms/service.js";
@@ -45,6 +46,16 @@ new client.Counter({
   collect() {
     this.reset();
     this.inc(getRejectedReadOnlyUpdatesCount());
+  },
+});
+
+new client.Counter({
+  name: "canvas_rate_limited_messages_total",
+  help: "Соединения доски, закрытые за превышение объёма правок учеником",
+  registers: [register],
+  collect() {
+    this.reset();
+    this.inc(getRateLimitedCanvasMessagesCount());
   },
 });
 
