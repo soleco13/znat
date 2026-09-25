@@ -188,15 +188,24 @@ export default async function materialsRoutes(app: FastifyInstance) {
       return reply.send(mediaAssetSchema.parse(asset));
     },
   );
+}
 
-  // §8 ТЗ: `GET /assets/:id/url` — БЕЗ requireRole (в отличие от /materials/media
-  // выше): блок image/audio внутри материала виден и ученику (через выдачу,
-  // Э8.6), значит и ссылку на файл ученик должен уметь получить — только
-  // базовая аутентификация, доступ к самому материалу проверен раньше в цепочке.
-  app.get<{ Params: { id: string } }>("/assets/:id/url", async (request, reply) => {
-    const parsed = uuidParam.safeParse(request.params.id);
-    if (!parsed.success) throw new AppError(400, "bad_asset_id", "Некорректный идентификатор файла");
-    const url = await materialsService.getMediaAssetUrl(request.user.schoolId, parsed.data);
-    return reply.send(assetUrlSchema.parse({ url }));
-  });
+/**
+ * §8 ТЗ: `GET /assets/:id/url` — ссылка на картинку/аудио из блока материала.
+ * Вне `materialsRoutes`: там на всех маршрутах `app.authenticate` (только
+ * персонал), и ученик-гость получал 401 — картинки и аудио в заданиях у него
+ * не открывались. Здесь пускает и персонал (Bearer), и гостя урока (кука);
+ * файл ищется только в школе этого человека/урока.
+ */
+export async function materialAssetUrlRoutes(app: FastifyInstance) {
+  app.get<{ Params: { id: string } }>(
+    "/assets/:id/url",
+    { preHandler: app.resolveLessonActor },
+    async (request, reply) => {
+      const parsed = uuidParam.safeParse(request.params.id);
+      if (!parsed.success) throw new AppError(400, "bad_asset_id", "Некорректный идентификатор файла");
+      const url = await materialsService.getMediaAssetUrl(request.lessonActor.schoolId, parsed.data);
+      return reply.send(assetUrlSchema.parse({ url }));
+    },
+  );
 }

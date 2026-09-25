@@ -30,7 +30,7 @@ import canvasWsRoutes from "./modules/canvas/ws.js";
 import canvasRoutes from "./modules/canvas/routes.js";
 import decksRoutes from "./modules/decks/routes.js";
 import activitiesRoutes from "./modules/activities/routes.js";
-import materialsRoutes from "./modules/materials/routes.js";
+import materialsRoutes, { materialAssetUrlRoutes } from "./modules/materials/routes.js";
 import recordingsRoutes from "./modules/recordings/routes.js";
 import schoolSettingsRoutes from "./modules/school-settings/routes.js";
 import registrationRoutes from "./modules/registration/routes.js";
@@ -118,6 +118,7 @@ export function buildServer() {
       api.register(decksRoutes);
       api.register(activitiesRoutes);
       api.register(materialsRoutes);
+      api.register(materialAssetUrlRoutes);
       api.register(recordingsRoutes);
       api.register(schoolSettingsRoutes);
       api.register(registrationRoutes);
