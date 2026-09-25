@@ -34,7 +34,34 @@ services:
   redis:
     image: redis:7
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
+    # Пароль обязателен: Redis виден из сети converter'а, который разбирает
+    # чужие pptx в LibreOffice. Без пароля взломанный конвертер мог бы
+    # переписать присутствие, права и отзывы гостевых сессий. Converter
+    # ходит отдельным пользователем — только ключи очереди BullMQ (bull:*),
+    # без административных команд.
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+      # Правило ACL — отдельными аргументами: одной строкой Redis считает
+      # всю её именем пользователя и не стартует.
+      - --user
+      - converter
+      - "on"
+      - ">${CONVERTER_REDIS_PASSWORD:?set CONVERTER_REDIS_PASSWORD in .env}"
+      - "~bull:*"
+      - "&*"
+      - "+@all"
+      - "-@admin"
+      - "-@dangerous"
+      - "+info"
+      - "+client|setname"
+      - "+client|getname"
+      - "+client|id"
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     ports:
@@ -64,7 +91,7 @@ services:
       - .env
     environment:
       DATABASE_URL: postgres://school:school@postgres:5432/school_dev
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       STORAGE_ROOT: /data/assets
       # /files/* отдаёт Caddy с того же тома (см. Caddyfile, X-Accel-Redirect).
       FILES_VIA_PROXY: "true"
@@ -150,6 +177,7 @@ services:
               secret: ${TURN_SHARED_SECRET}
         redis:
           address: 127.0.0.1:6379
+          password: ${REDIS_PASSWORD}
         turn:
           enabled: false
         # Э2.7, §10.5 ТЗ: посещаемость и завершение урока по вебхукам, не
@@ -218,7 +246,7 @@ services:
       redis:
         condition: service_healthy
     environment:
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://converter:${CONVERTER_REDIS_PASSWORD}@redis:6379
       STORAGE_ROOT: /data/assets
     networks:
       - convnet

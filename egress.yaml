@@ -27,6 +27,7 @@ ws_url: ws://${MAIN_HOST_PRIVATE_IP}:7880
 # recordings/service.ts#applyEgressWebhook).
 redis:
   address: ${MAIN_HOST_PRIVATE_IP}:6379
+  password: ${REDIS_PASSWORD}
 
 # Куда складывать готовые файлы. filepath = абсолютный путь внутри
 # контейнера; каталог смонтирован из STORAGE_ROOT основной машины.
