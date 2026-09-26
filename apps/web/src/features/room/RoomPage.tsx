@@ -116,6 +116,7 @@ import { ScreenShareTile } from "./ScreenShareTile.js";
 import { useRoomSocket } from "./useRoomSocket.js";
 import { notifyAnnotationsUpdated } from "../materials/annotations-events.js";
 import { VideoSubscriptionManager } from "./VideoSubscriptions.js";
+import { PoorLinkMediaAdapter } from "./PoorLinkMedia.js";
 
 // Э5.1/Э5.2 — см. подробные комментарии ниже у <LiveKitRoom>. 720p + simulcast,
 // adaptiveStream/dynacast включены явно (в livekit-client по умолчанию off).
@@ -1739,6 +1740,7 @@ export function RoomPage() {
         <ApplyAudioOutput deviceId={spkDeviceId} />
         <MicSync enabled={self?.permissions.canSpeak ?? false} />
         <VideoSubscriptionManager participants={participants} mode={lessonMode} />
+        <PoorLinkMediaAdapter />
         {clientMediaSettings?.pipEnabled !== false ? (
           <ScreenShareAutoPip
             ref={pipRef}
