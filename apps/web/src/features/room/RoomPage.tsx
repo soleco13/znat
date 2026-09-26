@@ -2026,8 +2026,10 @@ function StageContent({
   onActivityClose: () => void;
   onBoardClose: (() => void) | undefined;
 }) {
+  // Опубликованная, а не только подписанная: сцена сразу переключается на
+  // демонстрацию, и пока она грузится, `ScreenShareTile` показывает лоадер.
   const screenSharing =
-    useTracks([Track.Source.ScreenShare], { onlySubscribed: true }).length > 0;
+    useTracks([Track.Source.ScreenShare], { onlySubscribed: false }).length > 0;
 
   const main =
     view === "activity" && activityId ? (

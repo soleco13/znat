@@ -1,5 +1,8 @@
-import { useTracks, VideoTrack } from "@livekit/components-react";
+import { useState } from "react";
+import { isTrackReference, useTracks, VideoTrack } from "@livekit/components-react";
 import { Track } from "livekit-client";
+
+import { MediaLoader } from "@/shared/ui/media-loader";
 
 /**
  * Плитка демонстрации экрана (Э7.1) — рендерит уже подписанный трек
@@ -30,13 +33,22 @@ import { Track } from "livekit-client";
  * обрезанный край теряет данные.
  */
 export function ScreenShareTile() {
-  const tracks = useTracks([Track.Source.ScreenShare], { onlySubscribed: true });
+  // Все опубликованные, не только подписанные: пока подписка и первый кадр
+  // идут (на плохой связи — десятки секунд), показываем лоадер, а не пустоту.
+  const tracks = useTracks([Track.Source.ScreenShare], { onlySubscribed: false });
   const track = tracks[0];
-  if (!track) return null;
+  const [loadedSid, setLoadedSid] = useState<string | null>(null);
+  if (!track || !isTrackReference(track)) return null;
+  const sid = track.publication.trackSid;
+  // У своей (локальной) демонстрации трек есть сразу; у чужой — после подписки.
+  const ready = track.publication.track !== undefined;
 
   return (
-    <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
-      <VideoTrack trackRef={track} className="size-full object-contain" />
+    <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
+      {ready ? (
+        <VideoTrack trackRef={track} onLoadedData={() => setLoadedSid(sid)} className="size-full object-contain" />
+      ) : null}
+      {loadedSid !== sid ? <MediaLoader label="Загружаем демонстрацию экрана…" tone="light" size="lg" /> : null}
     </div>
   );
 }

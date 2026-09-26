@@ -6,11 +6,12 @@ import {
   VideoTrack,
 } from "@livekit/components-react";
 import { ConnectionQuality, Track } from "livekit-client";
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Hand, Loader2, MicOff, Pin, SignalLow } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Hand, MicOff, Pin, SignalLow } from "lucide-react";
 import type { LessonMode, ParticipantSnapshot } from "@school/shared";
 
 import { cn } from "@/lib/utils";
 import { initialsOf } from "@/shared/ui/avatar";
+import { MediaLoader } from "@/shared/ui/media-loader";
 import { participantsCount } from "./format.js";
 import { useSelfCameraUiStore } from "./self-camera-ui-store.js";
 import { useAdaptiveGrid } from "./use-adaptive-grid.js";
@@ -59,6 +60,17 @@ export function RoomVideoGrid({
   const narrow = useIsNarrowViewport();
   const cameraTracks = useTracks([Track.Source.Camera], { onlySubscribed: true });
   const trackByIdentity = new Map(cameraTracks.map((t) => [t.participant.identity, t]));
+  // Камера включена (опубликована и не выключена), но первый кадр ещё не
+  // пришёл — на плохой связи это десятки секунд. Показываем лоадер, а не
+  // чёрную плитку. Кадр пришёл — `loadedCameraSids`.
+  const cameraOnIds = new Set(
+    useTracks([Track.Source.Camera], { onlySubscribed: false })
+      .filter((t) => t.publication && !t.publication.isMuted)
+      .map((t) => t.participant.identity),
+  );
+  const [loadedCameraSids, setLoadedCameraSids] = useState<ReadonlySet<string>>(() => new Set());
+  const markCameraLoaded = (sid: string) =>
+    setLoadedCameraSids((prev) => (prev.has(sid) ? prev : new Set(prev).add(sid)));
   const speakingIds = new Set(useSpeakingParticipants().map((p) => p.identity));
   const roomParticipants = useParticipants();
   const micOffIds = new Set(
@@ -120,7 +132,10 @@ export function RoomVideoGrid({
     const track = trackByIdentity.get(p.userId);
     const isSelf = p.userId === selfId;
     const videoTrack = isSelf && !selfDesiredOn ? undefined : track;
-    const showLoader = isSelf && selfDesiredOn && !selfFrameReady;
+    const remoteSid = videoTrack?.publication?.trackSid;
+    const showLoader = isSelf
+      ? selfDesiredOn && !selfFrameReady
+      : cameraOnIds.has(p.userId) && (!remoteSid || !loadedCameraSids.has(remoteSid));
     const speaking = speakingIds.has(p.userId);
     const micOff = micOffIds.has(p.userId);
     const weak = weakIds.has(p.userId);
@@ -139,7 +154,9 @@ export function RoomVideoGrid({
         {videoTrack ? (
           <VideoTrack
             trackRef={videoTrack}
-            onLoadedData={isSelf ? () => setSelfFrameReady(true) : undefined}
+            onLoadedData={
+              isSelf ? () => setSelfFrameReady(true) : remoteSid ? () => markCameraLoaded(remoteSid) : undefined
+            }
             className={cn(
               "absolute inset-0 size-full object-cover transition-opacity",
               isSelf && "-scale-x-100",
@@ -160,26 +177,7 @@ export function RoomVideoGrid({
           </span>
         ) : null}
 
-        {showLoader ? (
-          <div role="status" className="absolute inset-0 flex items-center justify-center bg-slate-900">
-            <span className="relative inline-flex items-center justify-center">
-              <span
-                className="absolute inset-0 animate-ping rounded-full bg-primary/40"
-                style={{ animationDuration: "1.4s" }}
-                aria-hidden
-              />
-              <span
-                className={cn(
-                  "relative flex items-center justify-center rounded-full bg-primary/15 text-primary ring-1 ring-primary/25",
-                  small ? "size-7" : "size-10",
-                )}
-              >
-                <Loader2 className={cn("animate-spin", small ? "size-3.5" : "size-5")} aria-hidden />
-              </span>
-            </span>
-            <span className="sr-only">Камера загружается</span>
-          </div>
-        ) : null}
+        {showLoader ? <MediaLoader label="Камера загружается" size={small ? "sm" : "md"} /> : null}
 
         {speaking ? (
           <span

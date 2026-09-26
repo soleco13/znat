@@ -1,7 +1,7 @@
 import { Suspense, type ComponentProps } from "react";
 
 import { lazyNamed, withRetry } from "@/shared/lazy-retry";
-import { Skeleton } from "@/shared/ui/skeleton";
+import { MediaLoader } from "@/shared/ui/media-loader";
 
 /**
  * Тяжёлые части урока — отдельными кусками сборки. Доска тянет Excalidraw,
@@ -25,8 +25,12 @@ export function prefetchLessonStage(): void {
   for (const load of [loadBoard, loadActivityStage, loadActivityPanel]) load().catch(() => undefined);
 }
 
-function StageFallback() {
-  return <Skeleton className="size-full min-h-40 rounded-xl" />;
+function StageFallback({ label }: { label: string }) {
+  return (
+    <div className="relative size-full min-h-40 overflow-hidden rounded-2xl border border-border bg-card">
+      <MediaLoader label={label} tone="light" size="lg" />
+    </div>
+  );
 }
 
 type BoardProps = ComponentProps<typeof import("../canvas/Board.js").Board>;
@@ -35,7 +39,7 @@ type ActivityStageProps = ComponentProps<typeof import("./ActivityStage.js").Act
 
 export function Board(props: BoardProps) {
   return (
-    <Suspense fallback={<StageFallback />}>
+    <Suspense fallback={<StageFallback label="Загружаем доску…" />}>
       <LazyBoard {...props} />
     </Suspense>
   );
@@ -43,7 +47,7 @@ export function Board(props: BoardProps) {
 
 export function LessonActivityPanel(props: ActivityPanelProps) {
   return (
-    <Suspense fallback={<StageFallback />}>
+    <Suspense fallback={<StageFallback label="Загружаем задания…" />}>
       <LazyActivityPanel {...props} />
     </Suspense>
   );
@@ -51,7 +55,7 @@ export function LessonActivityPanel(props: ActivityPanelProps) {
 
 export function ActivityStage(props: ActivityStageProps) {
   return (
-    <Suspense fallback={<StageFallback />}>
+    <Suspense fallback={<StageFallback label="Загружаем задание…" />}>
       <LazyActivityStage {...props} />
     </Suspense>
   );

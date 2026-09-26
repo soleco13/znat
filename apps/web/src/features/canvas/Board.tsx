@@ -45,6 +45,7 @@ import {
 import { getPdfPageSizes } from "./pdf.js";
 import { MobileToolRail, type RailTool } from "./MobileToolRail.js";
 import { SlideSearch } from "./SlideSearch.js";
+import { MediaLoader } from "@/shared/ui/media-loader";
 import { createCoalescingApi, paceUpstream, throttleWhen, useBoardLinkPoor } from "./board-link.js";
 import "@excalidraw/excalidraw/index.css";
 import "./Board.css";
@@ -279,6 +280,20 @@ export function Board({
   // размонтировании React снимает эффекты по порядку, и штатная отправка
   // возвращается провайдеру раньше, чем он уничтожается.
   const linkPoor = useBoardLinkPoor(provider);
+
+  // Первая синхронизация доски: до неё холст пустой, на плохой связи — долго.
+  // Показываем лоадер, чтобы пустота не выглядела поломкой. После
+  // переподключений не показываем — содержимое на экране уже есть.
+  const [boardSynced, setBoardSynced] = useState(false);
+  useEffect(() => {
+    setBoardSynced(provider?.isSynced ?? false);
+    if (!provider) return;
+    const onSynced = () => setBoardSynced(true);
+    provider.on("synced", onSynced);
+    return () => {
+      provider.off("synced", onSynced);
+    };
+  }, [provider]);
   const linkPoorRef = useRef(false);
   useEffect(() => {
     linkPoorRef.current = linkPoor;
@@ -1333,6 +1348,9 @@ export function Board({
           slide={activeMeta?.slide ?? null}
         />
         {!readOnlyChrome && boardChrome}
+        {!boardSynced || !excalidrawAPI ? (
+          <MediaLoader label="Загружаем доску…" tone="light" size="lg" className="z-30" />
+        ) : null}
         {/* Мобильная/планшетная (тач) панель инструментов — см. MobileToolRail.tsx.
             Только когда можно рисовать: без `canDraw` Excalidraw и так read-only
             (viewModeEnabled), выбирать инструмент нечем. На десктопе (мышь) не
