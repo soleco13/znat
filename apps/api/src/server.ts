@@ -142,9 +142,14 @@ export function buildServer() {
       // страницы давала ~30 запросов с ответом 304). index.html и прочее —
       // всегда перепроверять, иначе новый деплой не доедет до браузера.
       cacheControl: false,
+      // Рядом с файлами сборки лежат brotli-копии (`*.br`, см. vite.config.ts) —
+      // отдаём их браузерам с `Accept-Encoding: br`: на ~20% легче gzip.
+      preCompressed: true,
       setHeaders(res, filePath) {
         const immutable = filePath.startsWith(path.join(webDistDir, "assets") + path.sep);
         res.setHeader("Cache-Control", immutable ? "public, max-age=31536000, immutable" : "no-cache");
+        // Один адрес — разные тела (brotli / без сжатия): кэши должны это различать.
+        res.setHeader("Vary", "Accept-Encoding");
       },
     });
     app.setNotFoundHandler(async (request, reply) => {

@@ -10,6 +10,8 @@ import {
   type Participant,
 } from "livekit-client";
 
+import { requestLessonPrecache } from "@/shared/service-worker";
+
 /**
  * Видео уступает канал звуку и доске, когда у ЭТОГО участника плохая связь.
  * Молча (без надписей) и только у него:
@@ -108,6 +110,15 @@ function capToLowLayer(track: LocalVideoTrack): () => void {
 export function PoorLinkMediaAdapter() {
   const room = useRoomContext();
   const poor = useLocalLinkPoor();
+
+  // Связь хорошая полминуты — просим service worker докачать файлы урока на
+  // устройство (доска, задания): следующий вход откроется без сети. На
+  // плохой связи не просим — фоновая закачка мешала бы уроку.
+  useEffect(() => {
+    if (poor) return;
+    const timer = setTimeout(requestLessonPrecache, 30_000);
+    return () => clearTimeout(timer);
+  }, [poor]);
 
   // Чужие камеры: нижний слой при плохой связи, иначе — как решит adaptiveStream.
   useEffect(() => {
