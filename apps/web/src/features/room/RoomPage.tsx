@@ -1844,12 +1844,8 @@ function LivePeopleList(props: PeopleListProps) {
   const micOffIds = new Set(
     roomParticipants.filter((p) => !p.isMicrophoneEnabled).map((p) => p.identity),
   );
-  // Значок «плохая связь» — только персоналу: учителю полезно видеть, у кого
-  // проблемы; ученику технические статусы на уроке не показываем.
-  const viewerIsStaff = useRoomIdentity()?.kind === "staff";
   const weakIds = new Set(
     roomParticipants
-      .filter(() => viewerIsStaff)
       .filter(
         (p) =>
           p.connectionQuality === ConnectionQuality.Poor ||
