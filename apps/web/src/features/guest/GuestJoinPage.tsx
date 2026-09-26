@@ -28,11 +28,13 @@ export function GuestJoinPage() {
   const navigate = useNavigate();
   const info = useAsync(() => fetchGuestLessonInfo(token), [token]);
 
-  // Пока ученик вводит имя, в фоне качаем сам урок и доску: на медленной
-  // сети к нажатию «Войти» они уже будут, и урок откроется сразу.
+  // Пока ученик вводит имя, в фоне качаем урок, а за ним — доску и задания.
+  // Именно по очереди: параллельно доска (~725 КБ) делила бы медленный канал
+  // с уроком (~350 КБ), и урок открывался бы позже.
   useEffect(() => {
-    prefetchRoom().catch(() => undefined);
-    prefetchLessonStage();
+    prefetchRoom()
+      .catch(() => undefined)
+      .finally(() => prefetchLessonStage());
   }, []);
 
   const [name, setName] = useState("");

@@ -243,11 +243,6 @@ export function RoomPage() {
   const clearGuestSession = useGuestSessionStore((s) => s.clearSession);
   const isGuest = identity?.kind === "guest";
 
-  // Доска и задания — отдельные куски сборки; качаем их сразу, параллельно
-  // с подключением к уроку, чтобы к показу доски они уже были.
-  useEffect(() => {
-    prefetchLessonStage();
-  }, []);
   const selfId = identity?.id;
   const [leftAsGuest, setLeftAsGuest] = useState(false);
 
@@ -505,14 +500,21 @@ export function RoomPage() {
   useEffect(() => {
     if (!lessonId || !deviceCheckDone) return;
     attemptJoin();
+  }, [lessonId, deviceCheckDone, attemptJoin]);
 
+  // Всё второстепенное — после входа: на медленной сети эти запросы и куски
+  // сборки делили бы канал с самим входом (/join, соединение урока, медиа).
+  const joined = media !== null;
+  useEffect(() => {
+    if (!lessonId || !joined) return;
+    prefetchLessonStage();
     apiFetch<{ items: ChatMessage[] }>(`/lessons/${lessonId}/chat`)
       .then((data) => {
         setChat([...data.items].reverse());
         setChatSeen(data.items.length);
       })
       .catch(() => undefined);
-  }, [lessonId, deviceCheckDone, attemptJoin]);
+  }, [lessonId, joined]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -555,18 +557,18 @@ export function RoomPage() {
   }, [lessonId]);
 
   useEffect(() => {
-    refreshDecks();
-  }, [refreshDecks]);
+    if (joined) refreshDecks();
+  }, [refreshDecks, joined]);
 
   useEffect(() => {
-    if (!lessonId) return;
+    if (!lessonId || !joined) return;
     listLessonActivities(lessonId)
       .then((data) => {
         const latest = data.items[0];
         if (latest) setActiveActivityId((prev) => prev ?? latest.id);
       })
       .catch(() => undefined);
-  }, [lessonId]);
+  }, [lessonId, joined]);
 
   const refetchedDecksRef = useRef<Set<string>>(new Set());
   useEffect(() => {
