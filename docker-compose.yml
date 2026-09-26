@@ -159,6 +159,15 @@ services:
           # публичный IP, что уже используется для TURN/STUN).
           use_external_ip: false
           node_ip: ${TURN_DOMAIN}
+          # link-local IPv6 docker-интерфейсов (veth/bridge) pion пытается
+          # занять по всему port_range: bind без зоны даёт EINVAL на каждый
+          # из 10 000 портов, с перечитыванием интерфейсов на каждой попытке.
+          # Нагрузочный тест 2026-09-26: каждый вход участника занимал ядро
+          # LiveKit на 100% на десятки секунд. Внешнему клиенту эти адреса
+          # всё равно недоступны.
+          ips:
+            excludes:
+              - fe80::/10
           stun_servers:
             - ${TURN_DOMAIN}:3478
           turn_servers:
