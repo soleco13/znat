@@ -15,6 +15,7 @@ import { participantsCount } from "./format.js";
 import { useSelfCameraUiStore } from "./self-camera-ui-store.js";
 import { useAdaptiveGrid } from "./use-adaptive-grid.js";
 import { useIsNarrowViewport } from "./use-narrow-viewport.js";
+import { useRoomIdentity } from "./use-room-identity.js";
 
 const GAP = 10;
 const PAGE_SIZE = 12;
@@ -64,8 +65,12 @@ export function RoomVideoGrid({
   const micOffIds = new Set(
     roomParticipants.filter((p) => !p.isMicrophoneEnabled).map((p) => p.identity),
   );
+  // Значок «плохая связь» — только персоналу: учителю полезно видеть, у кого
+  // проблемы; ученику технические статусы на уроке не показываем.
+  const viewerIsStaff = useRoomIdentity()?.kind === "staff";
   const weakIds = new Set(
     roomParticipants
+      .filter(() => viewerIsStaff)
       .filter(
         (p) =>
           p.connectionQuality === ConnectionQuality.Poor ||

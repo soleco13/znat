@@ -100,9 +100,8 @@ import { ActivityStage } from "./ActivityStage.js";
 import { RecordingConsentBanner, RecordingPanel } from "../recordings/RecordingPanel.js";
 import { playRecordingSound } from "./recording-sound.js";
 import { playParticipantSound } from "./participant-sound.js";
-import { SelfCameraButton, VideoDegradeSuggestion } from "./CameraControls.js";
+import { SelfCameraButton } from "./CameraControls.js";
 import { toScreenShareEncoding, toVideoEncoding, toVideoResolution } from "./media-quality.js";
-import { PacketLossWarning } from "./ConnectionQuality.js";
 import { DeviceCheckScreen, type DeviceCheckResult } from "./DeviceCheckScreen.js";
 import { DeviceSettingsModal } from "./DeviceSettingsModal.js";
 import { formatClock, participantsCount } from "./format.js";
@@ -162,6 +161,9 @@ function buildRoomOptions(settings: ClientMediaSettings | null): RoomOptions {
     dynacast: true,
   };
 }
+
+/** Сколько переподключение должно длиться, чтобы показать ученику оверлей. */
+const RECONNECT_OVERLAY_DELAY_MS = 20_000;
 
 type SocketStatusLike = "connecting" | "connected" | "reconnecting" | "closed";
 type DrawerMode = "tools" | "people" | "chat";
@@ -460,6 +462,18 @@ export function RoomPage() {
   // Оверлей переподключения — только если WS уже был `connected` хотя бы
   // раз: на самом первом подключении место занимает экран загрузки.
   const everConnectedRef = useRef(false);
+  // Оверлей «связь прервалась» — только при настоящем обрыве. Короткие
+  // переподключения служебного канала на мобильной сети частые, видео и звук
+  // под ними не прерываются — перекрывать урок из-за них не нужно.
+  const [longReconnect, setLongReconnect] = useState(false);
+  useEffect(() => {
+    if (status !== "reconnecting") {
+      setLongReconnect(false);
+      return;
+    }
+    const timer = setTimeout(() => setLongReconnect(true), RECONNECT_OVERLAY_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [status]);
   if (status === "connected") everConnectedRef.current = true;
 
   const attemptJoin = useCallback(() => {
@@ -1120,8 +1134,6 @@ export function RoomPage() {
             : `${raisedHands[0]!.fullName} и ещё ${raisedHands.length - 1} подняли руку.`}
         </StageBanner>
       ) : null}
-      {media && self?.permissions.canSpeak ? <PacketLossWarning /> : null}
-      {media && (isTeacher || self?.permissions.canPublishVideo) ? <VideoDegradeSuggestion /> : null}
 
       {media ? (
         <StageContent
@@ -1617,7 +1629,7 @@ export function RoomPage() {
 
       {/* Только WS-канал (`status`), НЕ LiveKit-медиа — оно продолжает
           работать под оверлеем, урок не прерывается. */}
-      {status === "reconnecting" && everConnectedRef.current ? (
+      {status === "reconnecting" && longReconnect && everConnectedRef.current ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(16,24,40,.45)] p-6 backdrop-blur-[3px]">
           <div className="flex w-full max-w-[400px] flex-col items-center gap-3 rounded-[20px] bg-card p-7 text-center shadow-lg">
             <span
@@ -1832,8 +1844,12 @@ function LivePeopleList(props: PeopleListProps) {
   const micOffIds = new Set(
     roomParticipants.filter((p) => !p.isMicrophoneEnabled).map((p) => p.identity),
   );
+  // Значок «плохая связь» — только персоналу: учителю полезно видеть, у кого
+  // проблемы; ученику технические статусы на уроке не показываем.
+  const viewerIsStaff = useRoomIdentity()?.kind === "staff";
   const weakIds = new Set(
     roomParticipants
+      .filter(() => viewerIsStaff)
       .filter(
         (p) =>
           p.connectionQuality === ConnectionQuality.Poor ||
