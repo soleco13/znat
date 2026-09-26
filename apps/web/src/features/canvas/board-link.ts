@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import type { HocuspocusProvider } from "@hocuspocus/provider";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import * as Y from "yjs";
+
+import { linkQuality, useLinkPoor } from "@/shared/link-quality";
 
 /**
  * Адаптация доски под слабую связь — ТОЛЬКО у участника, у которого связь
@@ -24,16 +26,6 @@ const PING_INTERVAL_MS = 2000;
 /** Нормальный RTT мобильной сети — 50–150 мс; стабильно выше — канал не справляется. */
 const RTT_POOR_MS = 400;
 const PONG_TIMEOUT_MS = 1500;
-/**
- * Режим снимается, только если столько времени не было ни одного плохого
- * признака. В экономном режиме канал разгружен и пинг хороший — выход по
- * фиксированному таймеру давал раскачку «плавно ↔ лагает» каждые ~20 с.
- * Поэтому каждый повторный заход вскоре после выхода удваивает удержание.
- */
-const RECOVER_MIN_MS = 20_000;
-const RECOVER_MAX_MS = 5 * 60_000;
-/** Заход в режим позже этого после выхода считается новым эпизодом — удержание сбрасывается. */
-const RELAPSE_WINDOW_MS = 5 * 60_000;
 export const PACED_SEND_MS = 100;
 
 type LinkMessage = { t: "pong"; i: number };
@@ -47,39 +39,20 @@ function parsePong(raw: string): LinkMessage | null {
   }
 }
 
-/** `true`, пока связь с доской плохая (с гистерезисом, см. `RECOVER_MIN_MS`). */
+/**
+ * Пинг по каналу доски: плохие признаки (медленный или потерянный пинг,
+ * обрыв) уходят в общий детектор связи устройства (`shared/link-quality.ts`),
+ * режим берётся оттуда же — тот же, что у медиа. О смене режима сообщаем
+ * серверу, он склеивает поток к этому подключению.
+ */
 export function useBoardLinkPoor(provider: HocuspocusProvider | null): boolean {
-  const [poor, setPoor] = useState(false);
+  const poor = useLinkPoor();
 
   useEffect(() => {
     if (!provider) return;
     let seq = 0;
     let outstanding: { i: number; sentAt: number } | null = null;
-    let lastBadAt = 0;
-    let current = false;
-    let recoverMs = RECOVER_MIN_MS;
-    let leftAt = 0;
     const recentRtt: number[] = [];
-
-    const report = () => provider.sendStateless(JSON.stringify({ t: "link", poor: current }));
-    const evaluate = () => {
-      const now = Date.now();
-      const next = lastBadAt > 0 && now - lastBadAt < recoverMs;
-      if (next === current) return;
-      if (next) {
-        recoverMs =
-          leftAt > 0 && now - leftAt < RELAPSE_WINDOW_MS ? Math.min(recoverMs * 2, RECOVER_MAX_MS) : RECOVER_MIN_MS;
-      } else {
-        leftAt = now;
-      }
-      current = next;
-      setPoor(next);
-      report();
-    };
-    const markBad = () => {
-      lastBadAt = Date.now();
-      evaluate();
-    };
 
     const tick = () => {
       // Фоновая вкладка: браузер душит таймеры, «потерянный» пинг был бы ложным.
@@ -89,13 +62,12 @@ export function useBoardLinkPoor(provider: HocuspocusProvider | null): boolean {
       }
       if (outstanding && Date.now() - outstanding.sentAt > PONG_TIMEOUT_MS) {
         outstanding = null;
-        markBad();
+        linkQuality.reportBad();
       }
       if (!outstanding) {
         outstanding = { i: ++seq, sentAt: Date.now() };
         provider.sendStateless(JSON.stringify({ t: "ping", i: outstanding.i }));
       }
-      evaluate();
     };
 
     const onStateless = ({ payload }: { payload: string }) => {
@@ -105,27 +77,35 @@ export function useBoardLinkPoor(provider: HocuspocusProvider | null): boolean {
       outstanding = null;
       if (recentRtt.length > 4) recentRtt.shift();
       // Один всплеск — не повод; два медленных из последних четырёх — уже канал.
-      if (recentRtt.filter((rtt) => rtt > RTT_POOR_MS).length >= 2) markBad();
+      if (recentRtt.filter((rtt) => rtt > RTT_POOR_MS).length >= 2) linkQuality.reportBad();
     };
-    // Обрыв сокета — тоже признак; после переподключения серверное
-    // подключение новое, флаг режима нужно передать заново.
-    const onDisconnect = () => markBad();
-    const onSynced = () => {
-      if (current) report();
-    };
+    const onDisconnect = () => linkQuality.reportBad();
 
     provider.on("stateless", onStateless);
     provider.on("disconnect", onDisconnect);
-    provider.on("synced", onSynced);
     const interval = setInterval(tick, PING_INTERVAL_MS);
     return () => {
       clearInterval(interval);
       provider.off("stateless", onStateless);
       provider.off("disconnect", onDisconnect);
-      provider.off("synced", onSynced);
-      setPoor(false);
     };
   }, [provider]);
+
+  // Режим — серверу: при каждой смене и заново после переподключения
+  // (серверное подключение новое, флаг на нём потерян).
+  useEffect(() => {
+    if (!provider) return;
+    const report = () => provider.sendStateless(JSON.stringify({ t: "link", poor: linkQuality.isPoor }));
+    if (poor) report();
+    const onSynced = () => {
+      if (linkQuality.isPoor) report();
+    };
+    provider.on("synced", onSynced);
+    return () => {
+      provider.off("synced", onSynced);
+      if (poor) report();
+    };
+  }, [provider, poor]);
 
   return poor;
 }

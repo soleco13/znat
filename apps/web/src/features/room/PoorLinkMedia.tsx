@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRoomContext } from "@livekit/components-react";
 import {
   ConnectionQuality,
@@ -10,6 +10,7 @@ import {
   type Participant,
 } from "livekit-client";
 
+import { linkQuality, useLinkPoor } from "@/shared/link-quality";
 import { requestLessonPrecache } from "@/shared/service-worker";
 
 /**
@@ -20,58 +21,35 @@ import { requestLessonPrecache } from "@/shared/service-worker";
  *  - своя камера отправляет только нижний слой (~180p).
  * Звук не трогаем. Связь восстановилась — всё возвращается само.
  *
- * Качество — `ConnectionQuality` локального участника от сервера LiveKit (по
- * потерям и джиттеру). Выход с гистерезисом, как у доски (board-link.ts):
- * в облегчённом режиме канал свободен и качество «хорошее», фиксированный
- * таймер давал бы раскачку — повторный заход удваивает удержание.
+ * Режим — общий для доски и медиа (`shared/link-quality.ts`): плохие признаки
+ * приходят и от LiveKit, и от пинга доски.
  */
-
-const RECOVER_MIN_MS = 20_000;
-const RECOVER_MAX_MS = 5 * 60_000;
-const RELAPSE_WINDOW_MS = 5 * 60_000;
 
 function isBad(quality: ConnectionQuality): boolean {
   return quality === ConnectionQuality.Poor || quality === ConnectionQuality.Lost;
 }
 
-/** `true`, пока связь участника плохая (с гистерезисом). */
-function useLocalLinkPoor(): boolean {
+/**
+ * Оценка LiveKit (по потерям и джиттеру) — ещё один источник плохих признаков
+ * для общего детектора связи устройства. Пока качество плохое, сообщаем раз в
+ * 2 с: событие приходит только при смене значения.
+ */
+function useReportLiveKitQuality(): void {
   const room = useRoomContext();
-  const [poor, setPoor] = useState(false);
-
   useEffect(() => {
-    let current = false;
-    let lastBadAt = 0;
-    let recoverMs = RECOVER_MIN_MS;
-    let leftAt = 0;
-
-    const evaluate = () => {
-      const now = Date.now();
-      if (isBad(room.localParticipant.connectionQuality)) lastBadAt = now;
-      const next = lastBadAt > 0 && now - lastBadAt < recoverMs;
-      if (next === current) return;
-      if (next) {
-        recoverMs =
-          leftAt > 0 && now - leftAt < RELAPSE_WINDOW_MS ? Math.min(recoverMs * 2, RECOVER_MAX_MS) : RECOVER_MIN_MS;
-      } else {
-        leftAt = now;
-      }
-      current = next;
-      setPoor(next);
+    const check = () => {
+      if (isBad(room.localParticipant.connectionQuality)) linkQuality.reportBad();
     };
     const onQuality = (_quality: ConnectionQuality, participant: Participant) => {
-      if (participant === room.localParticipant) evaluate();
+      if (participant === room.localParticipant) check();
     };
-
     room.on(RoomEvent.ConnectionQualityChanged, onQuality);
-    const interval = setInterval(evaluate, 2000);
+    const interval = setInterval(check, 2000);
     return () => {
       room.off(RoomEvent.ConnectionQualityChanged, onQuality);
       clearInterval(interval);
     };
   }, [room]);
-
-  return poor;
 }
 
 type Qualities = Parameters<LocalVideoTrack["setPublishingLayers"]>[1];
@@ -109,7 +87,8 @@ function capToLowLayer(track: LocalVideoTrack): () => void {
 
 export function PoorLinkMediaAdapter() {
   const room = useRoomContext();
-  const poor = useLocalLinkPoor();
+  useReportLiveKitQuality();
+  const poor = useLinkPoor();
 
   // Связь хорошая полминуты — просим service worker докачать файлы урока на
   // устройство (доска, задания): следующий вход откроется без сети. На
