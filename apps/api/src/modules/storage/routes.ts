@@ -1,8 +1,23 @@
+import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { env } from "../../plugins/env.js";
 import { AppError } from "../../plugins/errors.js";
 import * as storageService from "./service.js";
 import { isImageVariant, renderImageVariant, supportsImageVariant } from "./image-variants.js";
+
+/**
+ * Тип содержимого при отдаче файла напрямую (без Caddy, который ставит его сам
+ * по расширению): с `nosniff` и без типа браузер не обязан угадывать формат.
+ */
+const CONTENT_TYPES: Record<string, string> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".gif": "image/gif",
+  ".pdf": "application/pdf",
+  ".mp4": "video/mp4",
+};
 
 async function readAll(stream: NodeJS.ReadableStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -53,6 +68,8 @@ export async function filesRoutes(app: FastifyInstance) {
         return reply.header("X-Accel-Redirect", proxyPath).status(200).send();
       }
       const stream = await storageService.openFile(storageKey);
+      const contentType = CONTENT_TYPES[path.extname(storageKey).toLowerCase()];
+      if (contentType) reply.header("Content-Type", contentType);
       return reply.header("X-Content-Type-Options", "nosniff").send(stream);
     },
   );

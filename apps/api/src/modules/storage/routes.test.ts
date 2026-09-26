@@ -32,5 +32,6 @@ describe("GET /files/* — отдача через Caddy или напрямую
     expect(res.statusCode).toBe(200);
     expect(res.headers["x-accel-redirect"]).toBeUndefined();
     expect(res.body).toBe("IMAGE-BYTES");
+    expect(res.headers["content-type"]).toBe("image/webp");
   });
 });
