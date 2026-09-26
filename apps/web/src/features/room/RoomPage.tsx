@@ -92,11 +92,9 @@ import {
 } from "@/shared/ui/dropdown-menu";
 import { UserAvatar } from "@/shared/ui/avatar";
 import { SimpleTooltip, TooltipProvider } from "@/shared/ui/tooltip";
-import { Board } from "../canvas/Board.js";
 import { DeckPanel } from "../decks/DeckPanel.js";
 import { listLessonActivities } from "../materials/activity-api.js";
-import { LessonActivityPanel } from "../materials/LessonActivityPanel.js";
-import { ActivityStage } from "./ActivityStage.js";
+import { ActivityStage, Board, LessonActivityPanel, prefetchLessonStage } from "./lazy-stage.js";
 import { RecordingConsentBanner, RecordingPanel } from "../recordings/RecordingPanel.js";
 import { playRecordingSound } from "./recording-sound.js";
 import { playParticipantSound } from "./participant-sound.js";
@@ -243,6 +241,12 @@ export function RoomPage() {
   const guestSession = useGuestSessionStore((s) => s.session);
   const clearGuestSession = useGuestSessionStore((s) => s.clearSession);
   const isGuest = identity?.kind === "guest";
+
+  // Доска и задания — отдельные куски сборки; качаем их сразу, параллельно
+  // с подключением к уроку, чтобы к показу доски они уже были.
+  useEffect(() => {
+    prefetchLessonStage();
+  }, []);
   const selfId = identity?.id;
   const [leftAsGuest, setLeftAsGuest] = useState(false);
 

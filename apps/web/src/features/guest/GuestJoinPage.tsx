@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { GraduationCap, Link2Off } from "lucide-react";
 
@@ -9,7 +9,11 @@ import { PersonalDataConsent } from "@/shared/PersonalDataConsent";
 import { CenteredSpinner } from "@/shared/ui/spinner";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { prefetchLessonStage } from "@/features/room/lazy-stage";
+import { withRetry } from "@/shared/lazy-retry";
 import { enterGuestLesson, fetchGuestLessonInfo } from "./guest-api.js";
+
+const prefetchRoom = withRetry(() => import("@/features/room/RoomPage"));
 
 const NAME_MAX = 80;
 
@@ -23,6 +27,13 @@ export function GuestJoinPage() {
   const { token = "" } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const info = useAsync(() => fetchGuestLessonInfo(token), [token]);
+
+  // Пока ученик вводит имя, в фоне качаем сам урок и доску: на медленной
+  // сети к нажатию «Войти» они уже будут, и урок откроется сразу.
+  useEffect(() => {
+    prefetchRoom().catch(() => undefined);
+    prefetchLessonStage();
+  }, []);
 
   const [name, setName] = useState("");
   const [consent, setConsent] = useState(false);
