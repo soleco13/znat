@@ -24,13 +24,32 @@ import { toast } from "@/shared/ui/sonner";
 const DOCUMENT_SCREEN_SHARE_PRESET = new VideoPreset(1920, 1080, 1_000_000, 5, "medium");
 
 /**
- * Облегчённый слой демонстрации: 360p, 5 кадр/с, 150 кбит/с — экран почти
- * статичный, частота кадров не важна, а в канал 100–200 кбит/с пролезает.
+ * Дополнительные слои демонстрации под полным (настройки школы): сервер
+ * отдаёт каждому зрителю лучший слой, который пролезает в его канал, и сам
+ * переключает их при изменении связи (на ближайшем опорном кадре).
+ * - нижний: 360p, 5 кадр/с, 150 кбит/с — экран почти статичный, частота не
+ *   важна, а в канал 100–200 кбит/с пролезает;
+ * - средний: 540p (для источника 1080p — 720p), до 15 кадр/с, ~30% битрейта
+ *   полного (400–1200 кбит/с) — для средней связи. Без него разрыв между
+ *   нижним и полным был в 16 раз, и зритель с каналом ~1 Мбит/с всё время
+ *   смотрел размытый нижний слой.
+ * LiveKit делает третий слой, только если ширина источника ≥ 960 px.
  */
-function screenShareLowLayer(encoding: VideoPreset): VideoPreset {
+function screenShareExtraLayers(encoding: VideoPreset): VideoPreset[] {
   const { width, height } = encoding.resolution;
-  const scale = Math.min(1, 360 / height);
-  return new VideoPreset(Math.round(width * scale), Math.round(height * scale), 150_000, 5, "medium");
+  const scaled = (targetHeight: number) => {
+    const scale = Math.min(1, targetHeight / height);
+    return { w: Math.round(width * scale), h: Math.round(height * scale) };
+  };
+  const low = scaled(360);
+  const layers = [new VideoPreset(low.w, low.h, 150_000, 5, "medium")];
+  const midHeight = height >= 1080 ? 720 : 540;
+  if (height > midHeight) {
+    const mid = scaled(midHeight);
+    const midBitrate = Math.min(1_200_000, Math.max(400_000, Math.round(encoding.encoding.maxBitrate * 0.3)));
+    layers.push(new VideoPreset(mid.w, mid.h, midBitrate, 15, "medium"));
+  }
+  return layers;
 }
 
 function releaseScreenShare(lessonId: string) {
@@ -121,7 +140,7 @@ export function SelfScreenShareButton({
   }
 
   /**
-   * `withLowLayer` — дополнительный облегчённый слой (`screenShareLowLayer`):
+   * `withLowLayer` — дополнительные облегчённые слои (`screenShareExtraLayers`):
    * демонстрация одна на урок и шла ОДНИМ потоком по настройкам школы (720p,
    * 30 кадр/с, 2,5 Мбит/с); ученику на мобильной сети с каналом 100–200
    * кбит/с сервер её либо не отдавал вовсе, либо отдавал рывками — а сам
@@ -135,7 +154,7 @@ export function SelfScreenShareButton({
         { audio: false, resolution: encoding.resolution, contentHint: "detail" },
         {
           screenShareEncoding: encoding.encoding,
-          screenShareSimulcastLayers: [screenShareLowLayer(encoding)],
+          screenShareSimulcastLayers: screenShareExtraLayers(encoding),
           simulcast: true,
         },
       );
