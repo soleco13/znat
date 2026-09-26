@@ -8,7 +8,7 @@ const { authServiceMock, guestsServiceMock } = vi.hoisted(() => ({
 vi.mock("../modules/auth/service.js", () => authServiceMock);
 vi.mock("../modules/guests/service.js", () => guestsServiceMock);
 
-const { rateLimitKey, rateLimitMax, IDENTITY_RATE_LIMIT_PER_MINUTE, ANONYMOUS_RATE_LIMIT_PER_MINUTE } =
+const { rateLimitKey, rateLimitMax, isStaticAppRequest, IDENTITY_RATE_LIMIT_PER_MINUTE, ANONYMOUS_RATE_LIMIT_PER_MINUTE } =
   await import("./rate-limit-key.js");
 
 function request(opts: { authorization?: string; guestCookie?: string; ip?: string }): FastifyRequest {
@@ -54,5 +54,23 @@ describe("rateLimitKey", () => {
     expect(key).toBe("ip:1.2.3.4");
     expect(rateLimitMax(request({}), key)).toBe(ANONYMOUS_RATE_LIMIT_PER_MINUTE);
     expect(rateLimitMax(request({}), "guest:g-a")).toBe(IDENTITY_RATE_LIMIT_PER_MINUTE);
+  });
+});
+
+describe("isStaticAppRequest — что не считается в лимит", () => {
+  it("файлы сборки, страницы SPA, звуки — вне лимита", () => {
+    for (const url of ["/assets/RoomPage-abc.js", "/lessons/x/room", "/sounds/a.wav", "/sw.js", "/ping", "/"]) {
+      expect(isStaticAppRequest({ method: "GET", url })).toBe(true);
+    }
+  });
+
+  it("API, файлы, WebSocket урока и доски, вебхуки — под лимитом", () => {
+    for (const url of ["/api/v1/auth/login", "/files/k?exp=1&sig=s", "/ws?lessonId=x", "/collab", "/webhooks/livekit"]) {
+      expect(isStaticAppRequest({ method: "GET", url })).toBe(false);
+    }
+  });
+
+  it("не GET — всегда под лимитом", () => {
+    expect(isStaticAppRequest({ method: "POST", url: "/lessons/x/room" })).toBe(false);
   });
 });

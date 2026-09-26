@@ -15,7 +15,7 @@ import rbacPlugin from "./plugins/rbac.js";
 import lessonAccessPlugin from "./plugins/lesson-access.js";
 import recorderAccessPlugin from "./plugins/recorder-access.js";
 import metricsPlugin from "./plugins/metrics.js";
-import { rateLimitKey, rateLimitMax } from "./plugins/rate-limit-key.js";
+import { isStaticAppRequest, rateLimitKey, rateLimitMax } from "./plugins/rate-limit-key.js";
 import { serializeRequest } from "./plugins/log-redact.js";
 import { UPLOAD_LIMITS } from "./plugins/uploads.js";
 import { checkHealth } from "./plugins/health.js";
@@ -84,6 +84,7 @@ export function buildServer() {
   app.register(rateLimit, {
     max: rateLimitMax,
     keyGenerator: rateLimitKey,
+    allowList: isStaticAppRequest,
     timeWindow: "1 minute",
     redis: rateLimitRedis,
     nameSpace: "rl:",
