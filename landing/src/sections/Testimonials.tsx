@@ -12,7 +12,7 @@ const ITEMS = [
   },
   {
     quote:
-      "Редактор материалов — то, ради чего мы перешли. Методисты собирают проверочные сами, без вёрстки, а движок считает баллы за меня.",
+      "Редактор материалов — то, ради чего мы перешли. Методисты собирают проверочные сами, без программиста, а баллы платформа считает сама.",
     name: "Дмитрий С.",
     role: "Методист по математике",
     at: "10:14",
@@ -48,7 +48,7 @@ export function Testimonials() {
                   </span>
                 }
               >
-                <span className="block max-w-[58ch] rounded-[12px] bg-surface-2 px-4 py-3 text-[17px] leading-relaxed text-foreground">
+                <span className="block max-w-[58ch] rounded-md bg-surface-2 px-4 py-3 text-body text-foreground">
                   {t.quote}
                 </span>
               </ChatMsg>

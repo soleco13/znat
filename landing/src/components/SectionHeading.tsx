@@ -1,9 +1,11 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Words } from "./Ink";
 import { Reveal } from "./Reveal";
 
-/** Заголовок секции: крупный, слова выезжают по одному; без «эйброу»-плашек и нумерации. */
+/**
+ * Заголовок секции: крупный, без «эйброу»-плашек и нумерации.
+ * Появляется одним спокойным движением — пословная анимация только у h1 в hero.
+ */
 export function SectionHeading({
   title,
   subtitle,
@@ -17,25 +19,11 @@ export function SectionHeading({
 }) {
   const dark = tone === "dark";
   return (
-    <div className={cn("flex max-w-3xl flex-col gap-5", className)}>
-      <Words
-        as="h2"
-        className={cn(
-          "text-balance text-[34px] font-black leading-[1.05] tracking-tightest sm:text-[52px]",
-          dark ? "text-white" : "text-foreground",
-        )}
-      >
-        {title}
-      </Words>
+    <Reveal className={cn("flex max-w-3xl flex-col gap-5", className)}>
+      <h2 className={cn("text-h2 text-balance", dark ? "text-white" : "text-foreground")}>{title}</h2>
       {subtitle ? (
-        <Reveal
-          as="div"
-          delay={200}
-          className={cn("max-w-xl text-[17px] leading-relaxed", dark ? "text-white/65" : "text-muted-foreground")}
-        >
-          {subtitle}
-        </Reveal>
+        <p className={cn("max-w-xl text-body", dark ? "text-white/70" : "text-muted-foreground")}>{subtitle}</p>
       ) : null}
-    </div>
+    </Reveal>
   );
 }

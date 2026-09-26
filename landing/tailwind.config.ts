@@ -4,7 +4,8 @@ import tailwindcssAnimate from "tailwindcss-animate";
 /**
  * Дизайн-система «Матис» (Shkola / AutoCheck) — те же токены, что в
  * apps/web/tailwind.config.js. Значения приходят из src/index.css.
- * Лендинг добавляет свои keyframes для скролл-анимаций и «дорогих» эффектов.
+ * Лендинг добавляет только типографическую шкалу (text-caption … text-display):
+ * один источник размеров вместо десятка «13.5px / 15.5px / 16.5px».
  */
 export default {
   darkMode: ["class"],
@@ -48,6 +49,7 @@ export default {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
           light: "var(--c-success-light)",
+          ink: "var(--c-success-ink)",
         },
         warning: {
           DEFAULT: "hsl(var(--warning))",
@@ -58,7 +60,6 @@ export default {
           foreground: "hsl(var(--primary-foreground))",
           light: "var(--c-teal-light)",
         },
-        cyan: "var(--c-cyan)",
         danger: { DEFAULT: "var(--c-danger)", light: "var(--c-danger-light)" },
         warn: { DEFAULT: "var(--c-warn)", light: "var(--c-warn-light)" },
         muted: {
@@ -90,8 +91,6 @@ export default {
         md: "var(--radius)",
         lg: "var(--radius-lg)",
         xl: "var(--radius-xl)",
-        "2xl": "26px",
-        "3xl": "34px",
         pill: "var(--radius-pill)",
       },
       boxShadow: {
@@ -100,8 +99,16 @@ export default {
         DEFAULT: "var(--shadow)",
         md: "var(--shadow-md)",
         lg: "var(--shadow-lg)",
-        xl: "0 32px 80px -12px rgba(16,24,40,0.22), 0 12px 32px -8px rgba(16,24,40,0.12)",
-        glow: "0 0 0 1px rgba(29,78,216,0.18), 0 18px 50px -12px rgba(29,78,216,0.35)",
+      },
+      /* Шкала ~1.25: подпись → текст → лид → h3 → h2 → дисплей. */
+      fontSize: {
+        caption: ["13px", { lineHeight: "1.45" }],
+        small: ["15px", { lineHeight: "1.6" }],
+        body: ["17px", { lineHeight: "1.6" }],
+        lead: ["20px", { lineHeight: "1.55" }],
+        h3: ["26px", { lineHeight: "1.15", letterSpacing: "-0.025em", fontWeight: "700" }],
+        h2: ["clamp(2.125rem, 1.4rem + 2.4vw, 3.25rem)", { lineHeight: "1.05", letterSpacing: "-0.035em", fontWeight: "800" }],
+        display: ["clamp(2.75rem, 1rem + 5.6vw, 5.5rem)", { lineHeight: "1.02", letterSpacing: "-0.035em", fontWeight: "800" }],
       },
       maxWidth: { content: "1120px" },
       letterSpacing: {
@@ -109,10 +116,6 @@ export default {
         head: "var(--tracking-head)",
       },
       transitionTimingFunction: { ds: "cubic-bezier(0.2, 0.8, 0.2, 1)" },
-      backgroundImage: {
-        "grid-line":
-          "linear-gradient(to right, rgba(16,24,40,0.045) 1px, transparent 1px), linear-gradient(to bottom, rgba(16,24,40,0.045) 1px, transparent 1px)",
-      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },

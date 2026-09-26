@@ -1,5 +1,8 @@
+import { MotionConfig } from "motion/react";
+
 import { Dock, Nav } from "@/sections/Nav";
 import { Hero } from "@/sections/Hero";
+import { Audience } from "@/sections/Audience";
 import { Problem } from "@/sections/Problem";
 import { Features } from "@/sections/Features";
 import { LessonFlow } from "@/sections/LessonFlow";
@@ -14,24 +17,27 @@ import { Footer } from "@/sections/Footer";
 
 export function App() {
   return (
-    <div className="relative min-h-dvh bg-background">
-      <a href="#main" className="skip-link">К содержимому</a>
-      <Nav />
-      <Dock />
-      <main id="main">
-        <Hero />
-        <Problem />
-        <Features />
-        <LessonFlow />
-        <TaskEngine />
-        <HowItWorks />
-        <Security />
-        <Pricing />
-        <Testimonials />
-        <FAQ />
-        <CTA />
-      </main>
-      <Footer />
-    </div>
+    <MotionConfig reducedMotion="user">
+      <div className="relative min-h-dvh bg-background">
+        <a href="#main" className="skip-link">К содержимому</a>
+        <Nav />
+        <Dock />
+        <main id="main">
+          <Hero />
+          <Problem />
+          <Audience />
+          <Features />
+          <LessonFlow />
+          <TaskEngine />
+          <HowItWorks />
+          <Security />
+          <Pricing />
+          <Testimonials />
+          <FAQ />
+          <CTA />
+        </main>
+        <Footer />
+      </div>
+    </MotionConfig>
   );
 }

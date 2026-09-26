@@ -1,5 +1,4 @@
 import { ChatMsg } from "@/components/ChatMsg";
-import { Pencil } from "@/components/Ink";
 import { Reveal } from "@/components/Reveal";
 import { SectionHeading } from "@/components/SectionHeading";
 
@@ -7,7 +6,7 @@ const MESSAGES = [
   {
     who: "Марина Петровна",
     at: "09:52",
-    body: "Создала урок «Алгебра · 8 класс». Комната постоянная — ссылка не протухает.",
+    body: "Создала урок «Алгебра · 8 класс». Ссылка постоянная — отправляю один раз на весь курс."
   },
   {
     who: "Марина Петровна",
@@ -30,31 +29,25 @@ export function HowItWorks() {
     <section id="how" className="relative border-y border-border bg-white py-24 sm:py-32">
       <div className="container-l grid gap-14 lg:grid-cols-[1fr_minmax(0,460px)] lg:gap-20">
         <div>
-          <SectionHeading
-            title={
-              <>
-                От «создать» до «вести урок» — <Pencil kind="under" d={500}>три шага</Pencil>
-              </>
-            }
-          />
+          <SectionHeading title="От «создать» до «вести урок» — три шага" />
           <ol className="mt-12 max-w-md space-y-8">
             {[
-              ["Создайте урок", "Название, учитель, настройки класса."],
+              ["Создайте урок", "Название и время — это займёт минуту."],
               ["Пришлите ссылку", "Одна ссылка на весь класс. Ученик вводит имя — и в уроке."],
-              ["Ведите урок", "Готовьтесь один раз, повторяйте сколько нужно."],
+              ["Ведите урок", "Подготовились один раз — проводите сколько угодно раз."],
             ].map(([t, d], i) => (
               <Reveal as="li" key={t} delay={i * 130} className="flex gap-5">
-                <span className="mt-1 text-[15px] font-black tabular-nums text-primary">{i + 1}.</span>
+                <span className="mt-0.5 text-lead font-bold tabular-nums text-primary">{i + 1}.</span>
                 <span>
-                  <span className="block text-[20px] font-black tracking-tightest text-foreground">{t}</span>
-                  <span className="mt-1 block text-[15px] leading-relaxed text-muted-foreground">{d}</span>
+                  <span className="block text-lead font-bold tracking-tight text-foreground">{t}</span>
+                  <span className="mt-1 block text-small text-muted-foreground">{d}</span>
                 </span>
               </Reveal>
             ))}
           </ol>
         </div>
 
-        <Reveal className="lesson-ui self-start overflow-hidden rounded-[18px] border border-border bg-card shadow-lg">
+        <Reveal className="lesson-ui self-start overflow-hidden rounded-lg border border-border bg-card shadow-sm">
           <div role="tablist" className="flex shrink-0 gap-1 border-b border-border p-2.5">
             {["Участники", "Чат", "Материалы"].map((t) => (
               <span

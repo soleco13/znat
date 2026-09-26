@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { GraduationCap, Menu, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { StatusPill } from "@/lesson/parts";
+import { buttonVariants } from "@/components/ui/button";
 
 export const SECTIONS = [
+  { id: "audience", label: "Для кого" },
   { id: "features", label: "Возможности" },
   { id: "lesson", label: "Ход урока" },
   { id: "tasks", label: "Задания" },
@@ -31,7 +32,7 @@ function useActiveSection() {
   return active;
 }
 
-/** Шапка страницы — это шапка урока: та же разметка, что в комнате (RoomPage → header). */
+/** Шапка страницы — по разметке шапки урока (RoomPage → header). При скролле — сплошной фон и линия, без стекла. */
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -47,12 +48,12 @@ export function Nav() {
     <header
       className={cn(
         "fixed inset-x-0 top-0 z-50 border-b transition-colors duration-300",
-        scrolled || open ? "border-border bg-card/90 backdrop-blur-md" : "border-transparent bg-transparent",
+        scrolled || open ? "border-border bg-card" : "border-transparent bg-transparent",
       )}
     >
-      <div className="flex h-14 items-center gap-3 px-4 sm:px-6" style={{ animation: "nav-in 0.7s var(--ease) both" }}>
+      <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
         <a href="#top" className="flex min-w-0 items-center gap-3" aria-label="Матис — на главную">
-          <span className="flex size-[30px] shrink-0 items-center justify-center rounded-[10px] bg-primary text-primary-foreground">
+          <span className="flex size-[30px] shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <GraduationCap className="size-[17px]" aria-hidden />
           </span>
           <span className="flex min-w-0 flex-col">
@@ -62,26 +63,25 @@ export function Nav() {
             </span>
           </span>
         </a>
-        <span className="hidden sm:block">
-          <StatusPill />
-        </span>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
           <a
             href="/login"
-            className="hidden h-10 items-center rounded-[10px] px-3.5 text-[13.5px] font-semibold text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground sm:inline-flex"
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "hidden sm:inline-flex")}
           >
             Войти
           </a>
           <a
             href="#pricing"
-            className="btn-press inline-flex h-10 items-center rounded-[10px] bg-primary px-3.5 text-[13.5px] font-semibold text-primary-foreground shadow-xs transition-all hover:bg-primary-hover hover:shadow-[0_4px_12px_rgba(29,78,216,0.28)]"
+            className={buttonVariants({ size: "sm" })}
           >
-            Начать<span className="hidden sm:inline">&nbsp;бесплатно</span>
+            <span>
+              Начать<span className="hidden sm:inline"> бесплатно</span>
+            </span>
           </a>
           <button
             type="button"
-            className="grid size-11 cursor-pointer place-items-center rounded-[10px] text-muted-foreground transition-colors hover:bg-surface-3 md:hidden"
+            className="grid size-11 cursor-pointer place-items-center rounded-md text-muted-foreground transition-colors hover:bg-surface-3 md:hidden"
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? "Закрыть меню" : "Открыть меню"}
             aria-expanded={open}
@@ -98,12 +98,12 @@ export function Nav() {
               key={l.id}
               href={`#${l.id}`}
               onClick={() => setOpen(false)}
-              className="rounded-[10px] px-3 py-3 text-[16px] font-semibold text-foreground active:bg-surface-3"
+              className="rounded-md px-3 py-3 text-body font-semibold text-foreground active:bg-surface-3"
             >
               {l.label}
             </a>
           ))}
-          <a href="/login" className="rounded-[10px] px-3 py-3 text-[16px] font-semibold text-muted-foreground">
+          <a href="/login" className="rounded-md px-3 py-3 text-body font-semibold text-muted-foreground">
             Войти
           </a>
         </div>
@@ -162,7 +162,7 @@ export function Dock() {
         hidden ? "pointer-events-none translate-y-6 opacity-0" : "translate-y-0 opacity-100",
       )}
     >
-      <div ref={wrap} className="relative rounded-full border border-border bg-card/95 shadow-lg backdrop-blur-md">
+      <div ref={wrap} className="relative rounded-full border border-border bg-card shadow-md">
         <div className="flex items-center gap-1.5 p-1.5">
           {SECTIONS.map((s) => (
             <a
@@ -173,7 +173,7 @@ export function Dock() {
               href={`#${s.id}`}
               tabIndex={hidden ? -1 : 0}
               aria-current={active === s.id ? "true" : undefined}
-              className="inline-flex h-11 items-center rounded-full px-4 text-[14px] font-semibold text-text-2 transition-colors duration-200 hover:text-foreground focus-visible:outline-2"
+              className="inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-full px-4 text-[14px] font-semibold text-text-2 transition-colors duration-200 hover:text-foreground focus-visible:outline-2"
             >
               {s.label}
             </a>
@@ -186,7 +186,7 @@ export function Dock() {
         >
           <div className="flex items-center gap-1.5 p-1.5">
             {SECTIONS.map((s) => (
-              <span key={s.id} className="inline-flex h-11 items-center rounded-full px-4 text-[14px] font-semibold text-primary">
+              <span key={s.id} className="inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-full px-4 text-[14px] font-semibold text-primary">
                 {s.label}
               </span>
             ))}

@@ -16,11 +16,12 @@
   --c-primary-muted: #c7d7fe;
   --c-teal: #0d9488;
   --c-teal-light: #effcf9;
-  --c-cyan: #06d6c4;
 
   --c-text: #101828;
   --c-text-2: #475467;
-  --c-text-3: #98a2b3;
+  /* В приложении #98a2b3 (2.4:1 на фоне — не проходит AA). На лендинге этим
+     цветом набраны подписи и мелкий текст, поэтому темнее: 4.6:1. */
+  --c-text-3: #667085;
 
   --c-bg: #f6f7f9;
   --c-surface: #ffffff;
@@ -35,6 +36,8 @@
   --c-warn-light: #fffaeb;
   --c-success: #16a34a;
   --c-success-light: #f0fdf4;
+  /* Текст на success-light: #16a34a даёт там 3.15:1, этот — 4.8:1 (AA). */
+  --c-success-ink: #15803d;
 
   /* ---------- Typography ---------- */
   /* Manrope (variable, cyrillic) лежит в бандле через @fontsource-variable —
@@ -73,7 +76,7 @@
   --dur-2: 320ms;
   --dur-3: 560ms;
   --dur-4: 900ms;
-  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 
   /* ---------- Семантические shadcn-токены (HSL) ---------- */
@@ -236,13 +239,12 @@
   .typing i:nth-child(2) { animation-delay: 0.12s; }
   .typing i:nth-child(3) { animation-delay: 0.24s; }
 
-  /* Сообщение чата: появляется со сдвигом и лёгким «пружинящим» масштабом. */
-  .msg-in { animation: msg-in var(--dur-3) var(--ease-spring) both; transform-origin: left bottom; }
+  /* Сообщение чата: появляется со сдвигом снизу, без пружины. */
+  .msg-in { animation: msg-in var(--dur-2) var(--ease) both; transform-origin: left bottom; }
 
-  /* Кнопка: нажатие «вдавливает», стрелка едет. */
-  .btn-press { transition: transform var(--dur-1) var(--ease), box-shadow var(--dur-2) var(--ease), background-color var(--dur-2) var(--ease); }
-  .btn-press:hover { transform: translateY(-2px); }
-  .btn-press:active { transform: translateY(0) scale(0.98); }
+  /* Кнопка: только отклик на нажатие — без подъёма и свечения на hover. */
+  .btn-press { transition: transform var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease); }
+  .btn-press:active { transform: scale(0.98); }
 
   /* Плавающее окно урока в герое — поднимается при скролле (переменные ставит JS). */
   .scroll-lift {
@@ -371,9 +373,6 @@
     animation: var(--path) var(--dur, 3s) var(--ease) var(--d, 0ms) forwards;
     opacity: 0;
   }
-
-  /* Кровать-«плавающая» подпись рядом с окном урока */
-  .float-y { animation: float-y 7s ease-in-out infinite; }
 }
 
 @layer utilities {
@@ -408,12 +407,28 @@
     .pop, .slide-in { opacity: 1; animation: none; }
     .cursor-move { opacity: 0; animation: none; }
     .bar-grow { transform: none; animation: none; }
-    .float-y { animation: none; }
     .scroll-lift { transform: none; }
     .msg-in { animation: none; }
     .notebook::before { animation: none; }
     .dock-hl { transition: none; }
   }
+}
+
+/* Окно урока в hero догоняет текст при скролле — единственный параллакс страницы.
+   Скролл-таймлайн: linear, fill both, заканчивается к cover 35%. Без поддержки или
+   при reduced-motion окно просто стоит на месте. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-rise {
+      animation: hero-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 35%;
+    }
+  }
+}
+@keyframes hero-rise {
+  from { transform: translate3d(0, 40px, 0); }
+  to { transform: none; }
 }
 
 @keyframes draw { to { stroke-dashoffset: 0; } }
@@ -439,16 +454,12 @@
 }
 @keyframes cell-fill { to { background: var(--fill, #16a34a); } }
 @keyframes bar-grow { to { transform: scaleY(1); } }
-@keyframes float-y {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
 @keyframes dot-bounce {
   0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
   30% { transform: translateY(-4px); opacity: 1; }
 }
 @keyframes msg-in {
-  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }
 }
 @keyframes margin-draw { from { transform: scaleY(0); } to { transform: scaleY(1); } }
@@ -470,4 +481,13 @@
   0% { opacity: 0; transform: translate(220px, 400px); }
   15% { opacity: 1; }
   100% { opacity: 1; transform: translate(330px, 320px); }
+}
+
+/* Бегущая строка (Marquee): две копии ленты едут влево на свою ширину. */
+@keyframes marquee {
+  to { transform: translateX(-100%); }
+}
+.marquee-track { animation: marquee linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation: none; }
 }

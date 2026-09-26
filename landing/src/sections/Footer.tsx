@@ -1,4 +1,5 @@
 import { Logo } from "@/components/Logo";
+import { buttonVariants } from "@/components/ui/button";
 
 const GROUPS = [
   {
@@ -6,7 +7,7 @@ const GROUPS = [
     links: [
       { label: "Возможности", href: "#features" },
       { label: "Ход урока", href: "#lesson" },
-      { label: "Движок заданий", href: "#tasks" },
+      { label: "Задания", href: "#tasks" },
       { label: "Тарифы", href: "#pricing" },
     ],
   },
@@ -16,7 +17,7 @@ const GROUPS = [
       { label: "Как это работает", href: "#how" },
       { label: "Вопросы и ответы", href: "#faq" },
       { label: "Запросить демо", href: "#cta" },
-      { label: "Статус сервиса", href: "#" },
+      { label: "Кому подойдёт", href: "#audience" },
     ],
   },
   {
@@ -37,15 +38,15 @@ export function Footer() {
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
             <Logo />
-            <p className="mt-4 max-w-xs text-[13.5px] leading-relaxed text-muted-foreground">
+            <p className="mt-4 max-w-xs text-[14px] leading-relaxed text-muted-foreground">
               Платформа для онлайн-уроков: доска, слайды, материалы, задания, видео и запись —
               в одном пространстве. По подписке.
             </p>
             <div className="mt-5 flex gap-2">
-              <a href="#pricing" className="rounded-lg border border-border bg-card px-3 py-2 text-[13px] font-semibold text-foreground shadow-xs hover:bg-secondary">
+              <a href="#pricing" className={buttonVariants({ variant: "secondary", size: "sm" })}>
                 Начать бесплатно
               </a>
-              <a href="/login" className="rounded-lg px-3 py-2 text-[13px] font-medium text-muted-foreground hover:text-foreground">
+              <a href="/login" className={buttonVariants({ variant: "ghost", size: "sm" })}>
                 Войти
               </a>
             </div>
@@ -53,7 +54,7 @@ export function Footer() {
 
           {GROUPS.map((g) => (
             <div key={g.title}>
-              <h4 className="text-[12px] font-bold uppercase tracking-[0.08em] text-text-3">
+              <h4 className="text-[14px] font-semibold text-foreground">
                 {g.title}
               </h4>
               <ul className="mt-3 space-y-2.5">
@@ -61,7 +62,7 @@ export function Footer() {
                   <li key={l.label}>
                     <a
                       href={l.href}
-                      className="text-[13.5px] text-muted-foreground transition-colors hover:text-foreground"
+                      className="text-[14px] text-muted-foreground transition-colors hover:text-foreground"
                     >
                       {l.label}
                     </a>
@@ -72,12 +73,8 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-border pt-6 text-[12.5px] text-text-3 sm:flex-row">
-          <span>© {new Date().getFullYear()} «Матис». Все права защищены.</span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="size-1.5 rounded-full bg-success" />
-            Все системы работают
-          </span>
+        <div className="mt-12 border-t border-border pt-6 text-caption text-text-3">
+          © {new Date().getFullYear()} «Матис». Все права защищены.
         </div>
       </div>
     </footer>

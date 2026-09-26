@@ -22,12 +22,12 @@ const ROWS = [
     after: "Видео, доска, слайды, задания и чат — в одном окне урока",
   },
   {
-    before: "Ученик ставит 3 расширения и всё равно «меня не видно»",
+    before: "Ученик ставит три программы и всё равно «меня не слышно»",
     after: "Ученик открывает ссылку и сразу в классе",
   },
   {
     before: "Демонстрация экрана вместо слайдов — текст расплывается",
-    after: "Слайды рендерятся чётко, поверх них можно писать",
+    after: "Презентация видна чётко, и на ней можно рисовать"
   },
   {
     before: "Ответы собираются вручную после урока",
@@ -35,7 +35,7 @@ const ROWS = [
   },
   {
     before: "Запись — отдельный сервис и отдельная оплата",
-    after: "Запись включается одной кнопкой, лежит рядом с уроком",
+    after: "Запись включается одной кнопкой и хранится рядом с уроком",
   },
 ];
 
@@ -50,13 +50,13 @@ function TabStrip() {
   }, [visible]);
 
   return (
-    <div ref={ref} className="overflow-hidden rounded-[18px] border border-border bg-card shadow-md">
+    <div ref={ref} className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
       <div className="flex items-end gap-1 border-b border-border bg-surface-3 px-2.5 pt-2.5">
         {TABS.map((t, i) => (
           <span
             key={t.name}
             className={cn(
-              "flex h-9 min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap rounded-t-[10px] bg-card text-[13px] font-medium text-text-2 transition-all duration-700 ease-ds",
+              "flex h-9 min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap rounded-t-[10px] bg-card text-[13px] font-medium text-text-2 transition-[max-width,padding,opacity,flex-grow] duration-700 ease-ds",
               merged ? "max-w-0 px-0 opacity-0" : "max-w-[200px] px-3 opacity-100",
             )}
             style={{ transitionDelay: merged ? `${i * 90}ms` : "0ms", flex: merged ? "0 1 0px" : "1 1 0px" }}
@@ -68,7 +68,7 @@ function TabStrip() {
         ))}
         <span
           className={cn(
-            "flex h-9 min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap rounded-t-[10px] bg-card px-3 text-[13px] font-semibold text-foreground transition-all duration-700 ease-ds",
+            "flex h-9 min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap rounded-t-[10px] bg-card px-3 text-[13px] font-semibold text-foreground transition-[max-width,padding,opacity,flex-grow] duration-700 ease-ds",
             merged ? "max-w-[260px] flex-[1_1_0px]" : "max-w-0 flex-[0_1_0px] px-0 opacity-0",
           )}
           style={{ transitionDelay: merged ? "500ms" : "0ms" }}
@@ -82,7 +82,7 @@ function TabStrip() {
       <div className="px-5 py-7 sm:px-8">
         <p
           className={cn(
-            "text-[15px] transition-all duration-700 ease-ds",
+            "text-small transition-colors duration-700 ease-ds",
             merged ? "text-foreground" : "text-muted-foreground",
           )}
         >
@@ -99,7 +99,7 @@ export function Problem() {
       <div className="container-l">
         <SectionHeading
           title="Урок не должен начинаться со слов «сейчас, я найду вкладку»"
-          subtitle="Каждый инструмент по отдельности хорош. Вместе они крадут первые десять минут урока и внимание учеников."
+          subtitle="Каждый сервис по отдельности хорош. Но вместе они съедают первые десять минут урока и внимание учеников. А родители платят за полный час."
         />
 
         <Reveal className="mt-14 max-w-3xl">
@@ -109,11 +109,11 @@ export function Problem() {
         <ul className="mt-16 max-w-4xl divide-y divide-border border-y border-border">
           {ROWS.map((r, i) => (
             <li key={i} className="grid gap-2 py-6 sm:grid-cols-2 sm:gap-10">
-              <p className="text-[17px] leading-snug text-muted-foreground">
+              <p className="text-body text-muted-foreground">
                 <Strike d={i * 120}>{r.before}</Strike>
               </p>
               <Reveal delay={350 + i * 120}>
-                <p className="text-[17px] font-semibold leading-snug text-foreground">{r.after}</p>
+                <p className="text-body font-semibold text-foreground">{r.after}</p>
               </Reveal>
             </li>
           ))}

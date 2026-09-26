@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 
-import { Words } from "@/components/Ink";
 import { useMedia } from "@/hooks/useMedia";
 import { DESKTOP_H, DESKTOP_W, FitBox, PHONE_H, PHONE_W, PhoneWindow, RoomWindow, type DrawerTab, type Scene } from "@/lesson/RoomWindow";
 
@@ -17,29 +16,29 @@ const STEPS: Step[] = [
     scene: "people",
     drawer: null,
     title: "Класс на связи",
-    text: "Плитки участников, кто говорит — подсвечен, поднятая рука видна сразу. Слабую связь вы заметите раньше, чем ученик пожалуется.",
-    points: ["До 30 учеников", "Режимы «лекция» и «обсуждение»", "Приоритет камере учителя"],
+    text: "Все ученики перед глазами: кто говорит — подсвечен, поднятую руку видно сразу. Если у кого-то плохой интернет, вы заметите это раньше, чем он пожалуется.",
+    points: ["До 30 учеников с камерами", "Режимы «лекция» и «обсуждение»", "Вас всегда видно лучше всех"],
   },
   {
     scene: "board",
     drawer: null,
     title: "Доска, на которой пишут вместе",
     text: "Учитель объясняет, ученик у доски решает, класс видит оба курсора. Права на рисование — по одному клику.",
-    points: ["До 3 листов + слайды", "Курсоры и «следовать за учителем»", "Undo/redo не мешает соседу"],
+    points: ["Рисуйте поверх презентации", "Все смотрят туда же, куда и вы", "Никто не сотрёт чужое"],
   },
   {
     scene: "task",
     drawer: null,
     title: "Задание, которое класс делает вживую",
-    text: "Выдали материал — у каждого своя копия. Красный карандаш учителя появляется у ученика сам, пока тот отвечает.",
-    points: ["Индивидуальная копия", "Автосохранение каждые 5 секунд", "Пометки учителя поверх работы"],
+    text: "Выдали задание — у каждого своя тетрадь. Ваш красный карандаш появляется у ученика прямо во время ответа, как в обычном классе.",
+    points: ["У каждого своя тетрадь", "Ответы сохраняются сами", "Пометки учителя прямо в работе"],
   },
   {
     scene: "progress",
     drawer: null,
     title: "Учитель видит, кто застрял",
     text: "Прогресс класса обновляется на глазах. Нажмите на ученика — откроется его работа с текущими ответами.",
-    points: ["Ответили · в работе · застряли", "Ключи ответов не уходят на клиент", "Разбор и очередь проверки"],
+    points: ["Видно, кто ответил, а кто застрял", "Правильные ответы не подсмотреть", "Разбор ошибок всем классом"],
   },
   {
     scene: "people",
@@ -93,7 +92,7 @@ export function LessonFlow() {
       <div ref={wrapRef} style={{ height: `${STEPS.length * 85 + 15}vh` }}>
         <div className="sticky top-0 flex h-svh flex-col justify-center overflow-hidden bg-background pt-14">
           <div className="container-l">
-            <div className="overflow-hidden rounded-[18px] border border-border bg-card shadow-xl">
+            <div className="overflow-hidden rounded-lg border border-border bg-card shadow-md">
               {desktop ? (
                 <FitBox width={DESKTOP_W} height={DESKTOP_H} reserveH={300}>
                   <RoomWindow scene={step.scene} drawer={step.drawer} />
@@ -108,13 +107,11 @@ export function LessonFlow() {
             {/* подпись шага — как субтитры под окном */}
             <div className="mt-5 grid min-h-[104px] items-start gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] md:gap-10">
               <div key={idx} className="fade-in">
-                <Words as="h2" className="text-[22px] font-black leading-tight tracking-tightest sm:text-[30px]" step={30}>
-                  {step.title}
-                </Words>
+                <h2 className="text-[22px] font-black leading-tight tracking-tightest sm:text-[30px]">{step.title}</h2>
               </div>
               <div key={`t${idx}`} className="fade-in" style={{ animationDelay: "120ms" }}>
-                <p className="max-w-xl text-[14px] leading-relaxed text-muted-foreground md:text-[15px]">{step.text}</p>
-                <ul className="mt-3 hidden md:flex flex-wrap gap-x-5 gap-y-1 text-[13.5px] font-semibold text-foreground">
+                <p className="max-w-xl text-small text-muted-foreground">{step.text}</p>
+                <ul className="mt-3 hidden flex-wrap gap-x-5 gap-y-1 text-[14px] font-semibold text-foreground md:flex">
                   {step.points.map((p) => (
                     <li key={p} className="flex items-center gap-2">
                       <span className="size-1.5 rounded-full bg-primary" />

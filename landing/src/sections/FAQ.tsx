@@ -13,19 +13,19 @@ const QA = [
   },
   {
     q: "Сколько человек выдержит групповой урок?",
-    a: "Класс до 30 учеников с видео. Платформа сама управляет нагрузкой: в режиме «Лекция» видео учеников не передаётся, в «Обсуждении» — сетка до 9 активных плиток. Одновременно говорят до 4 учеников, микрофон включает учитель.",
+    a: "До 30 учеников с видео. Для больших классов есть режим «Лекция»: ученики видят и слышат учителя, а слово дают по поднятой руке. В режиме «Обсуждение» на экране до 9 учеников сразу. Кто и когда говорит — решает учитель."
   },
   {
     q: "Чем это лучше связки Zoom + Miro + Google Формы?",
-    a: "Всё в одном окне и под одним аккаунтом: не нужно переключать вкладки, давать три ссылки и сводить ответы вручную. Слайды рендерятся чётко (не «демонстрация экрана»), задания проверяются автоматически, запись лежит рядом с уроком. И одна подписка вместо нескольких.",
+    a: "Всё в одном окне: не нужно переключать вкладки, рассылать три ссылки и собирать ответы вручную. Презентация показывается чётко, задания проверяются сами, запись лежит рядом с уроком. И вы платите за одну подписку вместо нескольких."
   },
   {
     q: "Можно развернуть на своём сервере?",
-    a: "Да, на тарифе «Сеть». Вся платформа — это один docker-compose: приложение, база, Redis, медиасервер и конвертер презентаций. Данные и видеотрафик остаются у вас, обновление — git pull.",
+    a: "Да, на тарифе «Сеть». Мы сами установим платформу на ваш сервер и поможем с настройкой. Все уроки, записи и данные учеников останутся только у вас."
   },
   {
-    q: "Как обстоят дела с 152-ФЗ и записью уроков?",
-    a: "Ученик не является учётной записью и не оставляет персональных данных за пределами сессии урока. Запись включается только явным действием, участникам показывается баннер согласия, ссылки на скачивание — с ограниченным сроком.",
+    q: "Это законно? Что с персональными данными и записью?",
+    a: "Всё по закону. Ученикам не нужно регистрироваться и оставлять телефон или почту — достаточно имени. Запись включается только вручную, и все участники видят предупреждение. Скачать запись можно только по временной ссылке."
   },
   {
     q: "Что с материалами — их надо делать с нуля?",
@@ -56,25 +56,25 @@ export function FAQ() {
           {QA.map((item, i) => {
             const on = open === i;
             return (
-              <div key={i} className="rounded-[10px]">
+              <div key={i} className="rounded-md">
                 <button
                   type="button"
                   onClick={() => setOpen(on ? -1 : i)}
                   aria-expanded={on}
                   className={cn(
-                    "group flex min-h-[56px] w-full cursor-pointer items-center gap-3 rounded-[10px] p-2.5 text-left transition-colors duration-200 hover:bg-surface-2 focus-visible:outline-2",
+                    "flex min-h-[56px] w-full cursor-pointer items-center gap-3 rounded-md p-2.5 text-left transition-colors duration-150 hover:bg-surface-2 focus-visible:outline-2",
                     on && "bg-surface-2",
                   )}
                 >
                   <UserAvatar name={ASKERS[i % ASKERS.length]!} size={36} />
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="flex min-w-0 items-center gap-1.5">
-                      <span className="text-[15.5px] font-medium text-foreground">{item.q}</span>
+                      <span className="text-small font-semibold text-foreground">{item.q}</span>
                     </span>
                     <span className="truncate text-xs text-text-3">{ASKERS[i % ASKERS.length]} · поднял(а) руку</span>
                   </span>
                   <Hand
-                    className={cn("size-4 shrink-0 origin-bottom text-warning transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:-rotate-12 group-hover:scale-110", on && "-rotate-12 scale-125")}
+                    className={cn("size-4 shrink-0 origin-bottom text-warning transition-transform duration-200 ease-ds", on && "-rotate-12")}
                     aria-hidden
                   />
                 </button>
@@ -90,7 +90,7 @@ export function FAQ() {
                           учитель
                         </span>
                       </span>
-                      <span className="max-w-[60ch] self-start rounded-[10px] bg-primary-light px-3 py-2.5 text-[15px] leading-relaxed text-foreground">
+                      <span className="max-w-[60ch] self-start rounded-md bg-primary-light px-3 py-2.5 text-small text-foreground">
                         {item.a}
                       </span>
                     </div>

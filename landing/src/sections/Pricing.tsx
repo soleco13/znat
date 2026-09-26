@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Reveal } from "@/components/Reveal";
 import { SectionHeading } from "@/components/SectionHeading";
+import { buttonVariants } from "@/components/ui/button";
 import { LBadge } from "@/lesson/parts";
 
 type Plan = {
@@ -41,7 +42,7 @@ const PLANS: Plan[] = [
       "До 15 учителей, класс до 30 учеников",
       "Всё из «Репетитора»",
       "Редактор материалов для методистов",
-      "Разбор, аналитика по классу, очередь проверки",
+      "Успеваемость по каждому классу и ученику",
       "Запись без лимита минут",
       "Роли: администратор · методист · учитель",
       "Приоритетная поддержка",
@@ -55,10 +56,10 @@ const PLANS: Plan[] = [
     cta: "Обсудить внедрение",
     features: [
       "Учителя и ученики без ограничений",
-      "Развёртывание на вашем сервере (self-hosted)",
+      "Установка на ваш собственный сервер",
       "Свой домен и брендирование",
-      "SSO и интеграция с вашей CRM",
-      "SLA и выделенный менеджер",
+      "Вход через ваш сайт и связка с вашей CRM",
+      "Гарантия бесперебойной работы и личный менеджер",
       "Помощь с миграцией материалов",
     ],
     note: "Цена по договорённости",
@@ -104,18 +105,18 @@ export function Pricing() {
       <div className="container-l">
         <SectionHeading
           title="Одна подписка вместо пяти"
-          subtitle="Считали, сколько уходит на Zoom, Miro и сервис записи по отдельности? Здесь это дешевле — и в одном окне."
+          subtitle="Посчитайте, сколько сейчас уходит на видеосвязь, онлайн-доску и сервис записи. Здесь всё это дешевле — и в одном окне."
         />
 
         <Reveal className="mt-14 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-20">
           {/* Подбор по числу учителей */}
           <div>
-            <p className="text-[15px] font-semibold text-text-2">Сколько у вас учителей?</p>
+            <p className="text-small font-semibold text-text-2">Сколько у вас учителей?</p>
             <div className="mt-3 flex items-end gap-3">
               <span className="text-[88px] font-black leading-[0.9] tracking-tightest tabular-nums">
                 {teachers >= 20 ? "20+" : teachers}
               </span>
-              <span className="pb-2 text-[15px] text-muted-foreground">
+              <span className="pb-2 text-small text-muted-foreground">
                 {teachers === 1 ? "учитель" : teachers < 5 ? "учителя" : "учителей"}
               </span>
             </div>
@@ -132,7 +133,7 @@ export function Pricing() {
                 className="price-range w-full"
                 style={{ ["--p" as string]: `${pct}%` } as React.CSSProperties}
               />
-              <div className="relative mt-3 h-4 text-[12.5px] text-text-3">
+              <div className="relative mt-3 h-4 text-caption text-text-3">
                 <span className="absolute left-0">1</span>
                 <span className="absolute -translate-x-1/2" style={{ left: `${(14 / 19) * 100}%` }}>
                   15
@@ -143,7 +144,7 @@ export function Pricing() {
 
             <div className="lesson-ui mt-10 inline-flex items-center gap-3">
               <span className="text-[14px] font-semibold text-text-2">Оплата</span>
-              <span className="inline-flex items-center gap-0.5 rounded-[11px] bg-surface-3 p-1 text-muted-foreground">
+              <span className="inline-flex items-center gap-0.5 rounded-md bg-surface-3 p-1 text-muted-foreground">
                 {[
                   ["Помесячно", false],
                   ["На год", true],
@@ -153,7 +154,7 @@ export function Pricing() {
                     type="button"
                     onClick={() => setYearly(y as boolean)}
                     className={cn(
-                      "inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-lg px-4 py-1.5 text-sm font-semibold transition-all duration-200",
+                      "inline-flex min-h-9 cursor-pointer items-center justify-center whitespace-nowrap rounded-sm px-4 py-1.5 text-sm font-semibold transition-colors duration-150",
                       yearly === y ? "bg-card text-foreground shadow-xs" : "hover:text-foreground",
                     )}
                   >
@@ -169,7 +170,7 @@ export function Pricing() {
           <div key={plan.id} className="fade-in">
             <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-foreground pb-5">
               <h3 className="text-[34px] font-black tracking-tightest">{plan.name}</h3>
-              <p className="text-[15px] text-muted-foreground">{plan.tagline}</p>
+              <p className="text-small text-muted-foreground">{plan.tagline}</p>
             </div>
             <div className="mt-6 flex items-end gap-2">
               {plan.monthly === null ? (
@@ -179,11 +180,11 @@ export function Pricing() {
                   <span className="text-[60px] font-black leading-none tracking-tightest tabular-nums">
                     {priceFmt.format(Math.round(shown))} ₽
                   </span>
-                  <span className="pb-1.5 text-[15px] text-muted-foreground">/ мес</span>
+                  <span className="pb-1.5 text-small text-muted-foreground">/ мес</span>
                 </>
               )}
             </div>
-            <p className="mt-2 h-5 text-[13px] text-text-3">
+            <p className="mt-2 h-5 text-caption text-text-3">
               {plan.monthly !== null && yearly ? `${priceFmt.format(plan.monthly * 10)} ₽ в год` : (plan.note ?? " ")}
             </p>
 
@@ -191,7 +192,7 @@ export function Pricing() {
               {plan.features.map((f, i) => (
                 <li
                   key={f}
-                  className="slide-in flex gap-3 text-[15.5px] leading-snug text-foreground"
+                  className="slide-in flex gap-3 text-small text-foreground"
                   style={{ ["--d" as string]: `${i * 55}ms` } as React.CSSProperties}
                 >
                   <Check className="mt-0.5 size-[18px] shrink-0 text-primary" />
@@ -202,14 +203,14 @@ export function Pricing() {
 
             <a
               href="#cta"
-              className="btn-press mt-9 inline-flex h-[54px] items-center justify-center rounded-[14px] bg-primary px-8 text-[16px] font-semibold text-primary-foreground hover:bg-primary-hover hover:shadow-[0_10px_30px_-8px_rgba(29,78,216,0.55)]"
+              className={cn(buttonVariants({ size: "cta" }), "mt-9")}
             >
               {plan.cta}
             </a>
           </div>
         </Reveal>
 
-        <Reveal className="mt-14 text-[14px] text-muted-foreground">
+        <Reveal className="mt-14 text-small text-muted-foreground">
           Все тарифы — 14 дней бесплатно, без карты. Ученики никогда не платят и не заводят аккаунт.
         </Reveal>
       </div>

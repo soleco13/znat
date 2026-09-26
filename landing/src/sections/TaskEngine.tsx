@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
-import { Mark, Words } from "@/components/Ink";
 import { Reveal } from "@/components/Reveal";
 import { SectionHeading } from "@/components/SectionHeading";
 import { useReveal } from "@/hooks/useReveal";
@@ -12,21 +11,21 @@ const TYPES = [
   "Выбор нескольких",
   "Верно / неверно",
   "Ввод текста",
-  "Числовой ответ с допуском",
-  "Развёрнутый ответ + рубрика",
-  "Пропуски: выпадающий список",
-  "Пропуски: ввод",
+  "Ответ числом",
+  "Развёрнутый ответ",
+  "Выбрать слово в пропуске",
+  "Вписать пропущенное",
   "Соотнесение",
   "Упорядочивание",
-  "Классификация",
+  "Разложить по группам",
   "Перетащить слова",
-  "Точка на изображении",
+  "Отметить на картинке",
   "Начерти на холсте",
   "Ответ на числовой прямой",
   "Соединить линиями",
   "Уравнять реакцию",
   "Построить график",
-  "Ответ формулой",
+  "Написать формулу",
   "Загрузить фото решения",
   "Запись голоса",
   "Кроссворд · сканворд",
@@ -34,16 +33,16 @@ const TYPES = [
 
 const PILLARS = [
   {
-    title: "Редактор для методиста",
-    text: "Конструктор в духе Notion: команда «/», карточки-заготовки, живое превью «как видит ученик», версии и ревью.",
+    title: "Собирается как конструктор",
+    text: "Выбрали шаблон, вписали вопрос — готово. Сразу видно, как задание увидит ученик. Справится любой учитель, не только методист.",
   },
   {
-    title: "Проверка на сервере",
-    text: "Допуски absolute/relative/percent, регэкспы, опечатки, единицы измерения. Частичные баллы. Ключи не текут на клиент.",
+    title: "Проверяет по-честному",
+    text: "Засчитает «5 см» и «5 сантиметров», простит опечатку, даст баллы за частично верный ответ. А подсмотреть правильные ответы ученик не сможет.",
   },
   {
     title: "Импорт из Word и PDF",
-    text: "Загрузите документ с вопросами — платформа разберёт его в блоки материала. Дальше правьте в редакторе.",
+    text: "Уже есть задания в документах? Загрузите файл — вопросы сами разложатся по карточкам. Годы наработок не пропадут.",
   },
 ];
 
@@ -65,10 +64,16 @@ function QuestionCard({
 }) {
   const { ref, visible } = useReveal<HTMLDivElement>({ threshold: 0.5 });
   const [on, setOn] = useState(false);
+  // Через мгновение после ответа платформа «проверяет» работу: красная галочка + баллы.
+  const [checked, setChecked] = useState(false);
   useEffect(() => {
     if (!visible) return;
-    const t = setTimeout(() => setOn(true), delay + 700);
-    return () => clearTimeout(t);
+    const t1 = setTimeout(() => setOn(true), delay + 700);
+    const t2 = setTimeout(() => setChecked(true), delay + 1800);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }, [visible, delay]);
   return (
     <div
@@ -81,12 +86,36 @@ function QuestionCard({
         <div className="text-sm">
           <p className="my-1">{prompt}</p>
         </div>
-        <LBadge variant="muted" className="shrink-0">
-          {points}
-        </LBadge>
+        <span className="flex shrink-0 items-center gap-1.5">
+          <CheckTick drawn={checked} />
+          <LBadge variant={checked ? "green" : "muted"} className={cn("transition-colors duration-300", checked && "text-success-ink")}>
+            {checked ? `Верно · ${points}` : points}
+          </LBadge>
+        </span>
       </div>
       <div className="mt-3">{children(on)}</div>
     </div>
+  );
+}
+
+/** Галочка учительским красным карандашом — прорисовывается штрихом, когда ответ проверен. */
+function CheckTick({ drawn }: { drawn: boolean }) {
+  return (
+    <svg aria-hidden viewBox="0 0 24 20" className="h-4 w-5 overflow-visible">
+      <path
+        d="M2 11 C 4 13, 6 15.5, 8.5 18 C 12 11, 16.5 5.5, 22.5 1.5"
+        fill="none"
+        stroke="#e03131"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{
+          strokeDasharray: 32,
+          strokeDashoffset: drawn ? 0 : 32,
+          transition: "stroke-dashoffset 450ms var(--ease)",
+        }}
+      />
+    </svg>
   );
 }
 
@@ -113,12 +142,8 @@ export function TaskEngine() {
     <section id="tasks" className="relative py-24 sm:py-32">
       <div className="container-l">
         <SectionHeading
-          title={
-            <>
-              Второй продукт <Mark d={400}>внутри</Mark> первого
-            </>
-          }
-          subtitle="Не тест из трёх кнопок, а конструктор проверочных, разборов и домашних работ по любому предмету 1–11 класса."
+          title="Задания, которые проверяются сами"
+          subtitle="Тесты, самостоятельные и домашние работы по любому предмету с 1 по 11 класс. Вы тратите время на объяснение, а не на проверку тетрадей."
         />
 
         {/* Настоящие карточки вопросов из плеера ученика */}
@@ -162,26 +187,20 @@ export function TaskEngine() {
         <Reveal className="mt-20 max-w-4xl">
           <p className="text-[24px] font-bold leading-[1.5] tracking-tight text-foreground sm:text-[32px]">
             {TYPES.map((t, i) => (
-              <span
-                key={t}
-                className="cursor-default transition-colors duration-300 hover:text-primary hover:[text-shadow:0_0_0_currentColor]"
-                style={{ transitionDelay: "0ms" }}
-              >
+              <span key={t}>
                 {t}
-                {i < TYPES.length - 1 ? <span className="mx-2 text-foreground/15 sm:mx-3">/</span> : "."}
+                {i < TYPES.length - 1 ? <span className="mx-2 text-text-3 sm:mx-3" aria-hidden>/</span> : "."}
               </span>
             ))}
           </p>
-          <p className="mt-4 text-[15px] text-muted-foreground">22 типа. Наведите на любой — он подсветится.</p>
+          <p className="mt-4 text-small text-muted-foreground">22 вида заданий.</p>
         </Reveal>
 
         <div className="mt-20 grid gap-x-10 gap-y-10 border-t border-foreground pt-8 md:grid-cols-3">
           {PILLARS.map((p, i) => (
             <Reveal key={p.title} delay={i * 90}>
-              <Words as="h3" step={35} className="text-[20px] font-black tracking-tightest">
-                {p.title}
-              </Words>
-              <p className="mt-3 max-w-[38ch] text-[15px] leading-relaxed text-muted-foreground">{p.text}</p>
+              <h3 className="text-lead font-bold tracking-tight">{p.title}</h3>
+              <p className="mt-3 max-w-[38ch] text-small text-muted-foreground">{p.text}</p>
             </Reveal>
           ))}
         </div>
