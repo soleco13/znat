@@ -24,8 +24,16 @@ const PING_INTERVAL_MS = 2000;
 /** Нормальный RTT мобильной сети — 50–150 мс; стабильно выше — канал не справляется. */
 const RTT_POOR_MS = 400;
 const PONG_TIMEOUT_MS = 1500;
-/** Режим снимается, только если столько времени не было ни одного плохого признака. */
-const RECOVER_MS = 20_000;
+/**
+ * Режим снимается, только если столько времени не было ни одного плохого
+ * признака. В экономном режиме канал разгружен и пинг хороший — выход по
+ * фиксированному таймеру давал раскачку «плавно ↔ лагает» каждые ~20 с.
+ * Поэтому каждый повторный заход вскоре после выхода удваивает удержание.
+ */
+const RECOVER_MIN_MS = 20_000;
+const RECOVER_MAX_MS = 5 * 60_000;
+/** Заход в режим позже этого после выхода считается новым эпизодом — удержание сбрасывается. */
+const RELAPSE_WINDOW_MS = 5 * 60_000;
 export const PACED_SEND_MS = 100;
 
 type LinkMessage = { t: "pong"; i: number };
@@ -39,7 +47,7 @@ function parsePong(raw: string): LinkMessage | null {
   }
 }
 
-/** `true`, пока связь с доской плохая (с гистерезисом `RECOVER_MS`). */
+/** `true`, пока связь с доской плохая (с гистерезисом, см. `RECOVER_MIN_MS`). */
 export function useBoardLinkPoor(provider: HocuspocusProvider | null): boolean {
   const [poor, setPoor] = useState(false);
 
@@ -49,12 +57,21 @@ export function useBoardLinkPoor(provider: HocuspocusProvider | null): boolean {
     let outstanding: { i: number; sentAt: number } | null = null;
     let lastBadAt = 0;
     let current = false;
+    let recoverMs = RECOVER_MIN_MS;
+    let leftAt = 0;
     const recentRtt: number[] = [];
 
     const report = () => provider.sendStateless(JSON.stringify({ t: "link", poor: current }));
     const evaluate = () => {
-      const next = lastBadAt > 0 && Date.now() - lastBadAt < RECOVER_MS;
+      const now = Date.now();
+      const next = lastBadAt > 0 && now - lastBadAt < recoverMs;
       if (next === current) return;
+      if (next) {
+        recoverMs =
+          leftAt > 0 && now - leftAt < RELAPSE_WINDOW_MS ? Math.min(recoverMs * 2, RECOVER_MAX_MS) : RECOVER_MIN_MS;
+      } else {
+        leftAt = now;
+      }
       current = next;
       setPoor(next);
       report();

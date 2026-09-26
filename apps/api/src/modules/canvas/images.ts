@@ -44,24 +44,25 @@ export async function uploadCanvasImage(input: {
     throw new AppError(400, "unsupported_type", "Поддерживаются только PNG, JPEG, WebP");
   }
 
+  // Всегда WebP q90: визуально как исходник, но в 3–13 раз легче PNG
+  // (замер на картинках доски: 2,7 МБ → 213 КБ, 364 КБ → 130 КБ). Полный PNG
+  // на мобильной сети с потерями грузился у ученика десятки секунд.
   const resized = await sharp(input.buffer)
     .rotate()
     .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: "inside", withoutEnlargement: true })
+    .webp({ quality: 90, smartSubsample: true })
     .toBuffer({ resolveWithObject: true });
 
-  // sharp без явного .toFormat() отдаёт тот же формат, что и на входе
-  // (подтверждено документацией через Context7) — mimeType, провалидированный
-  // выше по входному файлу, остаётся верным и для результата ресайза.
   const { storageKey } = await storageService.uploadFile({
     stream: Readable.from(resized.data),
-    suggestedName: `board.${resized.info.format}`,
+    suggestedName: "board.webp",
     schoolId: input.schoolId,
   });
 
   return {
     storageKey,
     url: storageService.getSignedFileUrl(storageKey, CANVAS_IMAGE_URL_TTL_SECONDS),
-    mimeType: parsedMime.data,
+    mimeType: "image/webp",
     width: resized.info.width,
     height: resized.info.height,
   };

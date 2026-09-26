@@ -1340,16 +1340,11 @@ export function Board({
             <MobileToolRail excalidrawAPI={excalidrawAPI} activeTool={railActiveTool} locked={railLocked} />
           </div>
         )}
-        {(syncStalled || linkPoor || importNote || uploadError || pageElementCount >= PAGE_ELEMENT_WARN_AT) && (
+        {(syncStalled || importNote || uploadError || pageElementCount >= PAGE_ELEMENT_WARN_AT) && (
           <div className="pointer-events-none absolute inset-x-3 top-16 z-10 flex flex-col items-center gap-1 text-center">
             {syncStalled && (
               <span className="rounded-md bg-card/95 px-2 py-1 text-xs font-medium text-destructive shadow-sm backdrop-blur">
                 Доска не синхронизирована — восстанавливаем связь…
-              </span>
-            )}
-            {linkPoor && !syncStalled && (
-              <span className="rounded-md bg-card/95 px-2 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur">
-                Слабая связь — доска в экономном режиме
               </span>
             )}
             {importNote && (

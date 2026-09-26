@@ -204,6 +204,10 @@ export async function handleLinkStateless(
     payload.connection.sendStateless(JSON.stringify({ t: "pong", i: msg.i }));
     return;
   }
+  if (msg.poor !== clientPoor.has(payload.connection)) {
+    const userId = (payload.connection.context as { userId?: string } | undefined)?.userId ?? "unknown";
+    console.info(`canvas: слабая связь ${msg.poor ? "вкл" : "выкл"} lesson=${payload.document.name} participant=${userId}`);
+  }
   if (msg.poor) clientPoor.add(payload.connection);
   else {
     clientPoor.delete(payload.connection);
