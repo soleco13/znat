@@ -327,7 +327,9 @@ export function Board({
   // невидимым: у себя штрихи есть, у остальных нет.
   const [syncStalled, setSyncStalled] = useState(false);
   useEffect(() => {
-    if (!provider) return;
+    // Без права рисовать сервер отбрасывает любую локальную правку, ждать
+    // подтверждения нечего — баннер был бы ложным.
+    if (!provider || !canDraw) return;
     let timer: ReturnType<typeof setTimeout> | null = null;
     let last = provider.unsyncedChanges;
     const stop = () => {
@@ -357,7 +359,7 @@ export function Board({
       provider.off("unsyncedChanges", onUnsyncedChanges);
       setSyncStalled(false);
     };
-  }, [provider]);
+  }, [provider, canDraw]);
 
   useEffect(() => {
     if (!ydoc || !provider) return;
@@ -520,6 +522,14 @@ export function Board({
       provider.awareness,
       undoConfig,
     );
+    // Конструктор привязки заливает все ассеты документа в Excalidraw
+    // (`addFiles`), но `lastKnownFileIds` оставляет пустым — первый же
+    // `onChange` считает их «новыми» и пишет обратно в `yAssets`. У
+    // read-only ученика сервер отбрасывает эту правку, `unsyncedChanges`
+    // не падает до нуля, и через `SYNC_STALL_MS` вылезает «Доска не
+    // синхронизирована» сразу после входа (если на доске есть картинки).
+    // Рисующим это лишний перезапис каждого ассета при каждом входе.
+    nextBinding.lastKnownFileIds = new Set(yAssets.keys());
     setBinding(nextBinding);
 
     // Штатные кнопки Undo/Redo Excalidraw `y-excalidraw` перехватывает по
