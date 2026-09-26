@@ -53,7 +53,7 @@ import type {
 } from "@school/shared";
 
 import { cn } from "@/lib/utils";
-import { ApiError, apiFetch, setGuestMode } from "@/shared/api-client";
+import { ApiError, apiFetch } from "@/shared/api-client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -243,7 +243,6 @@ export function RoomPage() {
   const navigate = useNavigate();
   const identity = useRoomIdentity();
   const guestSession = useGuestSessionStore((s) => s.session);
-  const clearGuestSession = useGuestSessionStore((s) => s.clearSession);
   const isGuest = identity?.kind === "guest";
 
   const selfId = identity?.id;
@@ -444,8 +443,10 @@ export function RoomPage() {
   // /join — без этого клиент бесконечно переподключался, оставаясь вне урока.
   // До первого успешного входа не дублируем штатный `attemptJoin`.
   const joinedRef = useRef(false);
+  /** Участник сам вышел из урока — никаких повторных входов. */
+  const leftRef = useRef(false);
   const rejoinAfterEviction = useCallback(async () => {
-    if (!lessonId || !joinedRef.current) return;
+    if (!lessonId || !joinedRef.current || leftRef.current) return;
     await apiFetch<JoinLessonResponse>(`/lessons/${lessonId}/join`, { method: "POST" }).catch((err) => {
       const screen = blockedScreenFor(err);
       if (screen) setBlocked(screen);
@@ -456,7 +457,7 @@ export function RoomPage() {
   const status = useRoomSocket(
     lessonId ?? "",
     handleMessage,
-    deviceCheckDone && !blocked,
+    deviceCheckDone && !blocked && !leftAsGuest,
     isGuest ? "guest" : "staff",
     undefined,
     rejoinAfterEviction,
@@ -594,11 +595,17 @@ export function RoomPage() {
 
   async function leaveRoom() {
     if (!lessonId) return;
+    // До запроса: пока /leave идёт, сервер может закрыть соединение урока, и
+    // повторный вход (`rejoinAfterEviction`) не должен успеть сработать.
+    leftRef.current = true;
     await apiFetch(`/lessons/${lessonId}/leave`, { method: "POST" }).catch(() => undefined);
     if (isGuest) {
       // У гостя нет /lessons и личного кабинета — показываем экран выхода.
-      setGuestMode(false);
-      clearGuestSession();
+      // Гостевую сессию в памяти НЕ очищаем: `RequireRoomAccess` видел
+      // «сессии нет», восстанавливал её по куке и пускал обратно, а
+      // соединение урока под экраном выхода переподключалось и снова входило
+      // в урок — ученик «возвращался» (2026-09-26). Соединение урока
+      // выключается по `leftAsGuest` (см. `useRoomSocket` ниже).
       setLeftAsGuest(true);
       return;
     }
