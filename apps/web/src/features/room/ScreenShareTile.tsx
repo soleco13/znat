@@ -3,6 +3,7 @@ import { isTrackReference, useTracks, VideoTrack } from "@livekit/components-rea
 import { Track } from "livekit-client";
 
 import { MediaLoader } from "@/shared/ui/media-loader";
+import { isStreamPaused, useStreamStateUpdates } from "./use-stream-state.js";
 
 /**
  * Плитка демонстрации экрана (Э7.1) — рендерит уже подписанный трек
@@ -38,6 +39,7 @@ export function ScreenShareTile() {
   const tracks = useTracks([Track.Source.ScreenShare], { onlySubscribed: false });
   const track = tracks[0];
   const [loadedSid, setLoadedSid] = useState<string | null>(null);
+  useStreamStateUpdates();
   if (!track || !isTrackReference(track)) return null;
   const sid = track.publication.trackSid;
   // У своей (локальной) демонстрации трек есть сразу; у чужой — после подписки.
@@ -48,7 +50,7 @@ export function ScreenShareTile() {
       {ready ? (
         <VideoTrack trackRef={track} onLoadedData={() => setLoadedSid(sid)} className="size-full object-contain" />
       ) : null}
-      {loadedSid !== sid ? <MediaLoader label="Загружаем демонстрацию экрана…" tone="light" size="lg" /> : null}
+      {loadedSid !== sid || isStreamPaused(track.publication) ? <MediaLoader label="Загружаем демонстрацию экрана…" tone="light" size="lg" /> : null}
     </div>
   );
 }

@@ -14,6 +14,7 @@ import { initialsOf } from "@/shared/ui/avatar";
 import { MediaLoader } from "@/shared/ui/media-loader";
 import { participantsCount } from "./format.js";
 import { useSelfCameraUiStore } from "./self-camera-ui-store.js";
+import { isStreamPaused, useStreamStateUpdates } from "./use-stream-state.js";
 import { useAdaptiveGrid } from "./use-adaptive-grid.js";
 import { useIsNarrowViewport } from "./use-narrow-viewport.js";
 
@@ -68,6 +69,7 @@ export function RoomVideoGrid({
       .filter((t) => t.publication && !t.publication.isMuted)
       .map((t) => t.participant.identity),
   );
+  useStreamStateUpdates();
   const [loadedCameraSids, setLoadedCameraSids] = useState<ReadonlySet<string>>(() => new Set());
   const markCameraLoaded = (sid: string) =>
     setLoadedCameraSids((prev) => (prev.has(sid) ? prev : new Set(prev).add(sid)));
@@ -133,9 +135,12 @@ export function RoomVideoGrid({
     const isSelf = p.userId === selfId;
     const videoTrack = isSelf && !selfDesiredOn ? undefined : track;
     const remoteSid = videoTrack?.publication?.trackSid;
+    // Чужая камера: до первого кадра и пока сервер держит её на паузе
+    // (входящему каналу не хватает полосы) — иначе тёмная плитка без лоадера.
     const showLoader = isSelf
       ? selfDesiredOn && !selfFrameReady
-      : cameraOnIds.has(p.userId) && (!remoteSid || !loadedCameraSids.has(remoteSid));
+      : cameraOnIds.has(p.userId) &&
+        (!remoteSid || !loadedCameraSids.has(remoteSid) || isStreamPaused(videoTrack?.publication));
     const speaking = speakingIds.has(p.userId);
     const micOff = micOffIds.has(p.userId);
     const weak = weakIds.has(p.userId);
