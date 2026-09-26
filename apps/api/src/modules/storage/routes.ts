@@ -2,10 +2,17 @@ import type { FastifyInstance } from "fastify";
 import { env } from "../../plugins/env.js";
 import { AppError } from "../../plugins/errors.js";
 import * as storageService from "./service.js";
+import { isImageVariant, renderImageVariant, supportsImageVariant } from "./image-variants.js";
+
+async function readAll(stream: NodeJS.ReadableStream): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  return Buffer.concat(chunks);
+}
 
 /** Монтируется на верхнем уровне как /files/* (§4.1 ТЗ) — доступ по HMAC-подписи, без JWT. */
 export async function filesRoutes(app: FastifyInstance) {
-  app.get<{ Params: { "*": string }; Querystring: { exp: string; sig: string } }>(
+  app.get<{ Params: { "*": string }; Querystring: { exp: string; sig: string; v?: string } }>(
     "/files/*",
     async (request, reply) => {
       const storageKey = decodeURIComponent(request.params["*"]);
@@ -13,6 +20,22 @@ export async function filesRoutes(app: FastifyInstance) {
       const sig = request.query.sig;
       if (!sig || !Number.isFinite(exp) || !storageService.verifyFileSignature(storageKey, exp, sig)) {
         throw new AppError(403, "invalid_signature", "Ссылка недействительна или истекла");
+      }
+      // Облегчённый вариант картинки доски (image-variants.ts): подпись та же,
+      // `v` — только способ отдачи того же файла.
+      const variant = request.query.v;
+      if (isImageVariant(variant) && supportsImageVariant(storageKey)) {
+        let data: Buffer | null;
+        try {
+          data = await renderImageVariant(storageKey, variant, async () =>
+            readAll(await storageService.openFile(storageKey)),
+          );
+        } catch {
+          throw new AppError(404, "not_found", "Файл не найден");
+        }
+        if (data) {
+          return reply.header("Content-Type", "image/webp").header("X-Content-Type-Options", "nosniff").send(data);
+        }
       }
       if (env.FILES_VIA_PROXY) {
         let proxyPath: string;

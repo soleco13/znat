@@ -533,7 +533,14 @@ export function Board({
     // При слабой связи входящие правки и курсоры перерисовываются раз в кадр.
     // Обёртка живёт вместе с привязкой; режим читается на каждом вызове, так
     // что смена режима не пересоздаёт привязку (и не теряет историю undo).
-    const coalescing = createCoalescingApi(excalidrawAPI, () => linkPoorRef.current);
+    let bindingRef: ExcalidrawBinding | null = null;
+    const coalescing = createCoalescingApi(
+      excalidrawAPI,
+      () => linkPoorRef.current,
+      (fileIds) => {
+        for (const id of fileIds) bindingRef?.lastKnownFileIds.add(id);
+      },
+    );
     const nextBinding = new ExcalidrawBinding(
       yElements,
       yAssets,
@@ -549,6 +556,7 @@ export function Board({
     // синхронизирована» сразу после входа (если на доске есть картинки).
     // Рисующим это лишний перезапис каждого ассета при каждом входе.
     nextBinding.lastKnownFileIds = new Set(yAssets.keys());
+    bindingRef = nextBinding;
     setBinding(nextBinding);
 
     // Штатные кнопки Undo/Redo Excalidraw `y-excalidraw` перехватывает по

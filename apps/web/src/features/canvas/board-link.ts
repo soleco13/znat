@@ -179,9 +179,23 @@ export function paceUpstream(provider: HocuspocusProvider, intervalMs = PACED_SE
  * локальным `onChange` отложенное применяется, иначе привязка сочла бы
  * старую локальную версию элемента правкой и записала её обратно.
  */
+/**
+ * Ссылка на картинку доски с вариантом отдачи (`/files/*?v=`, сервер —
+ * storage/image-variants.ts): при слабой связи — облегчённая (`lite`, до
+ * 1000 px), иначе `web` (старые PNG отдаются как WebP того же размера).
+ */
+export function boardImageUrl(url: string, lite: boolean): string {
+  if (!url.startsWith("/files/")) return url;
+  const parsed = new URL(url, "https://x");
+  parsed.searchParams.set("v", lite ? "lite" : "web");
+  return `${parsed.pathname}${parsed.search}`;
+}
+
 export function createCoalescingApi(
   api: ExcalidrawImperativeAPI,
   enabled: () => boolean,
+  /** Картинки из документа отданы Excalidraw — привязка должна считать их уже известными. */
+  onFilesFromDoc?: (fileIds: string[]) => void,
 ): { api: ExcalidrawImperativeAPI; dispose: () => void } {
   type Scene = Pick<Parameters<ExcalidrawImperativeAPI["updateScene"]>[0], "elements" | "collaborators">;
   let pending: Scene | null = null;
@@ -257,8 +271,17 @@ export function createCoalescingApi(
       callback(...args);
     });
 
+  // Картинки из документа: ссылка — с вариантом под текущую связь (в сам
+  // документ не пишется), и сразу помечаем их известными привязке — иначе
+  // y-excalidraw на следующем onChange записал бы их обратно в документ.
+  const addFiles: ExcalidrawImperativeAPI["addFiles"] = (files) => {
+    onFilesFromDoc?.(files.map((file) => file.id));
+    api.addFiles(files.map((file) => ({ ...file, dataURL: boardImageUrl(file.dataURL, enabled()) as typeof file.dataURL })));
+  };
+
   const proxy = new Proxy(api, {
     get(target, key, receiver) {
+      if (key === "addFiles") return addFiles;
       if (key === "updateScene") return updateScene;
       if (key === "getSceneElements") return getSceneElements;
       if (key === "onChange") return onChange;
