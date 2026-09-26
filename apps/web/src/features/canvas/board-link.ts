@@ -73,7 +73,9 @@ export function useBoardLinkPoor(provider: HocuspocusProvider | null): boolean {
     const onStateless = ({ payload }: { payload: string }) => {
       const pong = parsePong(payload);
       if (!pong || !outstanding || pong.i !== outstanding.i) return;
-      recentRtt.push(Date.now() - outstanding.sentAt);
+      const rtt = Date.now() - outstanding.sentAt;
+      recentRtt.push(rtt);
+      linkQuality.reportRtt(rtt);
       outstanding = null;
       if (recentRtt.length > 4) recentRtt.shift();
       // Один всплеск — не повод; два медленных из последних четырёх — уже канал.

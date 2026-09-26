@@ -41,7 +41,9 @@ function useReportLiveKitQuality(): void {
   const room = useRoomContext();
   useEffect(() => {
     const check = () => {
-      if (isBad(room.localParticipant.connectionQuality)) linkQuality.reportBad();
+      const quality = room.localParticipant.connectionQuality;
+      if (isBad(quality)) linkQuality.reportBad();
+      linkQuality.reportMediaExcellent(quality === ConnectionQuality.Excellent);
     };
     const onQuality = (_quality: ConnectionQuality, participant: Participant) => {
       if (participant === room.localParticipant) check();

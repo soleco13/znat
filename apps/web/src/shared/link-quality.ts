@@ -11,9 +11,16 @@ import { useSyncExternalStore } from "react";
  * На живом телефоне (МегаФон, 2026-09-26) при удержании 20 с режим
  * переключался каждые 6–60 с: каждое переключение — «волна» на доске.
  * Поэтому: удержание начинается с минуты и удваивается при каждом срыве
- * вскоре после выхода; после `STICKY_AFTER_RELAPSES` срывов режим остаётся
- * до перезагрузки страницы — сеть этого устройства уже показала, что обычный
- * режим ей не по силам.
+ * вскоре после выхода; после `STICKY_AFTER_RELAPSES` срывов по одному
+ * таймеру уже не выходим.
+ *
+ * Но из режима всегда выходим по положительному доказательству хорошей связи
+ * (`isStrongGood`): пинги доски стабильно быстрые и тишина по плохим
+ * признакам, либо LiveKit оценивает связь как отличную. Раньше режим после
+ * срывов закреплялся до перезагрузки страницы — ученик переключился на
+ * хороший Wi-Fi, а демонстрация так и шла нижним слоем, размыто (2026-09-26).
+ * По замерам: Wi-Fi → сервер ~80 мс, мобильная сеть с потерями в
+ * экономном режиме 130–290 мс — порог `STRONG_RTT_MS` их разделяет.
  */
 
 const RECOVER_MIN_MS = 60_000;
@@ -22,6 +29,10 @@ const RECOVER_MAX_MS = 15 * 60_000;
 const RELAPSE_WINDOW_MS = 10 * 60_000;
 const STICKY_AFTER_RELAPSES = 2;
 const TICK_MS = 2000;
+/** Хорошая связь «доказана»: столько быстрых пингов подряд за окно и ни одного медленного. */
+const STRONG_RTT_MS = 200;
+const STRONG_SAMPLES = 8;
+const STRONG_WINDOW_MS = 30_000;
 
 type Listener = () => void;
 
@@ -32,6 +43,8 @@ class LinkQuality {
   private leftAt = 0;
   private relapses = 0;
   private sticky = false;
+  private rtts: { at: number; rtt: number }[] = [];
+  private excellentSince = 0;
   private listeners = new Set<Listener>();
   private timer: ReturnType<typeof setInterval> | null = null;
 
@@ -42,6 +55,20 @@ class LinkQuality {
   /** Плохой признак от любого источника: медленный/потерянный пинг, обрыв, Poor у LiveKit. */
   reportBad(now = Date.now()): void {
     this.lastBadAt = now;
+    this.evaluate(now);
+  }
+
+  /** RTT пинга доски — материал для «доказательства» хорошей связи. */
+  reportRtt(rtt: number, now = Date.now()): void {
+    this.rtts.push({ at: now, rtt });
+    if (this.rtts.length > 20) this.rtts.shift();
+    this.evaluate(now);
+  }
+
+  /** LiveKit: отличная связь сейчас (`true`) или нет. */
+  reportMediaExcellent(excellent: boolean, now = Date.now()): void {
+    if (!excellent) this.excellentSince = 0;
+    else if (!this.excellentSince) this.excellentSince = now;
     this.evaluate(now);
   }
 
@@ -59,8 +86,23 @@ class LinkQuality {
 
   getSnapshot = (): boolean => this.poor;
 
+  private isStrongGood(now: number): boolean {
+    if (now - this.lastBadAt < STRONG_WINDOW_MS) return false;
+    const recent = this.rtts.filter((s) => now - s.at < STRONG_WINDOW_MS);
+    const pingsGood = recent.length >= STRONG_SAMPLES && recent.every((s) => s.rtt < STRONG_RTT_MS);
+    const mediaGood = this.excellentSince > 0 && now - this.excellentSince >= STRONG_WINDOW_MS;
+    return pingsGood || mediaGood;
+  }
+
   private evaluate(now = Date.now()): void {
-    const next = this.sticky || (this.lastBadAt > 0 && now - this.lastBadAt < this.recoverMs);
+    const badRecently = this.lastBadAt > 0 && now - this.lastBadAt < this.recoverMs;
+    let next: boolean;
+    if (this.poor) {
+      next = !(this.isStrongGood(now) || (!this.sticky && !badRecently));
+    } else {
+      // Входим только по плохому признаку, случившемуся ПОСЛЕ выхода.
+      next = badRecently && this.lastBadAt > this.leftAt;
+    }
     if (next === this.poor) return;
     if (next) {
       const relapse = this.leftAt > 0 && now - this.leftAt < RELAPSE_WINDOW_MS;
@@ -74,6 +116,12 @@ class LinkQuality {
       }
     } else {
       this.leftAt = now;
+      if (this.isStrongGood(now)) {
+        // Связь по-настоящему хорошая (сменилась сеть) — прошлые срывы не в счёт.
+        this.sticky = false;
+        this.relapses = 0;
+        this.recoverMs = RECOVER_MIN_MS;
+      }
     }
     this.poor = next;
     for (const listener of this.listeners) listener();
