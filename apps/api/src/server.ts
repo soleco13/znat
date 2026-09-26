@@ -8,6 +8,7 @@ import rateLimit from "@fastify/rate-limit";
 import staticPlugin from "@fastify/static";
 import websocket from "@fastify/websocket";
 import { env } from "./plugins/env.js";
+import { syncAssetsArchive } from "./plugins/web-assets-archive.js";
 import errorsPlugin from "./plugins/errors.js";
 import authenticatePlugin from "./plugins/authenticate.js";
 import rbacPlugin from "./plugins/rbac.js";
@@ -171,7 +172,38 @@ export function buildServer() {
         res.setHeader("Vary", "Accept-Encoding");
       },
     });
+    // Файлы прошлых сборок: страница, открытая до выкладки, подгружает куски
+    // по своим старым именам (web-assets-archive.ts). Текущие файлы отдаёт
+    // статика выше (точные маршруты), сюда попадает только то, чего в
+    // текущей сборке нет.
+    if (env.WEB_ASSETS_ARCHIVE_DIR) {
+      const archiveDir = path.resolve(env.WEB_ASSETS_ARCHIVE_DIR);
+      try {
+        const { copied, removed } = syncAssetsArchive(path.join(webDistDir, "assets"), archiveDir);
+        app.log.info({ archiveDir, copied, removed }, "web assets archive synced");
+        app.register(staticPlugin, {
+          root: archiveDir,
+          prefix: "/assets/",
+          decorateReply: false,
+          index: false,
+          preCompressed: true,
+          cacheControl: false,
+          setHeaders(res) {
+            res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+            res.setHeader("Vary", "Accept-Encoding");
+          },
+        });
+      } catch (err) {
+        app.log.warn({ err, archiveDir }, "web assets archive unavailable");
+      }
+    }
     app.setNotFoundHandler(async (request, reply) => {
+      // Нет файла сборки — честный 404. Раньше отдавалась страница приложения
+      // (200, text/html): браузер не мог выполнить её как код, и загрузка
+      // куска молча падала.
+      if (request.url.startsWith("/assets/")) {
+        return reply.status(404).send({ error: "not_found", message: "Asset not found" });
+      }
       if (request.url.startsWith("/api/") || request.url.startsWith("/files/")) {
         return reply.status(404).send({ error: "not_found", message: "Route not found" });
       }

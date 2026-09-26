@@ -95,6 +95,9 @@ services:
       STORAGE_ROOT: /data/assets
       # /files/* отдаёт Caddy с того же тома (см. Caddyfile, X-Accel-Redirect).
       FILES_VIA_PROXY: "true"
+      # Файлы прошлых сборок фронта: страница, открытая до выкладки, догружает
+      # свои куски отсюда (apps/api/src/plugins/web-assets-archive.ts).
+      WEB_ASSETS_ARCHIVE_DIR: /data/web-assets
       # livekit слушает на network_mode: host — из моста (bridge) до него
       # достучаться можно только через шлюз хоста, не по имени сервиса.
       LIVEKIT_URL: ws://host.docker.internal:7880
@@ -102,6 +105,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - assets_data:/data/assets
+      - web_assets:/data/web-assets
     ports:
       - "127.0.0.1:3000:3000"
     healthcheck:
@@ -290,5 +294,6 @@ volumes:
   pg_data:
   redis_data:
   assets_data:
+  web_assets:
   caddy_data:
   caddy_config:

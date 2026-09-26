@@ -47,7 +47,8 @@ COPY apps/api/package.json ./apps/api/package.json
 # dist produced above instead — repo source (dev workflow) is untouched.
 RUN node -e "const p='./packages/shared/package.json';const j=require(p);j.main='./dist/index.js';require('fs').writeFileSync(p,JSON.stringify(j));"
 
-RUN mkdir -p /data/assets && chown -R app:app /data/assets
+# /data/web-assets — файлы прошлых сборок фронта (том web_assets, см. plugins/web-assets-archive.ts).
+RUN mkdir -p /data/assets /data/web-assets && chown -R app:app /data/assets /data/web-assets
 USER app
 
 EXPOSE 3000

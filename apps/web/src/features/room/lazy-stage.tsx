@@ -1,6 +1,7 @@
 import { Suspense, type ComponentProps } from "react";
 
 import { lazyNamed, withRetry } from "@/shared/lazy-retry";
+import { ErrorBoundary } from "@/shared/ErrorBoundary";
 import { MediaLoader } from "@/shared/ui/media-loader";
 
 /**
@@ -10,6 +11,10 @@ import { MediaLoader } from "@/shared/ui/media-loader";
  * файлом 4,9 МБ (1,5 МБ gzip), и на мобильной сети с потерями страница урока
  * не открывалась вовсе. Куски начинают качаться сразу при входе в урок
  * (`prefetchLessonStage`), так что к моменту показа доски они обычно уже есть.
+ *
+ * Своя `ErrorBoundary` на каждый кусок: если он не догрузился, ошибка остаётся
+ * в его области, а видео и звук урока продолжают работать. Раньше сбой
+ * загрузки доски ронял всю страницу урока, и ученик вылетал с урока.
  */
 
 const loadBoard = withRetry(() => import("../canvas/Board.js"));
@@ -39,24 +44,30 @@ type ActivityStageProps = ComponentProps<typeof import("./ActivityStage.js").Act
 
 export function Board(props: BoardProps) {
   return (
-    <Suspense fallback={<StageFallback label="Загружаем доску…" />}>
-      <LazyBoard {...props} />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<StageFallback label="Загружаем доску…" />}>
+        <LazyBoard {...props} />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 
 export function LessonActivityPanel(props: ActivityPanelProps) {
   return (
-    <Suspense fallback={<StageFallback label="Загружаем задания…" />}>
-      <LazyActivityPanel {...props} />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<StageFallback label="Загружаем задания…" />}>
+        <LazyActivityPanel {...props} />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 
 export function ActivityStage(props: ActivityStageProps) {
   return (
-    <Suspense fallback={<StageFallback label="Загружаем задание…" />}>
-      <LazyActivityStage {...props} />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<StageFallback label="Загружаем задание…" />}>
+        <LazyActivityStage {...props} />
+      </Suspense>
+    </ErrorBoundary>
   );
 }

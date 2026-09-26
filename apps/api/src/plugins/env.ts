@@ -41,6 +41,8 @@ const envSchema = z.object({
   SCHOOL_DAILY_UPLOAD_MB: z.coerce.number().int().min(1).default(2048),
   PUBLIC_ORIGIN: z.string().url().default("http://localhost:3000"),
   WEB_DIST_DIR: z.string().min(1).default("apps/web/dist"),
+  /** Постоянный каталог файлов прошлых сборок фронта (web-assets-archive.ts); без него — только текущая сборка. */
+  WEB_ASSETS_ARCHIVE_DIR: z.string().min(1).optional(),
   GLITCHTIP_DSN: z.string().url().optional(),
   LIVEKIT_URL: z.string().url().default("ws://localhost:7880"),
   LIVEKIT_PUBLIC_URL: z.string().url().default("ws://localhost:7880"),
