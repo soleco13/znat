@@ -185,25 +185,62 @@ export function createCoalescingApi(
 ): { api: ExcalidrawImperativeAPI; dispose: () => void } {
   type Scene = Pick<Parameters<ExcalidrawImperativeAPI["updateScene"]>[0], "elements" | "collaborators">;
   let pending: Scene | null = null;
+  /** id элементов сцены на момент, когда отложили первое обновление. */
+  let idsAtDefer: Set<string> | null = null;
   let frame = 0;
+
+  // Пользователь что-то рисует/тащит/пишет — Excalidraw держит ссылку на
+  // этот элемент; подмена сцены отложенным снимком оторвала бы его от сцены
+  // (штрих «рассинхронизировался»). В такие моменты применяем сразу.
+  const interacting = () => {
+    const s = api.getAppState();
+    return Boolean(
+      s.newElement ||
+        s.resizingElement ||
+        s.multiElement ||
+        s.editingTextElement ||
+        s.editingLinearElement ||
+        s.selectedElementsAreBeingDragged,
+    );
+  };
 
   const flush = () => {
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
     if (!pending) return;
     const scene = pending;
+    const knownIds = idsAtDefer ?? new Set<string>();
     pending = null;
-    api.updateScene(scene);
+    idsAtDefer = null;
+    if (!scene.elements) {
+      api.updateScene(scene);
+      return;
+    }
+    // Снимок собран до применения: всё, что за это время поменялось локально
+    // (версия выше) или появилось локально (нового id не было при откладывании),
+    // берём из текущей сцены, а не из снимка.
+    const current = api.getSceneElements();
+    const currentById = new Map(current.map((el) => [el.id, el]));
+    const pendingIds = new Set(scene.elements.map((el) => el.id));
+    const merged = scene.elements.map((el) => {
+      const local = currentById.get(el.id);
+      return local && local.version > el.version ? local : el;
+    });
+    for (const el of current) {
+      if (!pendingIds.has(el.id) && !knownIds.has(el.id)) merged.push(el);
+    }
+    api.updateScene({ ...scene, elements: merged });
   };
 
   // Привязка шлёт только `elements`/`collaborators`; всё остальное (appState,
   // captureUpdate) не склеиваем — применяем сразу, досылая отложенное перед ним.
   const updateScene = ((scene) => {
-    if (!enabled() || scene.appState != null || scene.captureUpdate !== undefined) {
+    if (!enabled() || scene.appState != null || scene.captureUpdate !== undefined || interacting()) {
       flush();
       api.updateScene(scene);
       return;
     }
+    if (!pending) idsAtDefer = new Set(api.getSceneElements().map((el) => el.id));
     pending = {
       ...pending,
       ...(scene.elements != null && { elements: scene.elements }),
@@ -234,6 +271,7 @@ export function createCoalescingApi(
       if (frame) cancelAnimationFrame(frame);
       frame = 0;
       pending = null;
+      idsAtDefer = null;
     },
   };
 }

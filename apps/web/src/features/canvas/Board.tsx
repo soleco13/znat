@@ -337,13 +337,11 @@ export function Board({
 
   // Сторож синхронизации: правки ждут подтверждения, а подтверждений нет
   // `SYNC_STALL_MS` подряд (сервер отбрасывает их или сокет умер без close,
-  // как бывает на мобильной сети) — показываем это рисующему и сами
-  // повторяем SyncStep1, пока не пройдёт. Раньше такой сбой был полностью
-  // невидимым: у себя штрихи есть, у остальных нет.
-  const [syncStalled, setSyncStalled] = useState(false);
+  // как бывает на мобильной сети) — молча повторяем SyncStep1, пока не
+  // пройдёт. Надписи ученику не показываем: на уроке она только отвлекает.
   useEffect(() => {
     // Без права рисовать сервер отбрасывает любую локальную правку, ждать
-    // подтверждения нечего — баннер был бы ложным.
+    // подтверждения нечего.
     if (!provider || !canDraw) return;
     let timer: ReturnType<typeof setTimeout> | null = null;
     let last = provider.unsyncedChanges;
@@ -355,14 +353,12 @@ export function Board({
       stop();
       timer = setTimeout(() => {
         timer = null;
-        setSyncStalled(true);
         provider.forceSync();
       }, SYNC_STALL_MS);
     };
     const onUnsyncedChanges = ({ number }: { number: number }) => {
       if (number === 0) {
         stop();
-        setSyncStalled(false);
       } else if (number < last || !timer) {
         arm();
       }
@@ -372,7 +368,6 @@ export function Board({
     return () => {
       stop();
       provider.off("unsyncedChanges", onUnsyncedChanges);
-      setSyncStalled(false);
     };
   }, [provider, canDraw]);
 
@@ -1340,13 +1335,8 @@ export function Board({
             <MobileToolRail excalidrawAPI={excalidrawAPI} activeTool={railActiveTool} locked={railLocked} />
           </div>
         )}
-        {(syncStalled || importNote || uploadError || pageElementCount >= PAGE_ELEMENT_WARN_AT) && (
+        {(importNote || uploadError || pageElementCount >= PAGE_ELEMENT_WARN_AT) && (
           <div className="pointer-events-none absolute inset-x-3 top-16 z-10 flex flex-col items-center gap-1 text-center">
-            {syncStalled && (
-              <span className="rounded-md bg-card/95 px-2 py-1 text-xs font-medium text-destructive shadow-sm backdrop-blur">
-                Доска не синхронизирована — восстанавливаем связь…
-              </span>
-            )}
             {importNote && (
               <span className="rounded-md bg-card/95 px-2 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur">
                 {importNote}
