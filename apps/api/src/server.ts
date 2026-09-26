@@ -104,8 +104,19 @@ export function buildServer() {
   // участника): пустой ответ без базы и Redis, вне лимита запросов — иначе
   // учителя за общим школьным IP упирались бы в лимит анонимных запросов.
   // Без записи в лог: 50 участников дали бы тысячи строк в минуту.
-  app.get("/ping", { config: { rateLimit: false }, logLevel: "silent" }, async (_request, reply) =>
-    reply.header("Cache-Control", "no-store").status(204).send(),
+  // `?link=poor|ok&who=<участник>` — клиент сообщает о смене режима связи
+  // (редко, только при переключении): в логе видно каждое переключение,
+  // независимо от доски (она сообщает свой режим, только пока открыта).
+  app.get<{ Querystring: { link?: string; who?: string } }>(
+    "/ping",
+    { config: { rateLimit: false }, logLevel: "silent" },
+    async (request, reply) => {
+      const { link, who } = request.query;
+      if ((link === "poor" || link === "ok") && who && /^[0-9a-f-]{36}$/.test(who)) {
+        console.info(`media: слабая связь ${link === "poor" ? "вкл" : "выкл"} participant=${who}`);
+      }
+      return reply.header("Cache-Control", "no-store").status(204).send();
+    },
   );
 
   app.get("/health", async (_request, reply) => {

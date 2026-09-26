@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRoomContext } from "@livekit/components-react";
 import {
   ConnectionQuality,
@@ -62,6 +62,21 @@ export function PoorLinkMediaAdapter() {
   useReportLiveKitQuality();
   useLinkProbe();
   const poor = useLinkPoor();
+
+  // Смена режима — в лог сервера (не в интерфейс): так видно, что режим
+  // включился и выключился, даже когда доска закрыта.
+  const firstReport = useRef(true);
+  useEffect(() => {
+    if (firstReport.current && !poor) {
+      firstReport.current = false;
+      return;
+    }
+    firstReport.current = false;
+    const who = room.localParticipant.identity;
+    void fetch(`/ping?link=${poor ? "poor" : "ok"}&who=${encodeURIComponent(who)}`, { cache: "no-store" }).catch(
+      () => undefined,
+    );
+  }, [poor, room]);
 
   // Связь хорошая полминуты — просим service worker докачать файлы урока на
   // устройство (доска, задания): следующий вход откроется без сети. На
