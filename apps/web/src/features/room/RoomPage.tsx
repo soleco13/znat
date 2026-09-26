@@ -7,15 +7,7 @@ import {
   useRoomContext,
   useTracks,
 } from "@livekit/components-react";
-import {
-  ConnectionQuality,
-  DisconnectReason,
-  Track,
-  VideoPresets,
-  type ReconnectPolicy,
-  type RoomConnectOptions,
-  type RoomOptions,
-} from "livekit-client";
+import { ConnectionQuality, Track, VideoPresets, type RoomOptions } from "livekit-client";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -125,42 +117,11 @@ import { useRoomSocket } from "./useRoomSocket.js";
 import { notifyAnnotationsUpdated } from "../materials/annotations-events.js";
 import { VideoSubscriptionManager } from "./VideoSubscriptions.js";
 import { PoorLinkMediaAdapter } from "./PoorLinkMedia.js";
+import { MEDIA_CONNECT_OPTIONS, MEDIA_RECONNECT_POLICY, MediaRecovery } from "./MediaRecovery.js";
 
 // Э5.1/Э5.2 — см. подробные комментарии ниже у <LiveKitRoom>. 720p + simulcast,
 // adaptiveStream/dynacast включены явно (в livekit-client по умолчанию off).
 // Дефолт на время, пока `clientMediaSettings` ещё не загружены (см. `buildRoomOptions`).
-/**
- * Медиа на плохой связи. Штатно LiveKit ждёт подключения 15 с с одним
- * повтором и переподключается ~45 с, а новое TCP+TLS-соединение на мобильной
- * сети с потерями само идёт 10–20 с: подключение не успевало, медиа
- * отваливалось навсегда (камера «бесконечно грузилась»). Даём больше времени
- * и попыток; переподключаемся до `RECONNECT_WINDOW_MS`.
- */
-const RECONNECT_WINDOW_MS = 5 * 60_000;
-const RECONNECT_MAX_DELAY_MS = 7000;
-const MEDIA_RECONNECT_POLICY: ReconnectPolicy = {
-  nextRetryDelayInMs: ({ retryCount, elapsedMs }) =>
-    elapsedMs > RECONNECT_WINDOW_MS ? null : Math.min(300 * 2 ** retryCount, RECONNECT_MAX_DELAY_MS),
-};
-const MEDIA_CONNECT_OPTIONS: RoomConnectOptions = {
-  // Э6.2, §5.2 ТЗ: автоподписка выключена намеренно — подпиской управляет
-  // `VideoSubscriptionManager`, единственное место.
-  autoSubscribe: false,
-  maxRetries: 3,
-  websocketTimeout: 30_000,
-  peerConnectionTimeout: 30_000,
-};
-/** Причины отключения, после которых заново подключаться НЕ надо — это не сеть. */
-const FINAL_DISCONNECT_REASONS = new Set<DisconnectReason>([
-  DisconnectReason.CLIENT_INITIATED,
-  DisconnectReason.DUPLICATE_IDENTITY,
-  DisconnectReason.PARTICIPANT_REMOVED,
-  DisconnectReason.ROOM_DELETED,
-  DisconnectReason.ROOM_CLOSED,
-]);
-/** Пауза перед повторным входом в медиа после окончательного обрыва. */
-const MEDIA_RECOVER_DELAY_MS = 3000;
-
 const FALLBACK_ROOM_OPTIONS: RoomOptions = {
   videoCaptureDefaults: { resolution: VideoPresets.h720.resolution },
   audioCaptureDefaults: { noiseSuppression: true },
@@ -543,35 +504,6 @@ export function RoomPage() {
     if (!lessonId || !deviceCheckDone) return;
     attemptJoin();
   }, [lessonId, deviceCheckDone, attemptJoin]);
-
-  // Медиа отвалилось окончательно (LiveKit исчерпал попытки) — получаем
-  // свежий пропуск тем же /join и пересоздаём подключение (`key`).
-  const [mediaEpoch, setMediaEpoch] = useState(0);
-  const recoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const recoverMedia = useCallback(() => {
-    if (!lessonId || recoverTimerRef.current) return;
-    recoverTimerRef.current = setTimeout(() => {
-      apiFetch<JoinLessonResponse>(`/lessons/${lessonId}/join`, { method: "POST" })
-        .then((data) => {
-          recoverTimerRef.current = null;
-          setParticipants(data.participants);
-          setMedia(data.media);
-          setMediaEpoch((n) => n + 1);
-        })
-        .catch((err) => {
-          recoverTimerRef.current = null;
-          const screen = blockedScreenFor(err);
-          if (screen) setBlocked(screen);
-          else recoverMedia();
-        });
-    }, MEDIA_RECOVER_DELAY_MS);
-  }, [lessonId]);
-  useEffect(
-    () => () => {
-      if (recoverTimerRef.current) clearTimeout(recoverTimerRef.current);
-    },
-    [],
-  );
 
   // Всё второстепенное — после входа: на медленной сети эти запросы и куски
   // сборки делили бы канал с самим входом (/join, соединение урока, медиа).
@@ -1777,7 +1709,6 @@ export function RoomPage() {
         token={media.token}
         connect
         options={buildRoomOptions(clientMediaSettings)}
-        key={mediaEpoch}
         connectOptions={MEDIA_CONNECT_OPTIONS}
         audio={
           self?.permissions.canSpeak && joinMicEnabled
@@ -1806,17 +1737,40 @@ export function RoomPage() {
             : false
         }
         // Разрыв аудио не показываем баннером — состояние видно на самой
-        // кнопке микрофона, плюс индикатор связи в шапке. Сетевой обрыв,
-        // который LiveKit не пережил сам, — молча входим заново.
-        onDisconnected={(reason) => {
-          if (reason === undefined || !FINAL_DISCONNECT_REASONS.has(reason)) recoverMedia();
-        }}
-        onError={() => recoverMedia()}
+        // кнопке микрофона, плюс индикатор связи в шапке. Обрыв, который
+        // LiveKit не пережил сам, чинит `MediaRecovery` ниже.
+        onDisconnected={() => undefined}
       >
         <ApplyAudioOutput deviceId={spkDeviceId} />
         <MicSync enabled={self?.permissions.canSpeak ?? false} />
         <VideoSubscriptionManager participants={participants} mode={lessonMode} />
         <PoorLinkMediaAdapter />
+        {lessonId ? (
+          <MediaRecovery
+            lessonId={lessonId}
+            restoreCamera={(participant) =>
+              isTeacher && clientMediaSettings
+                ? participant.setCameraEnabled(
+                    true,
+                    {
+                      resolution: toVideoResolution(clientMediaSettings.cameraResolution, clientMediaSettings.cameraFps),
+                      deviceId: camDeviceId ?? undefined,
+                    },
+                    { videoEncoding: toVideoEncoding(clientMediaSettings.cameraFps, clientMediaSettings.cameraBitrateKbps) },
+                  )
+                : participant.setCameraEnabled(true, {
+                    resolution: isTeacher ? VideoPresets.h720.resolution : VideoPresets.h360.resolution,
+                    deviceId: camDeviceId ?? undefined,
+                  })
+            }
+            onRejoined={(data) => setParticipants(data.participants)}
+            onBlocked={(err) => {
+              const screen = blockedScreenFor(err);
+              if (screen) setBlocked(screen);
+              return screen !== null;
+            }}
+          />
+        ) : null}
         {clientMediaSettings?.pipEnabled !== false ? (
           <ScreenShareAutoPip
             ref={pipRef}

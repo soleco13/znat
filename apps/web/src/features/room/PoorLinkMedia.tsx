@@ -16,8 +16,8 @@ import { requestLessonPrecache } from "@/shared/service-worker";
 /**
  * Видео уступает канал звуку и доске, когда у ЭТОГО участника плохая связь.
  * Молча (без надписей) и только у него:
- *  - чужие камеры принимаются нижним слоем simulcast (плитки камер остаются,
- *    просто в низком качестве); демонстрацию экрана не трогаем — это контент;
+ *  - чужие камеры и демонстрация экрана принимаются нижним слоем simulcast
+ *    (плитки остаются, просто в низком качестве);
  *  - своя камера отправляет только нижний слой (~180p).
  * Звук не трогаем. Связь восстановилась — всё возвращается само.
  *
@@ -99,11 +99,15 @@ export function PoorLinkMediaAdapter() {
     return () => clearTimeout(timer);
   }, [poor]);
 
-  // Чужие камеры: нижний слой при плохой связи, иначе — как решит adaptiveStream.
+  // Чужие камеры и демонстрация: нижний слой при плохой связи (у демонстрации
+  // он есть с 2026-09-26 — 360p/5 кадр/с), иначе — как решит adaptiveStream.
+  // Без этого сервер периодически пробовал поднять качество, полный поток в
+  // канал не пролезал — каждая проба давала рывок.
   useEffect(() => {
     const quality = poor ? VideoQuality.LOW : VideoQuality.HIGH;
     const apply = (pub: RemoteTrackPublication) => {
-      if (pub.source === Track.Source.Camera && pub.isSubscribed) pub.setVideoQuality(quality);
+      const video = pub.source === Track.Source.Camera || pub.source === Track.Source.ScreenShare;
+      if (video && pub.isSubscribed) pub.setVideoQuality(quality);
     };
     for (const participant of room.remoteParticipants.values()) {
       for (const pub of participant.trackPublications.values()) apply(pub);

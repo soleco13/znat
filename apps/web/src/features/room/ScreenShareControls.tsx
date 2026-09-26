@@ -23,6 +23,16 @@ import { toast } from "@/shared/ui/sonner";
  */
 const DOCUMENT_SCREEN_SHARE_PRESET = new VideoPreset(1920, 1080, 1_000_000, 5, "medium");
 
+/**
+ * Облегчённый слой демонстрации: 360p, 5 кадр/с, 150 кбит/с — экран почти
+ * статичный, частота кадров не важна, а в канал 100–200 кбит/с пролезает.
+ */
+function screenShareLowLayer(encoding: VideoPreset): VideoPreset {
+  const { width, height } = encoding.resolution;
+  const scale = Math.min(1, 360 / height);
+  return new VideoPreset(Math.round(width * scale), Math.round(height * scale), 150_000, 5, "medium");
+}
+
 function releaseScreenShare(lessonId: string) {
   void apiFetch(`/lessons/${lessonId}/screen-share/release`, { method: "POST" }).catch(() => undefined);
 }
@@ -110,7 +120,27 @@ export function SelfScreenShareButton({
     });
   }
 
-  async function publishOnce(): Promise<void> {
+  /**
+   * `withLowLayer` — дополнительный облегчённый слой (`screenShareLowLayer`):
+   * демонстрация одна на урок и шла ОДНИМ потоком по настройкам школы (720p,
+   * 30 кадр/с, 2,5 Мбит/с); ученику на мобильной сети с каналом 100–200
+   * кбит/с сервер её либо не отдавал вовсе, либо отдавал рывками — а сам
+   * пережать поток не умеет. С облегчённым слоем сервер отдаёт каждому то,
+   * что пролезет в его канал; у остальных качество прежнее.
+   */
+  async function publishOnce(withLowLayer: boolean): Promise<void> {
+    if (withLowLayer) {
+      await localParticipant.setScreenShareEnabled(
+        true,
+        { audio: false, resolution: encoding.resolution, contentHint: "detail" },
+        {
+          screenShareEncoding: encoding.encoding,
+          screenShareSimulcastLayers: [screenShareLowLayer(encoding)],
+          simulcast: true,
+        },
+      );
+      return;
+    }
     await localParticipant.setScreenShareEnabled(
       true,
       {
@@ -144,9 +174,9 @@ export function SelfScreenShareButton({
    * эмпирически вторая попытка стабильно проходит быстро (собственно то,
    * что и обходил пользователь руками — «включить второй раз»).
    */
-  async function publishWithTimeout(): Promise<"ok" | "timeout"> {
+  async function publishWithTimeout(withLowLayer: boolean): Promise<"ok" | "timeout"> {
     const timeout = new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), 6000));
-    const result = await Promise.race([publishOnce().then(() => "ok" as const), timeout]);
+    const result = await Promise.race([publishOnce(withLowLayer).then(() => "ok" as const), timeout]);
     return result;
   }
 
@@ -169,12 +199,14 @@ export function SelfScreenShareButton({
       return;
     }
     try {
-      let outcome = await publishWithTimeout();
+      let outcome = await publishWithTimeout(true).catch(() => "timeout" as const);
       if (outcome === "timeout") {
         // Зависшая попытка публикации сама трек не остановит — гасим явно
         // перед повтором, иначе второй вызов будет конкурировать с первым.
+        // Повтор — прежним проверенным путём, одним слоем: если зависание
+        // связано со слоями, демонстрация всё равно начнётся.
         await localParticipant.setScreenShareEnabled(false).catch(() => undefined);
-        outcome = await publishWithTimeout();
+        outcome = await publishWithTimeout(false);
       }
       if (outcome === "timeout") {
         toast.error("Не удалось начать демонстрацию — попробуйте ещё раз");
