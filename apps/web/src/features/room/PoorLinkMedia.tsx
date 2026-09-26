@@ -9,7 +9,7 @@ import {
   type Participant,
 } from "livekit-client";
 
-import { linkQuality, useLinkPoor } from "@/shared/link-quality";
+import { linkQuality, useLinkPoor, useLinkProbe } from "@/shared/link-quality";
 import { requestLessonPrecache } from "@/shared/service-worker";
 
 /**
@@ -60,6 +60,7 @@ function useReportLiveKitQuality(): void {
 export function PoorLinkMediaAdapter() {
   const room = useRoomContext();
   useReportLiveKitQuality();
+  useLinkProbe();
   const poor = useLinkPoor();
 
   // Связь хорошая полминуты — просим service worker докачать файлы урока на

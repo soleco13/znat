@@ -100,6 +100,14 @@ export function buildServer() {
   app.register(recorderAccessPlugin);
   app.register(metricsPlugin);
 
+  // Замер связи из урока (shared/link-quality.ts, раз в 2 с с каждого
+  // участника): пустой ответ без базы и Redis, вне лимита запросов — иначе
+  // учителя за общим школьным IP упирались бы в лимит анонимных запросов.
+  // Без записи в лог: 50 участников дали бы тысячи строк в минуту.
+  app.get("/ping", { config: { rateLimit: false }, logLevel: "silent" }, async (_request, reply) =>
+    reply.header("Cache-Control", "no-store").status(204).send(),
+  );
+
   app.get("/health", async (_request, reply) => {
     const health = await checkHealth({ db: () => pool.query("select 1"), redis: () => redis.ping() });
     return reply

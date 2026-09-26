@@ -50,6 +50,8 @@ export function useBoardLinkPoor(provider: HocuspocusProvider | null): boolean {
 
   useEffect(() => {
     if (!provider) return;
+    // Доска только открылась — её код и документ ещё качаются.
+    linkQuality.startGrace();
     let seq = 0;
     let outstanding: { i: number; sentAt: number } | null = null;
     const recentRtt: number[] = [];

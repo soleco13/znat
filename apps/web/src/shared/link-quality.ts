@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 /**
  * Единое «связь этого устройства плохая» для всего урока: доска (пинг по
@@ -33,6 +33,16 @@ const TICK_MS = 2000;
 const STRONG_RTT_MS = 200;
 const STRONG_SAMPLES = 8;
 const STRONG_WINDOW_MS = 30_000;
+/** Замер связи из урока (`useLinkProbe`): пустой `/ping` на сервер приложения. */
+const PROBE_INTERVAL_MS = 2000;
+const PROBE_TIMEOUT_MS = 1500;
+const PROBE_RTT_POOR_MS = 400;
+/**
+ * После входа в урок и открытия доски браузер качает их код и данные —
+ * замеры в это время медленные на любой сети. Раньше это давало ложный
+ * экономный режим у зрителя на хорошем Wi-Fi (2026-09-26).
+ */
+export const LINK_GRACE_MS = 20_000;
 
 type Listener = () => void;
 
@@ -45,6 +55,7 @@ class LinkQuality {
   private sticky = false;
   private rtts: { at: number; rtt: number }[] = [];
   private excellentSince = 0;
+  private graceUntil = 0;
   private listeners = new Set<Listener>();
   private timer: ReturnType<typeof setInterval> | null = null;
 
@@ -52,8 +63,14 @@ class LinkQuality {
     return this.poor;
   }
 
+  /** Плохие признаки не учитывать `ms` (идёт загрузка — см. `LINK_GRACE_MS`). */
+  startGrace(ms = LINK_GRACE_MS, now = Date.now()): void {
+    this.graceUntil = Math.max(this.graceUntil, now + ms);
+  }
+
   /** Плохой признак от любого источника: медленный/потерянный пинг, обрыв, Poor у LiveKit. */
   reportBad(now = Date.now()): void {
+    if (now < this.graceUntil) return;
     this.lastBadAt = now;
     this.evaluate(now);
   }
@@ -133,4 +150,42 @@ export const linkQuality = new LinkQuality();
 /** `true`, пока связь устройства плохая (единый режим для доски и медиа). */
 export function useLinkPoor(): boolean {
   return useSyncExternalStore(linkQuality.subscribe, linkQuality.getSnapshot);
+}
+
+/**
+ * Замер связи, пока открыт урок: раз в 2 с пустой `/ping` на сервер
+ * приложения. Нужен независимо от доски — её пинг есть, только пока доска
+ * открыта, а без замеров во время демонстрации экономный режим не мог
+ * выключиться даже на хорошей сети (2026-09-26).
+ */
+export function useLinkProbe(): void {
+  useEffect(() => {
+    linkQuality.startGrace();
+    let inFlight = false;
+    const recent: number[] = [];
+    const probe = async () => {
+      // Фоновая вкладка: браузер душит таймеры и сеть — замер был бы ложным.
+      if (document.hidden || inFlight) return;
+      inFlight = true;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+      const startedAt = performance.now();
+      try {
+        await fetch("/ping", { cache: "no-store", signal: controller.signal });
+        const rtt = performance.now() - startedAt;
+        linkQuality.reportRtt(rtt);
+        recent.push(rtt);
+        if (recent.length > 4) recent.shift();
+        // Один всплеск — не повод; два медленных из последних четырёх — уже канал.
+        if (recent.filter((value) => value > PROBE_RTT_POOR_MS).length >= 2) linkQuality.reportBad();
+      } catch {
+        linkQuality.reportBad();
+      } finally {
+        clearTimeout(timeout);
+        inFlight = false;
+      }
+    };
+    const interval = setInterval(() => void probe(), PROBE_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, []);
 }
