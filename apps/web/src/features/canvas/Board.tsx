@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Excalidraw, convertToExcalidrawElements } from "@excalidraw/excalidraw";
 import type { ExcalidrawImperativeAPI, NormalizedZoomValue } from "@excalidraw/excalidraw/types";
 import type { BinaryFileData, DataURL } from "@excalidraw/excalidraw/types";
@@ -45,6 +45,7 @@ import {
 import { getPdfPageSizes } from "./pdf.js";
 import { MobileToolRail, type RailTool } from "./MobileToolRail.js";
 import { SlideSearch } from "./SlideSearch.js";
+import { createCoalescingApi, paceUpstream, throttleWhen, useBoardLinkPoor } from "./board-link.js";
 import "@excalidraw/excalidraw/index.css";
 import "./Board.css";
 
@@ -273,6 +274,20 @@ export function Board({
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const ydoc = provider?.document ?? null;
 
+  // Слабая связь у ЭТОГО участника — доска переходит в экономный режим
+  // (см. board-link.ts). Объявлено до эффекта создания провайдера: при
+  // размонтировании React снимает эффекты по порядку, и штатная отправка
+  // возвращается провайдеру раньше, чем он уничтожается.
+  const linkPoor = useBoardLinkPoor(provider);
+  const linkPoorRef = useRef(false);
+  useEffect(() => {
+    linkPoorRef.current = linkPoor;
+  }, [linkPoor]);
+  useEffect(() => {
+    if (!provider || !linkPoor) return;
+    return paceUpstream(provider);
+  }, [provider, linkPoor]);
+
   useEffect(() => {
     // Э12.6: персонал подключается с access-токеном; гость-ученик — с
     // литералом-маркером (`HocuspocusProvider` не шлёт auth-сообщение при
@@ -418,6 +433,11 @@ export function Board({
   // снаружи, чтобы прокинуть `binding.onPointerUpdate` в проп `<Excalidraw
   // onPointerUpdate>` (Э3.9, курсоры собеседников: см. эффект ниже).
   const [binding, setBinding] = useState<ExcalidrawBinding | null>(null);
+  // Свой курсор при слабой связи — не чаще раза в 100 мс (последнее положение).
+  const pointerUpdate = useMemo(
+    () => (binding ? throttleWhen(binding.onPointerUpdate, () => linkPoorRef.current) : undefined),
+    [binding],
+  );
 
   // Э3.11: `Y.UndoManager` активной страницы + его текущее состояние для
   // наших кнопок Undo/Redo (штатные кнопки Excalidraw спрятаны — см. ниже).
@@ -515,10 +535,14 @@ export function Board({
     // на безусловном (не под `if (this.awareness)`) обращении в конце
     // конструктора — поймано живой проверкой в браузере (Playwright), не
     // по докам/типам пакета.
+    // При слабой связи входящие правки и курсоры перерисовываются раз в кадр.
+    // Обёртка живёт вместе с привязкой; режим читается на каждом вызове, так
+    // что смена режима не пересоздаёт привязку (и не теряет историю undo).
+    const coalescing = createCoalescingApi(excalidrawAPI, () => linkPoorRef.current);
     const nextBinding = new ExcalidrawBinding(
       yElements,
       yAssets,
-      excalidrawAPI,
+      coalescing.api,
       provider.awareness,
       undoConfig,
     );
@@ -553,6 +577,7 @@ export function Board({
       setUndoState(null);
       yElements.unobserve(sanitize);
       nextBinding.destroy();
+      coalescing.dispose();
       // `nextBinding.destroy()` только снимает свои подписи/слушатели
       // (проверено чтением бандла — прогоняет `this.subscriptions`), но
       // НЕ трогает переданный `Y.UndoManager`. Уничтожаем сами — это же
@@ -1315,11 +1340,16 @@ export function Board({
             <MobileToolRail excalidrawAPI={excalidrawAPI} activeTool={railActiveTool} locked={railLocked} />
           </div>
         )}
-        {(syncStalled || importNote || uploadError || pageElementCount >= PAGE_ELEMENT_WARN_AT) && (
+        {(syncStalled || linkPoor || importNote || uploadError || pageElementCount >= PAGE_ELEMENT_WARN_AT) && (
           <div className="pointer-events-none absolute inset-x-3 top-16 z-10 flex flex-col items-center gap-1 text-center">
             {syncStalled && (
               <span className="rounded-md bg-card/95 px-2 py-1 text-xs font-medium text-destructive shadow-sm backdrop-blur">
                 Доска не синхронизирована — восстанавливаем связь…
+              </span>
+            )}
+            {linkPoor && !syncStalled && (
+              <span className="rounded-md bg-card/95 px-2 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur">
+                Слабая связь — доска в экономном режиме
               </span>
             )}
             {importNote && (
@@ -1390,7 +1420,7 @@ export function Board({
             // Э3.9: без этого собеседники не увидят курсор — ExcalidrawBinding
             // публикует его в awareness только когда сам вызывается, а вызывает
             // его именно Excalidraw через этот проп, не сам пакет.
-            onPointerUpdate={binding?.onPointerUpdate}
+            onPointerUpdate={pointerUpdate}
             // Э3.12: откат локальных добавлений сверх лимита 500 (handleSceneChange) +
             // синхронизация активного инструмента для MobileToolRail (syncRailToolState).
             onChange={(elements, appState) => {

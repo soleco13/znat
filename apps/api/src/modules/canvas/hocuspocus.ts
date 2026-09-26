@@ -23,6 +23,7 @@ import { GUEST_COOKIE_NAME, resolveGuestSession } from "../guests/service.js";
 import { verifyRecorderToken } from "../recorder-auth/service.js";
 import * as lessonsService from "../lessons/service.js";
 import * as repo from "./repo.js";
+import { adaptBroadcastsToLink, handleLinkStateless } from "./link-adapt.js";
 
 const documentNameSchema = z.string().uuid();
 
@@ -544,6 +545,8 @@ export const hocuspocus = new Hocuspocus({
   beforeSync: trackReadOnlyRejection,
   beforeHandleMessage: limitGuestCanvasInbound,
   afterUnloadDocument: clearDrawPermissionOverrides,
+  afterLoadDocument: adaptBroadcastsToLink,
+  onStateless: handleLinkStateless,
 });
 
 // ─── Э8.10, §7.3 ТЗ: «вынести чей-то ответ на доску» ───────────────────────
