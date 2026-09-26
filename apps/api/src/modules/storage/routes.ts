@@ -37,7 +37,13 @@ export async function filesRoutes(app: FastifyInstance) {
           return reply.header("Content-Type", "image/webp").header("X-Content-Type-Options", "nosniff").send(data);
         }
       }
-      if (env.FILES_VIA_PROXY) {
+      // Отдачу через Caddy (X-Accel-Redirect) — только запросам, которые через
+      // него и пришли (он всегда ставит X-Forwarded-For). Запись урока
+      // (headless Chrome внутри egress) ходит к приложению напрямую, минуя
+      // Caddy: ей ответ-указание приходил пустым, и картинки доски в записи не
+      // отображались (2026-09-26). Напрямую к приложению можно только с
+      // самого сервера — порт открыт на 127.0.0.1.
+      if (env.FILES_VIA_PROXY && request.headers["x-forwarded-for"] !== undefined) {
         let proxyPath: string;
         try {
           proxyPath = storageService.getProxyFilePath(storageKey);
