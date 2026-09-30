@@ -14,6 +14,13 @@ const LESSON_ENTRY_MODULES = [
 ];
 
 /**
+ * Динамические импорты внутри кусков урока, которые тоже нужны заранее:
+ * Excalidraw подгружает сама русскую локаль и полифилл `roundRect`, без
+ * повторов — оборвался запрос, и доска у ученика на английском.
+ */
+const LESSON_DYNAMIC_MODULES = [/\/ru-RU[-.]/, /roundRect/];
+
+/**
  * `sw-assets.json` — список файлов урока (куски из `LESSON_ENTRY_MODULES` со
  * всеми их статическими зависимостями и CSS) для service worker'а
  * (`public/sw.js`): он докачивает их на устройство, пока связь хорошая.
@@ -45,6 +52,13 @@ function lessonAssetsManifest(): Plugin {
         if (module) {
           const own = new Set<string>();
           visit(chunk.fileName, own);
+          for (const dep of chunk.dynamicImports) {
+            const ids = byFile.get(dep)?.moduleIds ?? [];
+            if (ids.some((id) => LESSON_DYNAMIC_MODULES.some((re) => re.test(id)))) {
+              visit(dep, own);
+              visit(dep, assets);
+            }
+          }
           perModule[module] = [...own].sort();
         }
       }
