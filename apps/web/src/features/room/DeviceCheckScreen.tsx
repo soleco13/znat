@@ -4,7 +4,6 @@ import {
   ArrowRight,
   Camera,
   CameraOff,
-  GraduationCap,
   Mic,
   MicOff,
   Play,
@@ -16,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/shared/ui/alert";
 import { Button } from "@/shared/ui/button";
+import { ButtonGroup } from "@/shared/ui/button-group";
 import { Card } from "@/shared/ui/card";
 import { Label } from "@/shared/ui/label";
 import { Toggle } from "@/shared/ui/toggle";
@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/ui/select";
+import { BrandMark } from "@/shared/ui/brand-mark";
 
 type PermissionState = "idle" | "requesting" | "granted" | "denied" | "unavailable";
 type EchoState = "idle" | "recording" | "ready" | "playing";
@@ -106,6 +107,7 @@ export function DeviceCheckScreen({
   const [micEnabled, setMicEnabled] = useState(true);
   const [micError, setMicError] = useState<string | null>(null);
   const [echoState, setEchoState] = useState<EchoState>("idle");
+  const [voiceDetected, setVoiceDetected] = useState(false);
 
   const [camPermission, setCamPermission] = useState<PermissionState>("idle");
   const [camDevices, setCamDevices] = useState<MediaDeviceInfo[]>([]);
@@ -121,6 +123,7 @@ export function DeviceCheckScreen({
   const analyserRef = useRef<AnalyserNode | null>(null);
   const rafRef = useRef<number | null>(null);
   const levelPeakRef = useRef(0);
+  const voiceRef = useRef(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const audioElRef = useRef<HTMLAudioElement>(null);
@@ -135,6 +138,8 @@ export function DeviceCheckScreen({
       rafRef.current = null;
     }
     analyserRef.current = null;
+    voiceRef.current = false;
+    setVoiceDetected(false);
     audioCtxRef.current?.close().catch(() => undefined);
     audioCtxRef.current = null;
     drawMeter(0);
@@ -218,6 +223,11 @@ export function DeviceCheckScreen({
       const level = Math.min(1, rms * 3.2);
       levelPeakRef.current = Math.max(level, levelPeakRef.current * 0.9);
       drawMeter(reduceMotion ? Math.min(0.5, levelPeakRef.current) : levelPeakRef.current);
+      const voice = levelPeakRef.current > 0.08;
+      if (voice !== voiceRef.current) {
+        voiceRef.current = voice;
+        setVoiceDetected(voice);
+      }
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
@@ -391,18 +401,24 @@ export function DeviceCheckScreen({
 
   const camActive = camPermission === "granted" && camEnabled;
   const micActive = micPermission === "granted" && micEnabled;
+  const camFailed = camPermission === "denied" || camPermission === "unavailable";
   const micDeviceLabel =
     micDevices.find((d) => d.deviceId === micId)?.label || (micActive ? "Системный микрофон" : "—");
   const camDeviceLabel =
     camDevices.find((d) => d.deviceId === camId)?.label || (camActive ? "Системная камера" : "—");
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto flex h-16 w-full max-w-5xl items-center gap-3 px-4">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary">
-            <GraduationCap className="size-5" aria-hidden />
-          </span>
+    // Э14: экран обязан целиком помещаться в окно на любом устройстве — ни
+    // прокрутки страницы, ни внутренних скроллов (ученик ничего не должен
+    // «потерять» за краем). Корень фиксирован по высоте `h-dvh`; на телефоне
+    // и планшете в портрете сжимается только превью камеры (`flex-1`),
+    // карточки микрофона и динамиков занимают ровно свою высоту. Вариант
+    // `short:` (max-height 560px) уплотняет всё в альбомной ориентации.
+    <div className="flex h-dvh flex-col overflow-hidden bg-background">
+      {/* На низком экране шапки нет — название урока уезжает в футер. */}
+      <header className="shrink-0 border-b border-border bg-card short:hidden">
+        <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-3 px-4 sm:h-16">
+          <BrandMark className="size-9 text-primary" />
           <div className="min-w-0">
             <p className="text-[13px] text-muted-foreground">Подключение к уроку</p>
             <p className="truncate font-heavy text-foreground">{lessonTitle || "Проверка устройств"}</p>
@@ -410,29 +426,27 @@ export function DeviceCheckScreen({
         </div>
       </header>
 
-      <main className="flex flex-1 items-center justify-center p-4">
-        {/* Э12.7: фиксированная сетка — камера + микрофон + динамики образуют
-            единый блок постоянного размера. Переключение тумблеров и
-            появление подсказок НЕ меняют раскладку: у правых карточек
-            фиксированная высота строк и внутренний скролл, контролы всегда
-            в разметке (в выключенном состоянии — disabled). */}
-        {/* `grid-cols-1` (== `minmax(0,1fr)`) вместо предполагаемой одной
-            неявной auto-колонки — та растягивалась под контент (карточка с
-            `aspect-video` + названия устройств не желали сжиматься),
-            распирая всю раскладку на планшетах/телефонах. */}
-        <div className="grid w-full max-w-4xl grid-cols-1 gap-3 md:h-[26rem] md:grid-cols-[3fr_2fr]">
+      <main className="flex min-h-0 flex-1 justify-center p-3 sm:p-4 lg:items-center short:p-2">
+        {/* Телефон/планшет в портрете — колонка: камера сверху, под ней
+            микрофон и динамики (на планшете — рядом). От lg и на низком
+            экране — прежняя сетка «камера слева, звук справа». */}
+        <div className="flex h-full min-h-0 w-full max-w-4xl flex-col gap-3 lg:grid lg:max-h-[28rem] lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] short:grid short:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] short:gap-2">
           {/* ---------- Камера ---------- */}
-          <Card className="relative aspect-video overflow-hidden bg-slate-900 md:aspect-auto md:h-full">
+          <Card className="relative min-h-28 flex-1 overflow-hidden bg-slate-900 lg:h-full lg:min-h-0 short:h-full short:min-h-0">
             <div
               className={cn(
-                "absolute inset-0 grid place-items-center bg-gradient-to-br from-primary-light via-card to-teal-light transition-opacity",
+                "absolute inset-0 grid place-items-center bg-surface-2 transition-opacity motion-reduce:transition-none",
                 camActive && "opacity-0",
               )}
             >
-              <div className="flex flex-col items-center gap-2 text-center">
-                <span className="flex size-16 items-center justify-center rounded-2xl bg-card/80 text-primary shadow-sm">
-                  <GraduationCap className="size-8" aria-hidden />
-                </span>
+              <div
+                className={cn(
+                  "flex flex-col items-center gap-2 text-center",
+                  // Маленькое превью: плашка ошибки внизу важнее заглушки.
+                  camFailed && "hidden sm:flex short:hidden",
+                )}
+              >
+                <CameraOff className="size-6 text-muted-foreground short:size-5" aria-hidden />
                 <p className="text-sm font-semibold text-foreground">
                   {camPermission === "requesting" ? "Запрашиваем доступ…" : "Камера выключена"}
                 </p>
@@ -445,16 +459,20 @@ export function DeviceCheckScreen({
               playsInline
               muted
               className={cn(
-                "absolute inset-0 size-full -scale-x-100 bg-slate-900 object-cover transition-opacity",
+                "absolute inset-0 size-full -scale-x-100 bg-slate-900 object-cover transition-opacity motion-reduce:transition-none",
                 !camActive && "opacity-0",
               )}
             />
 
-            <div className="pointer-events-none absolute left-3 top-3 flex max-w-[calc(100%-4.5rem)] flex-col gap-0.5">
+            <div
+              role="status"
+              aria-live="polite"
+              className="pointer-events-none absolute left-3 top-3 flex max-w-[calc(100%-4.5rem)] flex-col gap-0.5"
+            >
               <span
                 className={cn(
-                  "inline-flex w-fit items-center gap-1.5 rounded-pill px-2.5 py-1 text-xs font-semibold backdrop-blur",
-                  camActive ? "bg-black/45 text-white" : "bg-card/85 text-foreground",
+                  "inline-flex w-fit items-center gap-1.5 rounded-pill px-2.5 py-1 text-xs font-semibold",
+                  camActive ? "bg-black/65 text-white" : "bg-card text-foreground",
                 )}
               >
                 {camActive ? (
@@ -465,7 +483,7 @@ export function DeviceCheckScreen({
                 {camActive ? "Камера включена" : "Камера выключена"}
               </span>
               {camActive && (
-                <span className="truncate rounded-pill bg-black/35 px-2.5 py-0.5 text-[11px] text-white/85 backdrop-blur">
+                <span className="truncate rounded-pill bg-black/65 px-2.5 py-0.5 text-xs text-white hidden sm:block short:hidden">
                   {camDeviceLabel}
                 </span>
               )}
@@ -476,19 +494,28 @@ export function DeviceCheckScreen({
               size="circle"
               pressed={camActive}
               onPressedChange={toggleCam}
-              aria-label={camActive ? "Выключить камеру" : "Включить камеру"}
+              aria-label="Камера"
+              title={camActive ? "Выключить камеру" : "Включить камеру"}
               className="absolute right-3 top-3 size-11"
             >
               {camActive ? <Camera aria-hidden /> : <CameraOff aria-hidden />}
             </Toggle>
 
-            {camPermission === "denied" || camPermission === "unavailable" ? (
+            {camFailed ? (
               <div className="absolute inset-x-3 bottom-3">
-                <Alert variant="warning" className="bg-card/95 backdrop-blur">
+                <Alert
+                  variant="warning"
+                  className="bg-card px-3 py-2.5 [&>svg]:left-3 [&>svg]:top-3"
+                >
                   <AlertTriangle className="size-4" aria-hidden />
-                  <AlertDescription className="flex min-w-0 flex-wrap items-center gap-2">
-                    <span className="min-w-0 break-words">{camError}</span>
-                    <Button variant="outline" size="sm" onClick={() => openCam(null)}>
+                  <AlertDescription className="flex min-w-0 items-center gap-2 text-xs sm:text-sm">
+                    <span className="min-w-0 flex-1 break-words">{camError}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0"
+                      onClick={() => openCam(null)}
+                    >
                       <RotateCcw aria-hidden /> Ещё раз
                     </Button>
                   </AlertDescription>
@@ -497,7 +524,10 @@ export function DeviceCheckScreen({
             ) : camDevices.length > 0 ? (
               <div className="absolute inset-x-3 bottom-3">
                 <Select value={camId} onValueChange={handleCamDeviceChange}>
-                  <SelectTrigger className="h-10 border-0 bg-card/90 text-xs shadow-sm backdrop-blur">
+                  <SelectTrigger
+                    aria-label="Выбор камеры"
+                    className="h-10 border-0 bg-card text-xs shadow-sm"
+                  >
                     <SelectValue placeholder="Камера" />
                   </SelectTrigger>
                   <SelectContent>
@@ -513,9 +543,9 @@ export function DeviceCheckScreen({
           </Card>
 
           {/* ---------- Микрофон + Динамики ---------- */}
-          <div className="grid min-h-0 grid-cols-1 gap-3 md:grid-rows-[1.55fr_1fr]">
-            <Card className="flex min-h-0 flex-col p-4">
-              <div className="flex items-start justify-between gap-3">
+          <div className="grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:min-h-0 lg:flex-col short:flex short:min-h-0 short:flex-col short:gap-2">
+            <Card className="flex flex-col gap-3 p-3 sm:p-4 justify-center lg:min-h-0 lg:flex-1 short:min-h-0 short:flex-1 short:justify-center short:gap-1.5 short:p-2.5">
+              <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="flex items-center gap-1.5 font-semibold text-foreground">
                     {micActive ? (
@@ -525,8 +555,27 @@ export function DeviceCheckScreen({
                     )}
                     {micActive ? "Микрофон включён" : "Микрофон выключен"}
                   </p>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {micPermission === "requesting" ? "Запрашиваем доступ…" : micDeviceLabel}
+                  <p
+                    role="status"
+                    aria-live="polite"
+                    className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-muted-foreground"
+                  >
+                    {micActive && (
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "size-2 shrink-0 rounded-full transition-colors motion-reduce:transition-none",
+                          voiceDetected ? "bg-success" : "bg-muted-foreground/40",
+                        )}
+                      />
+                    )}
+                    <span className="truncate">
+                      {micPermission === "requesting"
+                        ? "Запрашиваем доступ…"
+                        : micActive && voiceDetected
+                          ? "Слышим вас"
+                          : micDeviceLabel}
+                    </span>
                   </p>
                 </div>
                 <Toggle
@@ -534,112 +583,151 @@ export function DeviceCheckScreen({
                   size="circle"
                   pressed={micActive}
                   onPressedChange={toggleMic}
-                  aria-label={micActive ? "Выключить микрофон" : "Включить микрофон"}
-                  className="size-11 shrink-0"
+                  aria-label="Микрофон"
+                  title={micActive ? "Выключить микрофон" : "Включить микрофон"}
+                  className="size-11 shrink-0 short:size-9"
                 >
                   {micActive ? <Mic aria-hidden /> : <MicOff aria-hidden />}
                 </Toggle>
               </div>
 
-              <div className="mt-3 rounded-md bg-surface-2 p-2.5">
-                <canvas ref={canvasRef} className="h-9 w-full" aria-hidden />
+              <div
+                className="rounded-md bg-surface-2 px-2.5 py-2 short:py-1.5"
+                aria-busy={micPermission === "requesting"}
+              >
+                <canvas ref={canvasRef} className="h-8 w-full short:h-5" aria-hidden />
               </div>
 
-              <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">
-                {micPermission === "denied" || micPermission === "unavailable" ? (
-                  <Alert variant="warning">
-                    <AlertTriangle className="size-4" aria-hidden />
-                    <AlertDescription className="flex min-w-0 flex-wrap items-center gap-2">
-                      <span className="min-w-0 break-words">{micError}</span>
-                      <Button variant="outline" size="sm" onClick={() => openMic(null)}>
-                        <RotateCcw aria-hidden /> Ещё раз
-                      </Button>
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <>
-                    <Select
-                      value={micId}
-                      onValueChange={handleMicDeviceChange}
-                      disabled={!micActive || micDevices.length < 2}
+              {micPermission === "denied" || micPermission === "unavailable" ? (
+                <Alert variant="warning" className="px-3 py-2.5 [&>svg]:left-3 [&>svg]:top-3">
+                  <AlertTriangle className="size-4" aria-hidden />
+                  <AlertDescription className="flex min-w-0 items-center gap-2 text-xs sm:text-sm">
+                    <span className="min-w-0 flex-1 break-words">{micError}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0"
+                      onClick={() => openMic(null)}
                     >
-                      <SelectTrigger className="h-10 text-xs">
-                        <SelectValue placeholder="Микрофон" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {micDevices.map((d) => (
-                          <SelectItem key={d.deviceId} value={d.deviceId}>
-                            {d.label || "Микрофон"}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={startEchoTest}
-                        disabled={!micActive || echoState === "recording"}
-                      >
-                        {echoState === "recording" ? <Square aria-hidden /> : <Mic aria-hidden />}
-                        {echoState === "recording" ? "Запись… 3 с" : "Записать голос"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={playEcho}
-                        disabled={echoState !== "ready" && echoState !== "playing"}
-                      >
-                        <Play aria-hidden /> Прослушать
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </div>
+                      <RotateCcw aria-hidden /> Ещё раз
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <div className="flex flex-col gap-2 short:gap-1.5">
+                  <Label
+                    htmlFor="device-check-mic"
+                    className="sr-only text-xs text-muted-foreground sm:not-sr-only short:sr-only"
+                  >
+                    Устройство ввода
+                  </Label>
+                  <Select
+                    value={micId}
+                    onValueChange={handleMicDeviceChange}
+                    disabled={!micActive || micDevices.length < 2}
+                  >
+                    <SelectTrigger id="device-check-mic" className="h-10 text-xs short:h-9">
+                      <SelectValue placeholder="Микрофон" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {micDevices.map((d) => (
+                        <SelectItem key={d.deviceId} value={d.deviceId}>
+                          {d.label || "Микрофон"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <ButtonGroup aria-label="Проверка голоса" className="w-full">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-10 min-w-0 flex-1 short:h-9 short:px-2 short:text-xs"
+                      onClick={startEchoTest}
+                      disabled={!micActive || echoState === "recording"}
+                    >
+                      {echoState === "recording" ? <Square aria-hidden /> : <Mic aria-hidden />}
+                      {echoState === "recording" ? "Запись… 3 с" : "Записать голос"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-10 min-w-0 flex-1 short:h-9 short:px-2 short:text-xs"
+                      onClick={playEcho}
+                      disabled={echoState !== "ready" && echoState !== "playing"}
+                    >
+                      <Play aria-hidden /> Прослушать
+                    </Button>
+                  </ButtonGroup>
+                </div>
+              )}
             </Card>
 
-            <Card className="flex min-h-0 flex-col justify-center gap-2 p-4">
-              <p className="flex items-center gap-1.5 font-semibold text-foreground">
+            {/* Динамики: на телефоне и низком экране — одна строка
+                «иконка · выбор устройства · проверить». */}
+            <Card className="flex flex-col justify-center gap-2 p-3 sm:justify-start sm:p-4 lg:justify-center short:justify-center short:p-2.5">
+              <p className="hidden items-center gap-1.5 font-semibold text-foreground sm:flex short:hidden">
                 <Volume2 className="size-4 text-primary" aria-hidden />
                 Динамики
               </p>
-              <Label className="sr-only">Устройство вывода звука</Label>
-              <Select
-                value={spkId}
-                onValueChange={(v) => setSpkId(v)}
-                disabled={spkDevices.length === 0}
+              <Label
+                htmlFor="device-check-spk"
+                className="sr-only text-xs text-muted-foreground sm:not-sr-only short:sr-only"
               >
-                <SelectTrigger className="h-10 text-xs">
-                  <SelectValue
-                    placeholder={
-                      spkDevices.length ? "Динамики" : "Список появится после доступа к микрофону"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {spkDevices.map((d) => (
-                    <SelectItem key={d.deviceId} value={d.deviceId}>
-                      {d.label || "Динамики"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button variant="outline" size="sm" className="w-full" onClick={testSpeaker}>
-                <Play aria-hidden /> Проверить звук
-              </Button>
+                Устройство вывода звука
+              </Label>
+              <div className="flex items-center gap-2 sm:flex-col sm:items-stretch short:flex-row short:items-center">
+                <Volume2
+                  className="block size-5 shrink-0 text-primary sm:hidden short:block"
+                  aria-hidden
+                />
+                <Select
+                  value={spkId}
+                  onValueChange={(v) => setSpkId(v)}
+                  disabled={spkDevices.length === 0}
+                >
+                  <SelectTrigger
+                    id="device-check-spk"
+                    className="h-10 min-w-0 flex-1 text-xs sm:flex-none short:h-9 short:flex-1"
+                  >
+                    <SelectValue
+                      placeholder={spkDevices.length ? "Динамики" : "Системные динамики"}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {spkDevices.map((d) => (
+                      <SelectItem key={d.deviceId} value={d.deviceId}>
+                        {d.label || "Динамики"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-10 shrink-0 sm:w-full short:h-9 short:w-auto"
+                  onClick={testSpeaker}
+                >
+                  <Play aria-hidden /> Проверить звук
+                </Button>
+              </div>
             </Card>
           </div>
         </div>
       </main>
 
-      <footer className="sticky bottom-0 border-t border-border bg-card">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-3">
-          <p className="hidden text-sm text-muted-foreground sm:block">
+      <footer className="shrink-0 border-t border-border bg-card pb-[env(safe-area-inset-bottom)]">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-3 short:py-2">
+          <p className="hidden text-sm text-muted-foreground sm:block short:hidden">
             Оборудование можно переключить и во время урока
           </p>
-          <Button size="lg" className="ml-auto min-w-44" onClick={handleContinue}>
+          <p className="hidden min-w-0 truncate font-heavy text-foreground short:block">
+            {lessonTitle || "Проверка устройств"}
+          </p>
+          <Button
+            size="lg"
+            className="w-full sm:ml-auto sm:w-auto sm:min-w-44 short:ml-auto short:h-10 short:w-auto short:shrink-0"
+            onClick={handleContinue}
+          >
             Присоединиться
             <ArrowRight aria-hidden />
           </Button>

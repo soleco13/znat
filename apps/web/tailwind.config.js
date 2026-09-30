@@ -1,4 +1,5 @@
 import tailwindcssAnimate from "tailwindcss-animate";
+import plugin from "tailwindcss/plugin";
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -138,5 +139,16 @@ export default {
       },
     },
   },
-  plugins: [tailwindcssAnimate],
+  plugins: [
+    tailwindcssAnimate,
+    // `short:` — низкий экран (телефон/планшет в альбомной ориентации):
+    // уплотняем раскладки, которые обязаны помещаться без прокрутки.
+    // Через addVariant, а не raw в `screens` — raw-экран в Tailwind 3
+    // отключает все варианты `max-sm:`/`max-md:`. Экранные варианты Tailwind
+    // всегда ставит в конец CSS, поэтому `:is(html *)` (+1 к специфичности),
+    // чтобы `short:` перекрывал `sm:`/`md:` на том же элементе.
+    plugin(({ addVariant }) =>
+      addVariant("short", "@media (max-height: 560px) { &:is(html *) }"),
+    ),
+  ],
 };

@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "image-deep-research": {
+      "source": "ridelink0/ultimate-frontend-skills",
+      "sourceType": "github",
+      "skillPath": "skills/image-deep-research/SKILL.md",
+      "computedHash": "93058ad3e86cdb9c87dca58c3709a8362d3148d297da005f4207062347748394"
+    },
+    "kill-ai-slop": {
+      "source": "yetone/kill-ai-slop",
+      "sourceType": "github",
+      "skillPath": "skill/SKILL.md",
+      "computedHash": "7f0187c769ef43b86b162363156f1561b16f3898587b18041f4239ec9ec954f5"
+    },
+    "ultimate-frontend-skills": {
+      "source": "ridelink0/ultimate-frontend-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ultimate-frontend-skills/SKILL.md",
+      "computedHash": "dce9294fafdb3fc546eb231616bd1a5bda8b04c44edee357eebdf1a3055aa372"
+    },
+    "visual-research": {
+      "source": "ridelink0/ultimate-frontend-skills",
+      "sourceType": "github",
+      "skillPath": "skills/visual-research/SKILL.md",
+      "computedHash": "05f4ae614ecd883d050683f6d683b26e4557af36e2634438485e5182c9dda42f"
+    }
+  }
+}

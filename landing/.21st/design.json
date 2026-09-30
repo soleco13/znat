@@ -1,0 +1,259 @@
+{
+  "version": 1,
+  "project": {
+    "name": "matis-landing",
+    "productType": null,
+    "stack": [
+      "react",
+      "tailwind-v3",
+      "vite"
+    ]
+  },
+  "sources": {
+    "tokens": [
+      "src/index.css"
+    ],
+    "components": [
+      "src/components/ui"
+    ],
+    "assets": [],
+    "instructions": []
+  },
+  "design": {
+    "colorMode": "light",
+    "colors": {
+      "--c-primary": {
+        "value": "#1d4ed8",
+        "source": "src/index.css"
+      },
+      "--c-primary-hover": {
+        "value": "#1e40af",
+        "source": "src/index.css"
+      },
+      "--c-primary-light": {
+        "value": "#eff4ff",
+        "source": "src/index.css"
+      },
+      "--c-primary-muted": {
+        "value": "#c7d7fe",
+        "source": "src/index.css"
+      },
+      "--c-border": {
+        "value": "rgba(16, 24, 40, 0.07)",
+        "source": "src/index.css"
+      },
+      "--c-border-solid": {
+        "value": "#e7eaef",
+        "source": "src/index.css"
+      },
+      "--ease-spring": {
+        "value": "cubic-bezier(0.34, 1.4, 0.64, 1)",
+        "source": "src/index.css"
+      },
+      "--background": {
+        "value": "220 17% 97%",
+        "source": "src/index.css"
+      },
+      "--foreground": {
+        "value": "222 44% 11%",
+        "source": "src/index.css"
+      },
+      "--card-foreground": {
+        "value": "222 44% 11%",
+        "source": "src/index.css"
+      },
+      "--primary": {
+        "value": "224 71% 48%",
+        "source": "src/index.css"
+      },
+      "--primary-foreground": {
+        "value": "0 0% 100%",
+        "source": "src/index.css"
+      },
+      "--secondary": {
+        "value": "220 17% 95%",
+        "source": "src/index.css"
+      },
+      "--secondary-foreground": {
+        "value": "222 44% 11%",
+        "source": "src/index.css"
+      },
+      "--muted": {
+        "value": "220 16% 96%",
+        "source": "src/index.css"
+      },
+      "--muted-foreground": {
+        "value": "217 15% 45%",
+        "source": "src/index.css"
+      },
+      "--accent": {
+        "value": "214 100% 97%",
+        "source": "src/index.css"
+      },
+      "--accent-foreground": {
+        "value": "224 71% 48%",
+        "source": "src/index.css"
+      },
+      "--destructive": {
+        "value": "0 72% 51%",
+        "source": "src/index.css"
+      },
+      "--destructive-foreground": {
+        "value": "0 0% 100%",
+        "source": "src/index.css"
+      },
+      "--success-foreground": {
+        "value": "0 0% 100%",
+        "source": "src/index.css"
+      },
+      "--warning-foreground": {
+        "value": "0 0% 100%",
+        "source": "src/index.css"
+      },
+      "--border": {
+        "value": "220 22% 92%",
+        "source": "src/index.css"
+      },
+      "--ring": {
+        "value": "224 71% 48%",
+        "source": "src/index.css"
+      }
+    },
+    "typography": {
+      "--c-text": {
+        "value": "#101828",
+        "source": "src/index.css"
+      },
+      "--c-text-2": {
+        "value": "#475467",
+        "source": "src/index.css"
+      },
+      "--c-text-3": {
+        "value": "#98a2b3",
+        "source": "src/index.css"
+      },
+      "--font-app": {
+        "value": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"Inter\", Roboto,\n    \"Helvetica Neue\", Arial, sans-serif",
+        "source": "src/index.css"
+      },
+      "--font": {
+        "value": "\"Manrope Variable\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto,\n    \"Helvetica Neue\", Arial, sans-serif",
+        "source": "src/index.css"
+      },
+      "--font-mono": {
+        "value": "ui-monospace, \"SF Mono\", \"JetBrains Mono\", Menlo, Consolas, monospace",
+        "source": "src/index.css"
+      },
+      "--tracking-tight": {
+        "value": "-0.025em",
+        "source": "src/index.css"
+      },
+      "--tracking-head": {
+        "value": "-0.02em",
+        "source": "src/index.css"
+      },
+      "--leading-body": {
+        "value": "1.55",
+        "source": "src/index.css"
+      }
+    },
+    "spacing": {},
+    "radius": {
+      "--radius-sm": {
+        "value": "8px",
+        "source": "src/index.css"
+      },
+      "--radius": {
+        "value": "10px",
+        "source": "src/index.css"
+      },
+      "--radius-lg": {
+        "value": "16px",
+        "source": "src/index.css"
+      },
+      "--radius-xl": {
+        "value": "20px",
+        "source": "src/index.css"
+      },
+      "--radius-pill": {
+        "value": "99px",
+        "source": "src/index.css"
+      }
+    },
+    "shadows": {
+      "--shadow-xs": {
+        "value": "0 1px 2px rgba(16, 24, 40, 0.05)",
+        "source": "src/index.css"
+      },
+      "--shadow-sm": {
+        "value": "0 1px 3px rgba(16, 24, 40, 0.06), 0 1px 2px rgba(16, 24, 40, 0.04)",
+        "source": "src/index.css"
+      },
+      "--shadow": {
+        "value": "0 4px 12px rgba(16, 24, 40, 0.06), 0 2px 4px rgba(16, 24, 40, 0.04)",
+        "source": "src/index.css"
+      },
+      "--shadow-md": {
+        "value": "0 8px 24px rgba(16, 24, 40, 0.08), 0 3px 8px rgba(16, 24, 40, 0.05)",
+        "source": "src/index.css"
+      },
+      "--shadow-lg": {
+        "value": "0 16px 40px rgba(16, 24, 40, 0.12), 0 4px 12px rgba(16, 24, 40, 0.06)",
+        "source": "src/index.css"
+      }
+    },
+    "motion": {
+      "--transition": {
+        "value": "0.18s cubic-bezier(0.2, 0.8, 0.2, 1)",
+        "source": "src/index.css"
+      },
+      "--ease": {
+        "value": "cubic-bezier(0.2, 0.8, 0.2, 1)",
+        "source": "src/index.css"
+      }
+    },
+    "density": "unknown"
+  },
+  "components": {
+    "installed": [
+      "badge",
+      "button"
+    ],
+    "preferredPrimitives": [
+      "radix-ui"
+    ],
+    "patterns": []
+  },
+  "constraints": {
+    "must": [],
+    "avoid": []
+  },
+  "decisions": [],
+  "evidence": [
+    {
+      "fact": "components.installed",
+      "source": "src/components/ui"
+    },
+    {
+      "fact": "design.colorMode:light",
+      "source": "src/index.css"
+    },
+    {
+      "fact": "design.tokens",
+      "source": "src/index.css"
+    },
+    {
+      "fact": "project.stack:react",
+      "source": "package.json"
+    },
+    {
+      "fact": "project.stack:tailwind-v3",
+      "source": "package.json"
+    },
+    {
+      "fact": "project.stack:vite",
+      "source": "package.json"
+    }
+  ],
+  "generatedAt": "2026-09-26T14:18:51.876Z"
+}
