@@ -96,7 +96,7 @@ import { SimpleTooltip, TooltipProvider } from "@/shared/ui/tooltip";
 import { DeckPanel } from "../decks/DeckPanel.js";
 import { listLessonActivities } from "../materials/activity-api.js";
 import { ActivityStage, Board, LessonActivityPanel, prefetchLessonStage } from "./lazy-stage.js";
-import { RecordingConsentBanner, RecordingPanel } from "../recordings/RecordingPanel.js";
+import { RecordingPanel } from "../recordings/RecordingPanel.js";
 import { playRecordingSound } from "./recording-sound.js";
 import { playParticipantSound } from "./participant-sound.js";
 import { SelfCameraButton } from "./CameraControls.js";
@@ -165,6 +165,18 @@ function buildRoomOptions(settings: ClientMediaSettings | null): RoomOptions {
     dynacast: true,
     reconnectPolicy: MEDIA_RECONNECT_POLICY,
   };
+}
+
+/**
+ * Уведомления урока — всплывающие плашки по центру сверху, поверх стейджа
+ * (sonner, `position: "top-center"`), исчезают сами. Раньше это были полосы
+ * над сеткой камер: занимали место в сетке и висели, пока их не закроют.
+ */
+const ROOM_TOAST = { position: "top-center" as const, duration: 6000 };
+
+/** Ошибка действия в уроке (права, режим, чат…) — плашкой, одна за раз. */
+function showRoomError(message: string) {
+  toast.error(message, { ...ROOM_TOAST, id: "room-error" });
 }
 
 /** Сколько переподключение должно длиться, чтобы показать ученику оверлей. */
@@ -279,7 +291,6 @@ export function RoomPage() {
   const [activeActivityId, setActiveActivityId] = useState<string | null>(null);
   const [reviewSignal, setReviewSignal] = useState(0);
   const [recordingActive, setRecordingActive] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [joinFailed, setJoinFailed] = useState(false);
   /** Войти нельзя и повтор не поможет: удалили из урока, вход закрыт, урок полон. */
   const [blocked, setBlocked] = useState<{ title: string; text: string } | null>(null);
@@ -425,6 +436,11 @@ export function RoomPage() {
       case "recording_status": {
         const prev = recordingActivePrevRef.current;
         if (prev !== null && prev !== message.active) playRecordingSound(message.active);
+        // Предупреждение о записи — всем, и при старте, и при входе в урок,
+        // где запись уже идёт; дальше о ней напоминает иконка в шапке.
+        if (message.active && prev !== true) {
+          toast("Идёт запись урока", { ...ROOM_TOAST, id: "room-recording", icon: <Disc className="size-4 text-destructive" /> });
+        }
         recordingActivePrevRef.current = message.active;
         setRecordingActive(message.active);
         break;
@@ -436,7 +452,7 @@ export function RoomPage() {
         if (message.userId === selfIdRef.current) notifyAnnotationsUpdated(message.activityId);
         break;
       case "error":
-        setError(message.message);
+        showRoomError(message.message);
         break;
     }
   }, []);
@@ -628,27 +644,27 @@ export function RoomPage() {
     await apiFetch(`/lessons/${lessonId}/participants/${userId}/permissions`, {
       method: "PATCH",
       body: JSON.stringify({ [key]: value }),
-    }).catch((e) => setError(e instanceof Error ? e.message : "Не удалось изменить права"));
+    }).catch((e) => showRoomError(e instanceof Error ? e.message : "Не удалось изменить права"));
   }
 
   async function muteParticipant(userId: string) {
     if (!lessonId) return;
     await apiFetch(`/lessons/${lessonId}/participants/${userId}/mute`, { method: "POST" }).catch(() =>
-      setError("Не удалось заглушить участника"),
+      showRoomError("Не удалось заглушить участника"),
     );
   }
 
   async function muteAll() {
     if (!lessonId) return;
     await apiFetch(`/lessons/${lessonId}/mute-all`, { method: "POST" }).catch(() =>
-      setError("Не удалось заглушить всех участников"),
+      showRoomError("Не удалось заглушить всех участников"),
     );
   }
 
   async function removeParticipant(userId: string) {
     if (!lessonId) return;
     await apiFetch(`/lessons/${lessonId}/participants/${userId}/remove`, { method: "POST" }).catch((e) =>
-      setError(e instanceof Error ? e.message : "Не удалось удалить участника"),
+      showRoomError(e instanceof Error ? e.message : "Не удалось удалить участника"),
     );
   }
 
@@ -657,7 +673,7 @@ export function RoomPage() {
     await apiFetch(`/lessons/${lessonId}/entry`, {
       method: "PATCH",
       body: JSON.stringify({ locked: !entryLocked }),
-    }).catch(() => setError(entryLocked ? "Не удалось открыть вход" : "Не удалось закрыть вход"));
+    }).catch(() => showRoomError(entryLocked ? "Не удалось открыть вход" : "Не удалось закрыть вход"));
   }
 
   /** Э6.3, §5.3 ТЗ. */
@@ -666,7 +682,7 @@ export function RoomPage() {
     await apiFetch(`/lessons/${lessonId}/participants/${userId}/pin`, {
       method: "PATCH",
       body: JSON.stringify({ pinned }),
-    }).catch(() => setError("Не удалось закрепить участника"));
+    }).catch(() => showRoomError("Не удалось закрепить участника"));
   }
 
   /** Э6.4, §5.3 ТЗ. */
@@ -675,7 +691,7 @@ export function RoomPage() {
     await apiFetch(`/lessons/${lessonId}/mode`, {
       method: "PATCH",
       body: JSON.stringify({ mode }),
-    }).catch(() => setError("Не удалось изменить режим урока"));
+    }).catch(() => showRoomError("Не удалось изменить режим урока"));
   }
 
   /**
@@ -689,7 +705,7 @@ export function RoomPage() {
     await apiFetch(`/lessons/${lessonId}/stage`, {
       method: "PATCH",
       body: JSON.stringify({ stage }),
-    }).catch(() => setError("Не удалось переключить стейдж"));
+    }).catch(() => showRoomError("Не удалось переключить стейдж"));
   }
   const toggleBoard = () => changeLessonStage(stageView === "board" ? "people" : "board");
 
@@ -699,7 +715,7 @@ export function RoomPage() {
     await apiFetch(`/lessons/${lessonId}/draw-all`, {
       method: "POST",
       body: JSON.stringify({ canDraw }),
-    }).catch(() => setError("Не удалось изменить право рисования"));
+    }).catch(() => showRoomError("Не удалось изменить право рисования"));
   }
 
   async function sendChat(e: React.FormEvent) {
@@ -710,7 +726,7 @@ export function RoomPage() {
     await apiFetch(`/lessons/${lessonId}/chat`, {
       method: "POST",
       body: JSON.stringify({ body }),
-    }).catch(() => setError("Сообщение не отправлено"));
+    }).catch(() => showRoomError("Сообщение не отправлено"));
   }
 
   const openSettings = () => setSettingsOpen(true);
@@ -722,6 +738,32 @@ export function RoomPage() {
   const connectedCount = participants.filter((p) => p.connected).length;
   const aloneOnStage = media !== null && stageView === "people" && connectedCount <= 1;
   const raisedHands = participants.filter((p) => p.handRaised && p.connected && p.userId !== selfId);
+
+  // Поднятая рука — учителю плашка на каждого нового поднявшего (не висит:
+  // сам список поднятых рук остаётся в «Участниках»).
+  const handsSeenRef = useRef<Set<string>>(new Set());
+  const raisedKey = raisedHands.map((p) => p.userId).join(",");
+  useEffect(() => {
+    const now = new Set(raisedKey ? raisedKey.split(",") : []);
+    if (isTeacher) {
+      for (const id of now) {
+        if (handsSeenRef.current.has(id)) continue;
+        const p = raisedHands.find((x) => x.userId === id);
+        if (!p) continue;
+        toast(`${p.fullName} поднял(а) руку`, {
+          ...ROOM_TOAST,
+          id: `hand-${id}`,
+          duration: 8000,
+          icon: <Hand className="size-4 text-primary" />,
+          action: p.permissions.canSpeak
+            ? { label: "Участники", onClick: () => setDrawer("people") }
+            : { label: "Дать слово", onClick: () => void togglePermission(id, "canSpeak", true) },
+        });
+      }
+    }
+    handsSeenRef.current = now;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- реагируем только на смену набора поднявших
+  }, [raisedKey, isTeacher]);
   const unreadChat = drawer === "chat" ? 0 : Math.max(0, chat.length - chatSeen);
   const headerMeta = lessonStart
     ? `начало ${formatClock(lessonStart)} · ${participantsCount(connectedCount)}`
@@ -1133,30 +1175,6 @@ export function RoomPage() {
 
   const stageArea = (
     <>
-      {error ? (
-        <StageBanner tone="error" icon={AlertTriangle} action={{ label: "Скрыть", onClick: () => setError(null) }}>
-          {error}
-        </StageBanner>
-      ) : null}
-      {isTeacher && raisedHands.length > 0 ? (
-        <StageBanner
-          tone="info"
-          icon={Hand}
-          action={
-            raisedHands.length === 1 && !raisedHands[0]!.permissions.canSpeak
-              ? {
-                  label: "Дать слово",
-                  onClick: () => void togglePermission(raisedHands[0]!.userId, "canSpeak", true),
-                }
-              : { label: "Участники", onClick: () => setDrawer("people") }
-          }
-        >
-          {raisedHands.length === 1
-            ? `${raisedHands[0]!.fullName} поднял(а) руку — дайте слово, не прерывая объяснение.`
-            : `${raisedHands[0]!.fullName} и ещё ${raisedHands.length - 1} подняли руку.`}
-        </StageBanner>
-      ) : null}
-
       {media ? (
         <StageContent
           view={stageView}
@@ -1331,7 +1349,7 @@ export function RoomPage() {
           <span className="truncate text-xs leading-tight text-muted-foreground">{headerMeta}</span>
         </span>
         <StatusPill status={status} />
-        {recordingActive ? <RecordingPill /> : null}
+        {recordingActive ? <RecordingIcon /> : null}
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {isTeacher && lessonJoinPath ? (
             <Button variant="secondary" className="h-9 rounded-[10px] px-3.5 text-[13.5px]" onClick={copyJoinLink}>
@@ -1359,7 +1377,7 @@ export function RoomPage() {
         <BrandMark className="size-[26px] text-primary" />
         <span className="min-w-0 truncate text-[13.5px] font-bold">{lessonTitle ?? "Урок"}</span>
         <StatusPill status={status} compact />
-        {recordingActive ? <RecordingPill compact /> : null}
+        {recordingActive ? <RecordingIcon /> : null}
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <button
@@ -1406,8 +1424,6 @@ export function RoomPage() {
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
-
-      <RecordingConsentBanner active={recordingActive} />
 
       <div className="relative flex min-h-0 flex-1">
         {drawer ? (
@@ -1798,7 +1814,12 @@ export function RoomPage() {
   );
 }
 
+/**
+ * Метка связи — только когда со связью что-то не так. «На связи» не
+ * показываем: это обычное состояние, метка лишь мозолила глаза.
+ */
 function StatusPill({ status, compact = false }: { status: SocketStatusLike; compact?: boolean }) {
+  if (status === "connected") return null;
   return (
     <span
       className={cn(
@@ -1818,17 +1839,15 @@ function StatusPill({ status, compact = false }: { status: SocketStatusLike; com
   );
 }
 
-function RecordingPill({ compact = false }: { compact?: boolean }) {
+/** Идёт запись: спокойная иконка в стиле проекта вместо красной пилюли. */
+function RecordingIcon() {
   return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center rounded-full bg-danger-light font-semibold text-danger",
-        compact ? "h-[22px] gap-[5px] px-2 text-[11px]" : "h-[26px] gap-1.5 px-2.5 text-xs",
-      )}
-    >
-      <span className={cn("rounded-full bg-current", compact ? "size-[5px]" : "size-1.5")} />
-      Запись
-    </span>
+    <SimpleTooltip content="Идёт запись урока" side="bottom">
+      <span role="status" className="flex size-7 shrink-0 items-center justify-center rounded-[9px] text-destructive">
+        <Disc className="size-[17px]" aria-hidden />
+        <span className="sr-only">Идёт запись урока</span>
+      </span>
+    </SimpleTooltip>
   );
 }
 

@@ -4,6 +4,7 @@ import type {
   LessonRecordingsResponse,
   RecordingExternalLinkResponse,
   RecordingSummary,
+  RecordingWithDownload,
   StorageUsageResponse,
 } from "@school/shared";
 import { apiFetch } from "../../shared/api-client.js";
@@ -72,4 +73,29 @@ export function createExternalDownloadLink(
 /** Удалить запись из хранилища немедленно (не дожидаясь ретеншна). Активную запись нужно сначала остановить. */
 export function adminDeleteRecording(recordingId: string): Promise<void> {
   return apiFetch<void>(`/admin/recordings/${recordingId}`, { method: "DELETE" });
+}
+
+// ─── Кабинет учителя: записи своих уроков ────────────────────────────────────
+
+/** Запись вместе с названием урока — для архива учителя и блока «Последние записи». */
+export type LessonRecordingItem = RecordingWithDownload & { lessonTitle: string };
+
+/**
+ * Архив учителя собирается из `GET /lessons/:id/recordings` по каждому его
+ * уроку: общий список `/admin/recordings` учителю закрыт. Урок, по которому
+ * запрос упал, просто выпадает из списка — остальные показываем.
+ */
+export async function listRecordingsForLessons(
+  lessons: { id: string; title: string }[],
+): Promise<LessonRecordingItem[]> {
+  const results = await Promise.allSettled(lessons.map((l) => getLessonRecordings(l.id)));
+  const items: LessonRecordingItem[] = [];
+  results.forEach((res, i) => {
+    if (res.status !== "fulfilled") return;
+    for (const rec of res.value.recordings) {
+      if (rec.status === "deleted" || rec.status === "aborted") continue;
+      items.push({ ...rec, lessonTitle: lessons[i]!.title });
+    }
+  });
+  return items.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
 }

@@ -5,6 +5,7 @@ import {
   createMaterialResultSchema,
   importedQuestionsResultSchema,
   listMaterialsQuerySchema,
+  materialSourcesResponseSchema,
   listMediaAssetsQuerySchema,
   materialDetailSchema,
   materialSchema,
@@ -49,6 +50,12 @@ export default async function materialsRoutes(app: FastifyInstance) {
       return reply.send({ items });
     },
   );
+
+  // Вкладки библиотеки: «Матис» (материалы сервиса) + своё пространство, если там есть материалы.
+  app.get("/materials/sources", anyStaff, async (request, reply) => {
+    const result = await materialsService.listMaterialSources(request.user);
+    return reply.send(materialSourcesResponseSchema.parse(result));
+  });
 
   // Создание материала (Э9.10, §8 ТЗ) — задел на шаблоны/пустой материал;
   // тело — валидный `Material` целиком (тот же контракт, что и PUT ниже).

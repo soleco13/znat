@@ -5,6 +5,7 @@ import type {
   ListMaterialsQuery,
   Material,
   MaterialDetail,
+  MaterialSourcesResponse,
   MaterialStatusResult,
   MaterialSummary,
   MaterialValidationIssue,
@@ -24,6 +25,11 @@ export function listMaterials(query: ListMaterialsQuery = {}): Promise<{ items: 
   }
   const qs = params.toString();
   return apiFetch<{ items: MaterialSummary[] }>(`/materials${qs ? `?${qs}` : ""}`);
+}
+
+/** Вкладки библиотеки: «Матис» (материалы сервиса) и своё пространство, если там есть материалы. */
+export function listMaterialSources(): Promise<MaterialSourcesResponse> {
+  return apiFetch<MaterialSourcesResponse>("/materials/sources");
 }
 
 /** Материал целиком для редактора (Э9.2), с ключами ответов — только для admin/methodist/teacher-владельца. */

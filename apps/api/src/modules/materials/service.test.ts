@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AccessTokenPayload, Material } from "@school/shared";
 
-const { repoMock, validationMock } = vi.hoisted(() => ({
+const { repoMock, validationMock, schoolSettingsMock } = vi.hoisted(() => ({
+  schoolSettingsMock: { getPlatformSchool: vi.fn(), getSchoolName: vi.fn() },
   repoMock: {
+    findPublishedMaterialVersion: vi.fn(),
+    findMaterialSummariesByIds: vi.fn(),
     listMaterials: vi.fn(),
     findLatestMaterialVersionForEdit: vi.fn(),
     findPublishedMaterialVersionForEdit: vi.fn(),
@@ -19,6 +22,7 @@ const { repoMock, validationMock } = vi.hoisted(() => ({
 
 vi.mock("./repo.js", () => repoMock);
 vi.mock("./validation.js", () => validationMock);
+vi.mock("../school-settings/service.js", () => schoolSettingsMock);
 
 const {
   listMaterials,
@@ -31,6 +35,10 @@ const {
   validateMaterialForEdit,
   createMaterial,
   getMaterialVersion,
+  getLatestMaterial,
+  getMaterialSummaries,
+  assertMaterialInSchool,
+  listMaterialSources,
 } = await import("./service.js");
 
 const SCHOOL = "11111111-1111-1111-1111-111111111111";
@@ -468,5 +476,112 @@ describe("кеш версий материала на уроке", () => {
     });
 
     expect((await getMaterialVersion("cache-v3")).material.title).toBe("Новый заголовок");
+  });
+});
+
+// ─── Материалы сервиса «Матис» (служебное пространство kind = 'platform') ────
+
+describe("материалы «Матис»: чтение для всех пространств, запись — только своим", () => {
+  const PLATFORM = "99999999-9999-9999-9999-999999999999";
+  const PLATFORM_ADMIN: AccessTokenPayload = { sub: "88888888-8888-8888-8888-888888888888", schoolId: PLATFORM, role: "admin" };
+
+  function versionRow(overrides: Record<string, unknown> = {}) {
+    return {
+      materialId: "pm1",
+      versionId: "pv1",
+      version: 1,
+      content: VALID_CONTENT,
+      status: "published",
+      createdBy: PLATFORM_ADMIN.sub,
+      currentVersionId: "pv1",
+      ...overrides,
+    };
+  }
+  function summary(id: string, status: "draft" | "review" | "published") {
+    return { id, title: id, subject: "алгебра", grades: [8], topic: null, status, createdBy: "x", createdAt: new Date(), updatedAt: new Date() };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    schoolSettingsMock.getPlatformSchool.mockResolvedValue({ id: PLATFORM, name: "Матис" });
+  });
+
+  it("список source=platform — только опубликованное служебного пространства, для любой роли", async () => {
+    repoMock.listMaterials.mockResolvedValueOnce([]);
+    await listMaterials(ADMIN, { source: "platform", status: "draft" });
+    expect(repoMock.listMaterials).toHaveBeenCalledWith(PLATFORM, expect.objectContaining({ status: "published" }));
+  });
+
+  it("список source=platform без служебного пространства — пусто, в БД не ходим", async () => {
+    schoolSettingsMock.getPlatformSchool.mockResolvedValueOnce(null);
+    expect(await listMaterials(TEACHER, { source: "platform" })).toEqual([]);
+    expect(repoMock.listMaterials).not.toHaveBeenCalled();
+  });
+
+  it("просмотр: не своей школы — опубликованная версия Матиса, только чтение", async () => {
+    repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(null);
+    repoMock.findPublishedMaterialVersionForEdit.mockResolvedValueOnce(versionRow());
+    const loaded = await getMaterialForEdit(ADMIN, "pm1");
+    expect(repoMock.findPublishedMaterialVersionForEdit).toHaveBeenCalledWith(PLATFORM, "pm1");
+    expect(loaded).toMatchObject({ status: "published", isCurrent: true });
+  });
+
+  it("просмотр: черновик Матиса (нет опубликованной версии) — 404", async () => {
+    repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(null);
+    repoMock.findPublishedMaterialVersionForEdit.mockResolvedValueOnce(null);
+    await expect(getMaterialForEdit(TEACHER, "pm-draft")).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("правка/публикация/версии материала Матиса чужим админом — 404: запись ищет строго в своей школе", async () => {
+    repoMock.findLatestMaterialVersionForEdit.mockResolvedValue(null);
+    const content = VALID_CONTENT;
+    await expect(updateMaterialDraft(ADMIN, "pm1", content)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(publish(ADMIN, "pm1")).rejects.toMatchObject({ statusCode: 404 });
+    await expect(listMaterialVersions(ADMIN, "pm1")).rejects.toMatchObject({ statusCode: 404 });
+    for (const call of repoMock.findLatestMaterialVersionForEdit.mock.calls) expect(call[0]).toBe(SCHOOL);
+    repoMock.findLatestMaterialVersionForEdit.mockReset();
+  });
+
+  it("запуск задания: опубликованная версия Матиса, если в своей школе материала нет", async () => {
+    repoMock.findPublishedMaterialVersion.mockResolvedValueOnce(null).mockResolvedValueOnce(versionRow());
+    const loaded = await getLatestMaterial(SCHOOL, "pm1");
+    expect(repoMock.findPublishedMaterialVersion).toHaveBeenNthCalledWith(2, PLATFORM, "pm1");
+    expect(loaded.versionId).toBe("pv1");
+  });
+
+  it("материалы урока: свои — любые, Матиса — только опубликованные", async () => {
+    repoMock.findMaterialSummariesByIds
+      .mockResolvedValueOnce([summary("own", "draft")])
+      .mockResolvedValueOnce([summary("p-pub", "published"), summary("p-draft", "draft")]);
+    const rows = await getMaterialSummaries(SCHOOL, ["own", "p-pub", "p-draft"]);
+    expect(repoMock.findMaterialSummariesByIds).toHaveBeenNthCalledWith(2, PLATFORM, ["p-pub", "p-draft"]);
+    expect(rows.map((r) => r.id)).toEqual(["own", "p-pub"]);
+  });
+
+  it("назначение на урок черновика Матиса — 404", async () => {
+    repoMock.findMaterialSummariesByIds.mockResolvedValueOnce([]).mockResolvedValueOnce([summary("p-draft", "draft")]);
+    await expect(assertMaterialInSchool(SCHOOL, "p-draft")).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("для самого служебного пространства Матис не «чужой»: второй раз в БД не ходим", async () => {
+    repoMock.findPublishedMaterialVersion.mockResolvedValueOnce(null);
+    await expect(getLatestMaterial(PLATFORM, "nope")).rejects.toMatchObject({ statusCode: 404 });
+    expect(repoMock.findPublishedMaterialVersion).toHaveBeenCalledTimes(1);
+  });
+
+  it("вкладки: «Матис» + своё пространство, если там есть видимые материалы", async () => {
+    repoMock.listMaterials.mockResolvedValueOnce([summary("p1", "published")]).mockResolvedValueOnce([summary("o1", "published")]);
+    schoolSettingsMock.getSchoolName.mockResolvedValueOnce("Лицей №1");
+    const res = await listMaterialSources(TEACHER);
+    expect(res.items).toEqual([
+      { source: "platform", label: "Матис", count: 1 },
+      { source: "school", label: "Лицей №1", count: 1 },
+    ]);
+  });
+
+  it("вкладки: своё пространство без материалов — вкладки нет", async () => {
+    repoMock.listMaterials.mockResolvedValueOnce([summary("p1", "published")]).mockResolvedValueOnce([]);
+    const res = await listMaterialSources(TEACHER);
+    expect(res.items.map((i) => i.source)).toEqual(["platform"]);
   });
 });

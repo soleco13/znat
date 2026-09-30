@@ -7,6 +7,7 @@ import {
   type MediaAssetKind,
 } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
+import * as schoolSettingsService from "../school-settings/service.js";
 import * as storageService from "../storage/service.js";
 import * as mediaRepo from "./media-repo.js";
 
@@ -92,7 +93,11 @@ export async function listMediaAssets(schoolId: string, kind?: MediaAssetKind): 
  */
 export async function getMediaAssetUrl(schoolId: string, assetId: string): Promise<string> {
   const row = await mediaRepo.findMediaAssetById(assetId);
-  if (!row || row.schoolId !== schoolId) {
+  // Файлы служебного пространства «Матис» — картинки/аудио его материалов,
+  // которые открывают все пространства (вкладка «Матис»). id — случайный
+  // UUID, перебором не найти; сами материалы-черновики сервиса чужим не отдаются.
+  const platform = row && row.schoolId !== schoolId ? await schoolSettingsService.getPlatformSchool() : null;
+  if (!row || (row.schoolId !== schoolId && row.schoolId !== platform?.id)) {
     throw new AppError(404, "media_asset_not_found", "Файл не найден");
   }
   return storageService.getSignedFileUrl(row.storageKey);

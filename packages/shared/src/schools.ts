@@ -5,8 +5,11 @@ import { z } from "zod";
  * (в т.ч. без явно выбранного пространства — тогда это его личная школа
  * под капотом, не показывается пользователю как «пространство»);
  * `organization` — ООО, регистрирующее своё именованное пространство.
+ * `platform` — служебное пространство самого сервиса «Матис»: его
+ * опубликованные материалы видны в библиотеке всех пространств (вкладка
+ * «Матис»). Заводится вручную, через регистрацию не создаётся.
  */
-export const schoolKindSchema = z.enum(["individual", "organization"]);
+export const schoolKindSchema = z.enum(["individual", "organization", "platform"]);
 export type SchoolKind = z.infer<typeof schoolKindSchema>;
 
 /** Публичная информация о пространстве — ответ `GET /spaces/:slug` (визитка ООО). */

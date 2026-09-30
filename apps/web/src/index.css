@@ -340,3 +340,17 @@
     transform: rotate(360deg);
   }
 }
+
+/*
+  Кабинет учителя крупнее на 20%: TeacherShell ставит zoom на <html> и
+  атрибут data-teacher-zoom. Radix считает позицию всплывающих окон
+  (меню, подсказки, выпадающие списки) в экранных пикселях, а translate
+  обёртки под zoom умножился бы ещё раз — окно уезжало за край. Обёртка
+  гасит zoom, содержимое возвращает его. Админа и методиста не касается.
+*/
+html[data-teacher-zoom] [data-radix-popper-content-wrapper] {
+  zoom: calc(1 / 1.2);
+}
+html[data-teacher-zoom] [data-radix-popper-content-wrapper] > * {
+  zoom: 1.2;
+}

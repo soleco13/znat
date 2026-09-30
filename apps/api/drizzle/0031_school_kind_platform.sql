@@ -1,0 +1,1 @@
+ALTER TYPE "public"."school_kind" ADD VALUE 'platform';

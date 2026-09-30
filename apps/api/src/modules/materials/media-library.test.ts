@@ -1,7 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import sharp from "sharp";
 
-const { mediaRepoMock, storageServiceMock } = vi.hoisted(() => ({
+const { mediaRepoMock, storageServiceMock, schoolSettingsMock } = vi.hoisted(() => ({
+  schoolSettingsMock: { getPlatformSchool: vi.fn() },
   mediaRepoMock: {
     insertMediaAsset: vi.fn(),
     listMediaAssetRows: vi.fn(),
@@ -15,6 +16,7 @@ const { mediaRepoMock, storageServiceMock } = vi.hoisted(() => ({
 
 vi.mock("./media-repo.js", () => mediaRepoMock);
 vi.mock("../storage/service.js", () => storageServiceMock);
+vi.mock("../school-settings/service.js", () => schoolSettingsMock);
 
 const { uploadMediaAsset, listMediaAssets, getMediaAssetUrl } = await import("./media-library.js");
 
@@ -157,8 +159,22 @@ describe("getMediaAssetUrl (Э9.7, §8 ТЗ: GET /assets/:id/url, доступе
   });
 
   it("404 на файл чужой школы — не подтверждаем сам факт существования", async () => {
+    schoolSettingsMock.getPlatformSchool.mockResolvedValueOnce(null);
     mediaRepoMock.findMediaAssetById.mockResolvedValueOnce(storedRow({ schoolId: "other-school" }));
     await expect(getMediaAssetUrl(SCHOOL_ID, "asset-1")).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("404 на файл чужой школы и при заведённом Матисе, если это не Матис", async () => {
+    schoolSettingsMock.getPlatformSchool.mockResolvedValueOnce({ id: "platform-school", name: "Матис" });
+    mediaRepoMock.findMediaAssetById.mockResolvedValueOnce(storedRow({ schoolId: "other-school" }));
+    await expect(getMediaAssetUrl(SCHOOL_ID, "asset-1")).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("файл пространства «Матис» открывается любой школе — картинки его материалов", async () => {
+    schoolSettingsMock.getPlatformSchool.mockResolvedValueOnce({ id: "platform-school", name: "Матис" });
+    mediaRepoMock.findMediaAssetById.mockResolvedValueOnce(storedRow({ schoolId: "platform-school" }));
+    storageServiceMock.getSignedFileUrl.mockReturnValueOnce("/files/matis?exp=1&sig=z");
+    expect(await getMediaAssetUrl(SCHOOL_ID, "asset-1")).toBe("/files/matis?exp=1&sig=z");
   });
 
   it("возвращает подписанную ссылку на файл своей школы", async () => {

@@ -14,6 +14,10 @@ export function listLessons(): Promise<{ items: LessonSummary[] }> {
   return apiFetch<{ items: LessonSummary[] }>("/lessons");
 }
 
+export function getLesson(id: string): Promise<LessonSummary> {
+  return apiFetch<LessonSummary>(`/lessons/${id}`);
+}
+
 /** Список учителей для закрепления урока (только admin). */
 /** Кто может вести урок: учителя и администраторы (репетитор-одиночка — администратор своего пространства). */
 export async function listTeachers(): Promise<UserResponse[]> {

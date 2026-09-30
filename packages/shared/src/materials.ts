@@ -463,8 +463,34 @@ export type MaterialSummary = z.infer<typeof materialSummarySchema>;
 export const createMaterialResultSchema = z.object({ materialId: z.string() });
 export type CreateMaterialResult = z.infer<typeof createMaterialResultSchema>;
 
-/** Querystring `GET /materials` (§8 ТЗ: `?subject=&grade=&q=&status=`) + `topic` дерева (Э9.1). */
+/**
+ * Откуда материал в библиотеке: `school` — своего пространства (как было
+ * всегда), `platform` — опубликованные материалы сервиса «Матис», общие для
+ * всех пространств (служебное пространство `kind: "platform"`).
+ */
+export const materialSourceSchema = z.enum(["school", "platform"]);
+export type MaterialSource = z.infer<typeof materialSourceSchema>;
+
+/**
+ * Ответ `GET /materials/sources` — вкладки библиотеки. `platform` есть,
+ * если служебное пространство заведено; `school` — только если в своём
+ * пространстве есть материалы, видимые этому пользователю (учителю —
+ * опубликованные). `label` — «Матис» или название пространства.
+ */
+export const materialSourcesResponseSchema = z.object({
+  items: z.array(
+    z.object({
+      source: materialSourceSchema,
+      label: z.string(),
+      count: z.number().int().nonnegative(),
+    }),
+  ),
+});
+export type MaterialSourcesResponse = z.infer<typeof materialSourcesResponseSchema>;
+
+/** Querystring `GET /materials` (§8 ТЗ: `?subject=&grade=&q=&status=`) + `topic` дерева (Э9.1) + `source` (по умолчанию `school`). */
 export const listMaterialsQuerySchema = z.object({
+  source: materialSourceSchema.optional(),
   subject: z.string().min(1).optional(),
   grade: z.coerce.number().int().positive().optional(),
   topic: z.string().min(1).optional(),

@@ -219,19 +219,3 @@ export function RecordingPanel({
     </Card>
   );
 }
-
-/**
- * Баннер согласия на запись (Э10.3, §7.9/§10.10 ТЗ, 152-ФЗ). Видят ВСЕ участники.
- */
-export function RecordingConsentBanner({ active }: { active: boolean }) {
-  if (!active) return null;
-  return (
-    <div
-      role="status"
-      className="mb-4 flex items-center gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2.5 text-sm font-semibold text-destructive"
-    >
-      <span className="inline-block size-2.5 rounded-full bg-destructive" />
-      Идёт запись урока
-    </div>
-  );
-}

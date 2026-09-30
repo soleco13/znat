@@ -7,10 +7,12 @@ import {
   type AccessTokenPayload,
   type ListMaterialsQuery,
   type Material,
+  type MaterialSourcesResponse,
   type MaterialStatus,
   type MaterialValidationIssue,
 } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
+import * as schoolSettingsService from "../school-settings/service.js";
 import * as repo from "./repo.js";
 import { validateMaterial } from "./validation.js";
 
@@ -49,6 +51,23 @@ function parseVersion(row: repo.MaterialVersionRow): LoadedMaterial {
   };
 }
 
+// ─── Материалы сервиса «Матис» ────────────────────────────────────────────────
+//
+// Служебное пространство (`schools.kind = 'platform'`) — обычная школа, в
+// которой наша команда готовит материалы тем же редактором. Его
+// ОПУБЛИКОВАННЫЕ материалы доступны на ЧТЕНИЕ любому пространству: в
+// библиотеке (вкладка «Матис»), на просмотр, для назначения на урок и
+// запуска задания. Черновики, ревью, форки правок, история версий и любая
+// запись остаются только у самого служебного пространства — все пути записи
+// ниже по-прежнему ищут материал строго в `user.schoolId`. Область прав
+// доступа (CLAUDE.md, «не делегировать вслепую») — читано построчно.
+
+/** id служебного пространства, если оно заведено и это не сама школа пользователя. */
+async function foreignPlatformSchoolId(schoolId: string): Promise<string | null> {
+  const platform = await schoolSettingsService.getPlatformSchool();
+  return platform && platform.id !== schoolId ? platform.id : null;
+}
+
 /**
  * Опубликованная версия материала школы — то, что учитель запускает в
  * уроке (Э8.6). До Э9.8 это была буквально «последняя версия»; теперь —
@@ -61,7 +80,13 @@ function parseVersion(row: repo.MaterialVersionRow): LoadedMaterial {
  * не даст строк без `currentVersionId`.
  */
 export async function getLatestMaterial(schoolId: string, materialId: string): Promise<LoadedMaterial> {
-  const row = await repo.findPublishedMaterialVersion(schoolId, materialId);
+  let row = await repo.findPublishedMaterialVersion(schoolId, materialId);
+  if (!row) {
+    // Материал Матиса: `findPublishedMaterialVersion` и так отдаёт только
+    // опубликованную версию, черновик сервиса сюда не попадёт.
+    const platformId = await foreignPlatformSchoolId(schoolId);
+    if (platformId) row = await repo.findPublishedMaterialVersion(platformId, materialId);
+  }
   if (!row) throw new AppError(404, "material_not_found", "Материал не найден");
   return parseVersion(row);
 }
@@ -119,7 +144,15 @@ export async function getMaterialForEdit(
   materialId: string,
 ): Promise<EditableMaterial> {
   const latest = await repo.findLatestMaterialVersionForEdit(user.schoolId, materialId);
-  if (!latest) throw new AppError(404, "material_not_found", "Материал не найден");
+  if (!latest) {
+    // Не своей школы — может быть материалом Матиса: любой роли только
+    // опубликованная версия, только чтение (правка/публикация/версии ищут
+    // материал строго в своей школе и получат 404).
+    const platformId = await foreignPlatformSchoolId(user.schoolId);
+    const published = platformId ? await repo.findPublishedMaterialVersionForEdit(platformId, materialId) : null;
+    if (!published) throw new AppError(404, "material_not_found", "Материал не найден");
+    return { ...parseVersion(published), status: "published", createdBy: published.createdBy, isCurrent: true };
+  }
 
   // Ревизия Э12.7: учитель видит ТОЛЬКО опубликованную версию (просмотр),
   // непроверенные черновики/форки — не его дело. admin/methodist — последнюю.
@@ -338,12 +371,22 @@ export async function getMaterialSummaries(
   schoolId: string,
   ids: string[],
 ): Promise<repo.MaterialSummaryRow[]> {
-  return repo.findMaterialSummariesByIds(schoolId, [...new Set(ids)]);
+  const unique = [...new Set(ids)];
+  const own = await repo.findMaterialSummariesByIds(schoolId, unique);
+  const rest = unique.filter((id) => !own.some((m) => m.id === id));
+  const platformId = rest.length > 0 ? await foreignPlatformSchoolId(schoolId) : null;
+  if (!platformId) return own;
+  // Материалы Матиса — только опубликованные.
+  const platform = await repo.findMaterialSummariesByIds(platformId, rest);
+  return [...own, ...platform.filter((m) => m.status === "published")];
 }
 
-/** Материал существует в школе? (Э12: перед назначением материала уроку.) */
+/**
+ * Материал доступен школе? (Э12: перед назначением материала уроку.) Свой —
+ * любой статус, как было; материал Матиса — только опубликованный.
+ */
 export async function assertMaterialInSchool(schoolId: string, materialId: string): Promise<void> {
-  const [row] = await repo.findMaterialSummariesByIds(schoolId, [materialId]);
+  const [row] = await getMaterialSummaries(schoolId, [materialId]);
   if (!row) throw new AppError(404, "material_not_found", "Материал не найден");
 }
 
@@ -351,6 +394,19 @@ export async function listMaterials(
   user: AccessTokenPayload,
   query: ListMaterialsQuery,
 ): Promise<repo.MaterialSummaryRow[]> {
+  if (query.source === "platform") {
+    // Вкладка «Матис»: только опубликованное, для любой роли.
+    const platform = await schoolSettingsService.getPlatformSchool();
+    if (!platform) return [];
+    return repo.listMaterials(platform.id, {
+      subject: query.subject,
+      grade: query.grade,
+      topic: query.topic,
+      q: query.q,
+      status: "published",
+      restrictToOwnerOrPublished: undefined,
+    });
+  }
   // Ревизия Э12.7: учитель видит в библиотеке только ОПУБЛИКОВАННЫЕ
   // материалы (выбирает готовый на урок / открывает на просмотр).
   const teacher = user.role === "teacher";
@@ -362,4 +418,31 @@ export async function listMaterials(
     status: teacher ? "published" : query.status,
     restrictToOwnerOrPublished: undefined,
   });
+}
+
+/**
+ * Вкладки библиотеки (`GET /materials/sources`): «Матис» — если служебное
+ * пространство заведено (для него самого это его же вкладка `school`,
+ * со всеми статусами по его роли); своё пространство — если в нём есть
+ * материалы, видимые этому пользователю (та же видимость, что у
+ * `listMaterials`).
+ */
+export async function listMaterialSources(user: AccessTokenPayload): Promise<MaterialSourcesResponse> {
+  const platform = await schoolSettingsService.getPlatformSchool();
+  const items: MaterialSourcesResponse["items"] = [];
+  if (platform && platform.id === user.schoolId) {
+    const own = await listMaterials(user, { source: "school" });
+    items.push({ source: "school", label: "Матис", count: own.length });
+    return { items };
+  }
+  if (platform) {
+    const rows = await listMaterials(user, { source: "platform" });
+    items.push({ source: "platform", label: "Матис", count: rows.length });
+  }
+  const own = await listMaterials(user, { source: "school" });
+  if (own.length > 0) {
+    const name = await schoolSettingsService.getSchoolName(user.schoolId);
+    items.push({ source: "school", label: name ?? "Материалы пространства", count: own.length });
+  }
+  return { items };
 }

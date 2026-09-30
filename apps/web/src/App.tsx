@@ -3,6 +3,8 @@ import { Suspense, type ReactNode } from "react";
 
 import { GuestJoinPage } from "./features/guest/GuestJoinPage.js";
 import { AppShell } from "./shared/AppShell.js";
+import { TeacherShell } from "./shared/TeacherShell.js";
+import { useAuthStore } from "./shared/auth-store.js";
 import { ErrorBoundary } from "./shared/ErrorBoundary.js";
 import { RequireAuth } from "./shared/RequireAuth.js";
 import { RequireRoomAccess } from "./shared/RequireRoomAccess.js";
@@ -29,23 +31,42 @@ const SpacePage = lazyNamed(() => import("./features/spaces/SpacePage.js"), "Spa
 const AcceptInvitePage = lazyNamed(() => import("./features/spaces/AcceptInvitePage.js"), "AcceptInvitePage");
 const InvitesPage = lazyNamed(() => import("./features/invites/InvitesPage.js"), "InvitesPage");
 const LessonsListPage = lazyNamed(() => import("./features/lessons/LessonsListPage.js"), "LessonsListPage");
+const TeacherLessonsPage = lazyNamed(() => import("./features/lessons/TeacherLessonsPage.js"), "TeacherLessonsPage");
 const AdminRecordingsPage = lazyNamed(() => import("./features/recordings/AdminRecordingsPage.js"), "AdminRecordingsPage");
 const MaterialEditorPage = lazyNamed(() => import("./features/materials/MaterialEditorPage.js"), "MaterialEditorPage");
 const MaterialsEditorLandingPage = lazyNamed(() => import("./features/materials/MaterialsEditorLandingPage.js"), "MaterialsEditorLandingPage");
 const MaterialsLibraryPage = lazyNamed(() => import("./features/materials/MaterialsLibraryPage.js"), "MaterialsLibraryPage");
+const TeacherLibraryPage = lazyNamed(() => import("./features/materials/TeacherLibraryPage.js"), "TeacherLibraryPage");
 const EgressPage = lazyNamed(() => import("./features/recordings/EgressPage.js"), "EgressPage");
+const TeacherRecordingsPage = lazyNamed(() => import("./features/recordings/TeacherRecordingsPage.js"), "TeacherRecordingsPage");
+const LessonRecordingPage = lazyNamed(() => import("./features/recordings/LessonRecordingPage.js"), "LessonRecordingPage");
 const RecordingViewerPage = lazyNamed(() => import("./features/recordings/RecordingViewerPage.js"), "RecordingViewerPage");
 const SettingsPage = lazyNamed(() => import("./features/settings/SettingsPage.js"), "SettingsPage");
 const RoomPage = lazyNamed(() => import("./features/room/RoomPage.js"), "RoomPage");
 
 /** Защищённая страница внутри общего каркаса приложения. `roles` — если задан, ограничивает доступ. */
 function Shell({ children, roles }: { children: ReactNode; roles?: Role[] }) {
+  // Кабинет учителя — свой каркас (макет «ЛК учителя»); админ и методист — прежний.
+  const isTeacher = useAuthStore((s) => s.user?.role) === "teacher";
+  const Frame = isTeacher ? TeacherShell : AppShell;
   const page = (
-    <AppShell>
+    <Frame>
       <ErrorBoundary>{children}</ErrorBoundary>
-    </AppShell>
+    </Frame>
   );
   return <RequireAuth>{roles ? <RequireRole roles={roles}>{page}</RequireRole> : page}</RequireAuth>;
+}
+
+/** `/lessons`: учитель — новый кабинет, админ — прежний список с управлением уроками. */
+function LessonsRoute() {
+  const isTeacher = useAuthStore((s) => s.user?.role) === "teacher";
+  return isTeacher ? <TeacherLessonsPage /> : <LessonsListPage />;
+}
+
+/** `/materials`: учитель — библиотека кабинета учителя, админ и методист — прежняя. */
+function LibraryRoute() {
+  const isTeacher = useAuthStore((s) => s.user?.role) === "teacher";
+  return isTeacher ? <TeacherLibraryPage /> : <MaterialsLibraryPage />;
 }
 
 export function App() {
@@ -77,7 +98,16 @@ export function App() {
         {/* §4.2 ТЗ: уроки — admin и teacher; методист сюда не ходит. */}
         <Route
           path="/lessons"
-          element={<Shell roles={["admin", "teacher"]}><LessonsListPage /></Shell>}
+          element={<Shell roles={["admin", "teacher"]}><LessonsRoute /></Shell>}
+        />
+        {/* Записи своих уроков — кабинет учителя; просмотр — по уроку (учителю открыт GET /lessons/:id/recordings). */}
+        <Route
+          path="/recordings"
+          element={<Shell roles={["teacher"]}><TeacherRecordingsPage /></Shell>}
+        />
+        <Route
+          path="/recordings/:lessonId/:recordingId"
+          element={<Shell roles={["teacher"]}><LessonRecordingPage /></Shell>}
         />
         <Route
           path="/lessons/:id/room"
@@ -92,7 +122,7 @@ export function App() {
         {/* Э13: библиотека — просмотр/выбор (весь персонал); редактор —
             создание/правка (admin + methodist). Сам лист `/materials/edit/:id`
             открывают все — учитель попадает в него в режиме «Просмотр». */}
-        <Route path="/materials" element={<Shell><MaterialsLibraryPage /></Shell>} />
+        <Route path="/materials" element={<Shell><LibraryRoute /></Shell>} />
         <Route
           path="/materials/edit"
           element={<Shell roles={["admin", "methodist"]}><MaterialsEditorLandingPage /></Shell>}

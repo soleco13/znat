@@ -32,6 +32,30 @@ export async function getSchoolSettings(schoolId: string): Promise<SchoolSetting
   return parseSettings(await repo.getRawSettings(schoolId));
 }
 
+// ─── Служебное пространство сервиса «Матис» ──────────────────────────────────
+
+/** Сколько живёт кеш id служебного пространства — заводится один раз, меняется практически никогда. */
+const PLATFORM_CACHE_MS = 5 * 60 * 1000;
+let platformCache: { value: { id: string; name: string } | null; at: number } | null = null;
+
+/**
+ * Служебное пространство (`kind: "platform"`): его опубликованные материалы
+ * видны в библиотеке всех пространств (вкладка «Матис»). `null` — не
+ * заведено. Кеш в памяти процесса можно потерять без последствий (CLAUDE.md):
+ * при промахе просто перечитываем из БД.
+ */
+export async function getPlatformSchool(): Promise<{ id: string; name: string } | null> {
+  if (platformCache && Date.now() - platformCache.at < PLATFORM_CACHE_MS) return platformCache.value;
+  const value = await repo.findPlatformSchool();
+  platformCache = { value, at: Date.now() };
+  return value;
+}
+
+/** Название пространства — для вкладки библиотеки с его материалами. */
+export async function getSchoolName(schoolId: string): Promise<string | null> {
+  return repo.findSchoolName(schoolId);
+}
+
 /** Подмножество для клиента урока (`JoinLessonResponse.clientMediaSettings`) — и staff, и гостю. */
 export async function getClientMediaSettings(schoolId: string): Promise<ClientMediaSettings> {
   const settings = await getSchoolSettings(schoolId);

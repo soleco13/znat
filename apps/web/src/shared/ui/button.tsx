@@ -22,6 +22,8 @@ const buttonVariants = cva(
         teal: "bg-teal text-teal-foreground shadow-xs hover:bg-teal/90",
         success: "bg-success text-success-foreground shadow-xs hover:bg-success/90",
         link: "text-primary underline-offset-4 hover:underline",
+        // Чернильная — второстепенное главное действие рядом с синим «Войти» (макет ЛК).
+        ink: "bg-foreground text-background shadow-xs hover:bg-[#1d2939]",
       },
       size: {
         default: "h-10 px-4 py-2 text-[15px]",

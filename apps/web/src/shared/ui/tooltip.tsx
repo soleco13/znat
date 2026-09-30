@@ -30,16 +30,21 @@ function SimpleTooltip({
   content,
   children,
   side = "top",
+  className,
 }: {
   content: React.ReactNode;
   children: React.ReactNode;
   side?: "top" | "right" | "bottom" | "left";
+  /** Классы содержимого подсказки — например, `lg:hidden`, когда подпись и так видна. */
+  className?: string;
 }) {
   if (content == null || content === "") return <>{children}</>;
   return (
     <Tooltip>
       <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent side={side}>{content}</TooltipContent>
+      <TooltipContent side={side} className={className}>
+        {content}
+      </TooltipContent>
     </Tooltip>
   );
 }

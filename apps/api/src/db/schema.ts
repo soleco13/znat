@@ -62,7 +62,8 @@ export const recordingStatusEnum = pgEnum("recording_status", [
  * его личная школа под капотом); `organization` — ООО, регистрирующее своё
  * «пространство» с названием, ИНН/ОГРН.
  */
-export const schoolKindEnum = pgEnum("school_kind", ["individual", "organization"]);
+/** `platform` — служебное пространство сервиса «Матис» (общие материалы для всех пространств), см. `schoolKindSchema` в packages/shared. */
+export const schoolKindEnum = pgEnum("school_kind", ["individual", "organization", "platform"]);
 
 export const schools = pgTable("schools", {
   id: uuid("id").primaryKey().defaultRandom(),
