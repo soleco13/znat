@@ -306,7 +306,6 @@ export function RoomPage() {
   const [joinCamEnabled, setJoinCamEnabled] = useState(true);
   const [lessonTitle, setLessonTitle] = useState<string | null>(null);
   const [lessonJoinPath, setLessonJoinPath] = useState<string | null>(null);
-  const [lessonStart, setLessonStart] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   // Э10-звук: baseline «прошлое состояние записи» на текущее подключение
   // сокета. `null` — ещё не знаем (только что подключились) — в этом
@@ -559,7 +558,6 @@ export function RoomPage() {
       .then((l) => {
         setLessonTitle(l.title);
         setLessonJoinPath(l.joinPath);
-        setLessonStart(l.scheduledAt);
       })
       .catch(() => undefined);
   }, [lessonId, isGuest, guestSession?.lessonTitle]);
@@ -765,9 +763,8 @@ export function RoomPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- реагируем только на смену набора поднявших
   }, [raisedKey, isTeacher]);
   const unreadChat = drawer === "chat" ? 0 : Math.max(0, chat.length - chatSeen);
-  const headerMeta = lessonStart
-    ? `начало ${formatClock(lessonStart)} · ${participantsCount(connectedCount)}`
-    : participantsCount(connectedCount);
+  // Планового времени у урока по сути нет (постоянная комната) — только число участников.
+  const headerMeta = participantsCount(connectedCount);
   const shareVisible =
     media !== null &&
     Boolean(lessonId) &&
