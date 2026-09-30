@@ -239,10 +239,9 @@ function Tick({ show }: { show: boolean }) {
     <span
       aria-hidden
       className={cn(
-        "pointer-events-none absolute right-3 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full bg-success text-white transition-[transform,opacity] duration-300",
-        show ? "scale-100 opacity-100" : "scale-50 opacity-0",
+        "pointer-events-none absolute right-3 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded-full bg-success text-white transition-opacity duration-150",
+        show ? "opacity-100" : "opacity-0",
       )}
-      style={{ transitionTimingFunction: "var(--ease-spring, cubic-bezier(0.34,1.4,0.64,1))" }}
     >
       <Check className="size-3" />
     </span>

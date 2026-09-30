@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MailCheck } from "lucide-react";
 
 import { AuthHeading, AuthLayout, StepsAside, stagger } from "../auth/AuthLayout.js";
 
@@ -12,31 +12,9 @@ export function EmailSentPage() {
 
   return (
     <AuthLayout aside={<StepsAside current={1} />}>
-      {/* Конверт: контур и «галочка» прорисовываются */}
-      <svg viewBox="0 0 120 88" className="auth-pop mb-7 h-[88px] w-[120px] overflow-visible" style={stagger(100)} aria-hidden>
-        <rect x="4" y="12" width="112" height="72" rx="14" fill="#eff4ff" stroke="#1d4ed8" strokeWidth="3" />
-        <path
-          className="auth-ink"
-          style={{ ["--len" as string]: 140, ["--d" as string]: "500ms" } as React.CSSProperties}
-          d="M10 22 L60 58 L110 22"
-          fill="none"
-          stroke="#1d4ed8"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <circle cx="104" cy="14" r="14" fill="#16a34a" className="auth-pop" style={stagger(1100)} />
-        <path
-          className="auth-ink"
-          style={{ ["--len" as string]: 30, ["--d" as string]: "1300ms", ["--dur" as string]: "0.4s" } as React.CSSProperties}
-          d="M97 14 L102 19 L111 9"
-          fill="none"
-          stroke="#fff"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
+      <span className="auth-rise mb-6 flex size-12 items-center justify-center rounded-md border border-border text-foreground" style={stagger(0)}>
+        <MailCheck className="size-6" aria-hidden />
+      </span>
 
       <AuthHeading
         title="Проверьте почту"
@@ -61,9 +39,9 @@ export function EmailSentPage() {
       <p className="auth-rise mt-7 text-[14.5px]" style={stagger(380)}>
         <Link
           to="/login"
-          className="group inline-flex items-center gap-1.5 font-semibold text-primary underline-offset-4 hover:underline"
+          className="inline-flex items-center gap-1.5 font-semibold text-primary underline-offset-4 hover:underline"
         >
-          <ArrowLeft className="size-4 transition-transform duration-300 group-hover:-translate-x-1" aria-hidden />
+          <ArrowLeft className="size-4" aria-hidden />
           Вернуться ко входу
         </Link>
       </p>

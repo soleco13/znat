@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Link2Off, UserPlus } from "lucide-react";
+import { Link2Off } from "lucide-react";
 import type { Role } from "@school/shared";
 
 import { ApiError } from "@/shared/api-client";
@@ -10,6 +10,8 @@ import { PersonalDataConsent } from "@/shared/PersonalDataConsent";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { CenteredSpinner } from "@/shared/ui/spinner";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/shared/ui/empty";
+import { StatusScreen } from "@/shared/ui/status-screen";
 import { getInvitePublicInfo } from "@/features/invites/invites-api";
 import { registerIndividual } from "@/features/registration/registration-api";
 
@@ -50,36 +52,36 @@ export function AcceptInvitePage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-[#eff6ff] to-[#f0fdfa] p-6">
-      <div className="w-full max-w-[400px] rounded-xl border border-border bg-card p-9 shadow-lg">
+    <StatusScreen>
         {info.loading ? (
           <CenteredSpinner label="Проверяем приглашение…" />
         ) : info.error || !info.data ? (
-          <div className="flex flex-col items-center text-center">
-            <span className="mb-3.5 flex size-14 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
-              <Link2Off className="size-7" aria-hidden />
-            </span>
-            <h1 className="text-[22px] font-heavy tracking-tight">Приглашение не найдено</h1>
-            <p className="mt-2 text-sm text-muted-foreground">Проверьте ссылку — возможно, она устарела.</p>
-          </div>
+          <Empty className="p-0 md:p-0">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Link2Off aria-hidden />
+              </EmptyMedia>
+              <EmptyTitle as="h1">Приглашение не найдено</EmptyTitle>
+              <EmptyDescription>Проверьте ссылку — возможно, она устарела.</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : !info.data.valid ? (
-          <div className="flex flex-col items-center text-center">
-            <span className="mb-3.5 flex size-14 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
-              <Link2Off className="size-7" aria-hidden />
-            </span>
-            <h1 className="text-[22px] font-heavy tracking-tight">Приглашение больше не действует</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Ссылка в «{info.data.schoolName}» отозвана, просрочена или уже использована. Попросите
-              администратора прислать новую.
-            </p>
-          </div>
+          <Empty className="p-0 md:p-0">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Link2Off aria-hidden />
+              </EmptyMedia>
+              <EmptyTitle as="h1">Приглашение больше не действует</EmptyTitle>
+              <EmptyDescription>
+                Ссылка в «{info.data.schoolName}» отозвана, просрочена или уже использована. Попросите
+                администратора прислать новую.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
           <>
-            <div className="mb-8 flex flex-col items-center text-center">
-              <span className="mb-3.5 flex size-14 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                <UserPlus className="size-7" aria-hidden />
-              </span>
-              <h1 className="text-[22px] font-heavy tracking-tight">Приглашение в «{info.data.schoolName}»</h1>
+            <div className="mb-7">
+              <h1 className="text-2xl font-heavy tracking-tight">Приглашение в «{info.data.schoolName}»</h1>
               <p className="mt-1.5 text-sm text-muted-foreground">
                 Вас приглашают в роли {ROLE_LABEL[info.data.role]}
               </p>
@@ -141,7 +143,6 @@ export function AcceptInvitePage() {
             Уже есть аккаунт? Войти
           </Link>
         </p>
-      </div>
-    </div>
+    </StatusScreen>
   );
 }

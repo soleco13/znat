@@ -23,7 +23,7 @@ const AvatarImage = React.forwardRef<
 ));
 AvatarImage.displayName = AvatarPrimitive.Image.displayName;
 
-// .avatar из дизайн-системы: сине-бирюзовый градиент, синие инициалы, вес 700.
+// .avatar из дизайн-системы: светло-синий фон, синие инициалы, вес 700.
 const AvatarFallback = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Fallback>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Fallback>
@@ -31,7 +31,7 @@ const AvatarFallback = React.forwardRef<
   <AvatarPrimitive.Fallback
     ref={ref}
     className={cn(
-      "flex size-full items-center justify-center rounded-full bg-gradient-to-br from-primary-light to-teal-light font-bold text-primary",
+      "flex size-full items-center justify-center rounded-full bg-primary-light font-bold text-primary",
       className,
     )}
     {...props}

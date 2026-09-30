@@ -482,12 +482,3 @@
   15% { opacity: 1; }
   100% { opacity: 1; transform: translate(330px, 320px); }
 }
-
-/* Бегущая строка (Marquee): две копии ленты едут влево на свою ширину. */
-@keyframes marquee {
-  to { transform: translateX(-100%); }
-}
-.marquee-track { animation: marquee linear infinite; }
-@media (prefers-reduced-motion: reduce) {
-  .marquee-track { animation: none; }
-}

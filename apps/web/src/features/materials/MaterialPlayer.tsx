@@ -254,7 +254,7 @@ export function ContentBlockView({ block }: { block: Exclude<Block, { type: "que
       );
     case "callout":
       return (
-        <div className="rounded-lg border-l-4 border-primary/40 bg-primary/5 p-3 text-sm">
+        <div className="rounded-md border border-primary/25 bg-primary/5 p-3 text-sm">
           <div className="prose" dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.html) }} />
         </div>
       );

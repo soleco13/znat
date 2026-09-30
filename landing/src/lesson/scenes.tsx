@@ -321,7 +321,7 @@ export function TaskScene() {
             </div>
 
             <div className="relative flex flex-col gap-4">
-              <div className="rounded-lg border-l-4 border-primary/40 bg-primary/5 p-3 text-sm">
+              <div className="rounded-md border border-primary/25 bg-primary/5 p-3 text-sm">
                 <div className="prose">
                   <p>
                     Чтобы сократить дробь, разделите числитель и знаменатель на их <b>общий делитель</b>.

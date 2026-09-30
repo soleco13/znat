@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { AlertCircle, Check, Eye, EyeOff, GraduationCap, Hand } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { Alert, AlertDescription } from "@/shared/ui/alert";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import "./auth.css";
@@ -137,18 +138,14 @@ export function PasswordInput({
   );
 }
 
-/** Ошибка формы: при каждом новом сообщении «встряхивается». */
+/** Ошибка формы — `Alert` из UI-кита. */
 export function FormError({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <p
-      key={message}
-      role="alert"
-      className="auth-shake flex items-start gap-2 rounded-lg border border-[#fecaca] bg-danger-light px-3 py-2.5 text-sm font-medium text-danger"
-    >
-      <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
-      {message}
-    </p>
+    <Alert key={message} variant="destructive">
+      <AlertCircle aria-hidden />
+      <AlertDescription className="font-medium text-foreground">{message}</AlertDescription>
+    </Alert>
   );
 }
 
@@ -195,11 +192,11 @@ export function LobbyAside() {
       <h2 className="max-w-[12ch] text-[clamp(40px,4.6vw,68px)] font-black leading-[1.02] tracking-[-.035em] text-foreground">
         <span className="auth-rise block" style={stagger(200)}>Класс уже</span>
         <span className="auth-rise block" style={stagger(320)}>
-          <span className="auth-mark" style={stagger(1100)}>собирается</span>.
+          собирается.
         </span>
       </h2>
 
-      <div className="auth-rise w-full max-w-[560px] overflow-hidden rounded-[20px] border border-border bg-card shadow-lg" style={stagger(500)}>
+      <div className="auth-rise w-full max-w-[560px] overflow-hidden rounded-xl border border-border bg-card shadow-sm" style={stagger(500)}>
         <div className="flex h-12 items-center gap-2.5 border-b border-border px-3.5">
           <span className="flex size-6 items-center justify-center rounded-[8px] bg-primary text-primary-foreground">
             <GraduationCap className="size-[14px]" aria-hidden />
@@ -311,7 +308,7 @@ export function StepsAside({ current }: { current: 0 | 1 | 2 }) {
                 className={cn(
                   "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-[13px] font-bold transition-colors duration-500",
                   done && "border-success bg-success text-white",
-                  now && "border-primary bg-primary text-primary-foreground shadow-[0_0_0_5px_rgba(29,78,216,0.14)]",
+                  now && "border-primary bg-primary text-primary-foreground",
                   !done && !now && "border-border bg-card text-text-3",
                 )}
               >

@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { GraduationCap, Link2Off } from "lucide-react";
+import { Link2Off } from "lucide-react";
 
 import { ApiError } from "@/shared/api-client";
 import { useAsync } from "@/shared/hooks/use-async";
 import { Button } from "@/shared/ui/button";
 import { PersonalDataConsent } from "@/shared/PersonalDataConsent";
 import { CenteredSpinner } from "@/shared/ui/spinner";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/shared/ui/empty";
+import { StatusScreen } from "@/shared/ui/status-screen";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { enterGuestLesson, fetchGuestLessonInfo } from "./guest-api.js";
@@ -45,30 +47,26 @@ export function GuestJoinPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-[#eff6ff] to-[#f0fdfa] p-6">
-      <div className="w-full max-w-[400px] rounded-xl border border-border bg-card p-9 shadow-lg">
+    <StatusScreen>
         {info.loading ? (
           <CenteredSpinner label="Загружаем урок…" />
         ) : info.error ? (
-          <div className="flex flex-col items-center text-center">
-            <span className="mb-3.5 flex size-14 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
-              <Link2Off className="size-7" aria-hidden />
-            </span>
-            <h1 className="text-[22px] font-heavy tracking-tight">Ссылка недействительна</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Ссылка на урок устарела или введена с ошибкой. Попросите учителя прислать её заново.
-            </p>
-          </div>
+          <Empty className="p-0 md:p-0">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Link2Off aria-hidden />
+              </EmptyMedia>
+              <EmptyTitle as="h1">Ссылка недействительна</EmptyTitle>
+              <EmptyDescription>
+                Ссылка на урок устарела или введена с ошибкой. Попросите учителя прислать её заново.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : info.data ? (
           <>
-            <div className="mb-8 flex flex-col items-center text-center">
-              <span className="mb-3.5 flex size-14 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                <GraduationCap className="size-7" aria-hidden />
-              </span>
+            <div className="mb-7">
               <p className="text-sm text-muted-foreground">Вход в урок</p>
-              <h1 className="mt-1 text-[22px] font-heavy tracking-tight">
-                {info.data.lessonTitle}
-              </h1>
+              <h1 className="mt-1 text-2xl font-heavy tracking-tight">{info.data.lessonTitle}</h1>
             </div>
 
             <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
@@ -114,7 +112,6 @@ export function GuestJoinPage() {
             </p>
           </>
         ) : null}
-      </div>
-    </div>
+    </StatusScreen>
   );
 }

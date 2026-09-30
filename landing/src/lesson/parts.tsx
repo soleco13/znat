@@ -34,7 +34,7 @@ export function UserAvatar({ name, size = 40, className }: { name: string; size?
       style={{ width: size, height: size }}
     >
       <span
-        className="flex size-full items-center justify-center rounded-full bg-gradient-to-br from-primary-light to-teal-light font-bold text-primary"
+        className="flex size-full items-center justify-center rounded-full bg-primary-light font-bold text-primary"
         style={{ fontSize: Math.round(size * 0.38) }}
       >
         {initialsOf(name)}

@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Building2, User } from "lucide-react";
+import { Building2, ChevronRight, User } from "lucide-react";
+
+import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/shared/ui/item";
 
 import { AuthHeading, AuthLayout, StepsAside, stagger } from "../auth/AuthLayout.js";
 
@@ -29,26 +31,22 @@ export function RegisterChoicePage() {
     <AuthLayout aside={<StepsAside current={0} />}>
       <AuthHeading title="Начнём?" subtitle="Как вы будете использовать платформу?" />
 
-      <div className="flex flex-col gap-3.5">
+      <div className="flex flex-col gap-3">
         {OPTIONS.map((o, i) => (
-          <Link
-            key={o.to}
-            to={o.to}
-            className="auth-rise group flex items-center gap-4 rounded-2xl border border-border bg-card p-4 shadow-xs transition-[transform,box-shadow,border-color] duration-300 [transition-timing-function:var(--ease)] hover:-translate-y-0.5 hover:border-primary-muted hover:shadow-md active:translate-y-0 active:scale-[0.99]"
-            style={stagger(240 + i * 120)}
-          >
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
-              <o.icon className="size-[22px]" aria-hidden />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[16.5px] font-bold tracking-[-.01em]">{o.title}</span>
-              <span className="mt-0.5 block text-sm text-muted-foreground">{o.text}</span>
-            </span>
-            <ArrowRight
-              className="size-5 shrink-0 text-text-3 transition-[transform,color] duration-300 [transition-timing-function:var(--ease)] group-hover:translate-x-1 group-hover:text-primary"
-              aria-hidden
-            />
-          </Link>
+          <Item key={o.to} variant="outline" asChild className="auth-rise" style={stagger(240 + i * 120)}>
+            <Link to={o.to}>
+              <ItemMedia variant="icon">
+                <o.icon aria-hidden />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle className="text-base">{o.title}</ItemTitle>
+                <ItemDescription>{o.text}</ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <ChevronRight className="size-5 text-text-3" aria-hidden />
+              </ItemActions>
+            </Link>
+          </Item>
         ))}
       </div>
 

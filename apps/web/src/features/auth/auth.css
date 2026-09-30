@@ -31,26 +31,11 @@
 }
 .auth-pop {
   opacity: 0;
-  animation: auth-pop 0.55s var(--ease-spring, cubic-bezier(0.34, 1.4, 0.64, 1)) forwards;
+  animation: auth-pop 0.5s var(--ease) forwards;
   animation-delay: var(--d, 0ms);
 }
 .auth-step {
   animation: auth-step 0.5s var(--ease) both;
-}
-.auth-shake {
-  animation: auth-shake 0.45s var(--ease) both;
-}
-
-/* Жёлтый маркер под словом */
-.auth-mark {
-  background-image: linear-gradient(rgba(250, 204, 21, 0.62), rgba(250, 204, 21, 0.62));
-  background-repeat: no-repeat;
-  background-position: 0 88%;
-  background-size: 0% 46%;
-  animation: auth-mark 0.9s var(--ease) forwards;
-  animation-delay: var(--d, 0ms);
-  padding-inline: 0.08em;
-  margin-inline: -0.08em;
 }
 
 /* Красная линия карандашом (SVG path) */
@@ -68,53 +53,27 @@
   animation-delay: var(--d, 0ms);
 }
 
-.auth-dots i {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-inline: 2px;
-  border-radius: 50%;
-  background: var(--c-text-3);
-  animation: auth-dot 0.9s var(--ease) infinite;
-}
-.auth-dots i:nth-child(2) { animation-delay: 0.12s; }
-.auth-dots i:nth-child(3) { animation-delay: 0.24s; }
-
 @keyframes auth-margin { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 @keyframes auth-rise {
   from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: none; }
 }
 @keyframes auth-pop {
-  from { opacity: 0; transform: scale(0.9) translateY(8px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }
 }
 @keyframes auth-step {
   from { opacity: 0; transform: translateX(18px); }
   to { opacity: 1; transform: none; }
 }
-@keyframes auth-shake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-6px); }
-  40% { transform: translateX(5px); }
-  60% { transform: translateX(-3px); }
-  80% { transform: translateX(2px); }
-}
-@keyframes auth-mark { to { background-size: 100% 46%; } }
 @keyframes auth-draw { to { stroke-dashoffset: 0; } }
 @keyframes auth-fade { to { opacity: 1; } }
-@keyframes auth-dot {
-  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
-  30% { transform: translateY(-4px); opacity: 1; }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .auth-notebook::before,
   .auth-rise,
   .auth-pop,
   .auth-step,
-  .auth-shake,
-  .auth-mark,
   .auth-ink,
   .auth-speak {
     animation: none;
@@ -124,7 +83,5 @@
   .auth-speak {
     opacity: 1;
   }
-  .auth-mark { background-size: 100% 46%; }
   .auth-ink { stroke-dashoffset: 0; }
-  .auth-dots i { animation: none; }
 }

@@ -20,13 +20,13 @@ export function ErrorState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center rounded-lg border border-destructive/20 bg-destructive/5 px-8 py-14 text-center",
+        "flex flex-col items-center justify-center rounded-lg border border-border bg-card px-8 py-14 text-center",
         className,
       )}
       role="alert"
     >
-      <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-        <AlertTriangle className="size-6" aria-hidden />
+      <div className="mb-4 flex size-10 items-center justify-center rounded-md border border-border text-destructive">
+        <AlertTriangle className="size-5" aria-hidden />
       </div>
       <p className="font-semibold text-foreground">{title}</p>
       {description ? (

@@ -20,6 +20,7 @@ import {
   Hand,
   LayoutGrid,
   Link as LinkIcon,
+  Loader2,
   Lock,
   LockOpen,
   LogOut,
@@ -70,6 +71,8 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { ScrollArea } from "@/shared/ui/scroll-area";
 import { Skeleton } from "@/shared/ui/skeleton";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/shared/ui/empty";
+import { StatusScreen } from "@/shared/ui/status-screen";
 import { toast } from "@/shared/ui/sonner";
 import {
   Select,
@@ -200,8 +203,8 @@ const DRAWER_TABS: { key: DrawerMode; label: string }[] = [
   { key: "tools", label: "Материалы" },
 ];
 
-const MENU_CONTENT = "w-[280px] rounded-2xl p-1.5 shadow-lg";
-const MENU_ITEM = "h-9 gap-2.5 rounded-[10px] px-2.5 text-sm [&>svg]:text-muted-foreground";
+const MENU_CONTENT = "w-[280px] rounded-lg p-1.5 shadow-lg";
+const MENU_ITEM = "h-9 gap-2.5 rounded-md px-2.5 text-sm [&>svg]:text-muted-foreground";
 const MENU_LABEL = "px-2.5 pb-1 pt-2 text-[11.5px] font-bold uppercase tracking-[.07em] text-text-3";
 const ICON_BTN =
   "relative flex size-11 items-center justify-center rounded-full text-text-2 transition-colors hover:bg-surface-3 hover:text-foreground [&_svg]:size-5";
@@ -752,15 +755,17 @@ export function RoomPage() {
   const chatPanel = (sheet: boolean) => (
     <div className="flex h-full min-h-0 flex-col">
       {chat.length === 0 ? (
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2.5 px-7 py-8 text-center">
-          <span className="flex size-11 items-center justify-center rounded-full bg-primary-light text-primary">
-            <MessageSquare className="size-5" aria-hidden />
-          </span>
-          <span className="text-[15px] font-semibold">Сообщений пока нет</span>
-          <span className="text-[13px] text-muted-foreground [text-wrap:pretty]">
-            Напишите вопрос — его увидит весь класс. Учитель отвечает, не прерывая объяснение.
-          </span>
-        </div>
+        <Empty className="min-h-0 px-7 py-8 md:px-7 md:py-8">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <MessageSquare aria-hidden />
+            </EmptyMedia>
+            <EmptyTitle className="text-[15px] font-semibold">Сообщений пока нет</EmptyTitle>
+            <EmptyDescription className="text-[13px]">
+              Напишите вопрос — его увидит весь класс. Учитель отвечает, не прерывая объяснение.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
         <ScrollArea className="min-h-0 flex-1">
           <div className={cn("flex flex-col gap-3 py-3.5", sheet ? "px-4" : "px-3")}>
@@ -975,9 +980,9 @@ export function RoomPage() {
               key={key}
               type="button"
               onClick={onClick}
-              className="flex items-center gap-3 rounded-2xl px-2.5 py-[11px] text-left transition-colors hover:bg-surface-2"
+              className="flex items-center gap-3 rounded-lg px-2.5 py-[11px] text-left transition-colors hover:bg-surface-2"
             >
-              <span className="flex size-[38px] shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-card text-foreground">
                 <Icon className="size-[18px]" aria-hidden />
               </span>
               <span className="min-w-0 flex-1">
@@ -1062,8 +1067,8 @@ export function RoomPage() {
 
   // ── Стейдж ────────────────────────────────────────────────────────────
   const soloCard = aloneOnStage ? (
-    <div className="flex shrink-0 flex-col items-start justify-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-xs md:min-w-0 md:flex-1 md:gap-3.5 md:p-8">
-      <span className="hidden size-11 items-center justify-center rounded-full bg-primary-light text-primary md:flex">
+    <div className="flex shrink-0 flex-col items-start justify-center gap-3 rounded-lg border border-border bg-card p-4 shadow-xs md:min-w-0 md:flex-1 md:gap-3.5 md:p-8">
+      <span className="hidden size-10 items-center justify-center rounded-md border border-border text-foreground md:flex">
         <Users className="size-5" aria-hidden />
       </span>
       <span className="text-base font-heavy tracking-[-.02em] md:text-xl">
@@ -1189,7 +1194,7 @@ export function RoomPage() {
         Режим урока
       </DropdownMenuSubTrigger>
       <DropdownMenuPortal>
-        <DropdownMenuSubContent className="w-56 rounded-2xl p-1.5 shadow-lg">
+        <DropdownMenuSubContent className="w-56 rounded-lg p-1.5 shadow-lg">
           {Object.entries(LESSON_MODE_LABEL).map(([value, label]) => (
             <DropdownMenuItem
               key={value}
@@ -1291,7 +1296,7 @@ export function RoomPage() {
   const content = (
     <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
       {/* Шапка — десктоп */}
-      <header className="hidden h-14 shrink-0 items-center gap-3 border-b border-border bg-card/90 px-4 backdrop-blur-md md:flex">
+      <header className="hidden h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 md:flex">
         <span className="flex size-[30px] shrink-0 items-center justify-center rounded-[10px] bg-primary text-primary-foreground">
           <GraduationCap className="size-[17px]" aria-hidden />
         </span>
@@ -1583,7 +1588,7 @@ export function RoomPage() {
         <button
           type="button"
           onClick={leaveRoom}
-          className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-[#fecaca] bg-danger-light text-[15px] font-semibold text-danger transition-colors hover:bg-[#fee2e2]"
+          className="flex h-12 items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-card text-[15px] font-semibold text-destructive transition-colors hover:bg-destructive/5"
         >
           <LogOut className="size-[18px]" aria-hidden />
           Выйти из урока
@@ -1618,13 +1623,14 @@ export function RoomPage() {
       {/* Только WS-канал (`status`), НЕ LiveKit-медиа — оно продолжает
           работать под оверлеем, урок не прерывается. */}
       {status === "reconnecting" && everConnectedRef.current ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(16,24,40,.45)] p-6 backdrop-blur-[3px]">
-          <div className="flex w-full max-w-[400px] flex-col items-center gap-3 rounded-[20px] bg-card p-7 text-center shadow-lg">
-            <span
-              className="size-11 animate-spin rounded-full border-[3px] border-[#fde68a] border-t-warning"
-              aria-hidden
-            />
-            <h2 className="text-lg font-bold tracking-[-.02em]">Связь прервалась — переподключаемся</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-6">
+          <div
+            role="alertdialog"
+            aria-live="assertive"
+            className="flex w-full max-w-[400px] flex-col items-center gap-3 rounded-xl border border-border bg-card p-6 text-center shadow-lg"
+          >
+            <Loader2 className="size-6 animate-spin text-warning" aria-hidden />
+            <h2 className="text-lg font-bold tracking-tight">Связь прервалась — переподключаемся</h2>
             <p className="text-sm text-text-2 [text-wrap:pretty]">
               Урок продолжается. Вы вернётесь автоматически, выходить не нужно.
             </p>
@@ -1639,25 +1645,27 @@ export function RoomPage() {
 
   if (blocked) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-[#eff6ff] to-[#f0fdfa] p-6">
-        <div className="w-full max-w-[400px] rounded-xl border border-border bg-card p-9 text-center shadow-lg">
-          <h1 className="text-[22px] font-heavy tracking-tight">{blocked.title}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{blocked.text}</p>
-        </div>
-      </div>
+      <StatusScreen>
+        <Empty className="p-0 md:p-0">
+          <EmptyHeader>
+            <EmptyTitle as="h1">{blocked.title}</EmptyTitle>
+            <EmptyDescription>{blocked.text}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </StatusScreen>
     );
   }
 
   if (leftAsGuest) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-[#eff6ff] to-[#f0fdfa] p-6">
-        <div className="w-full max-w-[400px] rounded-xl border border-border bg-card p-9 text-center shadow-lg">
-          <h1 className="text-[22px] font-heavy tracking-tight">Вы вышли из урока</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Чтобы вернуться, откройте ссылку на урок ещё раз.
-          </p>
-        </div>
-      </div>
+      <StatusScreen>
+        <Empty className="p-0 md:p-0">
+          <EmptyHeader>
+            <EmptyTitle as="h1">Вы вышли из урока</EmptyTitle>
+            <EmptyDescription>Чтобы вернуться, откройте ссылку на урок ещё раз.</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </StatusScreen>
     );
   }
 

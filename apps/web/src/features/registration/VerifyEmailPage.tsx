@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Link2Off, MailCheck } from "lucide-react";
+import { Link2Off, Loader2 } from "lucide-react";
 
 import { ApiError } from "@/shared/api-client";
 import { useAuthStore } from "@/shared/auth-store";
@@ -41,8 +41,8 @@ export function VerifyEmailPage() {
     <AuthLayout aside={<StepsAside current={1} />}>
       {error ? (
         <>
-          <span className="auth-pop mb-7 flex size-16 items-center justify-center rounded-2xl bg-danger-light text-danger" style={stagger(100)}>
-            <Link2Off className="size-8" aria-hidden />
+          <span className="auth-rise mb-6 flex size-12 items-center justify-center rounded-md border border-border text-destructive" style={stagger(0)}>
+            <Link2Off className="size-6" aria-hidden />
           </span>
           <AuthHeading title="Ссылка не работает" subtitle={error} />
           <p className="auth-rise text-[14.5px]" style={stagger(300)}>
@@ -53,10 +53,8 @@ export function VerifyEmailPage() {
         </>
       ) : (
         <>
-          <span className="auth-pop relative mb-7 flex size-16 items-center justify-center" style={stagger(100)} role="status" aria-label="Подтверждаем почту">
-            <span className="absolute inset-0 rounded-full border-[3px] border-primary-light" />
-            <span className="absolute inset-0 animate-spin rounded-full border-[3px] border-transparent border-t-primary" />
-            <MailCheck className="size-6 text-primary" aria-hidden />
+          <span className="auth-rise mb-6 flex size-12 items-center justify-center rounded-md border border-border text-foreground" style={stagger(0)} role="status" aria-label="Подтверждаем почту">
+            <Loader2 className="size-6 animate-spin" aria-hidden />
           </span>
           <AuthHeading title="Подтверждаем почту" subtitle="Секунду — и вы внутри." />
         </>

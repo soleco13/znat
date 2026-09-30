@@ -3,6 +3,7 @@ import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/r
 import { BubbleMenu, FloatingMenu } from "@tiptap/react/menus";
 import { Placeholder } from "@tiptap/extensions/placeholder";
 import {
+  Baseline,
   Bold,
   Heading2,
   Heading3,
@@ -296,7 +297,7 @@ function FormatBar({ editor }: { editor: Editor }) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon-sm" aria-label="Цвет текста">
-            <span className="size-3.5 rounded-full border border-border bg-gradient-to-br from-primary to-success" />
+            <Baseline aria-hidden />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">

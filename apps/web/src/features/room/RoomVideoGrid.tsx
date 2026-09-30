@@ -162,21 +162,7 @@ export function RoomVideoGrid({
 
         {showLoader ? (
           <div role="status" className="absolute inset-0 flex items-center justify-center bg-slate-900">
-            <span className="relative inline-flex items-center justify-center">
-              <span
-                className="absolute inset-0 animate-ping rounded-full bg-primary/40"
-                style={{ animationDuration: "1.4s" }}
-                aria-hidden
-              />
-              <span
-                className={cn(
-                  "relative flex items-center justify-center rounded-full bg-primary/15 text-primary ring-1 ring-primary/25",
-                  small ? "size-7" : "size-10",
-                )}
-              >
-                <Loader2 className={cn("animate-spin", small ? "size-3.5" : "size-5")} aria-hidden />
-              </span>
-            </span>
+            <Loader2 className={cn("animate-spin text-white/60", small ? "size-4" : "size-6")} aria-hidden />
             <span className="sr-only">Камера загружается</span>
           </div>
         ) : null}

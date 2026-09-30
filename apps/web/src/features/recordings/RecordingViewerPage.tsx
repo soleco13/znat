@@ -168,16 +168,7 @@ export function RecordingViewerPage() {
                     role="status"
                     className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2.5 bg-slate-950/70"
                   >
-                    <span className="relative inline-flex items-center justify-center">
-                      <span
-                        className="absolute inset-0 animate-ping rounded-full bg-primary/40"
-                        style={{ animationDuration: "1.4s" }}
-                        aria-hidden
-                      />
-                      <span className="relative flex size-12 items-center justify-center rounded-full bg-primary/15 text-primary ring-1 ring-primary/25">
-                        <Loader2 className="size-6 animate-spin" aria-hidden />
-                      </span>
-                    </span>
+                    <Loader2 className="size-6 animate-spin text-white/70" aria-hidden />
                     <span className="text-xs font-medium text-white/70">Видео загружается…</span>
                   </div>
                 ) : null}

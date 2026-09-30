@@ -158,9 +158,6 @@ export function RoomControlButton({
   const button = (
     <SimpleTooltip content={label} side="top">
       <span className="relative inline-flex">
-        {speaking ? (
-          <span className="absolute inset-0 animate-ping rounded-full bg-success/40" aria-hidden />
-        ) : null}
         <Toggle
           variant={tone === "media" ? "media" : "outline"}
           size="circle"

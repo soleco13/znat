@@ -242,9 +242,9 @@ export const TableBlock = makeMediaNode("tableBlock", "data-table-block");
 // ─── Врезка — цветная полоса слева, содержимое редактируется как текст ───
 
 const CALLOUT_TONE: Record<string, string> = {
-  note: "border-l-primary bg-primary-light/40",
-  warning: "border-l-warning bg-warn-light/50",
-  example: "border-l-success bg-success-light/40",
+  note: "border-primary/25 bg-primary/5",
+  warning: "border-warning/30 bg-warning/5",
+  example: "border-success/25 bg-success/5",
 };
 const CALLOUT_LABEL: Record<string, string> = {
   note: "Заметка",
@@ -258,7 +258,7 @@ function CalloutView({ node, updateAttributes, deleteNode }: NodeViewProps) {
     <NodeViewWrapper className="group/co my-2">
       <div
         className={cn(
-          "relative rounded-r-md border-l-4 py-1.5 pl-3 pr-8",
+          "relative rounded-md border py-1.5 pl-3 pr-8",
           CALLOUT_TONE[variant],
         )}
       >
