@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 200" width="700" height="200">
+  <title>Матис — горизонтальный логотип</title>
+  <!-- Надпись набрана Manrope 800; для печати и сторонних сервисов переведите текст в кривые. -->
+  <defs>
+    <mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="325" height="325">
+      <rect width="325" height="325" fill="#fff"/>
+      <circle cx="162.5" cy="162.5" r="88" fill="#000"/>
+      <circle cx="162.5" cy="38.5" r="24" fill="#000"/>
+    </mask>
+  </defs>
+  <g transform="translate(20 20) scale(0.4923)">
+    <circle cx="162.5" cy="162.5" r="162.5" fill="#1d4ed8" mask="url(#m)"/>
+  </g>
+  <text x="212" y="140" font-family="Manrope, 'Segoe UI', system-ui, sans-serif" font-size="118" font-weight="800" letter-spacing="-4" fill="#101828">Матис</text>
+</svg>

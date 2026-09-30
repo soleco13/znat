@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { FileText, Plus, SquarePen } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Plus, SquarePen } from "lucide-react";
 import type { MaterialStatus, MaterialSummary } from "@school/shared";
 
-import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import { Card } from "@/shared/ui/card";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { ErrorState } from "@/shared/ui/error-state";
 import { PageHeader } from "@/shared/ui/page-header";
@@ -14,16 +12,6 @@ import { toast } from "@/shared/ui/sonner";
 import { buildPlaceholderDraft } from "./material-templates.js";
 import { createMaterial, listMaterials } from "./materials-api.js";
 
-const STATUS_LABEL: Record<MaterialStatus, string> = {
-  draft: "Черновик",
-  review: "На ревью",
-  published: "Опубликован",
-};
-const STATUS_VARIANT: Record<MaterialStatus, "gray" | "yellow" | "green"> = {
-  draft: "gray",
-  review: "yellow",
-  published: "green",
-};
 const SECTION_ORDER: { status: MaterialStatus; title: string; hint: string }[] = [
   { status: "draft", title: "Черновики", hint: "В работе, видны только персоналу" },
   { status: "review", title: "На ревью", hint: "Ждут проверки методистом или администратором" },
@@ -94,7 +82,7 @@ export function MaterialsEditorLandingPage() {
               <section key={status}>
                 <div className="mb-3">
                   <h2 className="ds-label">{title}</h2>
-                  <p className="text-xs text-muted-foreground">{hint}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {list.map((m) => (
@@ -111,44 +99,27 @@ export function MaterialsEditorLandingPage() {
 }
 
 function MaterialCard({ material }: { material: MaterialSummary }) {
-  const navigate = useNavigate();
   return (
-    <Card
-      role="button"
-      tabIndex={0}
-      onClick={() => navigate(`/materials/edit/${material.id}`)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          navigate(`/materials/edit/${material.id}`);
-        }
-      }}
-      className="flex cursor-pointer flex-col gap-2 p-4 transition-colors hover:border-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    <Link
+      to={`/materials/edit/${material.id}`}
+      className="flex flex-col gap-1 rounded-lg border border-border bg-card p-4 shadow-xs transition-colors hover:border-primary-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <div className="flex items-start justify-between gap-2">
-        <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-        <Badge variant={STATUS_VARIANT[material.status]} className="shrink-0">
-          {STATUS_LABEL[material.status]}
-        </Badge>
-      </div>
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-foreground">{material.title}</p>
-        <p className="mt-0.5 truncate text-xs text-muted-foreground">
-          {material.subject === "—" ? (
-            "данные не заполнены"
-          ) : (
-            <>
-              {material.subject}
-              {material.grades.length > 0 ? ` · ${material.grades.join(", ")} кл.` : ""}
-              {material.topic ? ` · ${material.topic}` : ""}
-            </>
-          )}
-        </p>
-      </div>
-      <p className="text-[11px] text-text-3">
+      <p className="truncate text-sm font-semibold text-foreground">{material.title}</p>
+      <p className="truncate text-xs text-muted-foreground">
+        {material.subject === "—" ? (
+          "данные не заполнены"
+        ) : (
+          <>
+            {material.subject}
+            {material.grades.length > 0 ? ` · ${material.grades.join(", ")} кл.` : ""}
+            {material.topic ? ` · ${material.topic}` : ""}
+          </>
+        )}
+      </p>
+      <p className="mt-1 text-[11px] text-text-3">
         изменён {new Date(material.updatedAt).toLocaleDateString("ru-RU")}
       </p>
-    </Card>
+    </Link>
   );
 }
 

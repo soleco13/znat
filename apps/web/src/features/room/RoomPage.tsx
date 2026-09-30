@@ -16,11 +16,9 @@ import {
   ClipboardList,
   Clock,
   Disc,
-  GraduationCap,
   Hand,
   LayoutGrid,
   Link as LinkIcon,
-  Loader2,
   Lock,
   LockOpen,
   LogOut,
@@ -122,6 +120,8 @@ import { ScreenShareTile } from "./ScreenShareTile.js";
 import { useRoomSocket } from "./useRoomSocket.js";
 import { notifyAnnotationsUpdated } from "../materials/annotations-events.js";
 import { VideoSubscriptionManager } from "./VideoSubscriptions.js";
+import { Loader } from "@/shared/ui/loader";
+import { BrandMark } from "@/shared/ui/brand-mark";
 
 // Э5.1/Э5.2 — см. подробные комментарии ниже у <LiveKitRoom>. 720p + simulcast,
 // adaptiveStream/dynacast включены явно (в livekit-client по умолчанию off).
@@ -205,7 +205,7 @@ const DRAWER_TABS: { key: DrawerMode; label: string }[] = [
 
 const MENU_CONTENT = "w-[280px] rounded-lg p-1.5 shadow-lg";
 const MENU_ITEM = "h-9 gap-2.5 rounded-md px-2.5 text-sm [&>svg]:text-muted-foreground";
-const MENU_LABEL = "px-2.5 pb-1 pt-2 text-[11.5px] font-bold uppercase tracking-[.07em] text-text-3";
+const MENU_LABEL = "px-2.5 pb-1 pt-2 text-xs font-semibold text-text-3";
 const ICON_BTN =
   "relative flex size-11 items-center justify-center rounded-full text-text-2 transition-colors hover:bg-surface-3 hover:text-foreground [&_svg]:size-5";
 
@@ -731,7 +731,7 @@ export function RoomPage() {
           />
         </label>
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-bold uppercase tracking-[.07em] text-text-3">
+          <span className="text-xs font-semibold text-text-3">
             В уроке · {connectedCount}
           </span>
           {isTeacher && media ? (
@@ -1092,7 +1092,7 @@ export function RoomPage() {
         </Button>
       </div>
       {isTeacher && lessonJoinPath ? (
-        <span className="hidden max-w-full truncate font-mono text-[12.5px] text-text-3 md:block">
+        <span className="hidden max-w-full truncate text-[12.5px] text-text-3 md:block">
           {window.location.host}
           {lessonJoinPath}
         </span>
@@ -1175,10 +1175,7 @@ export function RoomPage() {
             ))}
           </div>
           <span className="flex items-center gap-2.5 text-sm text-text-2">
-            <span
-              className="size-[18px] animate-spin rounded-full border-2 border-primary-muted border-t-primary"
-              aria-hidden
-            />
+            <Loader className="size-[18px] text-primary" />
             Подключаем звук и видео…
           </span>
         </div>
@@ -1297,9 +1294,7 @@ export function RoomPage() {
     <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
       {/* Шапка — десктоп */}
       <header className="hidden h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 md:flex">
-        <span className="flex size-[30px] shrink-0 items-center justify-center rounded-[10px] bg-primary text-primary-foreground">
-          <GraduationCap className="size-[17px]" aria-hidden />
-        </span>
+        <BrandMark className="size-[30px] text-primary" />
         <span className="flex min-w-0 flex-col">
           <span className="truncate text-[15px] font-bold leading-tight tracking-[-.02em]">
             {lessonTitle ?? "Урок"}
@@ -1332,9 +1327,7 @@ export function RoomPage() {
 
       {/* Шапка — телефон */}
       <header className="flex shrink-0 items-center gap-2 px-3.5 pb-2.5 pt-[max(8px,env(safe-area-inset-top))] md:hidden">
-        <span className="flex size-[26px] shrink-0 items-center justify-center rounded-[9px] bg-primary text-primary-foreground">
-          <GraduationCap className="size-[15px]" aria-hidden />
-        </span>
+        <BrandMark className="size-[26px] text-primary" />
         <span className="min-w-0 truncate text-[13.5px] font-bold">{lessonTitle ?? "Урок"}</span>
         <StatusPill status={status} compact />
         {recordingActive ? <RecordingPill compact /> : null}
@@ -1524,7 +1517,7 @@ export function RoomPage() {
             информация, а не навигация. */}
         <div className="flex shrink-0 items-center gap-2.5">
           <div className="hidden items-center gap-2.5 xl:flex">
-            <span className="inline-flex h-8 shrink-0 items-center gap-[7px] rounded-full bg-surface-2 px-3 font-mono text-[12.5px] font-semibold text-text-2">
+            <span className="inline-flex h-8 shrink-0 items-center gap-[7px] rounded-full bg-surface-2 px-3 text-[12.5px] font-semibold tabular-nums text-text-2">
               <Clock className="size-3.5" aria-hidden />
               {elapsedLabel}
             </span>
@@ -1629,7 +1622,7 @@ export function RoomPage() {
             aria-live="assertive"
             className="flex w-full max-w-[400px] flex-col items-center gap-3 rounded-xl border border-border bg-card p-6 text-center shadow-lg"
           >
-            <Loader2 className="size-6 animate-spin text-warning" aria-hidden />
+            <Loader className="size-8 text-warning" />
             <h2 className="text-lg font-bold tracking-tight">Связь прервалась — переподключаемся</h2>
             <p className="text-sm text-text-2 [text-wrap:pretty]">
               Урок продолжается. Вы вернётесь автоматически, выходить не нужно.
@@ -1763,7 +1756,6 @@ function StatusPill({ status, compact = false }: { status: SocketStatusLike; com
         className={cn(
           "rounded-full bg-current",
           compact ? "size-[5px]" : "size-1.5",
-          status !== "connected" && "animate-pulse",
         )}
       />
       {STATUS_LABEL[status]}
@@ -1779,7 +1771,7 @@ function RecordingPill({ compact = false }: { compact?: boolean }) {
         compact ? "h-[22px] gap-[5px] px-2 text-[11px]" : "h-[26px] gap-1.5 px-2.5 text-xs",
       )}
     >
-      <span className={cn("animate-pulse rounded-full bg-current", compact ? "size-[5px]" : "size-1.5")} />
+      <span className={cn("rounded-full bg-current", compact ? "size-[5px]" : "size-1.5")} />
       Запись
     </span>
   );
@@ -1799,19 +1791,24 @@ function StageBanner({
   return (
     <div
       className={cn(
-        "flex shrink-0 items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-[13.5px]",
-        tone === "info" && "border-primary-muted bg-primary-light text-primary",
-        tone === "warn" && "border-[#fde68a] bg-warn-light text-[#b45309]",
-        tone === "error" && "border-[#fecaca] bg-danger-light text-danger",
+        "flex shrink-0 items-center gap-2.5 rounded-xl border border-border bg-card px-3.5 py-2.5 text-[13.5px] text-foreground shadow-xs",
       )}
     >
-      <Icon className="size-[17px] shrink-0" aria-hidden />
+      <Icon
+        className={cn(
+          "size-[17px] shrink-0",
+          tone === "info" && "text-primary",
+          tone === "warn" && "text-warning",
+          tone === "error" && "text-destructive",
+        )}
+        aria-hidden
+      />
       <span className="min-w-0 flex-1 [text-wrap:pretty]">{children}</span>
       {action ? (
         <button
           type="button"
           onClick={action.onClick}
-          className="h-[30px] shrink-0 rounded-[9px] border border-current bg-transparent px-3 text-[13px] font-semibold"
+          className="h-[30px] shrink-0 rounded-[9px] border border-border bg-card px-3 text-[13px] font-semibold text-foreground transition-colors hover:bg-secondary"
         >
           {action.label}
         </button>

@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { GraduationCap, X } from "lucide-react";
+import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { Strike } from "@/components/Ink";
 import { Reveal } from "@/components/Reveal";
 import { SectionHeading } from "@/components/SectionHeading";
 import { useReveal } from "@/hooks/useReveal";
+import { BrandMark } from "@/components/BrandMark";
 
 const TABS = [
   { name: "Zoom — видео", c: "#2d8cff" },
@@ -73,9 +73,7 @@ function TabStrip() {
           )}
           style={{ transitionDelay: merged ? "500ms" : "0ms" }}
         >
-          <span className="flex size-4 shrink-0 items-center justify-center rounded-[5px] bg-primary text-primary-foreground">
-            <GraduationCap className="size-3" aria-hidden />
-          </span>
+          <BrandMark className="size-4 text-primary" />
           Матис
         </span>
       </div>
@@ -110,7 +108,7 @@ export function Problem() {
           {ROWS.map((r, i) => (
             <li key={i} className="grid gap-2 py-6 sm:grid-cols-2 sm:gap-10">
               <p className="text-body text-muted-foreground">
-                <Strike d={i * 120}>{r.before}</Strike>
+                {r.before}
               </p>
               <Reveal delay={350 + i * 120}>
                 <p className="text-body font-semibold text-foreground">{r.after}</p>

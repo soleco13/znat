@@ -11,7 +11,6 @@ import {
   RefreshCw,
   Trash2,
   Users,
-  Video,
   X,
 } from "lucide-react";
 import type {
@@ -38,7 +37,6 @@ import {
 } from "@/shared/ui/alert-dialog";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import { Card } from "@/shared/ui/card";
 import { Checkbox } from "@/shared/ui/checkbox";
 import {
   Dialog,
@@ -563,11 +561,8 @@ function LessonRow({
   onDelete: () => void;
 }) {
   return (
-    <Card className="flex flex-col gap-3 p-4 transition-shadow hover:shadow-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-      <div className="flex min-w-0 items-start gap-3.5">
-        <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary">
-          <Video className="size-5" aria-hidden />
-        </span>
+    <li className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="flex min-w-0 items-start">
         <div className="min-w-0">
           <span className="flex items-center gap-2">
             <span className="truncate font-semibold text-foreground">{lesson.title}</span>
@@ -630,7 +625,7 @@ function LessonRow({
           </DropdownMenu>
         ) : null}
       </div>
-    </Card>
+    </li>
   );
 }
 
@@ -722,22 +717,21 @@ export function LessonsListPage() {
       />
 
       {loading ? (
-        <div className="flex flex-col gap-3">
+        <ul className="divide-y divide-border rounded-lg border border-border bg-card shadow-xs">
           {[0, 1, 2].map((i) => (
-            <Card key={i} className="flex items-center gap-3.5 p-4">
-              <Skeleton className="size-10 rounded-lg" />
+            <li key={i} className="flex items-center gap-3.5 px-4 py-3.5">
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-48" />
                 <Skeleton className="h-3 w-64" />
               </div>
               <Skeleton className="h-8 w-20 rounded-md" />
-            </Card>
+            </li>
           ))}
-        </div>
+        </ul>
       ) : error ? (
         <ErrorState description={error} onRetry={reload} />
       ) : data && data.items.length > 0 ? (
-        <div className="flex flex-col gap-3">
+        <ul className="divide-y divide-border rounded-lg border border-border bg-card shadow-xs">
           {data.items.map((lesson) => (
             <LessonRow
               key={lesson.id}
@@ -754,7 +748,7 @@ export function LessonsListPage() {
               onDelete={() => setDeleteFor(lesson)}
             />
           ))}
-        </div>
+        </ul>
       ) : (
         <EmptyState
           icon={CalendarDays}

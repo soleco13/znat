@@ -230,8 +230,8 @@ export function ScreenShareStatusBar({
   }
 
   return (
-    <div className="flex shrink-0 items-center gap-2.5 rounded-xl border border-primary-muted bg-primary-light px-3 py-2 text-[13.5px] text-primary">
-      <MonitorUp className="size-[17px] shrink-0" aria-hidden />
+    <div className="flex shrink-0 items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-2 text-[13.5px] text-foreground shadow-xs">
+      <MonitorUp className="size-[17px] shrink-0 text-primary" aria-hidden />
       <span className="min-w-0 flex-1 truncate">
         {isSelf ? "Вы показываете экран" : `${name} показывает экран`}
       </span>

@@ -96,7 +96,7 @@ function ItemDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <p
       data-slot="item-description"
-      className={cn("line-clamp-2 text-balance text-sm font-normal leading-normal text-muted-foreground", className)}
+      className={cn("line-clamp-2 text-sm font-normal leading-normal text-muted-foreground", className)}
       {...props}
     />
   );

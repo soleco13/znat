@@ -1,12 +1,13 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { AlertCircle, Check, Eye, EyeOff, GraduationCap, Hand } from "lucide-react";
+import { AlertCircle, Check, Eye, EyeOff, Hand } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/shared/ui/alert";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import "./auth.css";
+import { BrandMark } from "@/shared/ui/brand-mark";
 
 /** Задержка появления (мс) для каскада `.auth-rise` / `.auth-pop`. */
 export const stagger = (ms: number) => ({ ["--d" as string]: `${ms}ms` }) as CSSProperties;
@@ -19,9 +20,7 @@ export function AuthLayout({ children, aside }: { children: ReactNode; aside: Re
       <main className="flex min-h-dvh flex-col px-6 py-6 sm:px-12 lg:px-16">
         <header className="auth-rise flex items-center">
           <Link to="/" className="flex items-center gap-2.5 rounded-lg" aria-label="Матис">
-            <span className="flex size-[34px] items-center justify-center rounded-[11px] bg-primary text-primary-foreground">
-              <GraduationCap className="size-[19px]" aria-hidden />
-            </span>
+            <BrandMark className="size-[34px] text-primary" />
             <span className="text-[16px] font-bold tracking-[-.02em]">Матис</span>
           </Link>
         </header>
@@ -198,9 +197,7 @@ export function LobbyAside() {
 
       <div className="auth-rise w-full max-w-[560px] overflow-hidden rounded-xl border border-border bg-card shadow-sm" style={stagger(500)}>
         <div className="flex h-12 items-center gap-2.5 border-b border-border px-3.5">
-          <span className="flex size-6 items-center justify-center rounded-[8px] bg-primary text-primary-foreground">
-            <GraduationCap className="size-[14px]" aria-hidden />
-          </span>
+          <BrandMark className="size-6 text-primary" />
           <span className="text-[13.5px] font-bold tracking-[-.02em]">Алгебра · 8 класс</span>
           <span className="inline-flex h-[22px] items-center gap-[5px] rounded-full bg-success-light px-2 text-[11px] font-semibold text-success">
             <span className="size-[5px] rounded-full bg-current" />
@@ -268,7 +265,7 @@ export function LobbyAside() {
 
 const STEPS = [
   { t: "Создайте аккаунт", d: "Имя, почта и пароль — меньше минуты." },
-  { t: "Подтвердите почту", d: "Перейдите по ссылке из письма — и вы внутри." },
+  { t: "Подтвердите почту", d: "Перейдите по ссылке из письма, чтобы войти." },
   { t: "Проведите первый урок", d: "Пришлите ученикам одну ссылку. Без установки." },
 ];
 

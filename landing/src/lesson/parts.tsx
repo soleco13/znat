@@ -142,7 +142,7 @@ export function RecordingPill({ compact = false }: { compact?: boolean }) {
         compact ? "h-[22px] gap-[5px] px-2 text-[11px]" : "h-[26px] gap-1.5 px-2.5 text-xs",
       )}
     >
-      <span className={cn("animate-pulse rounded-full bg-current", compact ? "size-[5px]" : "size-1.5")} />
+      <span className={cn("rounded-full bg-current", compact ? "size-[5px]" : "size-1.5")} />
       Запись
     </span>
   );
@@ -280,28 +280,18 @@ export type TileProps = {
   weak?: boolean;
   self?: boolean;
   role?: "teacher";
-  /** Есть ли «видео» (в живом уроке — поток камеры; здесь — обезличенный силуэт). */
+  /** Есть ли «видео» (в живом уроке — поток камеры; здесь — плитка своего оттенка с инициалами). */
   video?: "a" | "b" | "c";
   /** Задержка появления «говорит» (мс) — для сценариев. */
   speakAt?: number;
 };
 
 const VIDEO_TONES = {
-  a: { bg: "#334155", fg: "#94a3b8" },
-  b: { bg: "#3f3a52", fg: "#a5a0c0" },
-  c: { bg: "#2f4a4c", fg: "#93b7b4" },
+  a: { bg: "#334155" },
+  b: { bg: "#3f3a52" },
+  c: { bg: "#2f4a4c" },
 } as const;
 
-function Silhouette({ tone }: { tone: keyof typeof VIDEO_TONES }) {
-  const t = VIDEO_TONES[tone];
-  return (
-    <svg viewBox="0 0 160 90" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 size-full" aria-hidden>
-      <rect width="160" height="90" fill={t.bg} />
-      <circle cx="80" cy="38" r="15" fill={t.fg} />
-      <path d="M46 92c2-20 16-30 34-30s32 10 34 30Z" fill={t.fg} />
-    </svg>
-  );
-}
 
 export function Tile({
   name,
@@ -328,20 +318,19 @@ export function Tile({
       )}
     >
       {video ? (
-        <Silhouette tone={video} />
-      ) : (
-        <span
-          className={cn(
-            "flex items-center justify-center rounded-full bg-white/10 font-bold text-white",
-            size === "lg" && "size-14 text-lg",
-            size === "md" && "size-11 text-[15px]",
-            size === "sm" && "size-[34px] text-xs",
-            size === "xs" && "size-[30px] text-[11px]",
-          )}
-        >
-          {initialsOf(name)}
-        </span>
-      )}
+        <span className="absolute inset-0" style={{ background: VIDEO_TONES[video].bg }} aria-hidden />
+      ) : null}
+      <span
+        className={cn(
+          "relative flex items-center justify-center rounded-full bg-white/10 font-bold text-white",
+          size === "lg" && "size-14 text-lg",
+          size === "md" && "size-11 text-[15px]",
+          size === "sm" && "size-[34px] text-xs",
+          size === "xs" && "size-[30px] text-[11px]",
+        )}
+      >
+        {initialsOf(name)}
+      </span>
 
       {speaking ? (
         <span

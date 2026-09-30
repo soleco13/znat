@@ -1,15 +1,4 @@
 import { useEffect, useState } from "react";
-import {
-  Camera,
-  Disc,
-  Film,
-  Gauge,
-  LinkIcon,
-  Mic,
-  MonitorUp,
-  PictureInPicture2,
-  Waves,
-} from "lucide-react";
 import type {
   Framerate,
   MediaQualityPreset,
@@ -61,26 +50,19 @@ const BITRATE_MIN = 100;
 const BITRATE_MAX = 8000;
 
 function Row({
-  icon: Icon,
   title,
   description,
   children,
 }: {
-  icon: React.ElementType;
   title: string;
   description: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex items-start justify-between gap-4 py-3.5 first:pt-0 last:pb-0">
-      <div className="flex min-w-0 items-start gap-3">
-        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary text-muted-foreground">
-          <Icon className="size-4" aria-hidden />
-        </span>
-        <div className="min-w-0">
-          <p className="font-medium text-foreground">{title}</p>
-          <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
-        </div>
+      <div className="min-w-0">
+        <p className="font-medium text-foreground">{title}</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
       </div>
       <div className="shrink-0">{children}</div>
     </div>
@@ -90,7 +72,7 @@ function Row({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <Card className="p-4">
-      <h2 className="ds-label mb-1">{title}</h2>
+      <h2 className="ds-label mb-3">{title}</h2>
       <div className="divide-y divide-border">{children}</div>
     </Card>
   );
@@ -178,7 +160,6 @@ export function SettingsPage() {
         <div className="flex flex-col gap-5">
           <Section title="Функции">
             <Row
-              icon={LinkIcon}
               title="Гостевой доступ по ссылке"
               description="Ученик может войти в урок без аккаунта по прямой ссылке (/j/...)"
             >
@@ -188,7 +169,7 @@ export function SettingsPage() {
                 onCheckedChange={(v) => void patch("guestAccessEnabled", { guestAccessEnabled: v })}
               />
             </Row>
-            <Row icon={Disc} title="Запись урока" description="Учитель/админ может начать запись урока">
+            <Row title="Запись урока" description="Учитель/админ может начать запись урока">
               <Switch
                 checked={data.recordingEnabled}
                 disabled={savingKey === "recordingEnabled"}
@@ -196,7 +177,6 @@ export function SettingsPage() {
               />
             </Row>
             <Row
-              icon={MonitorUp}
               title="Демонстрация экрана"
               description="Кнопка демонстрации экрана доступна на уроке"
             >
@@ -207,7 +187,6 @@ export function SettingsPage() {
               />
             </Row>
             <Row
-              icon={PictureInPicture2}
               title="Картинка в картинке"
               description="Авто-PiP и кнопка «картинка в картинке» во время демонстрации"
             >
@@ -223,7 +202,7 @@ export function SettingsPage() {
             <p className="pb-3 text-xs text-muted-foreground">
               Мягкие дефолты — подставляются при публикации, участник может выбрать своё устройство.
             </p>
-            <Row icon={Camera} title="Разрешение камеры" description="Дефолт для видео учителя на уроке">
+            <Row title="Разрешение камеры" description="Дефолт для видео учителя на уроке">
               <Select
                 value={data.cameraResolution}
                 disabled={savingKey === "cameraResolution"}
@@ -243,7 +222,7 @@ export function SettingsPage() {
                 </SelectContent>
               </Select>
             </Row>
-            <Row icon={Film} title="Частота кадров камеры" description="Кадров в секунду для видео учителя">
+            <Row title="Частота кадров камеры" description="Кадров в секунду для видео учителя">
               <Select
                 value={String(data.cameraFps)}
                 disabled={savingKey === "cameraFps"}
@@ -261,14 +240,14 @@ export function SettingsPage() {
                 </SelectContent>
               </Select>
             </Row>
-            <Row icon={Gauge} title="Битрейт камеры" description="Сколько данных в секунду уходит на видео учителя">
+            <Row title="Битрейт камеры" description="Сколько данных в секунду уходит на видео учителя">
               <BitrateInput
                 value={data.cameraBitrateKbps}
                 disabled={savingKey === "cameraBitrateKbps"}
                 onCommit={(kbps) => void patch("cameraBitrateKbps", { cameraBitrateKbps: kbps })}
               />
             </Row>
-            <Row icon={Mic} title="Высокое качество звука" description="Стерео-захват микрофона вместо моно">
+            <Row title="Высокое качество звука" description="Стерео-захват микрофона вместо моно">
               <Switch
                 checked={data.micHighQuality}
                 disabled={savingKey === "micHighQuality"}
@@ -276,7 +255,6 @@ export function SettingsPage() {
               />
             </Row>
             <Row
-              icon={Waves}
               title="Шумоподавление микрофона"
               description="Убирает фоновый шум на стороне участника (браузер), не нагружает сервер"
             >
@@ -292,7 +270,6 @@ export function SettingsPage() {
 
           <Section title="Качество демонстрации экрана">
             <Row
-              icon={MonitorUp}
               title="Разрешение демонстрации"
               description="Дефолт для показа экрана/документа на уроке"
             >
@@ -316,7 +293,6 @@ export function SettingsPage() {
               </Select>
             </Row>
             <Row
-              icon={Film}
               title="Частота кадров демонстрации"
               description="Ниже — резче текст документа, выше — плавнее видео/анимация"
             >
@@ -339,7 +315,7 @@ export function SettingsPage() {
                 </SelectContent>
               </Select>
             </Row>
-            <Row icon={Gauge} title="Битрейт демонстрации" description="Сколько данных в секунду уходит на показ экрана">
+            <Row title="Битрейт демонстрации" description="Сколько данных в секунду уходит на показ экрана">
               <BitrateInput
                 value={data.screenShareBitrateKbps}
                 disabled={savingKey === "screenShareBitrateKbps"}
@@ -353,7 +329,7 @@ export function SettingsPage() {
               Разрешение/fps/битрейт видеозаписи урока (LiveKit Egress) — выше значения нагружают CPU записи
               сильнее и дают больший файл.
             </p>
-            <Row icon={Camera} title="Разрешение записи" description="Разрешение видеофайла урока">
+            <Row title="Разрешение записи" description="Разрешение видеофайла урока">
               <Select
                 value={data.recordingResolution}
                 disabled={savingKey === "recordingResolution"}
@@ -373,7 +349,7 @@ export function SettingsPage() {
                 </SelectContent>
               </Select>
             </Row>
-            <Row icon={Film} title="Частота кадров записи" description="Кадров в секунду в видеофайле урока">
+            <Row title="Частота кадров записи" description="Кадров в секунду в видеофайле урока">
               <Select
                 value={String(data.recordingFps)}
                 disabled={savingKey === "recordingFps"}
@@ -391,7 +367,7 @@ export function SettingsPage() {
                 </SelectContent>
               </Select>
             </Row>
-            <Row icon={Gauge} title="Битрейт записи" description="Сколько данных в секунду уходит на видеофайл урока">
+            <Row title="Битрейт записи" description="Сколько данных в секунду уходит на видеофайл урока">
               <BitrateInput
                 value={data.recordingBitrateKbps}
                 disabled={savingKey === "recordingBitrateKbps"}

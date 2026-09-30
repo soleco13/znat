@@ -278,32 +278,7 @@
   .no-scrollbar { scrollbar-width: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
 
-  /* ---- Разметка «как у учителя»: маркер, карандаш ----
-     Все три рисуются, когда родитель получает data-visible="true". */
-  .mark {
-    background-image: linear-gradient(rgba(250, 204, 21, 0.62), rgba(250, 204, 21, 0.62));
-    background-repeat: no-repeat;
-    background-position: 0 88%;
-    background-size: 0% 46%;
-    transition: background-size 0.9s var(--ease) var(--d, 0ms);
-    -webkit-box-decoration-break: clone;
-    box-decoration-break: clone;
-    padding-inline: 0.08em;
-    margin-inline: -0.08em;
-  }
-  .strike {
-    background-image: linear-gradient(#e03131, #e03131);
-    background-repeat: no-repeat;
-    background-position: 0 58%;
-    background-size: 0% 2px;
-    transition: background-size 0.9s var(--ease) var(--d, 0ms);
-    -webkit-box-decoration-break: clone;
-    box-decoration-break: clone;
-  }
-  .strike[data-visible="true"] { background-size: 100% 2px; }
-  [data-visible="true"] .mark,
-  .mark[data-visible="true"] { background-size: 100% 46%; }
-
+  /* ---- Красный карандаш учителя (SVG-линия в hero). ---- */
   .ink {
     stroke-dasharray: var(--len, 400);
     stroke-dashoffset: var(--len, 400);
@@ -400,8 +375,6 @@
     .reveal, .reveal-x { opacity: 1; transform: none; }
     .word > span { transform: none; }
     .word-free > span { opacity: 1; }
-    .mark { background-size: 100% 46%; }
-    .strike { background-size: 100% 2px; }
     .ink { stroke-dashoffset: 0; }
     .draw { stroke-dashoffset: 0; }
     .pop, .slide-in { opacity: 1; animation: none; }

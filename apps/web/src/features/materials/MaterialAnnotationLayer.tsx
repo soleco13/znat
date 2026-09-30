@@ -250,7 +250,7 @@ export function MaterialAnnotationLayer({
 
       {editable ? (
         <div className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-3">
-          <div className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-border bg-card/95 px-2 py-1.5 shadow-lg backdrop-blur">
+          <div className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-border bg-card px-2 py-1.5 shadow-md">
             <ToolButton label="Карандаш" active={tool === "pen" && !erasing} onClick={() => { setTool("pen"); setErasing(false); }}>
               <Pencil className="size-4" aria-hidden />
             </ToolButton>

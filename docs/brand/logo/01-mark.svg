@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 325 325" width="325" height="325">
+  <title>Матис — знак</title>
+  <!-- Кадр лоадера: большой вырез в центре, «спутник» у верхнего края. -->
+  <defs>
+    <mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="325" height="325">
+      <rect width="325" height="325" fill="#fff"/>
+      <circle cx="162.5" cy="162.5" r="88" fill="#000"/>
+      <circle cx="162.5" cy="38.5" r="24" fill="#000"/>
+    </mask>
+  </defs>
+  <circle cx="162.5" cy="162.5" r="162.5" fill="#1d4ed8" mask="url(#m)"/>
+</svg>

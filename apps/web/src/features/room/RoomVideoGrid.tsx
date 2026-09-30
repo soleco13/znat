@@ -6,7 +6,7 @@ import {
   VideoTrack,
 } from "@livekit/components-react";
 import { ConnectionQuality, Track } from "livekit-client";
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Hand, Loader2, MicOff, Pin, SignalLow } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Hand, MicOff, Pin, SignalLow } from "lucide-react";
 import type { LessonMode, ParticipantSnapshot } from "@school/shared";
 
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ import { participantsCount } from "./format.js";
 import { useSelfCameraUiStore } from "./self-camera-ui-store.js";
 import { useAdaptiveGrid } from "./use-adaptive-grid.js";
 import { useIsNarrowViewport } from "./use-narrow-viewport.js";
+import { Loader } from "@/shared/ui/loader";
 
 const GAP = 10;
 const PAGE_SIZE = 12;
@@ -162,7 +163,7 @@ export function RoomVideoGrid({
 
         {showLoader ? (
           <div role="status" className="absolute inset-0 flex items-center justify-center bg-slate-900">
-            <Loader2 className={cn("animate-spin text-white/60", small ? "size-4" : "size-6")} aria-hidden />
+            <Loader className={cn("text-white/60", small ? "size-5" : "size-8")} />
             <span className="sr-only">Камера загружается</span>
           </div>
         ) : null}

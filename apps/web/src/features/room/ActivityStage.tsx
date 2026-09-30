@@ -371,13 +371,13 @@ function StudentAnswerLine({
   return (
     <div className="grid gap-2 rounded-lg border border-border bg-secondary/50 p-2.5 text-sm sm:grid-cols-2">
       <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-text-3">Ответ ученика</p>
+        <p className="text-xs font-medium text-text-3">Ответ ученика</p>
         <p className="font-semibold text-foreground">
           {formatResponse(full.interaction, response)}
         </p>
       </div>
       <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-text-3">Верный ответ</p>
+        <p className="text-xs font-medium text-text-3">Верный ответ</p>
         <p className="font-medium text-success">{formatCorrectAnswer(full.interaction)}</p>
       </div>
     </div>

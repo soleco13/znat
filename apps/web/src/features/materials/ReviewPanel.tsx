@@ -117,7 +117,7 @@ function QuestionReview({
         dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.prompt.html) }}
       />
       <p className="mb-2 text-sm">
-        <span className="text-xs font-medium uppercase tracking-wide text-success">правильный ответ: </span>
+        <span className="text-xs font-medium text-success">Правильный ответ: </span>
         {formatCorrectAnswer(block.interaction)}
       </p>
       {isTeacher && (

@@ -83,7 +83,7 @@
 
 /* Э12.7: панели-«острова» Excalidraw (тулбар, свойства фигуры, зум,
    контекст-меню) — ТОТ ЖЕ рецепт, что у нашей шапки доски и карточек ДС:
-   `rounded-xl` + рамка + мягкая тень + полупрозрачный фон с блюром. */
+   `rounded-xl` + рамка + мягкая тень + сплошной фон. */
 .canvas-board .excalidraw .Island,
 .canvas-board .excalidraw .zoom-actions,
 .canvas-board .excalidraw .scroll-back-to-content,
@@ -93,8 +93,7 @@
   border: 1px solid var(--c-border-solid) !important;
   border-radius: var(--radius-xl) !important;
   box-shadow: var(--shadow-sm) !important;
-  background: rgba(255, 255, 255, 0.95) !important;
-  backdrop-filter: blur(6px);
+  background: var(--c-surface, #fff) !important;
 }
 
 /* Подсказку-hint внутри тулбара («Чтобы двигать холст…») прячем всегда. */

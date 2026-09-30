@@ -2,7 +2,6 @@ import { useState, type ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   CalendarDays,
-  GraduationCap,
   HardDrive,
   KeyRound,
   Library,
@@ -24,6 +23,7 @@ import { UserAvatar } from "@/shared/ui/avatar";
 import { Button } from "@/shared/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/shared/ui/sheet";
 import { SimpleTooltip, TooltipProvider } from "@/shared/ui/tooltip";
+import { BrandMark } from "@/shared/ui/brand-mark";
 
 interface NavItem {
   to: string;
@@ -58,9 +58,7 @@ const ROLE_LABEL: Record<Role, string> = {
 function Wordmark({ compact = false }: { compact?: boolean }) {
   return (
     <Link to="/" className="flex items-center gap-2.5 overflow-hidden">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-        <GraduationCap className="size-[18px]" aria-hidden />
-      </span>
+      <BrandMark className="size-8 text-primary" />
       {!compact && (
         <span className="truncate text-[17px] font-heavy tracking-tight text-foreground">
           Матис
@@ -208,7 +206,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Header */}
         <header
           className={cn(
-            "fixed inset-x-0 top-0 z-30 flex h-header items-center gap-3 border-b border-border bg-card/80 px-4 backdrop-blur-md transition-[left] duration-200 ease-ds sm:px-6",
+            "fixed inset-x-0 top-0 z-30 flex h-header items-center gap-3 border-b border-border bg-card px-4 transition-[left] duration-200 ease-ds sm:px-6",
             collapsed ? "lg:left-sidebar-collapsed" : "lg:left-sidebar",
           )}
         >

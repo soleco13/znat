@@ -7,6 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/ui/dialog";
+import { Input } from "@/shared/ui/input";
+import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/shared/ui/item";
 import {
   CONSTRUCT_SUBJECT_ORDER,
   MATERIAL_CONSTRUCTS,
@@ -77,12 +79,13 @@ export function ConstructPickerDialog({
 
         <div className="relative shrink-0">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-          <input
-            type="text"
+          <Input
+            type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Поиск по конструкциям и предметам…"
-            className="h-9 w-full rounded-lg border border-border bg-card pl-9 pr-3 text-sm outline-none focus:border-primary"
+            aria-label="Поиск конструкций"
+            className="pl-9"
           />
         </div>
 
@@ -92,8 +95,8 @@ export function ConstructPickerDialog({
           )}
           {bySubject.map(({ subject, items }) => (
             <section key={subject} className="mb-4">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-3">{subject}</p>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <h3 className="mb-2 text-sm font-semibold text-foreground">{subject}</h3>
+              <div className="grid gap-2 sm:grid-cols-2">
                 {items.map((c) => (
                   <ConstructCard key={c.id} construct={c} onPick={() => onPick(c)} />
                 ))}
@@ -115,28 +118,19 @@ function ConstructCard({
 }) {
   const Icon = construct.icon;
   return (
-    <button
-      type="button"
-      onClick={onPick}
-      className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3 text-left transition-colors hover:border-primary hover:bg-accent"
-    >
-      <div className="flex items-center gap-2">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary">
-          <Icon className="size-4" aria-hidden />
-        </span>
-        <span className="text-sm font-semibold text-foreground">{construct.label}</span>
-      </div>
-      <p className="text-xs text-muted-foreground">{construct.description}</p>
-      <div className="flex flex-wrap gap-1">
-        {construct.outline.map((step, i) => (
-          <span
-            key={i}
-            className="rounded-pill bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground"
-          >
-            {step}
-          </span>
-        ))}
-      </div>
-    </button>
+    <Item variant="outline" size="sm" asChild className="items-start text-left hover:border-primary-muted hover:bg-surface-2">
+      <button type="button" onClick={onPick}>
+        <ItemMedia variant="icon">
+          <Icon aria-hidden />
+        </ItemMedia>
+        <ItemContent>
+          <ItemTitle>{construct.label}</ItemTitle>
+          <ItemDescription>{construct.description}</ItemDescription>
+          {construct.outline.length > 0 ? (
+            <p className="text-[11.5px] leading-snug text-text-3">{construct.outline.join(" → ")}</p>
+          ) : null}
+        </ItemContent>
+      </button>
+    </Item>
   );
 }

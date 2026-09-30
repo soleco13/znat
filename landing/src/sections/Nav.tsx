@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { GraduationCap, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import { BrandMark } from "@/components/BrandMark";
 
 export const SECTIONS = [
   { id: "audience", label: "Для кого" },
@@ -53,9 +54,7 @@ export function Nav() {
     >
       <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
         <a href="#top" className="flex min-w-0 items-center gap-3" aria-label="Матис — на главную">
-          <span className="flex size-[30px] shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <GraduationCap className="size-[17px]" aria-hidden />
-          </span>
+          <BrandMark className="size-[30px] text-primary" />
           <span className="flex min-w-0 flex-col">
             <span className="truncate text-[15px] font-bold leading-tight tracking-[-.02em]">Матис</span>
             <span className="hidden truncate text-xs leading-tight text-muted-foreground sm:block">

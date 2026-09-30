@@ -33,9 +33,9 @@ const ROWS: {
   },
   {
     title: "Общая доска",
-    text: "Пишите и рисуйте вместе с учениками прямо поверх презентации. Вы решаете, кому можно выйти «к доске», — порядок гарантирован.",
+    text: "Пишите и рисуйте вместе с учениками прямо поверх презентации. Вы решаете, кому можно выйти «к доске»: остальные в это время только смотрят.",
     fragment: (
-      <div className="flex items-center gap-0.5 rounded-xl border border-border bg-card/95 p-1 shadow-sm">
+      <div className="flex items-center gap-0.5 rounded-xl border border-border bg-card p-1 shadow-sm">
         {[MousePointer2, PencilIcon, Eraser, ImagePlus, Undo2, Redo2].map((I, i) => (
           <span
             key={i}
@@ -85,7 +85,7 @@ const ROWS: {
   },
   {
     title: "Запись урока",
-    text: "Одна кнопка — и урок записан вместе с доской. Запись лежит рядом с уроком: удобно для тех, кто заболел или хочет повторить.",
+    text: "Запись включается одной кнопкой и захватывает доску вместе с видео. Запись лежит рядом с уроком: удобно для тех, кто заболел или хочет повторить.",
     fragment: (
       <div className="lesson-ui flex items-center gap-2">
         <StatusPill />
@@ -95,10 +95,10 @@ const ROWS: {
   },
   {
     title: "Ученик — по ссылке",
-    text: "Ученику не нужны аккаунт, пароль и программы. Открыл ссылку, ввёл имя — и уже на уроке. Даже с телефона.",
+    text: "Ученику не нужны аккаунт, пароль и программы. Открыл ссылку, ввёл имя и оказался на уроке. С телефона тоже.",
     fragment: (
       <div className="lesson-ui flex flex-col gap-1.5">
-        <span className="truncate font-mono text-[12.5px] text-text-3">matis.online/j/8k2-xq</span>
+        <span className="truncate text-[12.5px] text-text-3">matis.online/j/8k2-xq</span>
         <span className="inline-flex items-center gap-2">
           <span className="flex h-10 w-40 items-center rounded-md border border-border bg-card px-3.5 text-[15px] text-muted-foreground shadow-xs">
             Ваше имя

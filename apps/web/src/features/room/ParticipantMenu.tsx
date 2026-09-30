@@ -63,7 +63,7 @@ export function ParticipantMenu({
           <MoreHorizontal className="size-4" aria-hidden />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[264px] rounded-2xl p-1.5 shadow-lg">
+      <DropdownMenuContent align="end" className="w-[264px] rounded-lg p-1.5 shadow-lg">
         <DropdownMenuLabel className="mb-1 flex items-center gap-2 border-b border-border px-2.5 pb-2 pt-2.5 font-normal">
           <UserAvatar name={p.fullName} size={28} />
           <span className="truncate text-sm font-semibold">{p.fullName}</span>

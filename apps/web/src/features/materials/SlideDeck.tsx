@@ -125,7 +125,7 @@ export function SlideDeck<T extends SlideDeckBlock>({
           >
             <span
               className={cn(
-                "h-1.5 rounded-full transition-all",
+                "h-1.5 rounded-full transition-[width,background-color] duration-200",
                 i === index ? "w-6 bg-primary" : "w-3 bg-border hover:bg-muted-foreground/40",
               )}
             />

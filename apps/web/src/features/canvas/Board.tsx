@@ -1038,7 +1038,7 @@ export function Board({
       )}
     >
       {/* Страницы — компактная лента */}
-      <div className="pointer-events-auto flex items-center gap-1 rounded-xl border border-border bg-card/95 p-1 shadow-sm backdrop-blur">
+      <div className="pointer-events-auto flex items-center gap-1 rounded-xl border border-border bg-card p-1 shadow-sm">
         <div className="flex max-w-[40vw] items-center gap-0.5 overflow-x-auto">
           {nonSlidePages.map(([pageId], index) => (
             <button
@@ -1099,7 +1099,7 @@ export function Board({
       </div>
 
       {/* Действия: undo/redo, фото, ⋯ (доп.), скрыть доску */}
-      <div className="pointer-events-auto flex items-center gap-0.5 rounded-xl border border-border bg-card/95 p-1 shadow-sm backdrop-blur">
+      <div className="pointer-events-auto flex items-center gap-0.5 rounded-xl border border-border bg-card p-1 shadow-sm">
         {canDraw && undoState && (
           <>
             <SimpleTooltip content="Отменить (Ctrl+Z)">
@@ -1308,24 +1308,24 @@ export function Board({
         {(syncStalled || importNote || uploadError || pageElementCount >= PAGE_ELEMENT_WARN_AT) && (
           <div className="pointer-events-none absolute inset-x-3 top-16 z-10 flex flex-col items-center gap-1 text-center">
             {syncStalled && (
-              <span className="rounded-md bg-card/95 px-2 py-1 text-xs font-medium text-destructive shadow-sm backdrop-blur">
+              <span className="rounded-md bg-card px-2 py-1 text-xs font-medium text-destructive shadow-sm">
                 Доска не синхронизирована — восстанавливаем связь…
               </span>
             )}
             {importNote && (
-              <span className="rounded-md bg-card/95 px-2 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur">
+              <span className="rounded-md bg-card px-2 py-1 text-xs text-muted-foreground shadow-sm">
                 {importNote}
               </span>
             )}
             {uploadError && (
-              <span className="rounded-md bg-card/95 px-2 py-1 text-xs font-medium text-destructive shadow-sm backdrop-blur">
+              <span className="rounded-md bg-card px-2 py-1 text-xs font-medium text-destructive shadow-sm">
                 {uploadError}
               </span>
             )}
             {pageElementCount >= PAGE_ELEMENT_WARN_AT && (
               <span
                 className={cn(
-                  "rounded-md bg-card/95 px-2 py-1 text-xs shadow-sm backdrop-blur",
+                  "rounded-md bg-card px-2 py-1 text-xs shadow-sm",
                   pageElementCount >= PAGE_ELEMENT_LIMIT
                     ? "font-semibold text-destructive"
                     : "text-warning",
@@ -1345,7 +1345,7 @@ export function Board({
             подвинута ниже (`top-16` вместо `top-3`) РОВНО когда лента
             слайдов есть — незачем сдвигать её всегда, когда слайдов нет. */}
         {ydoc && slidePages.length > 0 && (
-          <div className="pointer-events-auto absolute inset-x-3 top-3 z-10 flex gap-1.5 overflow-x-auto rounded-lg bg-card/90 p-1.5 shadow-sm backdrop-blur">
+          <div className="pointer-events-auto absolute inset-x-3 top-3 z-10 flex gap-1.5 overflow-x-auto rounded-lg bg-card p-1.5 shadow-sm">
             {slidePages.map(([pageId, meta], i) => (
               <button
                 key={pageId}

@@ -131,7 +131,7 @@ export function RecordingPanel({
           <Disc className="size-3.5" aria-hidden /> Запись урока
           {recordingActive ? (
             <Badge variant="red">
-              <Circle className="size-2 animate-pulse fill-current" aria-hidden /> идёт
+              <Circle className="size-2 fill-current" aria-hidden /> идёт
             </Badge>
           ) : null}
         </h2>
@@ -230,7 +230,7 @@ export function RecordingConsentBanner({ active }: { active: boolean }) {
       role="status"
       className="mb-4 flex items-center gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2.5 text-sm font-semibold text-destructive"
     >
-      <span className="inline-block size-2.5 animate-pulse rounded-full bg-destructive" />
+      <span className="inline-block size-2.5 rounded-full bg-destructive" />
       Идёт запись урока
     </div>
   );

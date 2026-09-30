@@ -1,8 +1,9 @@
-import { ChevronUp, Loader2, type LucideIcon } from "lucide-react";
+import { ChevronUp, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Toggle } from "@/shared/ui/toggle";
 import { SimpleTooltip } from "@/shared/ui/tooltip";
+import { Loader } from "@/shared/ui/loader";
 
 export type RoomControlVariant = "circle" | "pill" | "tile";
 
@@ -63,7 +64,7 @@ export function RoomControlButton({
       ? "border-primary-muted bg-primary-light text-primary"
       : "border-border bg-card text-foreground";
   const hover = alarm ? "hover:bg-black/10" : highlighted ? "hover:bg-black/[.04]" : "hover:bg-surface-2";
-  const iconNode = loading ? <Loader2 className="animate-spin" aria-hidden /> : <Icon aria-hidden />;
+  const iconNode = loading ? <Loader /> : <Icon aria-hidden />;
 
   if (variant === "tile") {
     return (

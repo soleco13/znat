@@ -158,7 +158,7 @@ export function BoardScene({ compact = false }: { compact?: boolean }) {
         {/* левая вертикальная лента инструментов */}
         {!compact ? (
           <div className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2">
-            <div className="flex flex-col items-center gap-0.5 rounded-[20px] border border-[var(--c-border-solid)] bg-white/95 p-1.5 shadow-sm backdrop-blur-[6px]">
+            <div className="flex flex-col items-center gap-0.5 rounded-[20px] border border-[var(--c-border-solid)] bg-white p-1.5 shadow-sm">
               {RAIL_ICONS.map((I, i) => (
                 <span
                   key={i}
@@ -175,7 +175,7 @@ export function BoardScene({ compact = false }: { compact?: boolean }) {
           </div>
         ) : (
           <div className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2">
-            <div className="flex flex-col items-center gap-0.5 rounded-xl border border-border bg-card/95 p-1 shadow-sm backdrop-blur">
+            <div className="flex flex-col items-center gap-0.5 rounded-xl border border-border bg-card p-1 shadow-sm">
               {[MousePointer2, Pencil, Eraser, Square].map((I, i) => (
                 <span
                   key={i}
@@ -197,7 +197,7 @@ export function BoardScene({ compact = false }: { compact?: boolean }) {
 
         {/* шапка доски — страницы / undo / фото / ещё / скрыть */}
         <div className="board-chrome pointer-events-none absolute right-3 top-3 z-10 flex max-w-[calc(100%-1.5rem)] items-center gap-1.5">
-          <div className="flex items-center gap-1 rounded-xl border border-border bg-card/95 p-1 shadow-sm backdrop-blur">
+          <div className="flex items-center gap-1 rounded-xl border border-border bg-card p-1 shadow-sm">
             <div className="flex items-center gap-0.5">
               {[1, 2, 3].map((n) => (
                 <span
@@ -217,7 +217,7 @@ export function BoardScene({ compact = false }: { compact?: boolean }) {
               </span>
             ) : null}
           </div>
-          <div className="flex items-center gap-0.5 rounded-xl border border-border bg-card/95 p-1 shadow-sm backdrop-blur">
+          <div className="flex items-center gap-0.5 rounded-xl border border-border bg-card p-1 shadow-sm">
             {(compact ? [Undo2, Redo2, MoreHorizontal] : [Undo2, Redo2, ImagePlus, MoreHorizontal]).map((I, i) => (
               <span
                 key={i}
@@ -315,7 +315,7 @@ export function TaskScene() {
             <div className="flex flex-wrap items-center" aria-hidden>
               {[0, 1, 2, 3, 4].map((i) => (
                 <span key={i} className="flex items-center justify-center p-2">
-                  <span className={cn("h-1.5 rounded-full transition-all", i === 1 ? "w-6 bg-primary" : "w-3 bg-border")} />
+                  <span className={cn("h-1.5 rounded-full transition-[width,background-color] duration-200", i === 1 ? "w-6 bg-primary" : "w-3 bg-border")} />
                 </span>
               ))}
             </div>

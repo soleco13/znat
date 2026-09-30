@@ -168,25 +168,25 @@ export function MaterialsLibraryPage() {
           }
         />
       ) : (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-10">
           {[...tree.entries()].map(([subj, grades]) => (
             <section key={subj}>
-              <h2 className="ds-label mb-2">{subj}</h2>
-              <div className="flex flex-col gap-4">
+              <h2 className="mb-4 text-xl font-bold tracking-tight text-foreground first-letter:uppercase">{subj === "—" ? "Без предмета" : subj}</h2>
+              <div className="flex flex-col gap-6">
                 {[...grades.entries()].map(([gr, topics]) => (
                   <div key={gr}>
-                    <h3 className="mb-1.5 text-sm font-semibold text-muted-foreground">{gr} класс</h3>
-                    <div className="flex flex-col gap-3 border-l-2 border-border pl-4">
+                    <h3 className="mb-3 text-[15px] font-semibold text-foreground">{gr} класс</h3>
+                    <div className="flex flex-col gap-4">
                       {[...topics.entries()].map(([tp, materials]) => (
                         <div key={tp}>
-                          <h4 className="mb-1.5 text-xs font-medium uppercase tracking-wide text-text-3">
+                          <h4 className="mb-1.5 text-[13px] text-muted-foreground">
                             {tp === NO_TOPIC ? "Без темы" : tp}
                           </h4>
-                          <div className="flex flex-col gap-2">
+                          <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-card">
                             {materials.map((m) => (
                               <MaterialRow key={m.id} material={m} />
                             ))}
-                          </div>
+                          </ul>
                         </div>
                       ))}
                     </div>
@@ -212,18 +212,19 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function MaterialRow({ material }: { material: MaterialSummary }) {
   return (
-    <Card className="px-3.5 py-2.5 transition-colors hover:border-primary-muted">
+    <li>
       <Link
         to={`/materials/edit/${material.id}`}
-        className="flex min-w-0 items-center gap-2 text-sm font-medium hover:text-primary hover:underline"
+        className="flex min-w-0 items-center gap-2 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-none"
       >
-        <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden />
         <span className="truncate">{material.title}</span>
-        <Badge variant={STATUS_VARIANT[material.status]} className="shrink-0">
-          {STATUS_LABEL[material.status]}
-        </Badge>
+        {material.status !== "published" ? (
+          <Badge variant={STATUS_VARIANT[material.status]} className="shrink-0">
+            {STATUS_LABEL[material.status]}
+          </Badge>
+        ) : null}
       </Link>
-    </Card>
+    </li>
   );
 }
 

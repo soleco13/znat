@@ -155,11 +155,9 @@
   margin: 1.5rem 0 0.75rem;
   padding-top: 0.5rem;
   border-top: 1px dashed var(--c-border-solid);
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--c-primary);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-text-3);
   user-select: none;
 }
 .ProseMirror > .slide-marker:first-child {

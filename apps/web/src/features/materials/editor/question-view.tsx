@@ -44,9 +44,9 @@ export function QuestionView({ node, updateAttributes, deleteNode }: NodeViewPro
 
   return (
     <NodeViewWrapper className="group/q my-2">
-      <div className="rounded-md border-l-2 border-primary-muted/70 pl-3 transition-colors focus-within:border-primary hover:border-primary-muted">
+      <div className="rounded-md border border-border px-3 py-2 transition-colors focus-within:border-primary hover:border-primary-muted">
         <div
-          className="flex items-center gap-2 pt-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary/70"
+          className="flex items-center gap-2 pt-0.5 text-xs font-medium text-text-3"
           contentEditable={false}
         >
           {INTERACTION_LABELS[interaction.type]}

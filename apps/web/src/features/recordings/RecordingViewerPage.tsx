@@ -7,7 +7,6 @@ import {
   Download,
   HardDrive,
   Link2,
-  Loader2,
   Trash2,
   User,
 } from "lucide-react";
@@ -39,6 +38,7 @@ import {
   STATUS_VARIANT,
 } from "./format.js";
 import { adminDeleteRecording, createExternalDownloadLink, getRecording } from "./recordings-api.js";
+import { Loader } from "@/shared/ui/loader";
 
 /**
  * Пользовательский запрос (2026-09-14): отдельная страница просмотра одной
@@ -168,7 +168,7 @@ export function RecordingViewerPage() {
                     role="status"
                     className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2.5 bg-slate-950/70"
                   >
-                    <Loader2 className="size-6 animate-spin text-white/70" aria-hidden />
+                    <Loader className="size-8 text-white/70" />
                     <span className="text-xs font-medium text-white/70">Видео загружается…</span>
                   </div>
                 ) : null}

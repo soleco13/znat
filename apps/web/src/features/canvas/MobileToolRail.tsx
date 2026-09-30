@@ -112,7 +112,7 @@ export function MobileToolRail({
   );
 
   return (
-    <div className="pointer-events-auto flex flex-col items-center gap-0.5 rounded-xl border border-border bg-card/95 p-1 shadow-sm backdrop-blur">
+    <div className="pointer-events-auto flex flex-col items-center gap-0.5 rounded-xl border border-border bg-card p-1 shadow-sm">
       <ToolButton tool="selection" icon={MousePointer2} label="Выделение" />
       <ToolButton tool="freedraw" icon={Pencil} label="Карандаш" />
       <ToolButton tool="eraser" icon={Eraser} label="Ластик" />

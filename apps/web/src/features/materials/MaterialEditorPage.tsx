@@ -261,7 +261,7 @@ function EditorTopBar({
 }) {
   const metaReady = !isPlaceholderMeta(material);
   return (
-    <div className="sticky top-header z-20 -mx-4 mb-4 border-b border-border bg-background/90 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6">
+    <div className="sticky top-header z-20 -mx-4 mb-4 border-b border-border bg-background px-4 py-2 sm:-mx-6 sm:px-6">
       <Link
         to="/materials/edit"
         className="mb-1.5 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
@@ -277,9 +277,9 @@ function EditorTopBar({
             </Badge>
           ) : null}
           {canEdit ? (
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {autosaveLabel(autosaveStatus)}
-            </span>
+            autosaveStatus !== "idle" ? (
+              <span className="shrink-0 text-xs text-muted-foreground">{autosaveLabel(autosaveStatus)}</span>
+            ) : null
           ) : (
             <span className="shrink-0 text-xs font-medium text-warning">только просмотр</span>
           )}
@@ -327,7 +327,8 @@ function EditorTopBar({
   );
 }
 
-function autosaveLabel(status: AutosaveStatus): string {
+/** Подпись автосохранения; в покое (`idle`) не показывается — статус материала уже в бейдже. */
+function autosaveLabel(status: Exclude<AutosaveStatus, "idle">): string {
   switch (status) {
     case "saving":
       return "сохранение…";
@@ -335,8 +336,6 @@ function autosaveLabel(status: AutosaveStatus): string {
       return "сохранено";
     case "error":
       return "не сохранено — повторим";
-    case "idle":
-      return "черновик";
   }
 }
 
@@ -511,7 +510,7 @@ function SheetMeta({
         placeholder="Название материала"
         className="w-full border-0 bg-transparent p-0 text-2xl font-heavy tracking-tight text-foreground outline-none placeholder:text-muted-foreground/50"
       />
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+      <div className="-ml-2 mt-2 flex flex-wrap items-center gap-1">
         <MetaChip label="Предмет" value={material.subject || "—"}>
           <label className="flex flex-col gap-1.5">
             <FieldLabel>Предмет</FieldLabel>
@@ -545,8 +544,8 @@ function SheetMeta({
           </label>
         </MetaChip>
         {material.settings.layout === "slides" ? (
-          <span className="inline-flex items-center gap-1.5 rounded-pill border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground">
-            <span className="font-medium text-text-3">Слайдов:</span>
+          <span className="inline-flex items-center gap-1.5 px-2 py-1 text-xs">
+            <span className="text-text-3">Слайдов:</span>
             <span className="text-foreground">{paginateMaterial(material).length}</span>
           </span>
         ) : null}
@@ -569,9 +568,9 @@ function MetaChip({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 rounded-pill border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary"
+          className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <span className="font-medium text-text-3">{label}:</span>
+          <span className="text-text-3">{label}:</span>
           <span className="max-w-[12rem] truncate text-foreground">{value}</span>
         </button>
       </PopoverTrigger>

@@ -116,14 +116,14 @@ export function VideoDegradeSuggestion() {
   if (lossRatio === null || lossRatio <= VIDEO_PACKET_LOSS_WARNING_RATIO) return null;
 
   return (
-    <div className="flex shrink-0 items-center gap-2.5 rounded-xl border border-[#fde68a] bg-warn-light px-3.5 py-2.5 text-[13.5px] text-[#b45309]">
-      <AlertTriangle className="size-[17px] shrink-0" aria-hidden />
+    <div className="flex shrink-0 items-center gap-2.5 rounded-xl border border-border bg-card px-3.5 py-2.5 text-[13.5px] text-foreground shadow-xs">
+      <AlertTriangle className="size-[17px] shrink-0 text-warning" aria-hidden />
       <span className="min-w-0 flex-1 [text-wrap:pretty]">
         Плохая связь — теряется {Math.round(lossRatio * 100)}% видео. Видео может мешать звуку урока.
       </span>
       <button
         type="button"
-        className="h-[30px] shrink-0 rounded-[9px] border border-current bg-transparent px-3 text-[13px] font-semibold"
+        className="h-[30px] shrink-0 rounded-[9px] border border-border bg-card px-3 text-[13px] font-semibold text-foreground transition-colors hover:bg-secondary"
         onClick={() => {
           setDesiredOn(false);
           localParticipant.setCameraEnabled(false).catch(() => undefined);

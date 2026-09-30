@@ -105,7 +105,7 @@ export function Pricing() {
       <div className="container-l">
         <SectionHeading
           title="Одна подписка вместо пяти"
-          subtitle="Посчитайте, сколько сейчас уходит на видеосвязь, онлайн-доску и сервис записи. Здесь всё это дешевле — и в одном окне."
+          subtitle="Посчитайте, сколько сейчас уходит на видеосвязь, онлайн-доску и сервис записи, и сравните с ценой тарифа ниже."
         />
 
         <Reveal className="mt-14 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-20">

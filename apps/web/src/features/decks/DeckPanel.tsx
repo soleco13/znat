@@ -179,7 +179,7 @@ export function DeckPanel({
             {d.status === "converting" && d.slideCount > 0 ? (
               <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-pill bg-surface-3">
                 <div
-                  className="h-full bg-primary transition-all duration-500 ease-ds"
+                  className="h-full bg-primary transition-[width] duration-500 ease-ds"
                   style={{ width: `${Math.round((d.progress / d.slideCount) * 100)}%` }}
                 />
               </div>

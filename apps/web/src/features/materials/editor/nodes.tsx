@@ -120,7 +120,7 @@ function PageBreakView({ deleteNode }: NodeViewProps) {
   return (
     <NodeViewWrapper className="my-3">
       <div
-        className="group/pb relative flex items-center gap-3 text-[11px] uppercase tracking-wide text-text-3"
+        className="group/pb relative flex items-center gap-3 text-xs text-text-3"
         contentEditable={false}
       >
         <span className="h-px flex-1 bg-border" />
@@ -179,7 +179,7 @@ function MediaView({ node, updateAttributes, deleteNode }: NodeViewProps) {
         className="relative rounded-lg border border-border bg-card/60 p-3"
         contentEditable={false}
       >
-        <div className="mb-2 flex items-center justify-between text-[11px] font-medium uppercase tracking-wide text-text-3">
+        <div className="mb-2 flex items-center justify-between text-xs font-medium text-text-3">
           {CONTENT_BLOCK_LABELS[block.type] ?? "Медиа"}
           <Button
             variant="ghost"
@@ -501,13 +501,13 @@ function TemplateGroupView({ node, editor, getPos, deleteNode }: NodeViewProps) 
       <Collapsible
         open={open}
         onOpenChange={setOpen}
-        className="rounded-r-sm border-l-2 border-primary-muted pl-3 transition-colors hover:border-primary"
+        className="rounded-md border border-border px-3 py-1.5 transition-colors hover:border-primary-muted"
       >
         <div
           className="flex items-center justify-between gap-2 py-0.5 opacity-60 transition-opacity group-hover/tg:opacity-100"
           contentEditable={false}
         >
-          <CollapsibleTrigger className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+          <CollapsibleTrigger className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
             <ChevronDown
               className={cn("size-3 transition-transform", !open && "-rotate-90")}
               aria-hidden

@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Link2Off, Loader2 } from "lucide-react";
+import { Link2Off } from "lucide-react";
 
 import { ApiError } from "@/shared/api-client";
 import { useAuthStore } from "@/shared/auth-store";
 import { AuthHeading, AuthLayout, StepsAside, stagger } from "../auth/AuthLayout.js";
 import { verifyEmail } from "./registration-api.js";
+import { Loader } from "@/shared/ui/loader";
 
 /** Э14.1 — подтверждение почты по ссылке из письма (`/verify-email?token=...`), затем автологин. */
 export function VerifyEmailPage() {
@@ -54,9 +55,9 @@ export function VerifyEmailPage() {
       ) : (
         <>
           <span className="auth-rise mb-6 flex size-12 items-center justify-center rounded-md border border-border text-foreground" style={stagger(0)} role="status" aria-label="Подтверждаем почту">
-            <Loader2 className="size-6 animate-spin" aria-hidden />
+            <Loader className="size-6 text-primary" />
           </span>
-          <AuthHeading title="Подтверждаем почту" subtitle="Секунду — и вы внутри." />
+          <AuthHeading title="Подтверждаем почту" subtitle="Обычно это занимает пару секунд." />
         </>
       )}
     </AuthLayout>

@@ -10,7 +10,6 @@ import { TaskEngine } from "@/sections/TaskEngine";
 import { HowItWorks } from "@/sections/HowItWorks";
 import { Security } from "@/sections/Security";
 import { Pricing } from "@/sections/Pricing";
-import { Testimonials } from "@/sections/Testimonials";
 import { FAQ } from "@/sections/FAQ";
 import { CTA } from "@/sections/CTA";
 import { Footer } from "@/sections/Footer";
@@ -32,7 +31,6 @@ export function App() {
           <HowItWorks />
           <Security />
           <Pricing />
-          <Testimonials />
           <FAQ />
           <CTA />
         </main>

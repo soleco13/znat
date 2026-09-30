@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   ClipboardList,
   Clock,
-  GraduationCap,
   Hand,
   LogOut,
   Link as LinkIcon,
@@ -21,6 +20,7 @@ import { PEOPLE } from "./data";
 import { useInView } from "@/hooks/useInView";
 import { ControlPill, ControlTile, IconBtn, LButton, LiveContext, RecordingPill, StatusPill, useLive } from "./parts";
 import { BoardScene, Drawer, ProgressScene, TaskScene, TileRail, TileStrip, VideoGrid } from "./scenes";
+import { BrandMark } from "@/components/BrandMark";
 
 export type Scene = "people" | "board" | "task" | "progress";
 export type DrawerTab = "people" | "chat" | null;
@@ -121,10 +121,8 @@ export function RoomWindow({
       style={{ width: DESKTOP_W, height: DESKTOP_H }}
     >
       {/* Шапка */}
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card/90 px-4 backdrop-blur-md">
-        <span className="flex size-[30px] shrink-0 items-center justify-center rounded-[10px] bg-primary text-primary-foreground">
-          <GraduationCap className="size-[17px]" aria-hidden />
-        </span>
+      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4">
+        <BrandMark className="size-[30px] text-primary" />
         <span className="flex min-w-0 flex-col">
           <span className="truncate text-[15px] font-bold leading-tight tracking-[-.02em]">Алгебра · 8 класс</span>
           <span className="truncate text-xs leading-tight text-muted-foreground">
@@ -173,7 +171,7 @@ export function RoomWindow({
 
         <div className="flex shrink-0 items-center gap-2.5">
           <div className="flex items-center gap-2.5">
-            <span className="inline-flex h-8 shrink-0 items-center gap-[7px] rounded-full bg-surface-2 px-3 font-mono text-[12.5px] font-semibold text-text-2">
+            <span className="inline-flex h-8 shrink-0 items-center gap-[7px] rounded-full bg-surface-2 px-3 text-[12.5px] font-semibold tabular-nums text-text-2">
               <Clock className="size-3.5" aria-hidden />
               <Elapsed />
             </span>
@@ -224,9 +222,7 @@ export function PhoneWindow({ scene, className }: { scene: Scene; className?: st
       style={{ width: PHONE_W, height: PHONE_H }}
     >
       <header className="flex shrink-0 items-center gap-2 px-3.5 pb-2.5 pt-3">
-        <span className="flex size-[26px] shrink-0 items-center justify-center rounded-[9px] bg-primary text-primary-foreground">
-          <GraduationCap className="size-[15px]" aria-hidden />
-        </span>
+        <BrandMark className="size-[26px] text-primary" />
         <span className="min-w-0 truncate text-[13.5px] font-bold">Алгебра · 8 класс</span>
         <StatusPill compact />
         <RecordingPill compact />
@@ -264,7 +260,7 @@ export function PhoneWindow({ scene, className }: { scene: Scene; className?: st
           <ControlTile icon={Hand} label="Рука" tone="action" active={false} />
           <ControlTile icon={MessageSquare} label="Чат" tone="action" active={false} badge={3} />
         </div>
-        <span className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-[#fecaca] bg-danger-light text-[15px] font-semibold text-danger">
+        <span className="flex h-12 items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-card text-[15px] font-semibold text-destructive">
           <LogOut className="size-[18px]" aria-hidden />
           Выйти из урока
         </span>
@@ -277,11 +273,9 @@ export function PhoneWindow({ scene, className }: { scene: Scene; className?: st
 function PhoneFocus() {
   return (
     <>
-      <svg viewBox="0 0 160 90" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 size-full" aria-hidden>
-        <rect width="160" height="90" fill="#3f3a52" />
-        <circle cx="80" cy="38" r="15" fill="#a5a0c0" />
-        <path d="M46 92c2-20 16-30 34-30s32 10 34 30Z" fill="#a5a0c0" />
-      </svg>
+      <span className="absolute inset-0 grid place-items-center bg-[#3f3a52]" aria-hidden>
+        <span className="flex size-20 items-center justify-center rounded-full bg-white/10 text-2xl font-bold text-white">МП</span>
+      </span>
       <span className="pointer-events-none absolute inset-0 rounded-[inherit] ring-2 ring-inset ring-primary" aria-hidden />
       <span className="pointer-events-none absolute left-2.5 top-2.5 inline-flex h-6 items-center rounded-full bg-primary px-2.5 text-xs font-semibold text-primary-foreground">
         говорит
