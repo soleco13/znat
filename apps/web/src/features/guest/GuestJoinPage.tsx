@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Link2Off } from "lucide-react";
 
@@ -11,7 +11,11 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/
 import { StatusScreen } from "@/shared/ui/status-screen";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { prefetchLessonStage } from "@/features/room/lazy-stage";
+import { withRetry } from "@/shared/lazy-retry";
 import { enterGuestLesson, fetchGuestLessonInfo } from "./guest-api.js";
+
+const prefetchRoom = withRetry(() => import("@/features/room/RoomPage"));
 
 const NAME_MAX = 80;
 
@@ -25,6 +29,15 @@ export function GuestJoinPage() {
   const { token = "" } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const info = useAsync(() => fetchGuestLessonInfo(token), [token]);
+
+  // Пока ученик вводит имя, в фоне качаем урок, а за ним — доску и задания.
+  // Именно по очереди: параллельно доска (~725 КБ) делила бы медленный канал
+  // с уроком (~350 КБ), и урок открывался бы позже.
+  useEffect(() => {
+    prefetchRoom()
+      .catch(() => undefined)
+      .finally(() => prefetchLessonStage());
+  }, []);
 
   const [name, setName] = useState("");
   const [consent, setConsent] = useState(false);

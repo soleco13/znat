@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useLocalParticipant } from "@livekit/components-react";
-import { Track, VideoPresets, type VideoEncoding, type VideoResolution } from "livekit-client";
-import { AlertTriangle, Video, VideoOff } from "lucide-react";
+import { VideoPresets, type VideoEncoding, type VideoResolution } from "livekit-client";
+import { Video, VideoOff } from "lucide-react";
 
 import { RoomControlButton, type RoomControlVariant } from "./RoomControlButton.js";
 import { useSelfCameraUiStore } from "./self-camera-ui-store.js";
@@ -68,69 +68,5 @@ export function SelfCameraButton({
       onOpenSettings={onOpenSettings}
       settingsLabel="Выбрать камеру"
     />
-  );
-}
-
-/** Э5.5, ПЛАН.md — тот же порог формы, что `PacketLossWarning` для аудио (Э2.8), но для видео. */
-const VIDEO_PACKET_LOSS_WARNING_RATIO = 0.05;
-const POLL_MS = 2000;
-
-/**
- * Деградация при плохом канале (Э5.5). `LocalVideoTrack.getSenderStats()`
- * отдаёт МАССИВ — по записи на каждый слой simulcast; складываем по всем.
- */
-export function VideoDegradeSuggestion() {
-  const { localParticipant, isCameraEnabled } = useLocalParticipant();
-  const setDesiredOn = useSelfCameraUiStore((s) => s.setDesiredOn);
-  const [lossRatio, setLossRatio] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!isCameraEnabled) {
-      setLossRatio(null);
-      return;
-    }
-    let cancelled = false;
-
-    async function poll() {
-      const track = localParticipant.getTrackPublication(Track.Source.Camera)?.videoTrack;
-      const layers = await track?.getSenderStats();
-      if (cancelled || !layers || layers.length === 0) return;
-      let packetsSent = 0;
-      let packetsLost = 0;
-      for (const layer of layers) {
-        packetsSent += layer.packetsSent ?? 0;
-        packetsLost += layer.packetsLost ?? 0;
-      }
-      const total = packetsSent + packetsLost;
-      setLossRatio(total >= 50 ? packetsLost / total : null);
-    }
-
-    poll();
-    const interval = setInterval(poll, POLL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [localParticipant, isCameraEnabled]);
-
-  if (lossRatio === null || lossRatio <= VIDEO_PACKET_LOSS_WARNING_RATIO) return null;
-
-  return (
-    <div className="flex shrink-0 items-center gap-2.5 rounded-xl border border-[#fde68a] bg-warn-light px-3.5 py-2.5 text-[13.5px] text-[#b45309]">
-      <AlertTriangle className="size-[17px] shrink-0" aria-hidden />
-      <span className="min-w-0 flex-1 [text-wrap:pretty]">
-        Плохая связь — теряется {Math.round(lossRatio * 100)}% видео. Видео может мешать звуку урока.
-      </span>
-      <button
-        type="button"
-        className="h-[30px] shrink-0 rounded-[9px] border border-current bg-transparent px-3 text-[13px] font-semibold"
-        onClick={() => {
-          setDesiredOn(false);
-          localParticipant.setCameraEnabled(false).catch(() => undefined);
-        }}
-      >
-        Выключить видео
-      </button>
-    </div>
   );
 }

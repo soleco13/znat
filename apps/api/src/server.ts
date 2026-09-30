@@ -8,13 +8,14 @@ import rateLimit from "@fastify/rate-limit";
 import staticPlugin from "@fastify/static";
 import websocket from "@fastify/websocket";
 import { env } from "./plugins/env.js";
+import { syncAssetsArchive } from "./plugins/web-assets-archive.js";
 import errorsPlugin from "./plugins/errors.js";
 import authenticatePlugin from "./plugins/authenticate.js";
 import rbacPlugin from "./plugins/rbac.js";
 import lessonAccessPlugin from "./plugins/lesson-access.js";
 import recorderAccessPlugin from "./plugins/recorder-access.js";
 import metricsPlugin from "./plugins/metrics.js";
-import { rateLimitKey, rateLimitMax } from "./plugins/rate-limit-key.js";
+import { isStaticAppRequest, rateLimitKey, rateLimitMax } from "./plugins/rate-limit-key.js";
 import { serializeRequest } from "./plugins/log-redact.js";
 import { UPLOAD_LIMITS } from "./plugins/uploads.js";
 import { checkHealth } from "./plugins/health.js";
@@ -83,6 +84,7 @@ export function buildServer() {
   app.register(rateLimit, {
     max: rateLimitMax,
     keyGenerator: rateLimitKey,
+    allowList: isStaticAppRequest,
     timeWindow: "1 minute",
     redis: rateLimitRedis,
     nameSpace: "rl:",
@@ -99,6 +101,25 @@ export function buildServer() {
   app.register(lessonAccessPlugin);
   app.register(recorderAccessPlugin);
   app.register(metricsPlugin);
+
+  // Замер связи из урока (shared/link-quality.ts, раз в 2 с с каждого
+  // участника): пустой ответ без базы и Redis, вне лимита запросов — иначе
+  // учителя за общим школьным IP упирались бы в лимит анонимных запросов.
+  // Без записи в лог: 50 участников дали бы тысячи строк в минуту.
+  // `?link=poor|ok&who=<участник>` — клиент сообщает о смене режима связи
+  // (редко, только при переключении): в логе видно каждое переключение,
+  // независимо от доски (она сообщает свой режим, только пока открыта).
+  app.get<{ Querystring: { link?: string; who?: string } }>(
+    "/ping",
+    { config: { rateLimit: false }, logLevel: "silent" },
+    async (request, reply) => {
+      const { link, who } = request.query;
+      if ((link === "poor" || link === "ok") && who && /^[0-9a-f-]{36}$/.test(who)) {
+        console.info(`media: слабая связь ${link === "poor" ? "вкл" : "выкл"} participant=${who}`);
+      }
+      return reply.header("Cache-Control", "no-store").status(204).send();
+    },
+  );
 
   app.get("/health", async (_request, reply) => {
     const health = await checkHealth({ db: () => pool.query("select 1"), redis: () => redis.ping() });
@@ -142,12 +163,48 @@ export function buildServer() {
       // страницы давала ~30 запросов с ответом 304). index.html и прочее —
       // всегда перепроверять, иначе новый деплой не доедет до браузера.
       cacheControl: false,
+      // Рядом с файлами сборки лежат brotli-копии (`*.br`, см. vite.config.ts) —
+      // отдаём их браузерам с `Accept-Encoding: br`: на ~20% легче gzip.
+      preCompressed: true,
       setHeaders(res, filePath) {
         const immutable = filePath.startsWith(path.join(webDistDir, "assets") + path.sep);
         res.setHeader("Cache-Control", immutable ? "public, max-age=31536000, immutable" : "no-cache");
+        // Один адрес — разные тела (brotli / без сжатия): кэши должны это различать.
+        res.setHeader("Vary", "Accept-Encoding");
       },
     });
+    // Файлы прошлых сборок: страница, открытая до выкладки, подгружает куски
+    // по своим старым именам (web-assets-archive.ts). Текущие файлы отдаёт
+    // статика выше (точные маршруты), сюда попадает только то, чего в
+    // текущей сборке нет.
+    if (env.WEB_ASSETS_ARCHIVE_DIR) {
+      const archiveDir = path.resolve(env.WEB_ASSETS_ARCHIVE_DIR);
+      try {
+        const { copied, removed } = syncAssetsArchive(path.join(webDistDir, "assets"), archiveDir);
+        app.log.info({ archiveDir, copied, removed }, "web assets archive synced");
+        app.register(staticPlugin, {
+          root: archiveDir,
+          prefix: "/assets/",
+          decorateReply: false,
+          index: false,
+          preCompressed: true,
+          cacheControl: false,
+          setHeaders(res) {
+            res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+            res.setHeader("Vary", "Accept-Encoding");
+          },
+        });
+      } catch (err) {
+        app.log.warn({ err, archiveDir }, "web assets archive unavailable");
+      }
+    }
     app.setNotFoundHandler(async (request, reply) => {
+      // Нет файла сборки — честный 404. Раньше отдавалась страница приложения
+      // (200, text/html): браузер не мог выполнить её как код, и загрузка
+      // куска молча падала.
+      if (request.url.startsWith("/assets/")) {
+        return reply.status(404).send({ error: "not_found", message: "Asset not found" });
+      }
       if (request.url.startsWith("/api/") || request.url.startsWith("/files/")) {
         return reply.status(404).send({ error: "not_found", message: "Route not found" });
       }

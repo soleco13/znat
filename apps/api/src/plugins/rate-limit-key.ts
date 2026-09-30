@@ -36,3 +36,18 @@ export async function rateLimitKey(request: FastifyRequest): Promise<string> {
 export function rateLimitMax(_request: FastifyRequest, key: string): number {
   return key.startsWith("ip:") ? ANONYMOUS_RATE_LIMIT_PER_MINUTE : IDENTITY_RATE_LIMIT_PER_MINUTE;
 }
+
+/**
+ * Статика приложения (файлы сборки, страницы SPA, шрифты, звуки) — вне
+ * лимита. Все такие запросы идут без токена, то есть по IP, а после разбиения
+ * фронта на куски одно открытие урока — 50–70 файлов: учитель и ученик за
+ * одним школьным IP за пару перезагрузок упирались в лимит анонимных
+ * запросов (429), вход сбрасывался, соединения урока не поднимались
+ * (2026-09-26). Лимит остаётся на API, файлах, WebSocket урока и доски.
+ */
+const LIMITED_PREFIXES = ["/api/", "/files/", "/ws", "/collab", "/webhooks/", "/metrics"];
+
+export function isStaticAppRequest(request: Pick<FastifyRequest, "method" | "url">): boolean {
+  if (request.method !== "GET" && request.method !== "HEAD") return false;
+  return !LIMITED_PREFIXES.some((prefix) => request.url.startsWith(prefix));
+}

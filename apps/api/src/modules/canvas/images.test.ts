@@ -49,7 +49,7 @@ describe("uploadCanvasImage (Э3.10, §3.3 ТЗ)", () => {
 
     expect(result.width).toBe(2000);
     expect(result.height).toBe(1000);
-    expect(result.mimeType).toBe("image/jpeg");
+    expect(result.mimeType).toBe("image/webp");
 
     // Сверка не по метаданным ответа, а по факту записанных байт — реальный
     // sharp декодирует то, что реально ушло в StorageAdapter.
@@ -57,6 +57,7 @@ describe("uploadCanvasImage (Э3.10, §3.3 ТЗ)", () => {
     const uploadedMeta = await sharp(uploadedBuffer).metadata();
     expect(uploadedMeta.width).toBe(2000);
     expect(uploadedMeta.height).toBe(1000);
+    expect(uploadedMeta.format).toBe("webp");
   });
 
   it("НЕ увеличивает изображение меньше 2000px (withoutEnlargement)", async () => {
@@ -112,8 +113,9 @@ describe("uploadCanvasImage (Э3.10, §3.3 ТЗ)", () => {
       .webp()
       .toBuffer();
 
-    await uploadCanvasImage({ buffer: small, mimeType: "image/webp", schoolId: SCHOOL_ID });
+    await uploadCanvasImage({ buffer: small, mimeType: "image/png", schoolId: SCHOOL_ID });
 
+    // PNG на входе всё равно сохраняется как WebP.
     expect(storageServiceMock.uploadFile).toHaveBeenCalledWith(
       expect.objectContaining({ schoolId: SCHOOL_ID, suggestedName: "board.webp" }),
     );

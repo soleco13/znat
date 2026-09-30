@@ -23,6 +23,35 @@ import { toast } from "@/shared/ui/sonner";
  */
 const DOCUMENT_SCREEN_SHARE_PRESET = new VideoPreset(1920, 1080, 1_000_000, 5, "medium");
 
+/**
+ * Дополнительные слои демонстрации под полным (настройки школы): сервер
+ * отдаёт каждому зрителю лучший слой, который пролезает в его канал, и сам
+ * переключает их при изменении связи (на ближайшем опорном кадре).
+ * - нижний: 360p, 5 кадр/с, 150 кбит/с — экран почти статичный, частота не
+ *   важна, а в канал 100–200 кбит/с пролезает;
+ * - средний: 540p (для источника 1080p — 720p), до 15 кадр/с, ~30% битрейта
+ *   полного (400–1200 кбит/с) — для средней связи. Без него разрыв между
+ *   нижним и полным был в 16 раз, и зритель с каналом ~1 Мбит/с всё время
+ *   смотрел размытый нижний слой.
+ * LiveKit делает третий слой, только если ширина источника ≥ 960 px.
+ */
+function screenShareExtraLayers(encoding: VideoPreset): VideoPreset[] {
+  const { width, height } = encoding.resolution;
+  const scaled = (targetHeight: number) => {
+    const scale = Math.min(1, targetHeight / height);
+    return { w: Math.round(width * scale), h: Math.round(height * scale) };
+  };
+  const low = scaled(360);
+  const layers = [new VideoPreset(low.w, low.h, 150_000, 5, "medium")];
+  const midHeight = height >= 1080 ? 720 : 540;
+  if (height > midHeight) {
+    const mid = scaled(midHeight);
+    const midBitrate = Math.min(1_200_000, Math.max(400_000, Math.round(encoding.encoding.maxBitrate * 0.3)));
+    layers.push(new VideoPreset(mid.w, mid.h, midBitrate, 15, "medium"));
+  }
+  return layers;
+}
+
 function releaseScreenShare(lessonId: string) {
   void apiFetch(`/lessons/${lessonId}/screen-share/release`, { method: "POST" }).catch(() => undefined);
 }
@@ -110,7 +139,27 @@ export function SelfScreenShareButton({
     });
   }
 
-  async function publishOnce(): Promise<void> {
+  /**
+   * `withLowLayer` — дополнительные облегчённые слои (`screenShareExtraLayers`):
+   * демонстрация одна на урок и шла ОДНИМ потоком по настройкам школы (720p,
+   * 30 кадр/с, 2,5 Мбит/с); ученику на мобильной сети с каналом 100–200
+   * кбит/с сервер её либо не отдавал вовсе, либо отдавал рывками — а сам
+   * пережать поток не умеет. С облегчённым слоем сервер отдаёт каждому то,
+   * что пролезет в его канал; у остальных качество прежнее.
+   */
+  async function publishOnce(withLowLayer: boolean): Promise<void> {
+    if (withLowLayer) {
+      await localParticipant.setScreenShareEnabled(
+        true,
+        { audio: false, resolution: encoding.resolution, contentHint: "detail" },
+        {
+          screenShareEncoding: encoding.encoding,
+          screenShareSimulcastLayers: screenShareExtraLayers(encoding),
+          simulcast: true,
+        },
+      );
+      return;
+    }
     await localParticipant.setScreenShareEnabled(
       true,
       {
@@ -144,9 +193,9 @@ export function SelfScreenShareButton({
    * эмпирически вторая попытка стабильно проходит быстро (собственно то,
    * что и обходил пользователь руками — «включить второй раз»).
    */
-  async function publishWithTimeout(): Promise<"ok" | "timeout"> {
+  async function publishWithTimeout(withLowLayer: boolean): Promise<"ok" | "timeout"> {
     const timeout = new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), 6000));
-    const result = await Promise.race([publishOnce().then(() => "ok" as const), timeout]);
+    const result = await Promise.race([publishOnce(withLowLayer).then(() => "ok" as const), timeout]);
     return result;
   }
 
@@ -169,12 +218,14 @@ export function SelfScreenShareButton({
       return;
     }
     try {
-      let outcome = await publishWithTimeout();
+      let outcome = await publishWithTimeout(true).catch(() => "timeout" as const);
       if (outcome === "timeout") {
         // Зависшая попытка публикации сама трек не остановит — гасим явно
         // перед повтором, иначе второй вызов будет конкурировать с первым.
+        // Повтор — прежним проверенным путём, одним слоем: если зависание
+        // связано со слоями, демонстрация всё равно начнётся.
         await localParticipant.setScreenShareEnabled(false).catch(() => undefined);
-        outcome = await publishWithTimeout();
+        outcome = await publishWithTimeout(false);
       }
       if (outcome === "timeout") {
         toast.error("Не удалось начать демонстрацию — попробуйте ещё раз");

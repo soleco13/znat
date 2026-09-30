@@ -1,29 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 
-import { LoginPage } from "./features/auth/LoginPage.js";
-import { ChangePasswordPage } from "./features/account/ChangePasswordPage.js";
-import { ForgotPasswordPage } from "./features/account/ForgotPasswordPage.js";
-import { ResetPasswordPage } from "./features/account/ResetPasswordPage.js";
-import { PrivacyPolicyPage } from "./features/legal/PrivacyPolicyPage.js";
 import { GuestJoinPage } from "./features/guest/GuestJoinPage.js";
-import { RegisterChoicePage } from "./features/registration/RegisterChoicePage.js";
-import { IndividualRegisterPage } from "./features/registration/IndividualRegisterPage.js";
-import { OrganizationRegisterPage } from "./features/registration/OrganizationRegisterPage.js";
-import { EmailSentPage } from "./features/registration/EmailSentPage.js";
-import { VerifyEmailPage } from "./features/registration/VerifyEmailPage.js";
-import { SpacePage } from "./features/spaces/SpacePage.js";
-import { AcceptInvitePage } from "./features/spaces/AcceptInvitePage.js";
-import { InvitesPage } from "./features/invites/InvitesPage.js";
-import { LessonsListPage } from "./features/lessons/LessonsListPage.js";
-import { AdminRecordingsPage } from "./features/recordings/AdminRecordingsPage.js";
-import { MaterialEditorPage } from "./features/materials/MaterialEditorPage.js";
-import { MaterialsEditorLandingPage } from "./features/materials/MaterialsEditorLandingPage.js";
-import { MaterialsLibraryPage } from "./features/materials/MaterialsLibraryPage.js";
-import { EgressPage } from "./features/recordings/EgressPage.js";
-import { RecordingViewerPage } from "./features/recordings/RecordingViewerPage.js";
-import { SettingsPage } from "./features/settings/SettingsPage.js";
-import { RoomPage } from "./features/room/RoomPage.js";
 import { AppShell } from "./shared/AppShell.js";
 import { ErrorBoundary } from "./shared/ErrorBoundary.js";
 import { RequireAuth } from "./shared/RequireAuth.js";
@@ -31,6 +9,34 @@ import { RequireRoomAccess } from "./shared/RequireRoomAccess.js";
 import { HomeRedirect, RequireRole } from "./shared/RequireRole.js";
 import { Toaster } from "./shared/ui/sonner.js";
 import type { Role } from "@school/shared";
+import { FullscreenLoader } from "./shared/ui/fullscreen-loader.js";
+import { lazyNamed } from "./shared/lazy-retry.js";
+
+// Каждая страница — отдельный кусок сборки: раньше всё приложение было одним
+// файлом 4,9 МБ, и на мобильной сети страница урока не открывалась. Вход
+// ученика по ссылке (`GuestJoinPage`) — в основном куске, он открывается первым.
+const LoginPage = lazyNamed(() => import("./features/auth/LoginPage.js"), "LoginPage");
+const ChangePasswordPage = lazyNamed(() => import("./features/account/ChangePasswordPage.js"), "ChangePasswordPage");
+const ForgotPasswordPage = lazyNamed(() => import("./features/account/ForgotPasswordPage.js"), "ForgotPasswordPage");
+const ResetPasswordPage = lazyNamed(() => import("./features/account/ResetPasswordPage.js"), "ResetPasswordPage");
+const PrivacyPolicyPage = lazyNamed(() => import("./features/legal/PrivacyPolicyPage.js"), "PrivacyPolicyPage");
+const RegisterChoicePage = lazyNamed(() => import("./features/registration/RegisterChoicePage.js"), "RegisterChoicePage");
+const IndividualRegisterPage = lazyNamed(() => import("./features/registration/IndividualRegisterPage.js"), "IndividualRegisterPage");
+const OrganizationRegisterPage = lazyNamed(() => import("./features/registration/OrganizationRegisterPage.js"), "OrganizationRegisterPage");
+const EmailSentPage = lazyNamed(() => import("./features/registration/EmailSentPage.js"), "EmailSentPage");
+const VerifyEmailPage = lazyNamed(() => import("./features/registration/VerifyEmailPage.js"), "VerifyEmailPage");
+const SpacePage = lazyNamed(() => import("./features/spaces/SpacePage.js"), "SpacePage");
+const AcceptInvitePage = lazyNamed(() => import("./features/spaces/AcceptInvitePage.js"), "AcceptInvitePage");
+const InvitesPage = lazyNamed(() => import("./features/invites/InvitesPage.js"), "InvitesPage");
+const LessonsListPage = lazyNamed(() => import("./features/lessons/LessonsListPage.js"), "LessonsListPage");
+const AdminRecordingsPage = lazyNamed(() => import("./features/recordings/AdminRecordingsPage.js"), "AdminRecordingsPage");
+const MaterialEditorPage = lazyNamed(() => import("./features/materials/MaterialEditorPage.js"), "MaterialEditorPage");
+const MaterialsEditorLandingPage = lazyNamed(() => import("./features/materials/MaterialsEditorLandingPage.js"), "MaterialsEditorLandingPage");
+const MaterialsLibraryPage = lazyNamed(() => import("./features/materials/MaterialsLibraryPage.js"), "MaterialsLibraryPage");
+const EgressPage = lazyNamed(() => import("./features/recordings/EgressPage.js"), "EgressPage");
+const RecordingViewerPage = lazyNamed(() => import("./features/recordings/RecordingViewerPage.js"), "RecordingViewerPage");
+const SettingsPage = lazyNamed(() => import("./features/settings/SettingsPage.js"), "SettingsPage");
+const RoomPage = lazyNamed(() => import("./features/room/RoomPage.js"), "RoomPage");
 
 /** Защищённая страница внутри общего каркаса приложения. `roles` — если задан, ограничивает доступ. */
 function Shell({ children, roles }: { children: ReactNode; roles?: Role[] }) {
@@ -45,6 +51,7 @@ function Shell({ children, roles }: { children: ReactNode; roles?: Role[] }) {
 export function App() {
   return (
     <BrowserRouter>
+      <Suspense fallback={<FullscreenLoader label="Загрузка…" />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         {/* Э14.1 — публичная self-signup регистрация (§ план-ТЗ Э14), вне AppShell и RequireAuth. */}
@@ -109,6 +116,7 @@ export function App() {
         <Route path="/egress" element={<EgressPage />} />
         <Route path="/" element={<RequireAuth><HomeRedirect /></RequireAuth>} />
       </Routes>
+      </Suspense>
       <Toaster position="top-right" richColors closeButton />
     </BrowserRouter>
   );
