@@ -1,6 +1,7 @@
 import { Suspense, type ComponentProps } from "react";
 
-import { lazyNamed, withRetry } from "@/shared/lazy-retry";
+import { warmChunk } from "@/shared/chunk-warmup";
+import { lazyNamed } from "@/shared/lazy-retry";
 import { ErrorBoundary } from "@/shared/ErrorBoundary";
 import { MediaLoader } from "@/shared/ui/media-loader";
 
@@ -15,19 +16,39 @@ import { MediaLoader } from "@/shared/ui/media-loader";
  * Своя `ErrorBoundary` на каждый кусок: если он не догрузился, ошибка остаётся
  * в его области, а видео и звук урока продолжают работать. Раньше сбой
  * загрузки доски ронял всю страницу урока, и ученик вылетал с урока.
+ *
+ * Перед `import()` файлы куска докачиваются с повторами (`warmChunk`): один
+ * оборванный `import()` браузер запоминает до перезагрузки страницы, и на
+ * слабой связи доска падала с ошибкой, хотя сеть уже восстановилась.
  */
 
-const loadBoard = withRetry(() => import("../canvas/Board.js"));
-const loadActivityPanel = withRetry(() => import("../materials/LessonActivityPanel.js"));
-const loadActivityStage = withRetry(() => import("./ActivityStage.js"));
+const BOARD = "src/features/canvas/Board.tsx";
+const ACTIVITY_PANEL = "src/features/materials/LessonActivityPanel.tsx";
+const ACTIVITY_STAGE = "src/features/room/ActivityStage.tsx";
+
+async function loadBoard() {
+  await warmChunk(BOARD);
+  return import("../canvas/Board.js");
+}
+async function loadActivityPanel() {
+  await warmChunk(ACTIVITY_PANEL);
+  return import("../materials/LessonActivityPanel.js");
+}
+async function loadActivityStage() {
+  await warmChunk(ACTIVITY_STAGE);
+  return import("./ActivityStage.js");
+}
 
 const LazyBoard = lazyNamed(loadBoard, "Board");
 const LazyActivityPanel = lazyNamed(loadActivityPanel, "LessonActivityPanel");
 const LazyActivityStage = lazyNamed(loadActivityStage, "ActivityStage");
 
-/** Запускает загрузку кусков урока заранее — ошибки не важны, `lazy` повторит при показе. */
+/**
+ * Докачивает куски урока заранее. Только `fetch`, без `import()`: оборванный
+ * здесь `import()` сломал бы кусок до перезагрузки страницы.
+ */
 export function prefetchLessonStage(): void {
-  for (const load of [loadBoard, loadActivityStage, loadActivityPanel]) load().catch(() => undefined);
+  for (const module of [BOARD, ACTIVITY_STAGE, ACTIVITY_PANEL]) void warmChunk(module);
 }
 
 function StageFallback({ label }: { label: string }) {

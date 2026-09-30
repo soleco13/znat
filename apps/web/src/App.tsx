@@ -11,6 +11,7 @@ import { Toaster } from "./shared/ui/sonner.js";
 import type { Role } from "@school/shared";
 import { FullscreenLoader } from "./shared/ui/fullscreen-loader.js";
 import { lazyNamed } from "./shared/lazy-retry.js";
+import { warmChunk } from "./shared/chunk-warmup.js";
 
 // Каждая страница — отдельный кусок сборки: раньше всё приложение было одним
 // файлом 4,9 МБ, и на мобильной сети страница урока не открывалась. Вход
@@ -36,7 +37,14 @@ const MaterialsLibraryPage = lazyNamed(() => import("./features/materials/Materi
 const EgressPage = lazyNamed(() => import("./features/recordings/EgressPage.js"), "EgressPage");
 const RecordingViewerPage = lazyNamed(() => import("./features/recordings/RecordingViewerPage.js"), "RecordingViewerPage");
 const SettingsPage = lazyNamed(() => import("./features/settings/SettingsPage.js"), "SettingsPage");
-const RoomPage = lazyNamed(() => import("./features/room/RoomPage.js"), "RoomPage");
+// Файлы урока — сначала докачкой с повторами (см. `shared/chunk-warmup.ts`).
+const RoomPage = lazyNamed(
+  async () => {
+    await warmChunk("src/features/room/RoomPage.tsx");
+    return import("./features/room/RoomPage.js");
+  },
+  "RoomPage",
+);
 
 /** Защищённая страница внутри общего каркаса приложения. `roles` — если задан, ограничивает доступ. */
 function Shell({ children, roles }: { children: ReactNode; roles?: Role[] }) {

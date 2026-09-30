@@ -12,10 +12,12 @@ import { StatusScreen } from "@/shared/ui/status-screen";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { prefetchLessonStage } from "@/features/room/lazy-stage";
-import { withRetry } from "@/shared/lazy-retry";
+import { warmChunk } from "@/shared/chunk-warmup";
 import { enterGuestLesson, fetchGuestLessonInfo } from "./guest-api.js";
 
-const prefetchRoom = withRetry(() => import("@/features/room/RoomPage"));
+// Только докачка, без `import()`: оборванный `import()` браузер запоминает,
+// и страница урока потом не открылась бы до перезагрузки.
+const prefetchRoom = () => warmChunk("src/features/room/RoomPage.tsx");
 
 const NAME_MAX = 80;
 
@@ -34,9 +36,7 @@ export function GuestJoinPage() {
   // Именно по очереди: параллельно доска (~725 КБ) делила бы медленный канал
   // с уроком (~350 КБ), и урок открывался бы позже.
   useEffect(() => {
-    prefetchRoom()
-      .catch(() => undefined)
-      .finally(() => prefetchLessonStage());
+    void prefetchRoom().finally(() => prefetchLessonStage());
   }, []);
 
   const [name, setName] = useState("");
