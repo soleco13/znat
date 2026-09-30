@@ -67,6 +67,11 @@ export async function ensureLivekitRoom(schoolId: string, id: string): Promise<s
   return updated?.livekitRoom ?? livekitRoom;
 }
 
+/** Имя уже назначенной комнаты LiveKit урока без привязки к школе (для зачистки presence); не назначено — `null`. */
+export async function findLivekitRoom(id: string): Promise<string | null> {
+  return (await repo.findLessonByIdAnySchool(id))?.livekitRoom ?? null;
+}
+
 /** Для LiveKit-вебхука (Э2.7) — сопоставляет событие с уроком по имени комнаты, без привязки к школе. */
 export async function getLessonByLivekitRoom(livekitRoom: string) {
   return repo.findLessonByLivekitRoom(livekitRoom);

@@ -26,6 +26,7 @@ const {
     ensureLivekitRoom: vi.fn(),
     getLessonByLivekitRoom: vi.fn(),
     getLessonForGuestSession: vi.fn(),
+    findLivekitRoom: vi.fn().mockResolvedValue(null),
     onJoinLinkRotated: vi.fn(),
   },
   usersServiceMock: {
@@ -49,6 +50,7 @@ const {
     findOtherActiveScreenShares: vi.fn().mockResolvedValue([]),
     muteScreenShare: vi.fn(),
     removeParticipant: vi.fn(),
+    listConnectedIdentities: vi.fn().mockResolvedValue(new Set()),
   },
   schoolSettingsServiceMock: {
     // Параметры школы (запрос 2026-09-14) — `join()` подмешивает мягкие
@@ -1156,5 +1158,44 @@ describe("зачистка presence после перезапуска серве
     await roomsService.runPresenceSweepOnce();
 
     expect((await presenceModule.getParticipant(SECOND_LESSON_ID, STUDENT_ID))?.connected).toBe(true);
+  });
+
+  describe("участник молчит в WebSocket, но подключён к медиа (LiveKit)", () => {
+    beforeEach(() => {
+      lessonsServiceMock.findLivekitRoom.mockResolvedValue(`lesson-${SECOND_LESSON_ID}`);
+      mediaServiceMock.listConnectedIdentities.mockResolvedValue(new Set([STUDENT_ID]));
+    });
+    afterEach(() => {
+      lessonsServiceMock.findLivekitRoom.mockResolvedValue(null);
+      mediaServiceMock.listConnectedIdentities.mockResolvedValue(new Set());
+    });
+
+    it("остаётся на связи, отметка продлевается", async () => {
+      await presenceModule.setParticipant(SECOND_LESSON_ID, STUDENT_ID, ghost(true, 5 * 60 * 1000));
+
+      await roomsService.runPresenceSweepOnce();
+
+      const entry = await presenceModule.getParticipant(SECOND_LESSON_ID, STUDENT_ID);
+      expect(entry?.connected).toBe(true);
+      expect(Date.now() - entry!.lastSeenAt).toBeLessThan(5000);
+      expect(mediaServiceMock.listConnectedIdentities).toHaveBeenCalledWith(`lesson-${SECOND_LESSON_ID}`);
+    });
+
+    it("с закрытым сокетом после grace из урока не удаляется", async () => {
+      await presenceModule.setParticipant(SECOND_LESSON_ID, STUDENT_ID, ghost(false, 5 * 60 * 1000));
+
+      await roomsService.runPresenceSweepOnce();
+
+      expect(await presenceModule.getParticipant(SECOND_LESSON_ID, STUDENT_ID)).not.toBeNull();
+    });
+
+    it("LiveKit недоступен — зачистка по heartbeat, как раньше", async () => {
+      mediaServiceMock.listConnectedIdentities.mockRejectedValueOnce(new Error("livekit unreachable"));
+      await presenceModule.setParticipant(SECOND_LESSON_ID, STUDENT_ID, ghost(true, 5 * 60 * 1000));
+
+      await roomsService.runPresenceSweepOnce();
+
+      expect((await presenceModule.getParticipant(SECOND_LESSON_ID, STUDENT_ID))?.connected).toBe(false);
+    });
   });
 });
