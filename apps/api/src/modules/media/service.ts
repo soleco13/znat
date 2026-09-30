@@ -1,4 +1,4 @@
-import { AccessToken, RoomServiceClient, TrackSource } from "livekit-server-sdk";
+import { AccessToken, ParticipantInfo_State, RoomServiceClient, TrackSource } from "livekit-server-sdk";
 import type { MediaConnection, ParticipantKind, ParticipantPermissions } from "@school/shared";
 import { env } from "../../plugins/env.js";
 
@@ -130,6 +130,24 @@ export async function removeParticipant(livekitRoom: string, userId: string): Pr
     await roomService.removeParticipant(livekitRoom, userId);
   } catch (err) {
     if (!isNotFoundError(err)) throw err;
+  }
+}
+
+/**
+ * Identity участников, подключённых к комнате LiveKit прямо сейчас. LiveKit
+ * сам замечает пропавшего клиента (~20–30 с без ICE), так что это надёжный
+ * признак «участник на уроке», даже когда служебный WebSocket урока молчит.
+ * Комнаты нет — пустое множество.
+ */
+export async function listConnectedIdentities(livekitRoom: string): Promise<Set<string>> {
+  try {
+    const participants = await roomService.listParticipants(livekitRoom);
+    return new Set(
+      participants.filter((p) => p.state !== ParticipantInfo_State.DISCONNECTED).map((p) => p.identity),
+    );
+  } catch (err) {
+    if (isNotFoundError(err)) return new Set();
+    throw err;
   }
 }
 

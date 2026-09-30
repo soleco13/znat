@@ -1076,15 +1076,41 @@ export function isStaleEntry(entry: PresenceEntry, now: number): boolean {
   return presence.isStaleEntry(entry, now, RECONNECT_GRACE_MS, HEARTBEAT_TIMEOUT_MS);
 }
 
+/**
+ * Кто из участников урока подключён к медиа (LiveKit). LiveKit недоступен —
+ * пустое множество: зачистка работает по одному heartbeat, как раньше.
+ */
+async function mediaConnectedIds(lessonId: string): Promise<Set<string>> {
+  try {
+    const livekitRoom = await lessonsService.findLivekitRoom(lessonId);
+    if (!livekitRoom) return new Set();
+    return await mediaService.listConnectedIdentities(livekitRoom);
+  } catch (err) {
+    console.error("rooms: livekit participants unavailable", lessonId, err);
+    return new Set();
+  }
+}
+
 async function sweepRoom(lessonId: string): Promise<void> {
   const now = Date.now();
   const participants = await presence.listParticipants(lessonId);
+  const stale = [...participants].filter(([, entry]) => isStaleEntry(entry, now));
+  if (stale.length === 0) return;
+  // Служебный WebSocket (TCP) на мобильной сети с потерями молчит минутами:
+  // повторные передачи TCP уходят в экспоненциальные паузы, а канал на
+  // отдачу забит видео. Звук и видео (LiveKit, UDP) при этом идут. Раньше
+  // такого ученика выкидывало из урока каждые ~2 минуты, он перезаходил,
+  // и так по кругу. Подключён к медиа — значит на уроке: продлеваем.
+  const inMedia = await mediaConnectedIds(lessonId);
   let changed = false;
-  for (const [userId, entry] of participants) {
-    if (!isStaleEntry(entry, now)) continue;
+  for (const [userId, entry] of stale) {
     // Условие на lastSeenAt: пока sweep думал, участник мог прислать pong —
     // тогда его не трогаем (раньше запись перетиралась устаревшей копией).
     const stillStale = { connected: entry.connected, maxLastSeenAt: entry.lastSeenAt };
+    if (inMedia.has(userId)) {
+      await presence.patchParticipant(lessonId, userId, { lastSeenAt: now }, stillStale);
+      continue;
+    }
     if (entry.connected) {
       const result = await presence.patchParticipant(
         lessonId,

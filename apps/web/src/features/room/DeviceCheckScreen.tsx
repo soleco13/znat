@@ -72,10 +72,7 @@ function makeBeep(): string {
     const sample = Math.sin((2 * Math.PI * 440 * i) / rate) * 0.3 * fade;
     view.setInt16(44 + i * 2, sample * 0x7fff, true);
   }
-  let bin = "";
-  const arr = new Uint8Array(buf);
-  for (let i = 0; i < arr.length; i += 1) bin += String.fromCharCode(arr[i]!);
-  return `data:audio/wav;base64,${btoa(bin)}`;
+  return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
 }
 
 /**
@@ -183,7 +180,7 @@ export function DeviceCheckScreen({
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
     const gap = 3;
-    const barW = (w - gap * (METER_BARS - 1)) / METER_BARS;
+    const barW = Math.max(1, (w - gap * (METER_BARS - 1)) / METER_BARS);
     for (let i = 0; i < METER_BARS; i += 1) {
       // Колокол по центру: середина реагирует сильнее краёв — «живая» дорожка.
       const dist = Math.abs(i - (METER_BARS - 1) / 2) / ((METER_BARS - 1) / 2);
@@ -193,7 +190,7 @@ export function DeviceCheckScreen({
       const barH = Math.max(3, active * h);
       const y = (h - barH) / 2;
       ctx.fillStyle = level > 0.04 ? "hsl(142 71% 45%)" : "hsl(220 13% 82%)";
-      const r = Math.min(barW / 2, 2);
+      const r = Math.max(0, Math.min(barW / 2, barH / 2, 2));
       ctx.beginPath();
       ctx.roundRect(i * (barW + gap), y, barW, barH, r);
       ctx.fill();

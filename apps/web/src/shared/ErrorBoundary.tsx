@@ -14,11 +14,13 @@ interface State {
 }
 
 /**
- * Не догрузился кусок сборки: страница открыта до выкладки, а её файлов на
- * сервере уже нет (или сеть оборвала загрузку). Тексты ошибок у браузеров разные.
+ * Не догрузился кусок сборки — почти всегда обрыв на слабой связи (файлы
+ * прошлых сборок сервер хранит в архиве). Браузер запоминает неудачный
+ * `import()`, поэтому помогает только перезагрузка страницы. Тексты ошибок у
+ * браузеров разные: Safari/iOS — «Importing a module script failed».
  */
 function isChunkLoadError(error: Error): boolean {
-  return /dynamically imported module|Importing a module script failed|module script|Loading chunk/i.test(error.message);
+  return /dynamically imported module|Importing a module script failed|module script|Loading chunk|Unable to preload CSS/i.test(error.message);
 }
 
 /** Ловит ошибки рендера дочернего дерева и показывает восстановимое состояние. */
@@ -40,8 +42,8 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="mx-auto max-w-content px-4 py-16">
           {isChunkLoadError(this.state.error) ? (
             <ErrorState
-              title="Урок обновился"
-              description="Перезагрузите страницу, чтобы продолжить."
+              title="Не удалось загрузить"
+              description="Проверьте интернет и перезагрузите страницу."
             />
           ) : (
             <ErrorState

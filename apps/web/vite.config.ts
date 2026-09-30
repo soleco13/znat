@@ -14,9 +14,19 @@ const LESSON_ENTRY_MODULES = [
 ];
 
 /**
+ * Динамические импорты внутри кусков урока, которые тоже нужны заранее:
+ * Excalidraw подгружает сама русскую локаль и полифилл `roundRect`, без
+ * повторов — оборвался запрос, и доска у ученика на английском.
+ */
+const LESSON_DYNAMIC_MODULES = [/\/ru-RU[-.]/, /roundRect/];
+
+/**
  * `sw-assets.json` — список файлов урока (куски из `LESSON_ENTRY_MODULES` со
  * всеми их статическими зависимостями и CSS) для service worker'а
  * (`public/sw.js`): он докачивает их на устройство, пока связь хорошая.
+ *
+ * `chunks` — те же файлы по отдельности для каждого куска урока: страница
+ * скачивает их с повторами до `import()` (`shared/chunk-warmup.ts`).
  */
 function lessonAssetsManifest(): Plugin {
   return {
@@ -25,23 +35,37 @@ function lessonAssetsManifest(): Plugin {
     generateBundle(_options, bundle) {
       const chunks = Object.values(bundle).filter((item) => item.type === "chunk");
       const byFile = new Map(chunks.map((chunk) => [chunk.fileName, chunk]));
-      const assets = new Set<string>();
-      const visit = (fileName: string) => {
+      const visit = (fileName: string, into: Set<string>) => {
         const chunk = byFile.get(fileName);
-        if (!chunk || assets.has(`/${fileName}`)) return;
-        assets.add(`/${fileName}`);
-        for (const css of chunk.viteMetadata?.importedCss ?? []) assets.add(`/${css}`);
-        for (const dep of chunk.imports) visit(dep);
+        if (!chunk || into.has(`/${fileName}`)) return;
+        into.add(`/${fileName}`);
+        for (const css of chunk.viteMetadata?.importedCss ?? []) into.add(`/${css}`);
+        for (const dep of chunk.imports) visit(dep, into);
       };
+      const assets = new Set<string>();
+      const perModule: Record<string, string[]> = {};
       for (const chunk of chunks) {
-        if (chunk.isEntry || LESSON_ENTRY_MODULES.some((m) => chunk.facadeModuleId?.endsWith(m))) {
-          visit(chunk.fileName);
+        // По составу, а не по `facadeModuleId`: Rollup может склеить кусок с
+        // соседними модулями, и фасада у него не будет (так вышло с доской).
+        const module = LESSON_ENTRY_MODULES.find((m) => chunk.moduleIds.some((id) => id.endsWith(m)));
+        if (chunk.isEntry || module) visit(chunk.fileName, assets);
+        if (module) {
+          const own = new Set<string>();
+          visit(chunk.fileName, own);
+          for (const dep of chunk.dynamicImports) {
+            const ids = byFile.get(dep)?.moduleIds ?? [];
+            if (ids.some((id) => LESSON_DYNAMIC_MODULES.some((re) => re.test(id)))) {
+              visit(dep, own);
+              visit(dep, assets);
+            }
+          }
+          perModule[module] = [...own].sort();
         }
       }
       this.emitFile({
         type: "asset",
         fileName: "sw-assets.json",
-        source: JSON.stringify({ assets: [...assets].sort() }),
+        source: JSON.stringify({ assets: [...assets].sort(), chunks: perModule }),
       });
     },
   };
