@@ -13,6 +13,14 @@ interface State {
   error: Error | null;
 }
 
+/**
+ * Не догрузился кусок сборки: страница открыта до выкладки, а её файлов на
+ * сервере уже нет (или сеть оборвала загрузку). Тексты ошибок у браузеров разные.
+ */
+function isChunkLoadError(error: Error): boolean {
+  return /dynamically imported module|Importing a module script failed|module script|Loading chunk/i.test(error.message);
+}
+
 /** Ловит ошибки рендера дочернего дерева и показывает восстановимое состояние. */
 export class ErrorBoundary extends Component<Props, State> {
   override state: State = { error: null };
@@ -30,10 +38,17 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.error) {
       return (
         <div className="mx-auto max-w-content px-4 py-16">
-          <ErrorState
-            title={this.props.title ?? "Что-то пошло не так"}
-            description={this.state.error.message}
-          />
+          {isChunkLoadError(this.state.error) ? (
+            <ErrorState
+              title="Урок обновился"
+              description="Перезагрузите страницу, чтобы продолжить."
+            />
+          ) : (
+            <ErrorState
+              title={this.props.title ?? "Что-то пошло не так"}
+              description={this.state.error.message}
+            />
+          )}
           <div className="mt-4 flex justify-center">
             <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
               Перезагрузить страницу

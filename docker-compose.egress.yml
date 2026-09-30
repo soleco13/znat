@@ -64,7 +64,12 @@ services:
       - ./egress.local.yaml:/etc/egress.yaml:ro
       # Тот же каталог ассетов, что STORAGE_ROOT у `app` на основной машине.
       # На проде — точка монтирования сетевой ФС провайдера.
-      - ${EGRESS_STORAGE_ROOT:-/data/assets}:/data/assets
+      # Обязателен (без значения по умолчанию): 2026-09-25 контейнер пересоздали
+      # без `--env-file .env.egress`, и egress молча смонтировал пустой
+      # /data/assets хоста вместо тома приложения — записи сутки падали с
+      # «mkdir /data/assets/recordings: permission denied». Теперь запуск без
+      # переменной сразу падает с понятной ошибкой.
+      - ${EGRESS_STORAGE_ROOT:?EGRESS_STORAGE_ROOT не задан - запускайте с --env-file .env.egress}:/data/assets
     # Egress не слушает публичных портов: все команды приходят через Redis,
     # а метрики Prometheus снимаются изнутри приватной сети (см. egress.yaml).
     # network_mode: host — как и у livekit, чтобы Chrome/WebRTC не ходил через

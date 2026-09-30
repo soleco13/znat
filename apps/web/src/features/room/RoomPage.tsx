@@ -52,7 +52,7 @@ import type {
 } from "@school/shared";
 
 import { cn } from "@/lib/utils";
-import { ApiError, apiFetch, setGuestMode } from "@/shared/api-client";
+import { ApiError, apiFetch } from "@/shared/api-client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -93,17 +93,14 @@ import {
 } from "@/shared/ui/dropdown-menu";
 import { UserAvatar } from "@/shared/ui/avatar";
 import { SimpleTooltip, TooltipProvider } from "@/shared/ui/tooltip";
-import { Board } from "../canvas/Board.js";
 import { DeckPanel } from "../decks/DeckPanel.js";
 import { listLessonActivities } from "../materials/activity-api.js";
-import { LessonActivityPanel } from "../materials/LessonActivityPanel.js";
-import { ActivityStage } from "./ActivityStage.js";
+import { ActivityStage, Board, LessonActivityPanel, prefetchLessonStage } from "./lazy-stage.js";
 import { RecordingConsentBanner, RecordingPanel } from "../recordings/RecordingPanel.js";
 import { playRecordingSound } from "./recording-sound.js";
 import { playParticipantSound } from "./participant-sound.js";
-import { SelfCameraButton, VideoDegradeSuggestion } from "./CameraControls.js";
+import { SelfCameraButton } from "./CameraControls.js";
 import { toScreenShareEncoding, toVideoEncoding, toVideoResolution } from "./media-quality.js";
-import { PacketLossWarning } from "./ConnectionQuality.js";
 import { DeviceCheckScreen, type DeviceCheckResult } from "./DeviceCheckScreen.js";
 import { DeviceSettingsModal } from "./DeviceSettingsModal.js";
 import { formatClock, participantsCount } from "./format.js";
@@ -122,6 +119,8 @@ import { notifyAnnotationsUpdated } from "../materials/annotations-events.js";
 import { VideoSubscriptionManager } from "./VideoSubscriptions.js";
 import { Loader } from "@/shared/ui/loader";
 import { BrandMark } from "@/shared/ui/brand-mark";
+import { PoorLinkMediaAdapter } from "./PoorLinkMedia.js";
+import { MEDIA_CONNECT_OPTIONS, MEDIA_RECONNECT_POLICY, MediaRecovery } from "./MediaRecovery.js";
 
 // Э5.1/Э5.2 — см. подробные комментарии ниже у <LiveKitRoom>. 720p + simulcast,
 // adaptiveStream/dynacast включены явно (в livekit-client по умолчанию off).
@@ -132,6 +131,7 @@ const FALLBACK_ROOM_OPTIONS: RoomOptions = {
   publishDefaults: { simulcast: true },
   adaptiveStream: true,
   dynacast: true,
+  reconnectPolicy: MEDIA_RECONNECT_POLICY,
 };
 
 /**
@@ -163,8 +163,12 @@ function buildRoomOptions(settings: ClientMediaSettings | null): RoomOptions {
     },
     adaptiveStream: true,
     dynacast: true,
+    reconnectPolicy: MEDIA_RECONNECT_POLICY,
   };
 }
+
+/** Сколько переподключение должно длиться, чтобы показать ученику оверлей. */
+const RECONNECT_OVERLAY_DELAY_MS = 20_000;
 
 type SocketStatusLike = "connecting" | "connected" | "reconnecting" | "closed";
 type DrawerMode = "tools" | "people" | "chat";
@@ -242,8 +246,8 @@ export function RoomPage() {
   const navigate = useNavigate();
   const identity = useRoomIdentity();
   const guestSession = useGuestSessionStore((s) => s.session);
-  const clearGuestSession = useGuestSessionStore((s) => s.clearSession);
   const isGuest = identity?.kind === "guest";
+
   const selfId = identity?.id;
   const [leftAsGuest, setLeftAsGuest] = useState(false);
 
@@ -442,8 +446,10 @@ export function RoomPage() {
   // /join — без этого клиент бесконечно переподключался, оставаясь вне урока.
   // До первого успешного входа не дублируем штатный `attemptJoin`.
   const joinedRef = useRef(false);
+  /** Участник сам вышел из урока — никаких повторных входов. */
+  const leftRef = useRef(false);
   const rejoinAfterEviction = useCallback(async () => {
-    if (!lessonId || !joinedRef.current) return;
+    if (!lessonId || !joinedRef.current || leftRef.current) return;
     await apiFetch<JoinLessonResponse>(`/lessons/${lessonId}/join`, { method: "POST" }).catch((err) => {
       const screen = blockedScreenFor(err);
       if (screen) setBlocked(screen);
@@ -454,7 +460,7 @@ export function RoomPage() {
   const status = useRoomSocket(
     lessonId ?? "",
     handleMessage,
-    deviceCheckDone && !blocked,
+    deviceCheckDone && !blocked && !leftAsGuest,
     isGuest ? "guest" : "staff",
     undefined,
     rejoinAfterEviction,
@@ -463,6 +469,18 @@ export function RoomPage() {
   // Оверлей переподключения — только если WS уже был `connected` хотя бы
   // раз: на самом первом подключении место занимает экран загрузки.
   const everConnectedRef = useRef(false);
+  // Оверлей «связь прервалась» — только при настоящем обрыве. Короткие
+  // переподключения служебного канала на мобильной сети частые, видео и звук
+  // под ними не прерываются — перекрывать урок из-за них не нужно.
+  const [longReconnect, setLongReconnect] = useState(false);
+  useEffect(() => {
+    if (status !== "reconnecting") {
+      setLongReconnect(false);
+      return;
+    }
+    const timer = setTimeout(() => setLongReconnect(true), RECONNECT_OVERLAY_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [status]);
   if (status === "connected") everConnectedRef.current = true;
 
   const attemptJoin = useCallback(() => {
@@ -489,14 +507,21 @@ export function RoomPage() {
   useEffect(() => {
     if (!lessonId || !deviceCheckDone) return;
     attemptJoin();
+  }, [lessonId, deviceCheckDone, attemptJoin]);
 
+  // Всё второстепенное — после входа: на медленной сети эти запросы и куски
+  // сборки делили бы канал с самим входом (/join, соединение урока, медиа).
+  const joined = media !== null;
+  useEffect(() => {
+    if (!lessonId || !joined) return;
+    prefetchLessonStage();
     apiFetch<{ items: ChatMessage[] }>(`/lessons/${lessonId}/chat`)
       .then((data) => {
         setChat([...data.items].reverse());
         setChatSeen(data.items.length);
       })
       .catch(() => undefined);
-  }, [lessonId, deviceCheckDone, attemptJoin]);
+  }, [lessonId, joined]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -539,18 +564,18 @@ export function RoomPage() {
   }, [lessonId]);
 
   useEffect(() => {
-    refreshDecks();
-  }, [refreshDecks]);
+    if (joined) refreshDecks();
+  }, [refreshDecks, joined]);
 
   useEffect(() => {
-    if (!lessonId) return;
+    if (!lessonId || !joined) return;
     listLessonActivities(lessonId)
       .then((data) => {
         const latest = data.items[0];
         if (latest) setActiveActivityId((prev) => prev ?? latest.id);
       })
       .catch(() => undefined);
-  }, [lessonId]);
+  }, [lessonId, joined]);
 
   const refetchedDecksRef = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -573,11 +598,17 @@ export function RoomPage() {
 
   async function leaveRoom() {
     if (!lessonId) return;
+    // До запроса: пока /leave идёт, сервер может закрыть соединение урока, и
+    // повторный вход (`rejoinAfterEviction`) не должен успеть сработать.
+    leftRef.current = true;
     await apiFetch(`/lessons/${lessonId}/leave`, { method: "POST" }).catch(() => undefined);
     if (isGuest) {
       // У гостя нет /lessons и личного кабинета — показываем экран выхода.
-      setGuestMode(false);
-      clearGuestSession();
+      // Гостевую сессию в памяти НЕ очищаем: `RequireRoomAccess` видел
+      // «сессии нет», восстанавливал её по куке и пускал обратно, а
+      // соединение урока под экраном выхода переподключалось и снова входило
+      // в урок — ученик «возвращался» (2026-09-26). Соединение урока
+      // выключается по `leftAsGuest` (см. `useRoomSocket` ниже).
       setLeftAsGuest(true);
       return;
     }
@@ -1125,8 +1156,6 @@ export function RoomPage() {
             : `${raisedHands[0]!.fullName} и ещё ${raisedHands.length - 1} подняли руку.`}
         </StageBanner>
       ) : null}
-      {media && self?.permissions.canSpeak ? <PacketLossWarning /> : null}
-      {media && (isTeacher || self?.permissions.canPublishVideo) ? <VideoDegradeSuggestion /> : null}
 
       {media ? (
         <StageContent
@@ -1615,7 +1644,7 @@ export function RoomPage() {
 
       {/* Только WS-канал (`status`), НЕ LiveKit-медиа — оно продолжает
           работать под оверлеем, урок не прерывается. */}
-      {status === "reconnecting" && everConnectedRef.current ? (
+      {status === "reconnecting" && longReconnect && everConnectedRef.current ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-6">
           <div
             role="alertdialog"
@@ -1688,9 +1717,7 @@ export function RoomPage() {
         token={media.token}
         connect
         options={buildRoomOptions(clientMediaSettings)}
-        // Э6.2, §5.2 ТЗ: автоподписка LiveKit выключена намеренно — подпиской
-        // управляет `VideoSubscriptionManager` ниже, единственное место.
-        connectOptions={{ autoSubscribe: false }}
+        connectOptions={MEDIA_CONNECT_OPTIONS}
         audio={
           self?.permissions.canSpeak && joinMicEnabled
             ? {
@@ -1718,12 +1745,40 @@ export function RoomPage() {
             : false
         }
         // Разрыв аудио не показываем баннером — состояние видно на самой
-        // кнопке микрофона, плюс индикатор связи в шапке.
+        // кнопке микрофона, плюс индикатор связи в шапке. Обрыв, который
+        // LiveKit не пережил сам, чинит `MediaRecovery` ниже.
         onDisconnected={() => undefined}
       >
         <ApplyAudioOutput deviceId={spkDeviceId} />
         <MicSync enabled={self?.permissions.canSpeak ?? false} />
         <VideoSubscriptionManager participants={participants} mode={lessonMode} />
+        <PoorLinkMediaAdapter />
+        {lessonId ? (
+          <MediaRecovery
+            lessonId={lessonId}
+            restoreCamera={(participant) =>
+              isTeacher && clientMediaSettings
+                ? participant.setCameraEnabled(
+                    true,
+                    {
+                      resolution: toVideoResolution(clientMediaSettings.cameraResolution, clientMediaSettings.cameraFps),
+                      deviceId: camDeviceId ?? undefined,
+                    },
+                    { videoEncoding: toVideoEncoding(clientMediaSettings.cameraFps, clientMediaSettings.cameraBitrateKbps) },
+                  )
+                : participant.setCameraEnabled(true, {
+                    resolution: isTeacher ? VideoPresets.h720.resolution : VideoPresets.h360.resolution,
+                    deviceId: camDeviceId ?? undefined,
+                  })
+            }
+            onRejoined={(data) => setParticipants(data.participants)}
+            onBlocked={(err) => {
+              const screen = blockedScreenFor(err);
+              if (screen) setBlocked(screen);
+              return screen !== null;
+            }}
+          />
+        ) : null}
         {clientMediaSettings?.pipEnabled !== false ? (
           <ScreenShareAutoPip
             ref={pipRef}
@@ -1983,8 +2038,10 @@ function StageContent({
   onActivityClose: () => void;
   onBoardClose: (() => void) | undefined;
 }) {
+  // Опубликованная, а не только подписанная: сцена сразу переключается на
+  // демонстрацию, и пока она грузится, `ScreenShareTile` показывает лоадер.
   const screenSharing =
-    useTracks([Track.Source.ScreenShare], { onlySubscribed: true }).length > 0;
+    useTracks([Track.Source.ScreenShare], { onlySubscribed: false }).length > 0;
 
   const main =
     view === "activity" && activityId ? (

@@ -95,6 +95,9 @@ services:
       STORAGE_ROOT: /data/assets
       # /files/* отдаёт Caddy с того же тома (см. Caddyfile, X-Accel-Redirect).
       FILES_VIA_PROXY: "true"
+      # Файлы прошлых сборок фронта: страница, открытая до выкладки, догружает
+      # свои куски отсюда (apps/api/src/plugins/web-assets-archive.ts).
+      WEB_ASSETS_ARCHIVE_DIR: /data/web-assets
       # livekit слушает на network_mode: host — из моста (bridge) до него
       # достучаться можно только через шлюз хоста, не по имени сервиса.
       LIVEKIT_URL: ws://host.docker.internal:7880
@@ -102,6 +105,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - assets_data:/data/assets
+      - web_assets:/data/web-assets
     ports:
       - "127.0.0.1:3000:3000"
     healthcheck:
@@ -155,6 +159,15 @@ services:
           # публичный IP, что уже используется для TURN/STUN).
           use_external_ip: false
           node_ip: ${TURN_DOMAIN}
+          # link-local IPv6 docker-интерфейсов (veth/bridge) pion пытается
+          # занять по всему port_range: bind без зоны даёт EINVAL на каждый
+          # из 10 000 портов, с перечитыванием интерфейсов на каждой попытке.
+          # Нагрузочный тест 2026-09-26: каждый вход участника занимал ядро
+          # LiveKit на 100% на десятки секунд. Внешнему клиенту эти адреса
+          # всё равно недоступны.
+          ips:
+            excludes:
+              - fe80::/10
           stun_servers:
             - ${TURN_DOMAIN}:3478
           turn_servers:
@@ -290,5 +303,6 @@ volumes:
   pg_data:
   redis_data:
   assets_data:
+  web_assets:
   caddy_data:
   caddy_config:
