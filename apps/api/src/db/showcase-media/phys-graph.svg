@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="680" viewBox="0 0 1000 680" font-family="DejaVu Sans">
+  <rect width="1000" height="680" fill="#ffffff"/>
+  <g stroke="#e2e8f0" stroke-width="1.5">
+    <path d="M220 560V80M340 560V80M460 560V80M580 560V80M700 560V80M820 560V80"/>
+    <path d="M100 500H900M100 440H900M100 380H900M100 320H900M100 260H900M100 200H900M100 140H900M100 80H900"/>
+  </g>
+  <g stroke="#0f172a" stroke-width="3" fill="#0f172a">
+    <path d="M100 560H920" /><path d="M100 560V50"/>
+    <path d="M920 560l-16 -8v16z"/><path d="M100 50l-8 16h16z"/>
+  </g>
+  <g font-size="26" fill="#334155" text-anchor="middle">
+    <text x="100" y="596">0</text><text x="220" y="596">1</text><text x="340" y="596">2</text><text x="460" y="596">3</text>
+    <text x="580" y="596">4</text><text x="700" y="596">5</text><text x="820" y="596">6</text>
+  </g>
+  <g font-size="26" fill="#334155" text-anchor="end">
+    <text x="84" y="509">1</text><text x="84" y="449">2</text><text x="84" y="389">3</text><text x="84" y="329">4</text>
+    <text x="84" y="269">5</text><text x="84" y="209">6</text><text x="84" y="149">7</text><text x="84" y="89">8</text>
+  </g>
+  <text x="930" y="606" font-size="30" font-style="italic" fill="#0f172a">t, с</text>
+  <text x="120" y="44" font-size="30" font-style="italic" fill="#0f172a">x, м</text>
+  <path d="M100 560L580 80" stroke="#dc2626" stroke-width="6" stroke-linecap="round"/>
+  <path d="M580 80V560M100 80H580" stroke="#dc2626" stroke-width="2" stroke-dasharray="10 8"/>
+  <circle cx="580" cy="80" r="9" fill="#dc2626"/>
+  <circle cx="100" cy="560" r="9" fill="#dc2626"/>
+</svg>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="640" viewBox="0 0 1000 640" font-family="DejaVu Sans">
+  <rect width="1000" height="640" fill="#ffffff"/>
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#dbe4f0" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1000" height="640" fill="url(#grid)"/>
+  <rect x="260" y="160" width="480" height="320" fill="#e8f0fe" stroke="#1d4ed8" stroke-width="5"/>
+  <g fill="#1d4ed8" font-size="34" font-weight="bold">
+    <text x="232" y="150">A</text><text x="748" y="150">B</text>
+    <text x="748" y="512">C</text><text x="228" y="512">D</text>
+  </g>
+  <g stroke="#1d4ed8" stroke-width="3" fill="none">
+    <path d="M260 186h26v-26"/><path d="M740 186h-26v-26"/><path d="M740 454h-26v26"/><path d="M260 454h26v26"/>
+  </g>
+  <g font-size="36" fill="#0f172a" text-anchor="middle">
+    <text x="500" y="536">6 см</text>
+    <text x="820" y="332">4 см</text>
+  </g>
+</svg>

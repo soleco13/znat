@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="700" viewBox="0 0 1000 700" font-family="DejaVu Sans">
+  <rect width="1000" height="700" fill="#fbf7ee"/>
+  <g stroke="#cbd5e1" stroke-width="1.5" fill="none">
+    <path d="M0 140C300 120 700 120 1000 140"/><path d="M0 350C300 330 700 330 1000 350"/><path d="M0 560C300 540 700 540 1000 560"/>
+    <path d="M200 0C190 250 190 450 200 700"/><path d="M500 0V700"/><path d="M800 0C810 250 810 450 800 700"/>
+  </g>
+  <!-- реки -->
+  <g stroke="#60a5fa" stroke-width="4" fill="none" stroke-linecap="round">
+    <path d="M430 520C380 560 330 600 250 640"/>
+    <path d="M610 190C640 140 700 110 760 60"/>
+    <path d="M470 470C520 520 560 560 640 600" stroke-width="3"/>
+  </g>
+  <!-- озеро -->
+  <path d="M640 150C680 170 690 210 660 250C620 300 600 330 570 370C540 410 510 440 480 470C460 490 430 500 420 485C410 470 440 450 465 420C495 385 520 350 550 310C580 270 600 230 610 195C618 165 620 140 640 150Z" fill="#3b82f6" stroke="#1e3a8a" stroke-width="3"/>
+  <path d="M560 300c10 4 14 14 6 22" stroke="#1e3a8a" stroke-width="2" fill="#93c5fd"/>
+  <!-- метка -->
+  <g>
+    <path d="M720 300L600 300" stroke="#dc2626" stroke-width="4"/>
+    <circle cx="760" cy="300" r="40" fill="#dc2626"/>
+    <text x="746" y="316" font-size="44" font-weight="bold" fill="#ffffff">?</text>
+  </g>
+  <text x="40" y="670" font-size="22" fill="#64748b">Контурная карта</text>
+</svg>

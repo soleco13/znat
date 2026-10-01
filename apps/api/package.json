@@ -15,7 +15,8 @@
     "seed:dev": "tsx --env-file=.env src/db/seed-dev.ts",
     "build:showcase": "tsx src/db/build-construct-showcase.ts",
     "db:migrate:prod": "node dist/db/migrate.js",
-    "seed:platform": "tsx --env-file=.env src/db/seed-platform.ts"
+    "seed:platform": "tsx --env-file=.env src/db/seed-platform.ts",
+    "seed:platform-showcase": "tsx --env-file=.env src/db/seed-platform-showcase.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

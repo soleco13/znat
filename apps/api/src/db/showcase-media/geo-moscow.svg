@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="700" viewBox="0 0 1000 700" font-family="DejaVu Sans">
+<rect width="1000" height="700" fill="#f8fafc"/>
+<rect x="120" y="100" width="750" height="500" fill="#ecfdf5" stroke="#0f172a" stroke-width="3"/>
+<path d="M120 100V600" stroke="#94a3b8" stroke-width="2.5"/>
+<text x="120" y="638" font-size="26" text-anchor="middle" fill="#0f172a">30° в.д.</text>
+<path d="M170 100V600" stroke="#94a3b8" stroke-width="1"/>
+<path d="M220 100V600" stroke="#94a3b8" stroke-width="1"/>
+<path d="M270 100V600" stroke="#94a3b8" stroke-width="1"/>
+<path d="M320 100V600" stroke="#94a3b8" stroke-width="1"/>
+<path d="M370 100V600" stroke="#94a3b8" stroke-width="2.5"/>
+<text x="370" y="638" font-size="26" text-anchor="middle" fill="#0f172a">35° в.д.</text>
+<path d="M420 100V600" stroke="#94a3b8" stroke-width="1"/>
+<path d="M470 100V600" stroke="#94a3b8" stroke-width="1"/>
+<path d="M520 100V600" stroke="#94a3b8" stroke-width="1"/>
+<path d="M570 100V600" stroke="#94a3b8" stroke-width="1"/>
+<path d="M620 100V600" stroke="#94a3b8" stroke-width="2.5"/>
+<text x="620" y="638" font-size="26" text-anchor="middle" fill="#0f172a">40° в.д.</text>
+<path d="M670 100V600" stroke="#94a3b8" stroke-width="1"/>
+<path d="M720 100V600" stroke="#94a3b8" stroke-width="1"/>
+<path d="M770 100V600" stroke="#94a3b8" stroke-width="1"/>
+<path d="M820 100V600" stroke="#94a3b8" stroke-width="1"/>
+<path d="M870 100V600" stroke="#94a3b8" stroke-width="2.5"/>
+<text x="870" y="638" font-size="26" text-anchor="middle" fill="#0f172a">45° в.д.</text>
+<path d="M120 600H870" stroke="#94a3b8" stroke-width="2.5"/>
+<text x="108" y="609" font-size="26" text-anchor="end" fill="#0f172a">50° с.ш.</text>
+<path d="M120 550H870" stroke="#94a3b8" stroke-width="1"/>
+<path d="M120 500H870" stroke="#94a3b8" stroke-width="1"/>
+<path d="M120 450H870" stroke="#94a3b8" stroke-width="1"/>
+<path d="M120 400H870" stroke="#94a3b8" stroke-width="1"/>
+<path d="M120 350H870" stroke="#94a3b8" stroke-width="2.5"/>
+<text x="108" y="359" font-size="26" text-anchor="end" fill="#0f172a">55° с.ш.</text>
+<path d="M120 300H870" stroke="#94a3b8" stroke-width="1"/>
+<path d="M120 250H870" stroke="#94a3b8" stroke-width="1"/>
+<path d="M120 200H870" stroke="#94a3b8" stroke-width="1"/>
+<path d="M120 150H870" stroke="#94a3b8" stroke-width="1"/>
+<path d="M120 100H870" stroke="#94a3b8" stroke-width="2.5"/>
+<text x="108" y="109" font-size="26" text-anchor="end" fill="#0f172a">60° с.ш.</text>
+<path d="M270 239.9999999999999C420 210.0000000000001 570 219.99999999999994 670 250.0S820 285.0000000000001 870 310.0000000000001" stroke="#3b82f6" stroke-width="5" fill="none"/>
+<circle cx="500.9999999999999" cy="312.5" r="14" fill="#dc2626" stroke="#ffffff" stroke-width="4"/>
+<text x="522.9999999999999" y="296.5" font-size="30" font-weight="bold" fill="#dc2626">Москва</text>
+</svg>

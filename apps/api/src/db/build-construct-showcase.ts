@@ -19,10 +19,10 @@
  *
  *   pnpm --filter @school/api exec tsx src/db/build-construct-showcase.ts
  *
- * Дальше заводится в БД уже существующим `seed-material.ts`:
+ * Дальше публикуется в библиотеку «Матис» вместе с картинками и аудио
+ * из `showcase-media/`:
  *
- *   pnpm --filter @school/api run seed:material -- \
- *     ../../docs/materials/construct-showcase.json --status published
+ *   pnpm --filter @school/api run seed:platform-showcase
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
@@ -32,6 +32,7 @@ import {
   validateMaterialContent,
   type Material,
   type MaterialBlock,
+  type MaterialBlockGroup,
   type QuestionInteraction,
 } from "@school/shared";
 
@@ -55,19 +56,19 @@ function table(rows: string[][]): MaterialBlock {
   return { type: "table", id: uid(), rows };
 }
 /**
- * Заглушка вместо реального изображения/аудио — в этой среде нет
- * медиатеки для загрузки файлов (StorageAdapter/БД недоступны здесь;
- * `imageBlockSchema`/`audioBlockSchema` требуют непустой `assetId`, взять
- * его неоткуда). Методист при желании заменит на реальный файл через
- * пикер медиатеки — сама конструкция и её текстовое содержимое реальны.
+ * Картинки и аудио — настоящие файлы из `showcase-media/` (схемы — SVG,
+ * картины и фото — общественное достояние/CC0 с Wikimedia Commons, источники
+ * в `showcase-media/SOURCES.md`). Этот скрипт работает без БД, поэтому
+ * `assetId` здесь — метка `media:<файл>`; `seed-platform-showcase.ts`
+ * загружает файлы в медиатеку пространства и подставляет настоящие id.
  */
-function mediaPlaceholder(kind: "image" | "audio", description: string): MaterialBlock {
-  const icon = kind === "image" ? "🖼️" : "🎧";
-  const noun = kind === "image" ? "изображение" : "аудиофрагмент";
-  return callout(
-    "note",
-    `<p>${icon} <em>Здесь будет ${noun}: ${description}. Замените на файл из медиатеки.</em></p>`,
-  );
+const MEDIA_PREFIX = "media:";
+
+function image(file: string, caption: string, zoomable = false): MaterialBlock {
+  return { type: "image", id: uid(), assetId: MEDIA_PREFIX + file, caption, zoomable };
+}
+function audio(file: string, transcript?: string): MaterialBlock {
+  return { type: "audio", id: uid(), assetId: MEDIA_PREFIX + file, transcript };
 }
 
 function questionBlock(promptHtml: string, interaction: QuestionInteraction, points = 1): MaterialBlock {
@@ -156,6 +157,31 @@ function tableFill(rows: (string | { answer: string })[][]): QuestionInteraction
             },
       ),
     ),
+  };
+}
+
+function shuffled(i: QuestionInteraction): QuestionInteraction {
+  return i.type === "single_choice" || i.type === "multiple_choice" ? { ...i, shuffle: true } : i;
+}
+function withAttachments(i: QuestionInteraction): QuestionInteraction {
+  return i.type === "open_answer" ? { ...i, allowAttachments: true } : i;
+}
+
+function withExtras(
+  block: MaterialBlock,
+  extras: { hint?: string; correct?: string; incorrect?: string },
+): MaterialBlock {
+  if (block.type !== "question") return block;
+  return {
+    ...block,
+    hint: extras.hint ? { html: extras.hint } : undefined,
+    feedback:
+      extras.correct || extras.incorrect
+        ? {
+            correct: extras.correct ? { html: extras.correct } : undefined,
+            incorrect: extras.incorrect ? { html: extras.incorrect } : undefined,
+          }
+        : undefined,
   };
 }
 
@@ -442,7 +468,10 @@ const SECTIONS: ShowcaseSection[] = [
         ),
       ]),
       item("en_listening", "Listening", [
-        mediaPlaceholder("audio", "«Hello! My name is Anna. I am eleven years old and I live in Moscow.»"),
+        audio(
+          "en-listening-anna.mp3",
+          "Hello! My name is Anna. I am eleven years old, and I live in Moscow. I go to school every day. My favourite subject is English, and after school I like to play the piano.",
+        ),
         questionBlock(
           "<p>What is the text about?</p>",
           singleChoice([["A girl introducing herself", true], ["A weather forecast", false], ["A recipe", false], ["A football match", false]]),
@@ -495,7 +524,7 @@ const SECTIONS: ShowcaseSection[] = [
         ),
       ]),
       item("math_figure_problem", "Задача с чертежом", [
-        mediaPlaceholder("image", "прямоугольник со сторонами 6 см и 4 см"),
+        image("math-rectangle.svg", "Прямоугольник ABCD"),
         questionBlock("<p>Найдите площадь прямоугольника (в см²)</p>", numericInput(24, { kind: "absolute", value: 0.01 })),
       ]),
       item("math_find_error", "Найди ошибку в решении", [
@@ -546,7 +575,7 @@ const SECTIONS: ShowcaseSection[] = [
         ),
       ]),
       item("phys_graph_reading", "Чтение графика", [
-        mediaPlaceholder("image", "график равномерного движения — координата тела от времени"),
+        image("phys-graph.svg", "Зависимость координаты тела от времени", true),
         questionBlock(
           "<p>Что происходит на графике равномерного движения при t = 0?</p>",
           singleChoice([["Тело находится в начальной точке", true], ["Тело покоится в конце пути", false], ["Тело движется назад", false], ["График не определён", false]]),
@@ -573,7 +602,7 @@ const SECTIONS: ShowcaseSection[] = [
         ),
       ]),
       item("phys_circuit_scheme", "Схема электрической цепи", [
-        mediaPlaceholder("image", "батарея, ключ и лампочка, соединённые последовательно"),
+        image("phys-circuit.svg", "Схема электрической цепи"),
         questionBlock(
           "<p>Опишите, как соединены элементы цепи и что произойдёт, если разомкнуть ключ</p>",
           openAnswer(500, [["Верно описано последовательное соединение", 1], ["Верно объяснён разрыв цепи", 1]]),
@@ -621,7 +650,7 @@ const SECTIONS: ShowcaseSection[] = [
         ),
       ]),
       item("chem_safety", "Техника безопасности", [
-        mediaPlaceholder("image", "ученик пробует вещество на вкус в лаборатории"),
+        image("chem-safety.svg", "На лабораторной работе"),
         questionBlock(
           "<p>Какое правило техники безопасности нарушено на изображении?</p>",
           singleChoice([["Нельзя пробовать вещества на вкус", true], ["Нельзя мыть посуду", false], ["Нельзя записывать результаты", false], ["Нельзя работать в перчатках", false]]),
@@ -634,7 +663,7 @@ const SECTIONS: ShowcaseSection[] = [
     subject: "Биология",
     items: [
       item("bio_label_scheme", "Подпиши схему", [
-        mediaPlaceholder("image", "схема строения клетки с тремя пронумерованными частями"),
+        image("bio-cell.svg", "Строение клетки"),
         questionBlock("<p>Часть 1 (управляет всеми процессами клетки)</p>", textInput(["ядро"])),
         questionBlock("<p>Часть 2 (защищает клетку снаружи)</p>", textInput(["мембрана"])),
         questionBlock("<p>Часть 3 (вещество, заполняющее клетку)</p>", textInput(["цитоплазма"])),
@@ -665,7 +694,7 @@ const SECTIONS: ShowcaseSection[] = [
         ),
       ]),
       item("bio_identify_photo", "Определи по фотографии", [
-        mediaPlaceholder("image", "пресноводная рыба с усами возле рта"),
+        image("bio-catfish.jpg", "Фото: Naturalis Biodiversity Center, CC0", true),
         questionBlock(
           "<p>Что изображено на фотографии?</p>",
           singleChoice([["Сом", true], ["Щука", false], ["Карась", false], ["Окунь", false]]),
@@ -678,7 +707,7 @@ const SECTIONS: ShowcaseSection[] = [
     subject: "География",
     items: [
       item("geo_contour_map", "Контурная карта", [
-        mediaPlaceholder("image", "контурная карта с отмеченным самым глубоким озером мира"),
+        image("geo-baikal.svg", "Контурная карта"),
         questionBlock("<p>Назовите отмеченный объект</p>", textInput(["Байкал"])),
       ]),
       item("geo_capitals", "Страна — столица", [
@@ -694,12 +723,12 @@ const SECTIONS: ShowcaseSection[] = [
         ),
       ]),
       item("geo_coordinates", "Координаты точки", [
-        mediaPlaceholder("image", "карта с отмеченным городом Москва"),
+        image("geo-moscow.svg", "Градусная сетка", true),
         questionBlock("<p>Широта города Москвы</p>", numericInput(55.75, { kind: "absolute", value: 1 }, "°")),
         questionBlock("<p>Долгота города Москвы</p>", numericInput(37.62, { kind: "absolute", value: 1 }, "°")),
       ]),
       item("geo_climatogram", "Чтение климатограммы", [
-        richText("<p>Климатограмма умеренно континентального климата средней полосы России: самый тёплый месяц — июль, самый холодный — январь, среднегодовое количество осадков — около 600 мм.</p>"),
+        image("geo-climatogram.svg", "Климатограмма Москвы", true),
         questionBlock("<p>Какой месяц самый тёплый?</p>", singleChoice([["Июль", true], ["Январь", false], ["Март", false], ["Октябрь", false]])),
         questionBlock("<p>Какое среднегодовое количество осадков (в мм)?</p>", numericInput(600, { kind: "relative", value: 0.05 })),
       ]),
@@ -764,14 +793,14 @@ const SECTIONS: ShowcaseSection[] = [
         ),
       ]),
       item("hist_recognize_person", "Узнай личность по портрету", [
-        mediaPlaceholder("image", "портрет российского императора, отменившего крепостное право в 1861 году"),
+        image("hist-alexander2.jpg", "Н. А. Лавров, портрет (XIX в.)", true),
         questionBlock(
           "<p>Кто изображён на портрете?</p>",
           singleChoice([["Александр II", true], ["Николай I", false], ["Пётр I", false], ["Александр I", false]]),
         ),
       ]),
       item("hist_battle_map", "Карта сражения / территории", [
-        mediaPlaceholder("image", "карта сражения 1812 года близ Москвы"),
+        image("hist-borodino.jpg", "Карта сражения 24–26 августа 1812 года", true),
         questionBlock("<p>Назовите отмеченное сражение</p>", textInput(["Бородинское сражение", "Бородино"])),
       ]),
       item("hist_legal_case", "Правовой кейс", [
@@ -855,21 +884,21 @@ const SECTIONS: ShowcaseSection[] = [
     subject: "Музыка, ИЗО, ОБЖ",
     items: [
       item("art_audio_question", "Музыкальный фрагмент", [
-        mediaPlaceholder("audio", "плавная мелодия скрипки в темпе вальса"),
+        audio("art-bach-partita3.mp3", "И. С. Бах. Партита № 3 ми мажор для скрипки соло, BWV 1006 — Прелюдия (фрагмент)"),
         questionBlock(
           "<p>Какой инструмент исполняет мелодию?</p>",
           singleChoice([["Скрипка", true], ["Труба", false], ["Барабан", false], ["Флейта", false]]),
         ),
       ]),
       item("art_reproduction_analysis", "Анализ репродукции", [
-        mediaPlaceholder("image", "картина И.И. Шишкина «Утро в сосновом лесу»"),
+        image("art-shishkin.jpg", "И. И. Шишкин, К. А. Савицкий. «Утро в сосновом лесу», 1889", true),
         questionBlock(
           "<p>Опишите и проанализируйте изображение: что изображено, какое настроение передаёт картина?</p>",
           openAnswer(700, [["Описан сюжет картины", 1], ["Отмечено настроение/впечатление", 1]]),
         ),
       ]),
       item("art_recognize_style", "Узнай стиль или эпоху", [
-        mediaPlaceholder("image", "яркие смазанные мазки, естественный свет и сюжеты — конец XIX века, Франция"),
+        image("art-monet.jpg", "Картина 1872 года", true),
         questionBlock(
           "<p>К какому стилю/эпохе относится изображение?</p>",
           singleChoice([["Импрессионизм", true], ["Классицизм", false], ["Кубизм", false], ["Готика", false]]),
@@ -890,7 +919,184 @@ const SECTIONS: ShowcaseSection[] = [
   },
 ];
 
+// ─── Базовые блоки — каждый тип блока и вопроса из меню «/» ────────────
+//
+// Конструкции собраны из базовых блоков, но не из всех: видео, встраивание,
+// спойлер, разрыв слайда, «пропуски с вводом» и настройки вопроса
+// (подсказка, отзыв, перемешивание, допуски) в них не встречаются. Этот
+// раздел показывает каждый тип и каждую настройку хотя бы раз.
+
+const BASE_BLOCKS: MaterialBlock[] = [
+  richText("<h2>Базовые блоки редактора</h2>"),
+  richText(
+    `<p>Обычный текст поддерживает <strong>жирный</strong>, <em>курсив</em>, <u>подчёркнутый</u>,
+     <s>зачёркнутый</s> и <span style="color: #2563eb">цветной</span> текст,
+     <code>моноширинный код</code> и <a href="https://ru.wikipedia.org/wiki/Пифагор">ссылки</a>.</p>
+     <h3>Списки и цитаты</h3>
+     <ul><li>маркированный список</li><li>второй пункт</li></ul>
+     <ol><li>нумерованный список</li><li>второй пункт</li></ol>
+     <blockquote><p>«Число есть сущность всех вещей». — Пифагор</p></blockquote>`,
+  ),
+  formula("a^2 + b^2 = c^2"),
+  formula("x_{1,2} = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}"),
+  table([
+    ["Тип блока", "Для чего"],
+    ["Формула", "LaTeX, отображается через KaTeX"],
+    ["Таблица", "Справочные данные без ответов"],
+    ["Врезка", "Определение, предупреждение, пример"],
+  ]),
+  callout("note", "<p><strong>Врезка «Заметка».</strong> Определения и важные факты.</p>"),
+  callout("warning", "<p><strong>Врезка «Внимание».</strong> Теоремы, правила и частые ошибки.</p>"),
+  callout("example", "<p><strong>Врезка «Пример».</strong> Разобранный пример или образец решения.</p>"),
+  spoiler("Показать решение", "<p>Спойлер свёрнут, пока ученик сам его не раскроет: решение, перевод, подсказка к теории.</p>"),
+  image("phys-graph.svg", "Картинка с подписью; по клику открывается крупно", true),
+  audio("en-listening-anna.mp3", "Аудио с транскриптом: ученик раскрывает текст под плеером."),
+  {
+    type: "video",
+    id: uid(),
+    assetId:
+      "https://upload.wikimedia.org/wikipedia/commons/8/87/Earth_rotation_during_Galileo_flyby_%28PIA00114%29.webm",
+  },
+  { type: "embed", id: uid(), provider: "geogebra", config: {} },
+  { type: "embed", id: uid(), provider: "desmos", config: {} },
+  { type: "embed", id: uid(), provider: "jsxgraph", config: {} },
+  richText("<p>Ниже — разрыв слайда: следующий блок начнётся с нового слайда.</p>"),
+  { type: "page_break", id: uid() },
+
+  richText("<h2>Типы вопросов</h2>"),
+  withExtras(
+    questionBlock(
+      "<p><strong>Один вариант.</strong> Сколько сторон у треугольника?</p>",
+      shuffled(singleChoice([["3", true], ["4", false], ["5", false], ["6", false]])),
+    ),
+    {
+      hint: "<p>Подсказка открывается по кнопке: «три угла — столько же сторон».</p>",
+      correct: "<p>Верно — у треугольника три стороны.</p>",
+      incorrect: "<p>Посчитайте углы: у треугольника их три.</p>",
+    },
+  ),
+  questionBlock(
+    "<p><strong>Несколько вариантов.</strong> Отметьте простые числа.</p>",
+    shuffled(multipleChoice([["2", true], ["9", false], ["11", true], ["15", false], ["17", true]])),
+    2,
+  ),
+  questionBlock("<p><strong>Верно / неверно.</strong> Вода кипит при 100 °C при нормальном давлении.</p>", trueFalse(true)),
+  withExtras(
+    questionBlock(
+      "<p><strong>Короткий ответ</strong> (допускается одна опечатка). Столица Франции?</p>",
+      textInput(["Париж"], { typoTolerance: 1 }),
+    ),
+    { correct: "<p>Верно, Париж.</p>" },
+  ),
+  questionBlock(
+    "<p><strong>Короткий ответ по шаблону.</strong> Запишите любое чётное двузначное число.</p>",
+    {
+      type: "text_input",
+      answers: [{ value: "^[1-9][02468]$", match: "regex" }],
+      caseSensitive: false,
+      trimWhitespace: true,
+      typoTolerance: 0,
+    },
+  ),
+  questionBlock(
+    "<p><strong>Число с единицей измерения.</strong> Масса 1 л воды (единица обязательна).</p>",
+    numericInput(1, { kind: "percent", value: 5 }, "кг", true),
+  ),
+  questionBlock(
+    "<p><strong>Число с относительным допуском.</strong> Чему равно число π с точностью до 1 %?</p>",
+    numericInput(3.1416, { kind: "relative", value: 0.01 }),
+  ),
+  questionBlock(
+    "<p><strong>Развёрнутый ответ</strong> (можно приложить фото решения). Объясните, почему летом день длиннее ночи.</p>",
+    withAttachments(openAnswer(800, [["Упомянут наклон земной оси", 1], ["Объяснено положение Земли на орбите", 1]])),
+    2,
+  ),
+  questionBlock(
+    "<p><strong>Пропуски с выбором.</strong></p>",
+    clozeDropdown("Москва — {{g1}} России, она стоит на реке {{g2}}.", {
+      g1: { options: ["столица", "окраина", "провинция"], correct: "столица" },
+      g2: { options: ["Москве", "Неве", "Волге"], correct: "Москве" },
+    }),
+    2,
+  ),
+  questionBlock(
+    "<p><strong>Пропуски с вводом.</strong></p>",
+    {
+      type: "cloze_text",
+      template: "Земля вращается вокруг {{g1}} и делает полный оборот за {{g2}} дней.",
+      gaps: {
+        g1: { answers: [{ value: "Солнца", match: "normalized" }], caseSensitive: false, trimWhitespace: true, typoTolerance: 1 },
+        g2: {
+          answers: [{ value: "365", match: "exact" }, { value: "366", match: "exact" }],
+          caseSensitive: false,
+          trimWhitespace: true,
+          typoTolerance: 0,
+        },
+      },
+    },
+    2,
+  ),
+  questionBlock(
+    "<p><strong>Соответствие с частичным баллом и лишним вариантом.</strong> Планета — её особенность.</p>",
+    (() => {
+      const m = matching(
+        [
+          ["Меркурий", "Ближе всех к Солнцу"],
+          ["Юпитер", "Самая большая планета"],
+          ["Сатурн", "Заметные кольца"],
+        ],
+        "partial",
+      );
+      if (m.type !== "matching") return m;
+      const extra = { id: uid(), html: "Спутник Земли" };
+      return { ...m, right: [...m.right, extra], distractors: [extra.id] };
+    })(),
+    3,
+  ),
+  questionBlock(
+    "<p><strong>Порядок.</strong> Расположите планеты по удалённости от Солнца.</p>",
+    ordering(["Меркурий", "Венера", "Земля", "Марс"]),
+  ),
+  questionBlock(
+    "<p><strong>Распределение по группам.</strong></p>",
+    categorize([
+      ["Млекопитающие", ["кит", "летучая мышь"]],
+      ["Птицы", ["пингвин", "страус"]],
+      ["Рыбы", ["акула"]],
+    ]),
+    2,
+  ),
+  questionBlock(
+    "<p><strong>Выделение в тексте.</strong> Отметьте все прилагательные.</p>",
+    highlightText([
+      ["Яркое", true], ["солнце", false], ["освещало", false], ["зелёный", true], ["луг", false],
+      ["и", false], ["тихую", true], ["реку", false],
+    ]),
+  ),
+  questionBlock(
+    "<p><strong>Заполнение таблицы.</strong></p>",
+    tableFill([
+      ["Число", "Квадрат", "Куб"],
+      ["2", { answer: "4" }, { answer: "8" }],
+      ["3", { answer: "9" }, { answer: "27" }],
+    ]),
+    2,
+  ),
+];
+
 // ─── Сборка материала ────────────────────────────────────────────────
+
+/**
+ * Одноблочные конструкции (`kind: "block"` в material-templates.ts) —
+ * вставляются без рамки-группы; остальные редактор оборачивает в группу,
+ * и витрина повторяет это.
+ */
+const SINGLE_BLOCK_CONSTRUCTS = new Set<string>([
+  "definition_callout", "theorem_callout", "example_callout", "mc4", "numeric_tolerance",
+  "ru_syntax_parse", "ru_parts_of_speech", "lit_essay", "math_equation", "math_mental_math",
+  "phys_units_problem", "phys_why_question", "chem_classify", "chem_calc_problem",
+  "bio_classify_organisms", "geo_natural_zones", "hist_concept_features", "inf_number_system",
+]);
 
 function assertCoverage(sections: ShowcaseSection[]) {
   const covered = new Set(sections.flatMap((s) => s.items.map((i) => i.id)));
@@ -914,17 +1120,23 @@ const blocks: MaterialBlock[] = [
      конструкций (кнопка «/» → «Конструкции» в редакторе), заполненную настоящим
      предметным содержанием, а не заготовками-плейсхолдерами. Разделы идут по
      предметам в том же порядке, что и в пикере; перед каждым упражнением —
-     подзаголовок с названием конструкции. Материал специально «переполнен» —
-     он не рассчитан на прохождение одним учеником целиком, это витрина
-     возможностей для методиста.</p>`,
+     подзаголовок с названием конструкции. Сначала идут базовые блоки — каждый
+     тип блока и вопроса из меню «/» с его настройками. Материал специально
+     «переполнен» — он не рассчитан на прохождение одним учеником целиком,
+     это витрина возможностей для методиста.</p>`,
   ),
+  ...BASE_BLOCKS,
 ];
+const groups: MaterialBlockGroup[] = [];
 
 for (const section of SECTIONS) {
   blocks.push(richText(`<h2>${section.subject}</h2>`));
   for (const it of section.items) {
     blocks.push(richText(`<h3>${it.label}</h3>`));
     blocks.push(...it.blocks);
+    if (!SINGLE_BLOCK_CONSTRUCTS.has(it.id) && it.blocks.length > 1) {
+      groups.push({ id: uid(), templateId: it.id, label: it.label, blockIds: it.blocks.map((b) => b.id) });
+    }
   }
 }
 
@@ -938,7 +1150,7 @@ const material: Material = {
   tags: ["витрина", "конструкции", "демонстрация"],
   settings: { shuffleBlocks: false, showFeedback: "after_submit", attemptsAllowed: 5, layout: "slides" },
   blocks,
-  groups: [],
+  groups,
 };
 
 // ─── Валидация и запись ─────────────────────────────────────────────

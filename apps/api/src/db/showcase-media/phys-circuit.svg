@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="640" viewBox="0 0 1000 640" font-family="DejaVu Sans">
+  <rect width="1000" height="640" fill="#ffffff"/>
+  <g stroke="#0f172a" stroke-width="5" fill="none" stroke-linecap="round">
+    <!-- провода -->
+    <path d="M200 160H455"/><path d="M545 160H800V480H620"/><path d="M500 480H200V160"/>
+    <!-- батарея: длинная и короткая пластины -->
+    <path d="M455 110V210" stroke-width="6"/><path d="M490 135V185" stroke-width="12"/>
+    <path d="M490 160H545"/>
+    <!-- ключ (разомкнут) -->
+    <circle cx="500" cy="480" r="7" fill="#0f172a"/><circle cx="620" cy="480" r="7" fill="#0f172a"/>
+    <path d="M500 480L606 432"/>
+  </g>
+  <!-- лампа -->
+  <g stroke="#0f172a" stroke-width="5" fill="#ffffff">
+    <circle cx="800" cy="320" r="48"/>
+    <path d="M766 286L834 354M834 286L766 354" fill="none"/>
+  </g>
+  <g font-size="30" fill="#0f172a">
+    <text x="438" y="96">+</text><text x="482" y="96">−</text>
+    <text x="400" y="260">Батарея</text>
+    <text x="512" y="540">Ключ</text>
+    <text x="866" y="332">Лампа</text>
+  </g>
+</svg>

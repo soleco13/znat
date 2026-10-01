@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="720" viewBox="0 0 1000 720" font-family="DejaVu Sans">
+<rect width="1000" height="720" fill="#ffffff"/>
+<text x="500" y="50" font-size="30" font-weight="bold" text-anchor="middle" fill="#0f172a">Москва · t° года +5 °C · осадки за год 600 мм</text>
+<path d="M130 600.0H880" stroke="#e2e8f0" stroke-width="1.5"/>
+<text x="118" y="608.0" font-size="22" text-anchor="end" fill="#dc2626">-10</text>
+<path d="M130 530.0H880" stroke="#e2e8f0" stroke-width="1.5"/>
+<text x="118" y="538.0" font-size="22" text-anchor="end" fill="#dc2626">-5</text>
+<path d="M130 460.0H880" stroke="#e2e8f0" stroke-width="1.5"/>
+<text x="118" y="468.0" font-size="22" text-anchor="end" fill="#dc2626">0</text>
+<path d="M130 390.0H880" stroke="#e2e8f0" stroke-width="1.5"/>
+<text x="118" y="398.0" font-size="22" text-anchor="end" fill="#dc2626">5</text>
+<path d="M130 320.0H880" stroke="#e2e8f0" stroke-width="1.5"/>
+<text x="118" y="328.0" font-size="22" text-anchor="end" fill="#dc2626">10</text>
+<path d="M130 250.0H880" stroke="#e2e8f0" stroke-width="1.5"/>
+<text x="118" y="258.0" font-size="22" text-anchor="end" fill="#dc2626">15</text>
+<path d="M130 180.0H880" stroke="#e2e8f0" stroke-width="1.5"/>
+<text x="118" y="188.0" font-size="22" text-anchor="end" fill="#dc2626">20</text>
+<path d="M130 110.0H880" stroke="#e2e8f0" stroke-width="1.5"/>
+<text x="118" y="118.0" font-size="22" text-anchor="end" fill="#dc2626">25</text>
+<text x="892" y="608.0" font-size="22" fill="#2563eb">0</text>
+<text x="892" y="510.0" font-size="22" fill="#2563eb">20</text>
+<text x="892" y="412.0" font-size="22" fill="#2563eb">40</text>
+<text x="892" y="314.0" font-size="22" fill="#2563eb">60</text>
+<text x="892" y="216.0" font-size="22" fill="#2563eb">80</text>
+<text x="892" y="118.0" font-size="22" fill="#2563eb">100</text>
+<path d="M130 460.0H880" stroke="#94a3b8" stroke-width="2"/>
+<rect x="138.0" y="394.2" width="46.5" height="205.8" fill="#93c5fd" stroke="#2563eb" stroke-width="2"/>
+<rect x="200.5" y="423.6" width="46.5" height="176.4" fill="#93c5fd" stroke="#2563eb" stroke-width="2"/>
+<rect x="263.0" y="433.4" width="46.5" height="166.6" fill="#93c5fd" stroke="#2563eb" stroke-width="2"/>
+<rect x="325.5" y="423.6" width="46.5" height="176.4" fill="#93c5fd" stroke="#2563eb" stroke-width="2"/>
+<rect x="388.0" y="364.8" width="46.5" height="235.2" fill="#93c5fd" stroke="#2563eb" stroke-width="2"/>
+<rect x="450.5" y="257.0" width="46.5" height="343.0" fill="#93c5fd" stroke="#2563eb" stroke-width="2"/>
+<rect x="513.0" y="198.2" width="46.5" height="401.8" fill="#93c5fd" stroke="#2563eb" stroke-width="2"/>
+<rect x="575.5" y="247.2" width="46.5" height="352.8" fill="#93c5fd" stroke="#2563eb" stroke-width="2"/>
+<rect x="638.0" y="325.6" width="46.5" height="274.4" fill="#93c5fd" stroke="#2563eb" stroke-width="2"/>
+<rect x="700.5" y="364.8" width="46.5" height="235.2" fill="#93c5fd" stroke="#2563eb" stroke-width="2"/>
+<rect x="763.0" y="404.0" width="46.5" height="196.0" fill="#93c5fd" stroke="#2563eb" stroke-width="2"/>
+<rect x="825.5" y="423.6" width="46.5" height="176.4" fill="#93c5fd" stroke="#2563eb" stroke-width="2"/>
+<polyline points="161.2,551.0 223.8,553.8 286.2,474.0 348.8,366.2 411.2,275.2 473.8,222.0 536.2,191.2 598.8,222.0 661.2,301.8 723.8,381.6 786.2,476.8 848.8,532.8" fill="none" stroke="#dc2626" stroke-width="5" stroke-linejoin="round"/>
+<circle cx="161.2" cy="551.0" r="6" fill="#dc2626"/>
+<circle cx="223.8" cy="553.8" r="6" fill="#dc2626"/>
+<circle cx="286.2" cy="474.0" r="6" fill="#dc2626"/>
+<circle cx="348.8" cy="366.2" r="6" fill="#dc2626"/>
+<circle cx="411.2" cy="275.2" r="6" fill="#dc2626"/>
+<circle cx="473.8" cy="222.0" r="6" fill="#dc2626"/>
+<circle cx="536.2" cy="191.2" r="6" fill="#dc2626"/>
+<circle cx="598.8" cy="222.0" r="6" fill="#dc2626"/>
+<circle cx="661.2" cy="301.8" r="6" fill="#dc2626"/>
+<circle cx="723.8" cy="381.6" r="6" fill="#dc2626"/>
+<circle cx="786.2" cy="476.8" r="6" fill="#dc2626"/>
+<circle cx="848.8" cy="532.8" r="6" fill="#dc2626"/>
+<text x="161.2" y="636" font-size="24" text-anchor="middle" fill="#0f172a">Я</text>
+<text x="223.8" y="636" font-size="24" text-anchor="middle" fill="#0f172a">Ф</text>
+<text x="286.2" y="636" font-size="24" text-anchor="middle" fill="#0f172a">М</text>
+<text x="348.8" y="636" font-size="24" text-anchor="middle" fill="#0f172a">А</text>
+<text x="411.2" y="636" font-size="24" text-anchor="middle" fill="#0f172a">М</text>
+<text x="473.8" y="636" font-size="24" text-anchor="middle" fill="#0f172a">И</text>
+<text x="536.2" y="636" font-size="24" text-anchor="middle" fill="#0f172a">И</text>
+<text x="598.8" y="636" font-size="24" text-anchor="middle" fill="#0f172a">А</text>
+<text x="661.2" y="636" font-size="24" text-anchor="middle" fill="#0f172a">С</text>
+<text x="723.8" y="636" font-size="24" text-anchor="middle" fill="#0f172a">О</text>
+<text x="786.2" y="636" font-size="24" text-anchor="middle" fill="#0f172a">Н</text>
+<text x="848.8" y="636" font-size="24" text-anchor="middle" fill="#0f172a">Д</text>
+<path d="M130 110V600H880V110" stroke="#0f172a" stroke-width="2.5" fill="none"/>
+<text x="118" y="90" font-size="24" text-anchor="end" fill="#dc2626">t, °C</text>
+<text x="892" y="90" font-size="24" fill="#2563eb">мм</text>
+</svg>
