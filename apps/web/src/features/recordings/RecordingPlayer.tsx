@@ -57,17 +57,23 @@ function ControlButton({
 /**
  * Плеер записи урока (макет «Просмотр записи»): своя панель поверх
  * `<video>` — прогресс с буферизацией, ±10 секунд, скорость, звук,
- * «картинка в картинке», полный экран и горячие клавиши. Клавиши слушаем
- * на window, пока плеер на странице, кроме ввода в поля.
+ * «картинка в картинке», полный экран и горячие клавиши. На странице записи
+ * клавиши слушаем на window, пока плеер на странице, кроме ввода в поля.
+ * Внутри материала (`hotkeys="focus"`) — только когда фокус в самом плеере:
+ * роликов на странице может быть несколько, а пробел/стрелки нужны уроку.
  */
 export function RecordingPlayer({
   src,
   poster,
   className,
+  hotkeys = "window",
+  playLabel = "Смотреть запись",
 }: {
   src: string;
   poster?: string | null;
   className?: string;
+  hotkeys?: "window" | "focus";
+  playLabel?: string;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -149,8 +155,8 @@ export function RecordingPlayer({
   }, []);
 
   // Горячие клавиши.
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
+  const onKey = useCallback(
+    (e: Pick<KeyboardEvent, "key" | "code" | "target" | "ctrlKey" | "metaKey" | "altKey" | "preventDefault">) => {
       const t = e.target as HTMLElement | null;
       if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -169,10 +175,15 @@ export function RecordingPlayer({
       } else if (key === "s" || key === "ы") cycleSpeed();
       else if (key === "m" || key === "ь") toggleMute();
       else if (key === "f" || key === "а") toggleFullscreen();
-    }
+    },
+    [toggle, skip, cycleSpeed, toggleMute, toggleFullscreen],
+  );
+
+  useEffect(() => {
+    if (hotkeys !== "window") return;
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [toggle, skip, cycleSpeed, toggleMute, toggleFullscreen]);
+  }, [hotkeys, onKey]);
 
   useEffect(() => {
     const onFs = () => setFullscreen(document.fullscreenElement === frameRef.current);
@@ -216,10 +227,12 @@ export function RecordingPlayer({
   return (
     <div
       ref={frameRef}
+      tabIndex={hotkeys === "focus" ? 0 : undefined}
+      onKeyDown={hotkeys === "focus" ? (e) => onKey(e) : undefined}
       onPointerMove={wake}
       onPointerLeave={() => playing && setIdle(true)}
       className={cn(
-        "group/player relative aspect-video select-none overflow-hidden bg-[#0b1220] [&:fullscreen]:aspect-auto",
+        "group/player relative aspect-video select-none overflow-hidden bg-[#0b1220] focus-visible:outline-none [&:fullscreen]:aspect-auto",
         controlsHidden && "cursor-none",
         className,
       )}
@@ -273,7 +286,7 @@ export function RecordingPlayer({
         <button
           type="button"
           onClick={toggle}
-          aria-label="Смотреть запись"
+          aria-label={playLabel}
           className="absolute inset-0 flex items-center justify-center bg-[#0b1220]/40 transition-colors duration-150 hover:bg-[#0b1220]/30 focus-visible:outline-none"
         >
           <span className="flex size-[76px] items-center justify-center rounded-full bg-white text-foreground shadow-md">

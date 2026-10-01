@@ -7,6 +7,7 @@ import { sanitizeHtml } from "@/shared/sanitize-html";
 import { Alert, AlertDescription } from "@/shared/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/shared/ui/accordion";
 import { Button } from "@/shared/ui/button";
+import { RecordingPlayer } from "@/features/recordings/RecordingPlayer.js";
 import { QuestionPlayer } from "./QuestionPlayer.js";
 import { SlideDeck } from "./SlideDeck.js";
 import { submitActivity } from "./activity-api.js";
@@ -351,7 +352,7 @@ function ImageAssetView({ block }: { block: Extract<Block, { type: "image" }> })
 }
 
 /**
- * Видео из медиатеки — `<video>` по подписанной ссылке (Caddy отдаёт её с
+ * Видео из медиатеки — тот же плеер, что у записей урока, по подписанной ссылке (Caddy отдаёт её с
  * Range, перемотка работает). Старые блоки со ссылкой вместо id медиатеки
  * (поле «Ссылка на видео» в редакторе) CSP всё равно не пустит — для них
  * прежняя заглушка.
@@ -374,12 +375,11 @@ function VideoFromLibrary({ assetId }: { assetId: string }) {
   if (error) return <p className="text-xs text-destructive">Не удалось загрузить видео</p>;
   if (!url) return <p className="text-xs text-muted-foreground">Загрузка видео…</p>;
   return (
-    <video
+    <RecordingPlayer
       src={url}
-      controls
-      playsInline
-      preload="metadata"
-      className="aspect-video w-full rounded-lg border border-border bg-black"
+      hotkeys="focus"
+      playLabel="Смотреть видео"
+      className="w-full rounded-lg border border-border"
     />
   );
 }
