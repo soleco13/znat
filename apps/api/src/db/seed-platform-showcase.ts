@@ -1,5 +1,5 @@
 /**
- * Витрина конструкций в библиотеке «Матис»: заливает картинки/аудио витрины
+ * Витрина конструкций в библиотеке «Матис»: заливает картинки/аудио/видео витрины
  * в медиатеку служебного пространства, подставляет их id вместо меток
  * `media:<файл>` и публикует материал — новый или новой версией уже
  * заведённого (ищется по названию). Не часть рантайма — ручной инструмент.
@@ -34,12 +34,24 @@ const MIME_BY_EXT: Record<string, string> = {
   ".jpeg": "image/jpeg",
   ".webp": "image/webp",
   ".mp3": "audio/mpeg",
+  ".mp4": "video/mp4",
 };
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const [jsonArg, mediaArg] = process.argv.slice(2).filter((a) => a !== "--");
 const jsonPath = jsonArg ?? path.resolve(here, "../../../../docs/materials/construct-showcase.json");
 const mediaDir = mediaArg ?? path.resolve(here, "showcase-media");
+/** Промо-ролик лежит не в `showcase-media/`, а рядом с исходниками ролика — второе место поиска. */
+const videoDir = path.resolve(here, "../../../../video-marketing/mathis-promo/out");
+
+async function readMedia(file: string): Promise<Buffer> {
+  try {
+    return await readFile(path.join(mediaDir, file));
+  } catch (err) {
+    if (!file.endsWith(".mp4")) throw err;
+    return readFile(path.join(videoDir, file));
+  }
+}
 
 const content: Material = materialSchema.parse(JSON.parse(await readFile(jsonPath, "utf8")));
 
@@ -71,7 +83,7 @@ async function ensureAsset(file: string): Promise<string> {
     .limit(1);
   if (existing) return existing.id;
 
-  const raw = await readFile(path.join(mediaDir, file));
+  const raw = await readMedia(file);
   const buffer = isSvg ? await sharp(raw, { density: SVG_DENSITY }).png().toBuffer() : raw;
   const mimeType = MIME_BY_EXT[path.extname(uploadName).toLowerCase()];
   if (!mimeType) throw new Error(`Неизвестный тип файла: ${file}`);
@@ -88,7 +100,10 @@ async function ensureAsset(file: string): Promise<string> {
 
 const assetIds = new Map<string, string>();
 for (const block of content.blocks) {
-  if ((block.type === "image" || block.type === "audio") && block.assetId.startsWith(MEDIA_PREFIX)) {
+  if (
+    (block.type === "image" || block.type === "audio" || block.type === "video") &&
+    block.assetId.startsWith(MEDIA_PREFIX)
+  ) {
     const file = block.assetId.slice(MEDIA_PREFIX.length);
     if (!assetIds.has(file)) assetIds.set(file, await ensureAsset(file));
     block.assetId = assetIds.get(file)!;

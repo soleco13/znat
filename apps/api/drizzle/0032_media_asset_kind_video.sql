@@ -1,0 +1,1 @@
+ALTER TYPE "public"."media_asset_kind" ADD VALUE 'video';

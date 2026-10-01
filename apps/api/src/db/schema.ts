@@ -40,7 +40,7 @@ export const deckStatusEnum = pgEnum("deck_status", [
 ]);
 export const materialStatusEnum = pgEnum("material_status", ["draft", "review", "published"]);
 /** Э9.7: `video` сознательно не входит — план ограничивает подзадачу «картинки/аудио», видео в медиатеке — отдельная работа (транскодирование/превью не в этом срезе). */
-export const mediaAssetKindEnum = pgEnum("media_asset_kind", ["image", "audio"]);
+export const mediaAssetKindEnum = pgEnum("media_asset_kind", ["image", "audio", "video"]);
 /**
  * Э10 (§10.4 ТЗ). Проекция `livekit.EgressStatus` + собственное `deleted`
  * (удаление файла по ретеншну). Строкой, не числом LiveKit — журнал

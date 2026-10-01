@@ -576,7 +576,14 @@ export const mediaAudioMimeTypeSchema = z.enum([
   "audio/webm",
 ]);
 
-export const mediaAssetKindSchema = z.enum(["image", "audio"]);
+/**
+ * mp4/webm — то, что `<video>` играет без транскодирования. Загрузки из
+ * редактора пока нет (пикер — только картинки/аудио); видео кладут в
+ * медиатеку служебные скрипты (витрина «Матиса»).
+ */
+export const mediaVideoMimeTypeSchema = z.enum(["video/mp4", "video/webm"]);
+
+export const mediaAssetKindSchema = z.enum(["image", "audio", "video"]);
 export type MediaAssetKind = z.infer<typeof mediaAssetKindSchema>;
 
 /** Одна запись медиатеки — карточка в пикере (`GET /materials/media`) и ответ загрузки (`POST /materials/media`). */

@@ -2,6 +2,7 @@ import { Readable } from "node:stream";
 import sharp from "sharp";
 import {
   mediaAudioMimeTypeSchema,
+  mediaVideoMimeTypeSchema,
   mediaImageMimeTypeSchema,
   type MediaAsset,
   type MediaAssetKind,
@@ -40,14 +41,15 @@ export async function uploadMediaAsset(input: {
 }): Promise<MediaAsset> {
   const asImage = mediaImageMimeTypeSchema.safeParse(input.mimeType);
   const asAudio = mediaAudioMimeTypeSchema.safeParse(input.mimeType);
-  if (!asImage.success && !asAudio.success) {
+  const asVideo = mediaVideoMimeTypeSchema.safeParse(input.mimeType);
+  if (!asImage.success && !asAudio.success && !asVideo.success) {
     throw new AppError(
       400,
       "unsupported_type",
-      "Поддерживаются изображения (PNG/JPEG/WebP) и аудио (MP3/WAV/OGG/M4A/WebM)",
+      "Поддерживаются изображения (PNG/JPEG/WebP), аудио (MP3/WAV/OGG/M4A/WebM) и видео (MP4/WebM)",
     );
   }
-  const kind: MediaAssetKind = asImage.success ? "image" : "audio";
+  const kind: MediaAssetKind = asImage.success ? "image" : asAudio.success ? "audio" : "video";
 
   let buffer = input.buffer;
   if (kind === "image") {

@@ -20,7 +20,7 @@
  *   pnpm --filter @school/api exec tsx src/db/build-construct-showcase.ts
  *
  * Дальше публикуется в библиотеку «Матис» вместе с картинками и аудио
- * из `showcase-media/`:
+ * из `showcase-media/` и промо-роликом:
  *
  *   pnpm --filter @school/api run seed:platform-showcase
  */
@@ -69,6 +69,11 @@ function image(file: string, caption: string, zoomable = false): MaterialBlock {
 }
 function audio(file: string, transcript?: string): MaterialBlock {
   return { type: "audio", id: uid(), assetId: MEDIA_PREFIX + file, transcript };
+}
+/** Промо-ролик «Матиса» — `video-marketing/mathis-promo/out/`, seed берёт его оттуда. */
+const PROMO_VIDEO = "MathisPromo.mp4";
+function video(file: string): MaterialBlock {
+  return { type: "video", id: uid(), assetId: MEDIA_PREFIX + file };
 }
 
 function questionBlock(promptHtml: string, interaction: QuestionInteraction, points = 1): MaterialBlock {
@@ -951,12 +956,7 @@ const BASE_BLOCKS: MaterialBlock[] = [
   spoiler("Показать решение", "<p>Спойлер свёрнут, пока ученик сам его не раскроет: решение, перевод, подсказка к теории.</p>"),
   image("phys-graph.svg", "Картинка с подписью; по клику открывается крупно", true),
   audio("en-listening-anna.mp3", "Аудио с транскриптом: ученик раскрывает текст под плеером."),
-  {
-    type: "video",
-    id: uid(),
-    assetId:
-      "https://upload.wikimedia.org/wikipedia/commons/8/87/Earth_rotation_during_Galileo_flyby_%28PIA00114%29.webm",
-  },
+  video(PROMO_VIDEO),
   { type: "embed", id: uid(), provider: "geogebra", config: {} },
   { type: "embed", id: uid(), provider: "desmos", config: {} },
   { type: "embed", id: uid(), provider: "jsxgraph", config: {} },
@@ -1114,6 +1114,7 @@ assertCoverage(SECTIONS);
 
 const blocks: MaterialBlock[] = [
   richText("<h2>Витрина конструкций редактора материалов</h2>"),
+  video(PROMO_VIDEO),
   spoiler(
     "Как устроен этот материал",
     `<p>Этот материал — каталог: он использует <strong>каждую</strong> конструкцию из пикера

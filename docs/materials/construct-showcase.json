@@ -1,5 +1,5 @@
 {
-  "id": "ad7163f3-ec9b-4d64-a45a-27dbf94d389b",
+  "id": "b3cf5346-4b28-40e6-9be1-0192204f1166",
   "schemaVersion": 1,
   "title": "Витрина конструкций редактора",
   "subject": "Все предметы",
@@ -25,38 +25,43 @@
   "blocks": [
     {
       "type": "rich_text",
-      "id": "2b106875-0d00-46d9-8dd7-ba7fc9d726ed",
+      "id": "799f7fea-3c82-4e6a-b6a3-f10e478e10b7",
       "html": "<h2>Витрина конструкций редактора материалов</h2>"
     },
     {
+      "type": "video",
+      "id": "a3038cf0-0c44-4fd7-8d04-b1754a369ec4",
+      "assetId": "media:MathisPromo.mp4"
+    },
+    {
       "type": "spoiler",
-      "id": "a7e08d59-2a8d-4f23-b730-f82e169cebca",
+      "id": "203f7631-3ff6-49d5-8a4c-b906cc2a04be",
       "title": "Как устроен этот материал",
       "html": "<p>Этот материал — каталог: он использует <strong>каждую</strong> конструкцию из пикера\n     конструкций (кнопка «/» → «Конструкции» в редакторе), заполненную настоящим\n     предметным содержанием, а не заготовками-плейсхолдерами. Разделы идут по\n     предметам в том же порядке, что и в пикере; перед каждым упражнением —\n     подзаголовок с названием конструкции. Сначала идут базовые блоки — каждый\n     тип блока и вопроса из меню «/» с его настройками. Материал специально\n     «переполнен» — он не рассчитан на прохождение одним учеником целиком,\n     это витрина возможностей для методиста.</p>"
     },
     {
       "type": "rich_text",
-      "id": "a99bafe7-2205-4e03-a20a-5240b942cac3",
+      "id": "eabc0b12-5946-450e-9bc2-85ba0d94b78f",
       "html": "<h2>Базовые блоки редактора</h2>"
     },
     {
       "type": "rich_text",
-      "id": "74175cc4-fb3a-4260-bbf7-8101e1b1901d",
+      "id": "087c8eb5-2113-407c-87ed-d19fd4d02e0a",
       "html": "<p>Обычный текст поддерживает <strong>жирный</strong>, <em>курсив</em>, <u>подчёркнутый</u>,\n     <s>зачёркнутый</s> и <span style=\"color: #2563eb\">цветной</span> текст,\n     <code>моноширинный код</code> и <a href=\"https://ru.wikipedia.org/wiki/Пифагор\">ссылки</a>.</p>\n     <h3>Списки и цитаты</h3>\n     <ul><li>маркированный список</li><li>второй пункт</li></ul>\n     <ol><li>нумерованный список</li><li>второй пункт</li></ol>\n     <blockquote><p>«Число есть сущность всех вещей». — Пифагор</p></blockquote>"
     },
     {
       "type": "formula",
-      "id": "fa0698c1-03fb-4408-aff3-295e1b92a7f0",
+      "id": "c3241d4d-d647-43db-be77-4e545e021b13",
       "latex": "a^2 + b^2 = c^2"
     },
     {
       "type": "formula",
-      "id": "c620b62d-99f2-4f4a-aac0-3af91a11a571",
+      "id": "998c608c-acc6-4a18-bbf0-11c2001b71fa",
       "latex": "x_{1,2} = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}"
     },
     {
       "type": "table",
-      "id": "14326ac8-31e9-4260-82db-79ab2e1bc821",
+      "id": "995e392a-d097-4f71-889d-c885c2ea1bbb",
       "rows": [
         [
           "Тип блока",
@@ -78,81 +83,81 @@
     },
     {
       "type": "callout",
-      "id": "25cbee40-524b-4916-a5f1-adc4a8ff30f6",
+      "id": "888f6941-5065-4088-a585-ff6f4d21e030",
       "variant": "note",
       "html": "<p><strong>Врезка «Заметка».</strong> Определения и важные факты.</p>"
     },
     {
       "type": "callout",
-      "id": "3925dcc2-0208-4b41-bd62-845402add721",
+      "id": "caeee0f8-720d-4b69-8760-1127c620f9f2",
       "variant": "warning",
       "html": "<p><strong>Врезка «Внимание».</strong> Теоремы, правила и частые ошибки.</p>"
     },
     {
       "type": "callout",
-      "id": "30b2dbfc-1111-40ca-9815-9f7b85d0873c",
+      "id": "06a8afab-87ad-4162-9cd9-bb340f2d336b",
       "variant": "example",
       "html": "<p><strong>Врезка «Пример».</strong> Разобранный пример или образец решения.</p>"
     },
     {
       "type": "spoiler",
-      "id": "4713d84b-b5f1-4a06-b16a-71df228de86c",
+      "id": "1aa69db7-509d-4e18-b6d1-320c3ead992c",
       "title": "Показать решение",
       "html": "<p>Спойлер свёрнут, пока ученик сам его не раскроет: решение, перевод, подсказка к теории.</p>"
     },
     {
       "type": "image",
-      "id": "ede58364-8d6f-4377-bcf5-f2b76798207b",
+      "id": "d6657f08-8a7b-4169-b644-0e32ce01f0ab",
       "assetId": "media:phys-graph.svg",
       "caption": "Картинка с подписью; по клику открывается крупно",
       "zoomable": true
     },
     {
       "type": "audio",
-      "id": "02929839-6138-495f-a4e2-71a0cab0a1b1",
+      "id": "78fcb355-1262-4a71-9a94-3ff77028d526",
       "assetId": "media:en-listening-anna.mp3",
       "transcript": "Аудио с транскриптом: ученик раскрывает текст под плеером."
     },
     {
       "type": "video",
-      "id": "3f0f2756-432e-4a29-8fcd-25c7fb463019",
-      "assetId": "https://upload.wikimedia.org/wikipedia/commons/8/87/Earth_rotation_during_Galileo_flyby_%28PIA00114%29.webm"
+      "id": "bd63b950-d8c5-4e1c-9361-bb31cdab576c",
+      "assetId": "media:MathisPromo.mp4"
     },
     {
       "type": "embed",
-      "id": "e2d70ed8-f815-463f-ad08-3588718e5415",
+      "id": "7d40815c-7367-4fc5-b210-e21c811076ab",
       "provider": "geogebra",
       "config": {}
     },
     {
       "type": "embed",
-      "id": "b4e229c5-8522-4966-a2bc-0253ec00a877",
+      "id": "80e866c0-718b-4e76-871b-57678d7b021a",
       "provider": "desmos",
       "config": {}
     },
     {
       "type": "embed",
-      "id": "8cc79744-406a-4822-a0ce-18c952a67298",
+      "id": "d0ae9b1d-64ee-4745-811a-b745b5a9a3bf",
       "provider": "jsxgraph",
       "config": {}
     },
     {
       "type": "rich_text",
-      "id": "2be80629-b5a7-4838-adab-7197c1bb51cd",
+      "id": "3bbd1bf1-1dd7-4591-a99c-90d8c55d6041",
       "html": "<p>Ниже — разрыв слайда: следующий блок начнётся с нового слайда.</p>"
     },
     {
       "type": "page_break",
-      "id": "b146a7cc-0363-46a0-8a15-d74df1047fb3"
+      "id": "a4dbfc95-8c99-45c9-a451-56c98a52202f"
     },
     {
       "type": "rich_text",
-      "id": "7f712484-d4bb-438f-9e38-282c8400eae1",
+      "id": "e6c034f0-e9da-4520-9b15-3ea35be4ecc1",
       "html": "<h2>Типы вопросов</h2>"
     },
     {
       "type": "question",
-      "id": "912db2a2-f7bc-4535-838b-5db11b79211b",
+      "id": "6275eae2-e700-4052-a4fc-405dd6edeee8",
       "prompt": {
         "html": "<p><strong>Один вариант.</strong> Сколько сторон у треугольника?</p>"
       },
@@ -173,22 +178,22 @@
         "shuffle": true,
         "options": [
           {
-            "id": "7e70bcdf-ec10-4503-baf9-286579a8aba1",
+            "id": "4a9fa622-69d0-498f-b773-462d0aaa1d8e",
             "html": "3",
             "correct": true
           },
           {
-            "id": "3840c763-338f-41a8-b0e2-281f44aeb174",
+            "id": "6b60fb6d-08f8-4d54-a5c8-72f423d3f6b0",
             "html": "4",
             "correct": false
           },
           {
-            "id": "fafd7db3-db96-45a1-a6d1-b54d3bb0b4e8",
+            "id": "e07332d0-2ff8-4c20-a42e-03c2e731f812",
             "html": "5",
             "correct": false
           },
           {
-            "id": "fd72d7ea-3d3f-48fe-840b-a4c02f7311e0",
+            "id": "c576bfe5-bff7-4c3a-9685-fa474d6680c7",
             "html": "6",
             "correct": false
           }
@@ -197,7 +202,7 @@
     },
     {
       "type": "question",
-      "id": "1331153a-238f-412d-a4b0-4ed8ca319fb1",
+      "id": "809956d5-3c82-4ed8-8f75-4563a27ca023",
       "prompt": {
         "html": "<p><strong>Несколько вариантов.</strong> Отметьте простые числа.</p>"
       },
@@ -207,27 +212,27 @@
         "shuffle": true,
         "options": [
           {
-            "id": "9ea2b0e6-1925-4a28-9850-edf45b79828b",
+            "id": "3d08b117-ae32-42d0-8f3c-7f7e87e66993",
             "html": "2",
             "correct": true
           },
           {
-            "id": "d490774d-7954-4c18-9445-133c5217ca02",
+            "id": "640df0df-9ad2-40ef-939e-2a73b5eb5368",
             "html": "9",
             "correct": false
           },
           {
-            "id": "d8025017-590f-48fa-b350-ac354071df9b",
+            "id": "e0b1fe2c-b8fa-42ad-9e54-414d9fb217c0",
             "html": "11",
             "correct": true
           },
           {
-            "id": "543ee58b-4b43-425a-bfe7-98796ee8f5b9",
+            "id": "bca62a71-7425-42d9-b8ca-9bc5e45eff7e",
             "html": "15",
             "correct": false
           },
           {
-            "id": "a61d3761-6818-4bd7-9192-ff5f2dd1a3a7",
+            "id": "f7501ad3-8bcc-4430-8bd7-5999b67a2312",
             "html": "17",
             "correct": true
           }
@@ -236,7 +241,7 @@
     },
     {
       "type": "question",
-      "id": "d419d1a9-81fb-4518-b70f-fef79e1a5a5e",
+      "id": "2e261716-3517-4d42-8f78-762517172f1c",
       "prompt": {
         "html": "<p><strong>Верно / неверно.</strong> Вода кипит при 100 °C при нормальном давлении.</p>"
       },
@@ -248,7 +253,7 @@
     },
     {
       "type": "question",
-      "id": "9a136609-2d81-4df5-9944-5039d4183b71",
+      "id": "97e85037-988b-4f14-96c4-d54f320b4cf1",
       "prompt": {
         "html": "<p><strong>Короткий ответ</strong> (допускается одна опечатка). Столица Франции?</p>"
       },
@@ -273,7 +278,7 @@
     },
     {
       "type": "question",
-      "id": "e52447e5-9681-46f3-a17c-aa2549a2c0e5",
+      "id": "64d7666b-32e7-4aab-9f7b-25cdc5ac4f3f",
       "prompt": {
         "html": "<p><strong>Короткий ответ по шаблону.</strong> Запишите любое чётное двузначное число.</p>"
       },
@@ -293,7 +298,7 @@
     },
     {
       "type": "question",
-      "id": "e511d385-3874-4f0f-9528-b96089717196",
+      "id": "a01ff83a-706d-45e4-bb5b-23949299eab7",
       "prompt": {
         "html": "<p><strong>Число с единицей измерения.</strong> Масса 1 л воды (единица обязательна).</p>"
       },
@@ -311,7 +316,7 @@
     },
     {
       "type": "question",
-      "id": "33064418-8937-4698-b362-acff6fa5447e",
+      "id": "1a54af49-bd66-4298-a4e6-b31a4db54d64",
       "prompt": {
         "html": "<p><strong>Число с относительным допуском.</strong> Чему равно число π с точностью до 1 %?</p>"
       },
@@ -328,7 +333,7 @@
     },
     {
       "type": "question",
-      "id": "be8cea6b-be10-4aff-9ab0-72a83190b515",
+      "id": "251a1cd3-753f-4a71-8415-c18432c24176",
       "prompt": {
         "html": "<p><strong>Развёрнутый ответ</strong> (можно приложить фото решения). Объясните, почему летом день длиннее ночи.</p>"
       },
@@ -339,12 +344,12 @@
         "allowAttachments": true,
         "rubric": [
           {
-            "id": "34bddf56-4612-4c75-a63e-c0a757348d35",
+            "id": "09b6fb75-c386-4cdc-b93e-a133c8fe28b7",
             "label": "Упомянут наклон земной оси",
             "points": 1
           },
           {
-            "id": "f35e2ec8-fdc4-4def-b0e7-857a41526b82",
+            "id": "69ef9bfc-d395-4843-87e2-8ce6c480c7d8",
             "label": "Объяснено положение Земли на орбите",
             "points": 1
           }
@@ -353,7 +358,7 @@
     },
     {
       "type": "question",
-      "id": "f836c063-0ce2-4260-8a42-60867bc50c8f",
+      "id": "23005a93-3b66-4f62-bdc2-b55697a791ef",
       "prompt": {
         "html": "<p><strong>Пропуски с выбором.</strong></p>"
       },
@@ -383,7 +388,7 @@
     },
     {
       "type": "question",
-      "id": "1426eab0-3545-4cf6-80c2-63b590704574",
+      "id": "76da912d-2739-4bc7-a812-464b20cc4e3b",
       "prompt": {
         "html": "<p><strong>Пропуски с вводом.</strong></p>"
       },
@@ -423,7 +428,7 @@
     },
     {
       "type": "question",
-      "id": "cab6e7e6-49c1-4eb0-9170-9becb6dd59a2",
+      "id": "d9152399-a193-4d61-aebe-a066f1b18a59",
       "prompt": {
         "html": "<p><strong>Соответствие с частичным баллом и лишним вариантом.</strong> Планета — её особенность.</p>"
       },
@@ -432,59 +437,59 @@
         "type": "matching",
         "left": [
           {
-            "id": "8858c142-b7f7-436c-866f-83408db924a3",
+            "id": "a208c150-d194-4f13-87c5-f7fbf0bcc445",
             "html": "Меркурий"
           },
           {
-            "id": "82d283ff-9cb2-46fc-b19e-65860a39310e",
+            "id": "efe86dc8-4124-4285-b2cd-5e4b534d9447",
             "html": "Юпитер"
           },
           {
-            "id": "c79ea98b-83a4-4249-b2f3-6463e4a1f808",
+            "id": "c4601619-85cc-4beb-91fc-42bdb729dfe9",
             "html": "Сатурн"
           }
         ],
         "right": [
           {
-            "id": "840e8ef0-24b4-4380-862f-35733b69f3b6",
+            "id": "364667cc-1f47-4f98-bb68-be601e2f55c2",
             "html": "Ближе всех к Солнцу"
           },
           {
-            "id": "5456df19-1f4a-4b42-86ad-08768a8c24f7",
+            "id": "70b9270b-f87c-4ab7-ad06-524819d97ea2",
             "html": "Самая большая планета"
           },
           {
-            "id": "e5070d54-b758-48e5-8967-3cd02efd1dfa",
+            "id": "1bf8c891-ade0-465c-91ad-80a1d85e8f43",
             "html": "Заметные кольца"
           },
           {
-            "id": "ad9d30a1-aaf8-4c86-9326-d5d1bd17f29a",
+            "id": "68309bf1-63e7-401d-976a-4c7796075d12",
             "html": "Спутник Земли"
           }
         ],
         "pairs": [
           [
-            "8858c142-b7f7-436c-866f-83408db924a3",
-            "840e8ef0-24b4-4380-862f-35733b69f3b6"
+            "a208c150-d194-4f13-87c5-f7fbf0bcc445",
+            "364667cc-1f47-4f98-bb68-be601e2f55c2"
           ],
           [
-            "82d283ff-9cb2-46fc-b19e-65860a39310e",
-            "5456df19-1f4a-4b42-86ad-08768a8c24f7"
+            "efe86dc8-4124-4285-b2cd-5e4b534d9447",
+            "70b9270b-f87c-4ab7-ad06-524819d97ea2"
           ],
           [
-            "c79ea98b-83a4-4249-b2f3-6463e4a1f808",
-            "e5070d54-b758-48e5-8967-3cd02efd1dfa"
+            "c4601619-85cc-4beb-91fc-42bdb729dfe9",
+            "1bf8c891-ade0-465c-91ad-80a1d85e8f43"
           ]
         ],
         "scoring": "partial",
         "distractors": [
-          "ad9d30a1-aaf8-4c86-9326-d5d1bd17f29a"
+          "68309bf1-63e7-401d-976a-4c7796075d12"
         ]
       }
     },
     {
       "type": "question",
-      "id": "e332be21-a41f-4261-a14b-724874723c0d",
+      "id": "7e205eac-c102-4dd0-998f-d9879573be44",
       "prompt": {
         "html": "<p><strong>Порядок.</strong> Расположите планеты по удалённости от Солнца.</p>"
       },
@@ -493,19 +498,19 @@
         "type": "ordering",
         "items": [
           {
-            "id": "e10601a1-d498-4218-b9d0-cc46e2a8a0e0",
+            "id": "335d9242-53fd-4e80-af85-fcf68a6e9342",
             "html": "Меркурий"
           },
           {
-            "id": "e1a1c771-f483-4a49-a0b5-77c3af0bbb5a",
+            "id": "79271a84-aded-477f-be1f-30fd2144e9b8",
             "html": "Венера"
           },
           {
-            "id": "121a6a6c-eccc-4dab-9013-8ba931185b4e",
+            "id": "66f0b454-d118-44cc-b5c0-c25b66052a2e",
             "html": "Земля"
           },
           {
-            "id": "6cefbecd-5f79-41f9-aa12-f1ebc5b6c664",
+            "id": "55063f7c-3a04-4817-acd7-810722d69ee4",
             "html": "Марс"
           }
         ]
@@ -513,7 +518,7 @@
     },
     {
       "type": "question",
-      "id": "81358411-66f7-404b-a65d-653b1442f02a",
+      "id": "2cd1b8c3-fcd3-4562-81a6-8bf4117cf807",
       "prompt": {
         "html": "<p><strong>Распределение по группам.</strong></p>"
       },
@@ -523,50 +528,50 @@
         "shuffle": true,
         "categories": [
           {
-            "id": "2d695ef1-f8c0-495e-b341-86c389f49a07",
+            "id": "f2bd3937-4813-419c-a91b-ff14c1de0ba6",
             "label": "Млекопитающие"
           },
           {
-            "id": "e43e2500-3dd2-41a5-aa69-82f16719c43a",
+            "id": "c213bc40-182b-4a22-a118-af2cda68a018",
             "label": "Птицы"
           },
           {
-            "id": "281c6192-9102-4580-a9d0-ab9c0e7217c0",
+            "id": "614dcbed-3190-4109-afaa-4fb0f50482dd",
             "label": "Рыбы"
           }
         ],
         "items": [
           {
-            "id": "2fd0eb03-df84-48fc-9fef-e86fed91f39d",
+            "id": "7135c7c1-3755-439a-950d-1c29afcc3db7",
             "html": "кит",
-            "categoryId": "2d695ef1-f8c0-495e-b341-86c389f49a07"
+            "categoryId": "f2bd3937-4813-419c-a91b-ff14c1de0ba6"
           },
           {
-            "id": "c167876a-4141-466b-8c4b-937be5edd725",
+            "id": "802b45a2-dea2-471c-a337-9f10cab04b88",
             "html": "летучая мышь",
-            "categoryId": "2d695ef1-f8c0-495e-b341-86c389f49a07"
+            "categoryId": "f2bd3937-4813-419c-a91b-ff14c1de0ba6"
           },
           {
-            "id": "2fdc99bd-344f-46ea-b07b-5110db885e16",
+            "id": "2e072a3e-4b06-4198-b936-59ff5f6010f0",
             "html": "пингвин",
-            "categoryId": "e43e2500-3dd2-41a5-aa69-82f16719c43a"
+            "categoryId": "c213bc40-182b-4a22-a118-af2cda68a018"
           },
           {
-            "id": "06f96a88-2636-4358-b9ae-6999c52d3cff",
+            "id": "69cc7748-db37-489b-aa38-af8e383a9754",
             "html": "страус",
-            "categoryId": "e43e2500-3dd2-41a5-aa69-82f16719c43a"
+            "categoryId": "c213bc40-182b-4a22-a118-af2cda68a018"
           },
           {
-            "id": "6159d4ed-587f-40cc-b8cd-0e4825cc0366",
+            "id": "60ada362-2b66-4cdc-8b84-8c961312a6bf",
             "html": "акула",
-            "categoryId": "281c6192-9102-4580-a9d0-ab9c0e7217c0"
+            "categoryId": "614dcbed-3190-4109-afaa-4fb0f50482dd"
           }
         ]
       }
     },
     {
       "type": "question",
-      "id": "4da275f7-731e-45fd-8e4d-9a35b39ecbd1",
+      "id": "84e0c57c-8bd7-4d0f-87c7-d8291980f996",
       "prompt": {
         "html": "<p><strong>Выделение в тексте.</strong> Отметьте все прилагательные.</p>"
       },
@@ -575,42 +580,42 @@
         "type": "highlight_text",
         "tokens": [
           {
-            "id": "696c714f-a03e-496b-a35c-a9045011563b",
+            "id": "1e03b432-868a-43d7-8bbd-32ed2d623a03",
             "text": "Яркое",
             "correct": true
           },
           {
-            "id": "df9e9f2d-6570-4858-b390-1782b7d82e0b",
+            "id": "0c957b78-409f-4438-ad0e-7f55309ef02f",
             "text": "солнце",
             "correct": false
           },
           {
-            "id": "b3dad2c4-8c63-4c60-a24b-245bdd6118a8",
+            "id": "335b8f2b-c211-49c8-8322-d6cbd0d4ffdd",
             "text": "освещало",
             "correct": false
           },
           {
-            "id": "0f38f839-4164-4384-9d0d-843f3601b99c",
+            "id": "4d9f2094-73cd-4f72-b863-aadb4f81f1a8",
             "text": "зелёный",
             "correct": true
           },
           {
-            "id": "59c42b4e-0667-4ea3-a9ed-59a0db200cb8",
+            "id": "6cc22e46-6d13-4eda-90fe-3a01b9b43dd3",
             "text": "луг",
             "correct": false
           },
           {
-            "id": "fd8f5725-e0c6-46ff-a6f0-e05b31717a87",
+            "id": "7158fd60-3dfd-4168-b8e7-214ff92f4841",
             "text": "и",
             "correct": false
           },
           {
-            "id": "ce6c9a63-2ca7-45b0-b008-6e0c941ef281",
+            "id": "53f953a3-5b48-422e-aaa0-762d704b402c",
             "text": "тихую",
             "correct": true
           },
           {
-            "id": "fdbc3bc7-c13c-4633-a17c-55e14a1174ce",
+            "id": "45cf231b-33bd-4094-8a3d-0ca5ac51c95c",
             "text": "реку",
             "correct": false
           }
@@ -619,7 +624,7 @@
     },
     {
       "type": "question",
-      "id": "a041ecda-4b18-4151-8782-8d75c61b3d4b",
+      "id": "294b219f-d0cb-4510-b37c-2a1a3b464822",
       "prompt": {
         "html": "<p><strong>Заполнение таблицы.</strong></p>"
       },
@@ -648,7 +653,7 @@
             },
             {
               "kind": "input",
-              "id": "fba138ab-c457-4486-8862-aa4f59853e4a",
+              "id": "a6eb0b09-8725-43cb-84e2-5efdb7889f14",
               "answers": [
                 {
                   "value": "4",
@@ -661,7 +666,7 @@
             },
             {
               "kind": "input",
-              "id": "518ffd77-70d3-4b25-83f8-31aa0312a794",
+              "id": "50a32c47-12b8-44c2-9501-51cfdc4a90b8",
               "answers": [
                 {
                   "value": "8",
@@ -680,7 +685,7 @@
             },
             {
               "kind": "input",
-              "id": "b1832cf4-81bf-43be-aee9-b569e4d400d7",
+              "id": "7b8944ca-d817-4878-bc78-059cd5363f38",
               "answers": [
                 {
                   "value": "9",
@@ -693,7 +698,7 @@
             },
             {
               "kind": "input",
-              "id": "04d3220f-375e-4c9a-a04c-2eb7aca50128",
+              "id": "374e055d-1e93-4f54-aa59-f851a41f9e48",
               "answers": [
                 {
                   "value": "27",
@@ -710,39 +715,39 @@
     },
     {
       "type": "rich_text",
-      "id": "2313578e-9103-4ace-9786-08cdbc66ad55",
+      "id": "2dece873-c083-4f41-881a-f8d05b8d069a",
       "html": "<h2>Общее</h2>"
     },
     {
       "type": "rich_text",
-      "id": "f9bfe3d2-14f2-47ec-8823-f95f75e4a26d",
+      "id": "ddc168e1-f1ec-463d-bb82-c0374dd494a2",
       "html": "<h3>Разбор задачи</h3>"
     },
     {
       "type": "rich_text",
-      "id": "d592c8ff-99e1-4a06-a99e-3785b5685f24",
+      "id": "d151a941-4f75-4850-b4a4-469d8f3be294",
       "html": "<h2>Разбор задачи</h2><p>Периметр прямоугольника со сторонами 5 см и 3 см.</p>"
     },
     {
       "type": "formula",
-      "id": "23ba737a-ede7-430b-a344-b14bfcd2b852",
+      "id": "66464702-ea25-4ced-9bd2-9ef5919549d4",
       "latex": "P = 2(a + b)"
     },
     {
       "type": "callout",
-      "id": "06388557-5dff-4a9f-ae87-35a3cf01715d",
+      "id": "d9c87a27-2ae9-4400-881c-b7fcc96ca2ef",
       "variant": "example",
       "html": "<p><strong>Шаг 1.</strong> Подставим значения: P = 2(5 + 3).</p>"
     },
     {
       "type": "callout",
-      "id": "dbb06518-c212-47c8-bf84-8cba44c78b94",
+      "id": "4d146002-9998-45f0-99b7-2f07385d90c3",
       "variant": "example",
       "html": "<p><strong>Шаг 2.</strong> Посчитаем: P = 2 · 8 = 16.</p>"
     },
     {
       "type": "question",
-      "id": "ff54a7e3-fa6b-4727-81eb-df6a7a547bc6",
+      "id": "6d58c9c5-20f9-4470-b24a-1f04ebdbd926",
       "prompt": {
         "html": "<p>Чему равен периметр (в см)?</p>"
       },
@@ -759,17 +764,17 @@
     },
     {
       "type": "rich_text",
-      "id": "9104b7bb-cfb2-46ad-b9e4-fc269ffd3dbc",
+      "id": "46ce8f18-5ab7-4820-ab24-5364f21d994e",
       "html": "<h3>Блок проверки</h3>"
     },
     {
       "type": "rich_text",
-      "id": "467018fe-7e07-4ba6-9427-47eb43d73d42",
+      "id": "25080374-1dbb-4b31-976c-5713c74f9b7d",
       "html": "<p>Ответьте на вопросы ниже.</p>"
     },
     {
       "type": "question",
-      "id": "61b08dde-08aa-4b58-abf2-7f201ce0dce6",
+      "id": "a8baead3-4686-45ac-8c5d-eaa6c7b30fe5",
       "prompt": {
         "html": "<p>Сколько дней в високосном году?</p>"
       },
@@ -779,22 +784,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "0ad613b1-020f-4da7-94ef-264eec5eecce",
+            "id": "a80ab592-e99e-4653-b867-8bd443585ebb",
             "html": "365",
             "correct": false
           },
           {
-            "id": "3f150f32-008b-4626-a343-f694c82b574d",
+            "id": "2ec114e2-0a5f-448a-8912-d1d1d3675341",
             "html": "366",
             "correct": true
           },
           {
-            "id": "7eb9e09c-4ecc-4698-89ce-e81a65a7efa1",
+            "id": "ff4a9ad5-6917-4034-a030-02e30f3ed77a",
             "html": "364",
             "correct": false
           },
           {
-            "id": "7d039a32-0bf0-473f-b880-c35f4efee2cb",
+            "id": "5f9ef863-b0b0-4bb9-ab29-5a819b0effa9",
             "html": "367",
             "correct": false
           }
@@ -803,7 +808,7 @@
     },
     {
       "type": "question",
-      "id": "5cadc849-6e10-476b-a7b8-040fe79850d8",
+      "id": "837eb520-6c50-4417-b841-64682451987d",
       "prompt": {
         "html": "<p>Столица России?</p>"
       },
@@ -813,22 +818,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "2980e3ad-58fd-4aec-9e49-71efe95cc068",
+            "id": "1615e8c5-639e-4ea2-8b1e-f5a5b2c0dce9",
             "html": "Санкт-Петербург",
             "correct": false
           },
           {
-            "id": "ecaf87c6-6ee6-4c66-a6aa-56bfeaae86e6",
+            "id": "2eacb49a-13fa-4da1-8302-a6769323117c",
             "html": "Москва",
             "correct": true
           },
           {
-            "id": "2315d000-a3b5-406f-9225-2394bbd44780",
+            "id": "390fa7d9-794f-4626-b87f-b05b7fc247f5",
             "html": "Новосибирск",
             "correct": false
           },
           {
-            "id": "f62d57eb-d434-4ab8-979c-0ddc021c58ab",
+            "id": "22b922d0-77ea-4fd0-9e13-4cf41f7d348b",
             "html": "Казань",
             "correct": false
           }
@@ -837,7 +842,7 @@
     },
     {
       "type": "question",
-      "id": "66b0d090-6dcd-41fe-a7c6-21d4e62d34b8",
+      "id": "2f94c6f9-07ca-49d3-8cdb-cb5306e599d9",
       "prompt": {
         "html": "<p>Сколько будет 7 × 8?</p>"
       },
@@ -847,22 +852,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "03d9773d-3e43-4020-b823-f0b076da45fa",
+            "id": "419e6648-f263-42ec-acad-d638615fbc9b",
             "html": "54",
             "correct": false
           },
           {
-            "id": "dabbf26e-e899-42f4-a110-a6f8f4f32e85",
+            "id": "b7881210-5e3d-456a-be4c-66a4004d1bd3",
             "html": "64",
             "correct": false
           },
           {
-            "id": "03c088cc-54df-4ec3-a97c-d70e175a2048",
+            "id": "07ac4404-f987-4476-8ebc-be0b7d371d76",
             "html": "56",
             "correct": true
           },
           {
-            "id": "817f4968-18c4-4563-8cda-23c1c94e2183",
+            "id": "dd3063fb-322b-47c4-ae48-e5174a037129",
             "html": "48",
             "correct": false
           }
@@ -871,17 +876,17 @@
     },
     {
       "type": "rich_text",
-      "id": "69da43e2-117d-48f5-86a5-179a16d2b571",
+      "id": "48696abe-2a41-40cd-b66c-7a659453223c",
       "html": "<h3>Словарный диктант</h3>"
     },
     {
       "type": "rich_text",
-      "id": "a88d19fc-899f-4cf4-b643-0774cf496294",
+      "id": "95b04dfd-28b6-43b1-b83a-b553a64d494b",
       "html": "<p>Учитель диктует слово — впишите его без ошибок.</p>"
     },
     {
       "type": "question",
-      "id": "7ee8e5d0-be64-4842-8ae2-f24ac9df83bd",
+      "id": "767d0be5-61f6-4dc0-9e35-50883209939e",
       "prompt": {
         "html": "<p>Слово 1</p>"
       },
@@ -901,7 +906,7 @@
     },
     {
       "type": "question",
-      "id": "7b7d32ba-91f9-46e0-a7ea-cbfa7a0e0391",
+      "id": "e82863d2-2fa1-4ff7-90fb-5d6259293e9d",
       "prompt": {
         "html": "<p>Слово 2</p>"
       },
@@ -921,7 +926,7 @@
     },
     {
       "type": "question",
-      "id": "0dcd2449-03e2-4463-9ddd-80ba7bd9c134",
+      "id": "c66f029b-fa69-493c-8e4a-46706dfa7e39",
       "prompt": {
         "html": "<p>Слово 3</p>"
       },
@@ -941,7 +946,7 @@
     },
     {
       "type": "question",
-      "id": "d854d344-6a9e-4f12-9d47-ba536257e010",
+      "id": "0d4e63a1-02a2-45ed-abd8-89b119a2d0b6",
       "prompt": {
         "html": "<p>Слово 4</p>"
       },
@@ -961,7 +966,7 @@
     },
     {
       "type": "question",
-      "id": "cd62c3e0-4fac-4b1a-8660-d10f3d4ec0cc",
+      "id": "6e770e65-bfec-41b6-995b-8a424c3d69f7",
       "prompt": {
         "html": "<p>Слово 5</p>"
       },
@@ -981,40 +986,40 @@
     },
     {
       "type": "rich_text",
-      "id": "76409edd-526c-473a-9c20-7683539597a6",
+      "id": "3128a288-9abd-4e79-936a-565430a9527d",
       "html": "<h3>Определение и теорема</h3>"
     },
     {
       "type": "callout",
-      "id": "8bfb93f3-109c-4ded-8e03-5ea647c6fc82",
+      "id": "d0eaa1b9-fdd2-46c8-82e4-907ca0e2881e",
       "variant": "note",
       "html": "<p><strong>Определение.</strong> Прямоугольный треугольник — треугольник, один из углов которого равен 90°.</p>"
     },
     {
       "type": "callout",
-      "id": "f07c2283-cea9-422f-86b2-8a16951f9ea8",
+      "id": "ae074c6b-d141-422c-9aea-0ae93e84675a",
       "variant": "warning",
       "html": "<p><strong>Теорема Пифагора.</strong> Квадрат гипотенузы равен сумме квадратов катетов: c² = a² + b².</p>"
     },
     {
       "type": "callout",
-      "id": "292ee52a-c34b-4212-a92d-8b9f1fdcb3fd",
+      "id": "a3461b2f-83dd-4185-afae-bf9197d0e92f",
       "variant": "example",
       "html": "<p><strong>Пример.</strong> Если a = 3, b = 4, то c² = 9 + 16 = 25, c = 5.</p>"
     },
     {
       "type": "rich_text",
-      "id": "b5dc401c-451b-4db0-82fb-e67480940974",
+      "id": "b9d2e7dd-015e-4b57-9b07-c58d90c95344",
       "html": "<h3>Параграф с проверкой</h3>"
     },
     {
       "type": "rich_text",
-      "id": "ae1f1d1e-3eba-47e4-9ae3-1caf3fb734ec",
+      "id": "ddf3e104-045d-4db9-a691-780294d2d732",
       "html": "<h2>Агрегатные состояния воды</h2><p>Вода может находиться в трёх агрегатных состояниях: твёрдом (лёд), жидком (вода) и газообразном (пар).</p>"
     },
     {
       "type": "question",
-      "id": "adf646bf-263d-4cdd-b263-49cd753c3cb3",
+      "id": "fe90e2b0-0667-44e4-a7c6-ae5056715cd6",
       "prompt": {
         "html": "<p>В каком состоянии вода в виде пара?</p>"
       },
@@ -1024,17 +1029,17 @@
         "shuffle": false,
         "options": [
           {
-            "id": "daa35118-6964-43f1-ae50-4b73cb42b8f9",
+            "id": "481e39b3-a06d-4959-a7c7-7e083738df7c",
             "html": "Твёрдом",
             "correct": false
           },
           {
-            "id": "07cdbe78-b89a-47c6-8d1e-33019fb3f020",
+            "id": "70a59d0a-ae55-4cf2-b4c1-41411f516d28",
             "html": "Жидком",
             "correct": false
           },
           {
-            "id": "9fda356c-6b50-4903-a3fe-8724f0d4b26b",
+            "id": "ccb60148-517f-4ec6-a4d0-2f6ca4ee866a",
             "html": "Газообразном",
             "correct": true
           }
@@ -1043,7 +1048,7 @@
     },
     {
       "type": "question",
-      "id": "8ee5e886-3250-4136-bb09-030d932d42ee",
+      "id": "9ef7b16a-61e0-4529-8828-9fcabdf5580d",
       "prompt": {
         "html": "<p>Лёд — это твёрдое состояние воды.</p>"
       },
@@ -1055,45 +1060,45 @@
     },
     {
       "type": "rich_text",
-      "id": "9e29a0f2-e448-47bf-9063-203a1393ec4a",
+      "id": "ce48e6e4-0afe-43eb-8366-9a57461fcb7c",
       "html": "<h3>Врезка «Определение»</h3>"
     },
     {
       "type": "callout",
-      "id": "8e8dbb59-5759-47d6-893e-9a1decaf38c3",
+      "id": "c6c8c050-6c36-4333-90e5-7712a58afba5",
       "variant": "note",
       "html": "<p><strong>Определение.</strong> Простое число — натуральное число больше 1, которое делится только на 1 и на само себя.</p>"
     },
     {
       "type": "rich_text",
-      "id": "dc0ad94f-9219-43e3-b0f6-4b8d64fb0c36",
+      "id": "e0a57727-5de1-4142-9292-e967399a9a1a",
       "html": "<h3>Врезка «Теорема»</h3>"
     },
     {
       "type": "callout",
-      "id": "6e9b059e-08a6-43cd-a5b0-2392a830da82",
+      "id": "07175a20-12f9-414c-ac1a-7c20d89509e8",
       "variant": "warning",
       "html": "<p><strong>Теорема.</strong> Сумма углов любого треугольника равна 180°.</p>"
     },
     {
       "type": "rich_text",
-      "id": "62fa014b-cc47-48fe-a2ab-ecbd01f153ce",
+      "id": "8d83edc4-4d9a-4f79-8c64-545f041def7e",
       "html": "<h3>Врезка «Пример»</h3>"
     },
     {
       "type": "callout",
-      "id": "317caed7-cb00-4376-be27-860ea1724da2",
+      "id": "3b1200c1-6b14-4011-af8a-c68ac51ffd20",
       "variant": "example",
       "html": "<p><strong>Пример.</strong> 2, 3, 5, 7, 11 — первые пять простых чисел.</p>"
     },
     {
       "type": "rich_text",
-      "id": "45815fac-51d2-4d89-a182-28bc5ed1a91f",
+      "id": "15152558-55e6-41c1-9905-34192e7ec6fb",
       "html": "<h3>Вопрос: выбор из 4</h3>"
     },
     {
       "type": "question",
-      "id": "5b1063ff-568b-4a5f-849e-7221816d5d7d",
+      "id": "8b4d0973-ae56-4e7d-8c86-c60f30e94732",
       "prompt": {
         "html": "<p>Сколько будет 15 + 27?</p>"
       },
@@ -1103,22 +1108,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "90827ea7-aa30-46a9-9fa3-e75fe434bfc8",
+            "id": "17ef1ead-28c4-46cc-9005-e2cc45fae8e6",
             "html": "42",
             "correct": true
           },
           {
-            "id": "80a37cf8-a3be-463f-8d49-cb1213df625f",
+            "id": "b0da0552-bd42-4370-8635-41f58ad9f747",
             "html": "52",
             "correct": false
           },
           {
-            "id": "718abc7f-cdac-4d09-89f1-ec69be36b38d",
+            "id": "82fde94f-2753-4212-b9d4-3af48b870b4e",
             "html": "32",
             "correct": false
           },
           {
-            "id": "b328ad57-64e4-4d07-bbbd-dcc4d3e532d7",
+            "id": "47ea1d55-8bf2-450d-b7f9-9cd795ce0c9f",
             "html": "41",
             "correct": false
           }
@@ -1127,12 +1132,12 @@
     },
     {
       "type": "rich_text",
-      "id": "be491318-2022-4d8a-bcd3-3c347db29e14",
+      "id": "97fb62cb-46b6-431a-82fb-77350e5e87f8",
       "html": "<h3>Числовой ответ с допуском</h3>"
     },
     {
       "type": "question",
-      "id": "57324f41-c3d1-4e97-848b-883e5dcdcf76",
+      "id": "1cf88e24-ea49-47cf-98dc-53b3129c1817",
       "prompt": {
         "html": "<p>Вычислите площадь круга радиусом 2 см (π ≈ 3.14)</p>"
       },
@@ -1150,22 +1155,22 @@
     },
     {
       "type": "rich_text",
-      "id": "1da8992f-dafb-4641-9f70-68da25eb8891",
+      "id": "ab39f28f-b39b-413e-bcad-04038fa70dc4",
       "html": "<h2>Русский язык</h2>"
     },
     {
       "type": "rich_text",
-      "id": "88860a6b-a45c-4032-a477-ee46a6a5774e",
+      "id": "f357f7f4-115c-4665-8e0c-b096b14eb80f",
       "html": "<h3>Вставь пропущенную букву</h3>"
     },
     {
       "type": "rich_text",
-      "id": "9096a1b9-2618-4f60-8ae6-6803b67ad415",
+      "id": "d008a0dd-a074-4c97-8c30-655ddc7446a0",
       "html": "<p>Вставьте пропущенную букву и впишите слово целиком.</p>"
     },
     {
       "type": "question",
-      "id": "20150196-615e-4b23-b7c1-e9d6e2c42fdc",
+      "id": "6f8032cf-716d-4c64-9357-c976470aa335",
       "prompt": {
         "html": "<p>1. б_гать</p>"
       },
@@ -1185,7 +1190,7 @@
     },
     {
       "type": "question",
-      "id": "ecabbed1-57e6-4ef9-90d5-26468dc92353",
+      "id": "760e6466-3e16-4332-bcef-c14010539e3f",
       "prompt": {
         "html": "<p>2. д_ждь</p>"
       },
@@ -1205,7 +1210,7 @@
     },
     {
       "type": "question",
-      "id": "2589aaf4-a7ce-4b46-9a45-2e35c679ffcc",
+      "id": "75085c34-c330-4134-9163-82d9244f4287",
       "prompt": {
         "html": "<p>3. к_ртина</p>"
       },
@@ -1225,7 +1230,7 @@
     },
     {
       "type": "question",
-      "id": "5ada9324-62ed-4569-b770-c8f3c5d69af0",
+      "id": "191ea770-b3ed-4d66-89d1-36368d5d3c1e",
       "prompt": {
         "html": "<p>4. с_довник</p>"
       },
@@ -1245,7 +1250,7 @@
     },
     {
       "type": "question",
-      "id": "26c14d8b-320d-40ee-9961-dbc76f25ccca",
+      "id": "13f84a39-72bb-4a3a-97a0-c718d8003c78",
       "prompt": {
         "html": "<p>5. х_роший</p>"
       },
@@ -1265,7 +1270,7 @@
     },
     {
       "type": "question",
-      "id": "f6fd18af-188a-45fc-b628-b266d10fea50",
+      "id": "e6a570ed-2d46-49a9-9048-ad13c4a0ba42",
       "prompt": {
         "html": "<p>6. м_шина</p>"
       },
@@ -1285,7 +1290,7 @@
     },
     {
       "type": "question",
-      "id": "c110b820-0560-4cf3-86ec-252fca0c43bf",
+      "id": "53b59329-97ec-4c14-83a0-dbc5236d1adc",
       "prompt": {
         "html": "<p>7. к_рабль</p>"
       },
@@ -1305,7 +1310,7 @@
     },
     {
       "type": "question",
-      "id": "cffc5563-4a59-4bb7-9bbe-b796a094fbd0",
+      "id": "eacade27-c46d-4e35-8e9b-617d96ba97fc",
       "prompt": {
         "html": "<p>8. с_бака</p>"
       },
@@ -1325,17 +1330,17 @@
     },
     {
       "type": "rich_text",
-      "id": "2edff6c3-57cf-4bf9-8a25-2249bc094248",
+      "id": "1284d9ea-7bda-4112-8b9e-eac5fcf0f194",
       "html": "<h3>Расставь знаки препинания</h3>"
     },
     {
       "type": "rich_text",
-      "id": "5937cbc6-4bd4-48f8-a99e-2fa4050c8f7b",
+      "id": "508634b1-9560-4b4e-b5d6-12e0fbb28710",
       "html": "<p>Выберите знак препинания, который нужно поставить на месте пропуска.</p>"
     },
     {
       "type": "question",
-      "id": "4e98070f-161d-4a18-8e89-8e01e1345be2",
+      "id": "25747734-a164-4ce1-887e-077ef594d8f1",
       "prompt": {
         "html": "<p>Вставьте знак препинания</p>"
       },
@@ -1357,17 +1362,17 @@
     },
     {
       "type": "rich_text",
-      "id": "7f7ba64e-8937-47a6-b7e3-03dde203bc5f",
+      "id": "82b44589-aec6-4f96-9f2a-936d5b9840ca",
       "html": "<h3>Орфоэпическая разминка</h3>"
     },
     {
       "type": "rich_text",
-      "id": "f40cb904-b88c-4a2e-8695-0996c64ef0c7",
+      "id": "29a4b947-4a5b-4cc4-9977-494eba7b403a",
       "html": "<p>Отметьте слово с верно поставленным ударением (норма современного русского языка).</p>"
     },
     {
       "type": "question",
-      "id": "3ef97b4d-92df-4c89-bb36-f3583a2f43b0",
+      "id": "a5d89a09-4671-4bc0-b514-971333731ec6",
       "prompt": {
         "html": "<p>1. Как правильно?</p>"
       },
@@ -1377,22 +1382,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "c81c6b6c-0ea3-490d-8fe3-cc65535dd1d5",
+            "id": "9925354e-df88-48d3-9d82-9a59a7f006f6",
             "html": "тОрты",
             "correct": true
           },
           {
-            "id": "f0987f49-d1d6-4f64-8123-763b9510ac6b",
+            "id": "f01ad1fb-d7c1-47e2-a93b-3500cb2e0caf",
             "html": "торТЫ",
             "correct": false
           },
           {
-            "id": "0ca19c7f-38ad-4567-b4de-9f8b1c2bf7d2",
+            "id": "79bcecd5-0694-4096-a0ec-85b27ba086e9",
             "html": "ТОРты",
             "correct": false
           },
           {
-            "id": "81935f67-e9dc-4f99-9776-9ad1dba35c10",
+            "id": "6e714ba8-8d0c-4053-bb96-c94d0db320cd",
             "html": "торты (без ударения)",
             "correct": false
           }
@@ -1401,7 +1406,7 @@
     },
     {
       "type": "question",
-      "id": "547f83f7-72f1-4b94-8bbd-091bb2a6c609",
+      "id": "6cf70a64-8c52-4d62-b222-7e0347be2e6e",
       "prompt": {
         "html": "<p>2. Как правильно?</p>"
       },
@@ -1411,22 +1416,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "ceafc537-9cb4-4be5-b1fd-85ccaccb5acd",
+            "id": "1a810022-2a75-4f37-85e5-29586946b510",
             "html": "звонИт",
             "correct": true
           },
           {
-            "id": "37138dcf-dbbc-4b38-901e-10f70b005132",
+            "id": "9f7e4aec-dc81-4e21-9fe0-94d80f9a3096",
             "html": "звОнит",
             "correct": false
           },
           {
-            "id": "53e47819-2b4f-4ce4-8062-1d9ed5d2c499",
+            "id": "643f80ac-96ca-4841-87c5-973637351ec7",
             "html": "звоНИТ",
             "correct": false
           },
           {
-            "id": "9127160a-121e-4451-9d81-aaf68b7a9551",
+            "id": "6c746d23-732e-4344-91d1-2e8ee4a390bd",
             "html": "ЗВОнит",
             "correct": false
           }
@@ -1435,7 +1440,7 @@
     },
     {
       "type": "question",
-      "id": "0bb9a930-8f4f-4067-8cec-706e58ae70ec",
+      "id": "2e8878c3-a5ff-4736-bcdf-f3164209ee66",
       "prompt": {
         "html": "<p>3. Как правильно?</p>"
       },
@@ -1445,22 +1450,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "f730651d-bd15-4d73-8b05-cfed977f99d7",
+            "id": "e151e914-1040-4640-b312-4462af4eaa6c",
             "html": "срЕдства",
             "correct": true
           },
           {
-            "id": "8d54d747-8b92-4b4e-9a5b-e506eb05680c",
+            "id": "a81ded20-94c4-4075-9569-f066de070880",
             "html": "средствА",
             "correct": false
           },
           {
-            "id": "6fe99092-9c7f-48e8-b03a-d72db96f6400",
+            "id": "ed8ebc1d-2112-4563-ae2a-8bab2322a4c2",
             "html": "СРЕДства",
             "correct": false
           },
           {
-            "id": "e5875184-27a7-4269-b668-273204240e6e",
+            "id": "005b0da7-70b8-4c0f-b439-1e10ed5274ba",
             "html": "средстВА",
             "correct": false
           }
@@ -1469,7 +1474,7 @@
     },
     {
       "type": "question",
-      "id": "f6f0e200-4420-4fe4-8513-989c4fbba62f",
+      "id": "7bd9602a-2cf6-49f0-a6cf-afdaf699ee9b",
       "prompt": {
         "html": "<p>4. Как правильно?</p>"
       },
@@ -1479,22 +1484,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "33ed68b6-38d5-4d3a-b50f-bd98f62e81a9",
+            "id": "90fb85e4-a29b-40ae-9949-ca03fb46458e",
             "html": "докумЕнт",
             "correct": true
           },
           {
-            "id": "c24297f2-5691-4cc7-bcbe-337de5d0129f",
+            "id": "3a3c89be-5308-4515-908f-a0feae061472",
             "html": "ДОКУмент",
             "correct": false
           },
           {
-            "id": "32fcd9d1-3b38-4f66-abd4-97c3c8a6b330",
+            "id": "a17697c2-a736-44c7-add0-d275e2ee0733",
             "html": "докУмент",
             "correct": false
           },
           {
-            "id": "a8e19982-24ec-44f7-9f5b-298c2b236e34",
+            "id": "4601dd3d-b7bc-4eff-bd5b-14f71389dfa6",
             "html": "документ (без ударения)",
             "correct": false
           }
@@ -1503,7 +1508,7 @@
     },
     {
       "type": "question",
-      "id": "9612495b-8397-41ea-a514-35f29c115edb",
+      "id": "27bafb74-5b75-4a5c-998a-8dfe6dbcb7d6",
       "prompt": {
         "html": "<p>5. Как правильно?</p>"
       },
@@ -1513,22 +1518,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "00d8f9bd-79b2-4de3-aeb0-36a870c7d1d6",
+            "id": "0517ee3e-7531-4372-ba2e-125b9a1a942e",
             "html": "красИвее",
             "correct": true
           },
           {
-            "id": "81602c66-cfad-4dac-9819-aa49a7b51600",
+            "id": "c0858ec5-4e5d-4b35-8399-dc6bdfd54c4d",
             "html": "красивЕе",
             "correct": false
           },
           {
-            "id": "f607cd48-e2d6-4225-9786-e17a635e1eca",
+            "id": "a47bc8b3-f2a6-4907-9672-6db6d0c56acc",
             "html": "КРАсивее",
             "correct": false
           },
           {
-            "id": "c050c4b7-2637-4854-be19-58722203dcd9",
+            "id": "259dbc59-986d-4db0-8792-5fa40505d871",
             "html": "красивеЕ",
             "correct": false
           }
@@ -1537,17 +1542,17 @@
     },
     {
       "type": "rich_text",
-      "id": "f94adfe9-f864-41c0-9862-a976b3dc1e48",
+      "id": "e7bae119-5716-4a91-8257-52a12cafb1bc",
       "html": "<h3>Разбор слова по составу</h3>"
     },
     {
       "type": "rich_text",
-      "id": "2398d14e-81bf-4b38-ab72-1e3a3dd5375a",
+      "id": "d423fcf8-7658-4991-a325-d7b9ff145cdb",
       "html": "<h3>Разбор слова по составу</h3><p>Слово: <strong>подсказка</strong></p>"
     },
     {
       "type": "question",
-      "id": "1d1d9962-7dfb-4bbd-8f7a-1ff978a474dd",
+      "id": "771841de-c1b6-4689-a006-89a5e85a3b55",
       "prompt": {
         "html": "<p>Приставка</p>"
       },
@@ -1567,7 +1572,7 @@
     },
     {
       "type": "question",
-      "id": "68810d9e-1ac5-4e0e-89bf-3ab7c89a5ac8",
+      "id": "d34b5f32-e974-4120-9e22-1201b614bdec",
       "prompt": {
         "html": "<p>Корень</p>"
       },
@@ -1587,7 +1592,7 @@
     },
     {
       "type": "question",
-      "id": "60e3dd51-d7e9-4020-a615-63f1ec5ee897",
+      "id": "879b2e85-0003-46ba-9bf9-d291ac040cc9",
       "prompt": {
         "html": "<p>Суффикс</p>"
       },
@@ -1607,7 +1612,7 @@
     },
     {
       "type": "question",
-      "id": "7a3f6d5e-956b-461c-a328-d1448a65c9a0",
+      "id": "ddbad1c2-8be2-4db2-914e-7ba0fea5a127",
       "prompt": {
         "html": "<p>Окончание</p>"
       },
@@ -1627,12 +1632,12 @@
     },
     {
       "type": "rich_text",
-      "id": "f4f6f4a2-2c43-4d03-8e29-865757944945",
+      "id": "ec670076-7de1-43e9-b3e6-55cff29e7153",
       "html": "<h3>Синтаксический разбор предложения</h3>"
     },
     {
       "type": "question",
-      "id": "11220a77-ea21-490f-9b2a-8d9c09268165",
+      "id": "f735002f-d3cd-4cab-9aec-017f907a8586",
       "prompt": {
         "html": "<p>Выделите подлежащее и сказуемое</p>"
       },
@@ -1641,27 +1646,27 @@
         "type": "highlight_text",
         "tokens": [
           {
-            "id": "4db63f18-2122-4ccf-be54-b7419f2495ce",
+            "id": "1ea7a676-bbe0-4df4-bb55-bfca9ea1da91",
             "text": "Дети",
             "correct": true
           },
           {
-            "id": "46d22db0-739e-4a31-80de-8de07534a7af",
+            "id": "e4baca70-3fdf-436b-b4eb-358b44be3d42",
             "text": "весело",
             "correct": false
           },
           {
-            "id": "e51ec1ee-89fc-4b3e-847c-1c9d1669c01b",
+            "id": "5c78ca4d-d311-467b-8a5d-e9b47c124fb4",
             "text": "играли",
             "correct": true
           },
           {
-            "id": "ff7665d2-26b9-4fcd-8d33-afcb8351180b",
+            "id": "e1f59101-6a73-4a82-8fbe-233f590babce",
             "text": "во",
             "correct": false
           },
           {
-            "id": "1bf4a77e-9d36-4d3e-ae34-5485fc3445e0",
+            "id": "fc91187e-9c00-46c8-b85e-4e836f883210",
             "text": "дворе",
             "correct": false
           }
@@ -1670,17 +1675,17 @@
     },
     {
       "type": "rich_text",
-      "id": "088ebbf2-ebf9-4648-b7e2-7ded703a5649",
+      "id": "afe5269a-6ddc-4560-aca4-ab05b91bf7cd",
       "html": "<h3>Найди и исправь ошибку</h3>"
     },
     {
       "type": "rich_text",
-      "id": "54e6b3ff-442a-49c3-bda4-9aa415a3fbe0",
+      "id": "173216d3-ed88-4775-abe0-a0caf2e54b81",
       "html": "<p>В предложении есть ошибка. Перепишите его правильно.</p><p><em>«Одеть пальто и выйти на улицу.»</em></p>"
     },
     {
       "type": "question",
-      "id": "bbf8d4ad-70bc-4954-bb17-7518ccf1688f",
+      "id": "79a9bf3c-8af2-485b-b540-7868132e3aee",
       "prompt": {
         "html": "<p>Исправленное предложение</p>"
       },
@@ -1700,17 +1705,17 @@
     },
     {
       "type": "rich_text",
-      "id": "53fb239f-0964-4078-b397-a741f5ee086a",
+      "id": "b4686844-80d4-40f1-825c-673b85e37c61",
       "html": "<h3>Работа с текстом (ОГЭ/ЕГЭ)</h3>"
     },
     {
       "type": "rich_text",
-      "id": "544805bb-2382-46a0-a287-9e5157261746",
+      "id": "b34bae9f-81f7-487e-a981-8a963309fd80",
       "html": "<h3>Текст</h3><p>Осенью дни становятся короче, а ночи — длиннее. Птицы улетают в тёплые края. Деревья сбрасывают листву, готовясь к зиме.</p>"
     },
     {
       "type": "question",
-      "id": "fc9fbbc4-a106-406b-a1fd-f6a1384e42b3",
+      "id": "c4b4509e-d0a4-44fd-ad8c-0a223a059c8c",
       "prompt": {
         "html": "<p>Что происходит с днями осенью?</p>"
       },
@@ -1720,22 +1725,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "b500584d-f218-4ec3-8a84-64c58bf7cc18",
+            "id": "18286648-9dc7-4927-86d1-64c1f26cea74",
             "html": "Дни становятся короче",
             "correct": true
           },
           {
-            "id": "290fc670-e5b8-434d-85d5-72e632c1ba60",
+            "id": "8667e8de-5d78-40b8-b3dc-1b1fd394dc8c",
             "html": "Дни становятся длиннее",
             "correct": false
           },
           {
-            "id": "ab6f13f9-f76a-476f-8fba-c43b3f6c655f",
+            "id": "f3f6863a-b0cd-4ef6-97a5-f58eeebb50b4",
             "html": "Дни не меняются",
             "correct": false
           },
           {
-            "id": "6c9f9bff-f998-499f-87f5-ea8530769848",
+            "id": "353aae67-4e50-4c11-b394-61c9652d5eae",
             "html": "Дни исчезают",
             "correct": false
           }
@@ -1744,7 +1749,7 @@
     },
     {
       "type": "question",
-      "id": "a0a6a393-fd5e-4d2d-9d41-a59ca7664610",
+      "id": "d8dd8921-e167-4e2a-ac2c-64d5f7683112",
       "prompt": {
         "html": "<p>Куда улетают птицы?</p>"
       },
@@ -1754,22 +1759,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "e6b7ef1a-1b1a-4f66-9925-75f890e3f26b",
+            "id": "731755d4-8aa5-43ed-8bbe-1ce6c7821185",
             "html": "В тёплые края",
             "correct": true
           },
           {
-            "id": "caa09c1b-2745-4747-b427-5c39e75d9974",
+            "id": "8e4d3042-18c0-475c-a571-94513ca64a1d",
             "html": "На север",
             "correct": false
           },
           {
-            "id": "44d45171-10cf-4c0f-94ff-29f9b1fbb764",
+            "id": "d72c62db-9e1b-420f-b173-82a65c4d2b92",
             "html": "В горы",
             "correct": false
           },
           {
-            "id": "49a4dc3a-6ade-4f18-99eb-34da43332f55",
+            "id": "b2df1c17-a5a6-4e9b-94d0-4c32cd913db4",
             "html": "Под землю",
             "correct": false
           }
@@ -1778,7 +1783,7 @@
     },
     {
       "type": "question",
-      "id": "56aa8e94-e016-420e-9d31-28618acf5566",
+      "id": "dd64418c-85de-4364-b0de-ff1444d39b48",
       "prompt": {
         "html": "<p>Зачем деревья сбрасывают листву?</p>"
       },
@@ -1788,22 +1793,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "c0d21f4d-d83a-466c-a6ef-2d6e368ff770",
+            "id": "86538c4a-c214-4cd6-ae06-82b872e5a88e",
             "html": "Готовятся к зиме",
             "correct": true
           },
           {
-            "id": "501fea38-7c32-4d8b-aefb-1275c1453b30",
+            "id": "74286d0f-7cae-4a71-89ff-1463cd9fdd3d",
             "html": "От жары",
             "correct": false
           },
           {
-            "id": "9ad1f5c4-8d35-4bbe-b25e-db01abdba3d1",
+            "id": "4028661d-1571-46d5-9993-b48366f954bc",
             "html": "Просто так",
             "correct": false
           },
           {
-            "id": "0e054178-6adf-4c56-8c2b-0c4d6f655744",
+            "id": "c904d702-d59a-4173-87ec-47ce9dfcc443",
             "html": "Из-за дождя",
             "correct": false
           }
@@ -1812,7 +1817,7 @@
     },
     {
       "type": "question",
-      "id": "0fd68a52-a424-4f5e-82d5-8a4ef80d51e4",
+      "id": "ab5c11eb-d501-460a-897c-4edd81a81c39",
       "prompt": {
         "html": "<p>Ночи осенью становятся длиннее.</p>"
       },
@@ -1824,7 +1829,7 @@
     },
     {
       "type": "question",
-      "id": "e4d23aeb-165d-4046-aa41-661fc3b80584",
+      "id": "657923d6-7835-4ea2-8dc3-207b7aec3876",
       "prompt": {
         "html": "<p>Опишите своими словами, как меняется природа осенью.</p>"
       },
@@ -1835,12 +1840,12 @@
         "allowAttachments": false,
         "rubric": [
           {
-            "id": "a58d96d0-ba86-4b0b-9821-494218771991",
+            "id": "c071f9f9-971e-4343-84cf-875b0a544295",
             "label": "Названы минимум 2 признака осени",
             "points": 1
           },
           {
-            "id": "c243de23-2840-4ca8-aaba-10e765937516",
+            "id": "28067d4b-981c-4398-b682-d867a3b678ef",
             "label": "Ответ связный, без грубых ошибок",
             "points": 1
           }
@@ -1849,12 +1854,12 @@
     },
     {
       "type": "rich_text",
-      "id": "d782baa4-e1ed-480f-97df-11d7d11c4073",
+      "id": "68f88614-7879-4138-b093-7af2ac8da8a4",
       "html": "<h3>Части речи</h3>"
     },
     {
       "type": "question",
-      "id": "455a7913-719a-48b9-b4bd-885664018cef",
+      "id": "9e76b795-8bcb-40a3-9842-38cd10492cb2",
       "prompt": {
         "html": "<p>Разложите слова по частям речи</p>"
       },
@@ -1864,76 +1869,76 @@
         "shuffle": true,
         "categories": [
           {
-            "id": "002ebf94-22ec-421a-98b5-0069bf79b203",
+            "id": "931886d1-bbcf-4fc4-8c2e-ca73d90f817b",
             "label": "Существительное"
           },
           {
-            "id": "725bca83-1839-4d81-b106-c9c70939e4cf",
+            "id": "3a94eb9e-c580-4f60-981f-7a7fcc287bbe",
             "label": "Прилагательное"
           },
           {
-            "id": "b5615ac1-9e24-4bcb-936e-750c0720259c",
+            "id": "97c0f6b0-25cd-44e6-ab47-96b3e2c08da5",
             "label": "Глагол"
           }
         ],
         "items": [
           {
-            "id": "fcdcf6c9-3626-4a63-b68f-a352492328d8",
+            "id": "817ff803-b9ff-4ee6-954f-e045b5245dc8",
             "html": "дом",
-            "categoryId": "002ebf94-22ec-421a-98b5-0069bf79b203"
+            "categoryId": "931886d1-bbcf-4fc4-8c2e-ca73d90f817b"
           },
           {
-            "id": "b9c6f502-2957-446a-b2b7-96b724541797",
+            "id": "320c889d-0b60-4815-b225-52340ec7a7d3",
             "html": "окно",
-            "categoryId": "002ebf94-22ec-421a-98b5-0069bf79b203"
+            "categoryId": "931886d1-bbcf-4fc4-8c2e-ca73d90f817b"
           },
           {
-            "id": "4044c77b-ee73-4a50-b61f-d79e566aacef",
+            "id": "f39d13b6-2a97-4a8a-a74e-68a122a4e556",
             "html": "книга",
-            "categoryId": "002ebf94-22ec-421a-98b5-0069bf79b203"
+            "categoryId": "931886d1-bbcf-4fc4-8c2e-ca73d90f817b"
           },
           {
-            "id": "9926cc44-4e4f-42e4-b35d-c10c1c711cfb",
+            "id": "dbc049ed-d168-4e0e-996e-dcd976ff13db",
             "html": "красивый",
-            "categoryId": "725bca83-1839-4d81-b106-c9c70939e4cf"
+            "categoryId": "3a94eb9e-c580-4f60-981f-7a7fcc287bbe"
           },
           {
-            "id": "f1ee3211-d059-4d7c-abe4-ff95cdd4a5b4",
+            "id": "050956c2-cffb-4596-aaaa-9f9523b94f63",
             "html": "быстрый",
-            "categoryId": "725bca83-1839-4d81-b106-c9c70939e4cf"
+            "categoryId": "3a94eb9e-c580-4f60-981f-7a7fcc287bbe"
           },
           {
-            "id": "3bfde8e7-f2ce-4cfd-912b-7f97c8bb9fa9",
+            "id": "aec65471-d73d-4b37-84e9-439a620a94e8",
             "html": "бежать",
-            "categoryId": "b5615ac1-9e24-4bcb-936e-750c0720259c"
+            "categoryId": "97c0f6b0-25cd-44e6-ab47-96b3e2c08da5"
           },
           {
-            "id": "5221dc6e-e2bd-4be4-acbf-a4ad10f02130",
+            "id": "3fcfc8fb-6639-4831-b375-5b8ba3a53f99",
             "html": "читать",
-            "categoryId": "b5615ac1-9e24-4bcb-936e-750c0720259c"
+            "categoryId": "97c0f6b0-25cd-44e6-ab47-96b3e2c08da5"
           }
         ]
       }
     },
     {
       "type": "rich_text",
-      "id": "17df824d-1dc9-4227-9beb-873e4a2b2e72",
+      "id": "479e9d29-3b04-4e4b-874f-92bc5f1db2a0",
       "html": "<h2>Литература</h2>"
     },
     {
       "type": "rich_text",
-      "id": "79e79ad9-e2b7-47a0-85f4-0e34fbf5105b",
+      "id": "3ecae15c-c43d-4727-b51a-e2b1953b85e7",
       "html": "<h3>Цитата и анализ</h3>"
     },
     {
       "type": "callout",
-      "id": "cba39fd4-5c14-4fd5-b866-e5af05711258",
+      "id": "7fa4c24e-a8c3-4de9-908d-38bcbcee5ce9",
       "variant": "example",
       "html": "<p><strong>Цитата.</strong> «Я вас любил: любовь ещё, быть может, / В душе моей угасла не совсем…» (А.С. Пушкин)</p>"
     },
     {
       "type": "question",
-      "id": "4220cb8a-d4c7-41a5-8476-0577c8435075",
+      "id": "66a11d38-b886-4153-a9f1-3cbe21f30d8c",
       "prompt": {
         "html": "<p>Как вы понимаете смысл этой цитаты?</p>"
       },
@@ -1944,12 +1949,12 @@
         "allowAttachments": false,
         "rubric": [
           {
-            "id": "ad0c9ba3-794b-4eec-ae48-a26e813dbc35",
+            "id": "b38864ee-02f4-4e31-898d-2c29fd93976a",
             "label": "Верно передан общий смысл",
             "points": 1
           },
           {
-            "id": "eede81ca-d30f-497c-b13d-0d7102045edb",
+            "id": "1ccfd9ea-0872-4270-961a-97b788429e46",
             "label": "Есть личная интерпретация",
             "points": 1
           }
@@ -1958,17 +1963,17 @@
     },
     {
       "type": "rich_text",
-      "id": "77ceca8c-5f46-4244-8292-ff4a712f002d",
+      "id": "2d18c707-cf4f-449d-af5b-d3d70328e9b2",
       "html": "<h3>Кто автор строк</h3>"
     },
     {
       "type": "rich_text",
-      "id": "37eab5b9-4524-41f8-aa53-183820a33c61",
+      "id": "d2ece788-5940-49fd-b1d5-4e1454021a06",
       "html": "<p>Сопоставьте произведения и их авторов.</p>"
     },
     {
       "type": "question",
-      "id": "41697927-cec5-4747-8deb-0155ba7ab931",
+      "id": "108dfb0b-a190-4929-9bd5-6050dbdd495d",
       "prompt": {
         "html": "<p>Сопоставьте произведение и автора</p>"
       },
@@ -1977,44 +1982,44 @@
         "type": "matching",
         "left": [
           {
-            "id": "a05d8e8c-fc54-49e0-ad58-82fc5b061676",
+            "id": "a731a367-55bb-4251-9c15-97cd4872d5e4",
             "html": "«Евгений Онегин»"
           },
           {
-            "id": "7b1e3141-bb94-405a-b83d-19b41ff3987c",
+            "id": "9c1bb72f-e657-4c95-92f7-3c45c5443ca2",
             "html": "«Мёртвые души»"
           },
           {
-            "id": "900794f0-906b-486b-9fb5-fed92cc72435",
+            "id": "af481a0c-ffdd-4e08-a5b3-a8f99921be59",
             "html": "«Война и мир»"
           }
         ],
         "right": [
           {
-            "id": "64a54898-793e-48d0-af17-1ade0cdffc73",
+            "id": "c4eaad0c-f1dd-43a9-bfcb-5f92cf2f27e7",
             "html": "А. С. Пушкин"
           },
           {
-            "id": "40f1b79a-7821-45a6-a707-efae8b9423c9",
+            "id": "4b823cff-0be7-4304-929a-f6a582c5ada9",
             "html": "Н. В. Гоголь"
           },
           {
-            "id": "5adae1b0-8e20-4a91-8f0d-da1d871f3859",
+            "id": "5a02c888-b8b0-4d38-bf68-7bd7babe9e3e",
             "html": "Л. Н. Толстой"
           }
         ],
         "pairs": [
           [
-            "a05d8e8c-fc54-49e0-ad58-82fc5b061676",
-            "64a54898-793e-48d0-af17-1ade0cdffc73"
+            "a731a367-55bb-4251-9c15-97cd4872d5e4",
+            "c4eaad0c-f1dd-43a9-bfcb-5f92cf2f27e7"
           ],
           [
-            "7b1e3141-bb94-405a-b83d-19b41ff3987c",
-            "40f1b79a-7821-45a6-a707-efae8b9423c9"
+            "9c1bb72f-e657-4c95-92f7-3c45c5443ca2",
+            "4b823cff-0be7-4304-929a-f6a582c5ada9"
           ],
           [
-            "900794f0-906b-486b-9fb5-fed92cc72435",
-            "5adae1b0-8e20-4a91-8f0d-da1d871f3859"
+            "af481a0c-ffdd-4e08-a5b3-a8f99921be59",
+            "5a02c888-b8b0-4d38-bf68-7bd7babe9e3e"
           ]
         ],
         "scoring": "all_or_nothing",
@@ -2023,12 +2028,12 @@
     },
     {
       "type": "rich_text",
-      "id": "47833916-ac0d-41ad-ae29-d70d64f14335",
+      "id": "763b0605-5a2a-48f8-a0df-8b789d433a7e",
       "html": "<h3>Герой — произведение</h3>"
     },
     {
       "type": "question",
-      "id": "c1abccd1-3657-4300-9eac-e4c1612d319c",
+      "id": "c9cf1c02-6280-4384-a5aa-41dd29783a8b",
       "prompt": {
         "html": "<p>Сопоставьте героя и произведение</p>"
       },
@@ -2037,44 +2042,44 @@
         "type": "matching",
         "left": [
           {
-            "id": "20bb3a4c-aa56-4082-a8de-e9b332243f25",
+            "id": "b5179ff5-c840-40ab-b6ca-ea39fc2401ac",
             "html": "Печорин"
           },
           {
-            "id": "700a120f-45f4-4cf4-9b19-56f3c674135b",
+            "id": "8d4893ec-863f-49ad-99d9-09e1ef8b9d11",
             "html": "Онегин"
           },
           {
-            "id": "63e4f71e-56a4-416d-bca5-4e416b4da7bd",
+            "id": "4f1efea9-4270-43da-97e7-839226e1aae3",
             "html": "Чичиков"
           }
         ],
         "right": [
           {
-            "id": "0a2ef004-06bf-4266-9ed4-343f40658b09",
+            "id": "813193d0-27c5-4668-a714-154887bb3835",
             "html": "«Герой нашего времени»"
           },
           {
-            "id": "73d97220-8230-4ce4-b2f5-13fb00ba809c",
+            "id": "2925a040-3f7e-404c-8ecc-49216f3636e8",
             "html": "«Евгений Онегин»"
           },
           {
-            "id": "fb88bbe2-d708-403b-958a-8d27b2343155",
+            "id": "6bb11791-1595-42bb-bdf2-6dbad9bc35c0",
             "html": "«Мёртвые души»"
           }
         ],
         "pairs": [
           [
-            "20bb3a4c-aa56-4082-a8de-e9b332243f25",
-            "0a2ef004-06bf-4266-9ed4-343f40658b09"
+            "b5179ff5-c840-40ab-b6ca-ea39fc2401ac",
+            "813193d0-27c5-4668-a714-154887bb3835"
           ],
           [
-            "700a120f-45f4-4cf4-9b19-56f3c674135b",
-            "73d97220-8230-4ce4-b2f5-13fb00ba809c"
+            "8d4893ec-863f-49ad-99d9-09e1ef8b9d11",
+            "2925a040-3f7e-404c-8ecc-49216f3636e8"
           ],
           [
-            "63e4f71e-56a4-416d-bca5-4e416b4da7bd",
-            "fb88bbe2-d708-403b-958a-8d27b2343155"
+            "4f1efea9-4270-43da-97e7-839226e1aae3",
+            "6bb11791-1595-42bb-bdf2-6dbad9bc35c0"
           ]
         ],
         "scoring": "all_or_nothing",
@@ -2083,12 +2088,12 @@
     },
     {
       "type": "rich_text",
-      "id": "84977731-99c8-4b8a-9daa-18ef86619a45",
+      "id": "c3443f97-c5bd-46f7-ab2c-ea53db03ebda",
       "html": "<h3>Хронология сюжета</h3>"
     },
     {
       "type": "question",
-      "id": "e50e93e7-7705-422b-a712-83bb095b191e",
+      "id": "34cacfe2-06b5-4b16-bcd2-24aae70f53b9",
       "prompt": {
         "html": "<p>Расставьте события «Капитанской дочки» в порядке сюжета</p>"
       },
@@ -2097,19 +2102,19 @@
         "type": "ordering",
         "items": [
           {
-            "id": "2c0920f0-2b45-4b80-826f-e797d754fdc5",
+            "id": "edc10762-74f7-4a52-8111-7435971e525b",
             "html": "Гринёв отправляется на военную службу"
           },
           {
-            "id": "79ad9ac6-0070-4fcb-bd77-ebafafd20a65",
+            "id": "6354d8d3-ade7-415e-8e83-bf5a782948b7",
             "html": "Знакомство с Пугачёвым во время бурана"
           },
           {
-            "id": "42e359ca-158a-4dff-ae02-fdaef4466197",
+            "id": "64caac7b-5f76-4268-978c-7efa38ecaea4",
             "html": "Осада Белогорской крепости"
           },
           {
-            "id": "4a0e0057-45fe-4b06-9142-1c8cbff06364",
+            "id": "0a51be32-338b-44df-8785-29078c9572c2",
             "html": "Гринёва оправдывают благодаря заступничеству Маши"
           }
         ]
@@ -2117,12 +2122,12 @@
     },
     {
       "type": "rich_text",
-      "id": "92d10bad-f7ed-44ce-8a45-de0f81b2c76a",
+      "id": "4719796d-ceda-49c0-8b83-f2e28eab7a9a",
       "html": "<h3>Средства выразительности</h3>"
     },
     {
       "type": "question",
-      "id": "cec654a9-996e-4ec5-8c40-714525a1222e",
+      "id": "38e117ad-8dda-4c6f-b8a0-2a7384268ae0",
       "prompt": {
         "html": "<p>Найдите в отрывке эпитет: «Мороз и солнце; день чудесный!» (А.С. Пушкин)</p>"
       },
@@ -2131,27 +2136,27 @@
         "type": "highlight_text",
         "tokens": [
           {
-            "id": "bd402309-420b-4bc1-bf62-4882475542aa",
+            "id": "198a64e7-e8b1-4ae4-9d68-94b1103bed3b",
             "text": "Мороз",
             "correct": false
           },
           {
-            "id": "6ac2adb2-d686-48df-b98e-20ba90309363",
+            "id": "a1d2ab93-b385-429b-99e2-0a8ff5b79690",
             "text": "и",
             "correct": false
           },
           {
-            "id": "81b3940d-2d79-4104-9cec-425b6fdd0068",
+            "id": "80577a92-0dd6-450f-9c52-cf4c70a8663b",
             "text": "солнце;",
             "correct": false
           },
           {
-            "id": "929bb6f9-2b04-4024-bbe2-ff15f665791d",
+            "id": "bcd75222-4107-4b01-836d-8f11af01a561",
             "text": "день",
             "correct": false
           },
           {
-            "id": "873df4be-820b-4488-b0cc-ed1a01f05a03",
+            "id": "ca266cb0-add8-40e6-a7b1-3928b575b827",
             "text": "чудесный!",
             "correct": true
           }
@@ -2160,7 +2165,7 @@
     },
     {
       "type": "question",
-      "id": "e890add8-9603-4bf0-97ef-56b01b4c69a3",
+      "id": "8b0081c9-0d2a-452a-a193-83ab8226bb91",
       "prompt": {
         "html": "<p>Какое средство выразительности вы нашли?</p>"
       },
@@ -2170,22 +2175,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "bea2ee54-601f-4a2e-a7ed-30820af415fc",
+            "id": "2425db3c-491f-461f-845b-d1943ddfd32a",
             "html": "Эпитет",
             "correct": true
           },
           {
-            "id": "d7a5072b-62ae-4681-b7ef-35dce8995744",
+            "id": "e9917a20-5d0e-4ec1-8c0b-8c6899b4b4fc",
             "html": "Метафора",
             "correct": false
           },
           {
-            "id": "5900c468-e9cf-4895-8892-e4934fb5532b",
+            "id": "764084a8-ab08-489c-b706-a08d269e5a39",
             "html": "Сравнение",
             "correct": false
           },
           {
-            "id": "d0e3ce3a-0a25-40f4-930c-c5fdbf86a2a4",
+            "id": "02be438c-3aca-4468-a663-9984844681d5",
             "html": "Олицетворение",
             "correct": false
           }
@@ -2194,12 +2199,12 @@
     },
     {
       "type": "rich_text",
-      "id": "e1dc1470-939f-4c4f-8517-0cb8907f607b",
+      "id": "b59e4524-cf51-4873-935d-6a073b1e4dca",
       "html": "<h3>Сочинение-миниатюра</h3>"
     },
     {
       "type": "question",
-      "id": "494c4e7c-6b21-450a-a4d6-ad52b5764294",
+      "id": "c886498f-90ba-4fe0-9a0f-0eb93bf10e6f",
       "prompt": {
         "html": "<p>Напишите сочинение-миниатюру на тему «Мой любимый литературный герой»</p>"
       },
@@ -2210,17 +2215,17 @@
         "allowAttachments": false,
         "rubric": [
           {
-            "id": "4ec3f8e4-99cf-4091-8c12-0bfb917203c1",
+            "id": "cb3e4170-bdff-4df4-9885-3ecb769b8caf",
             "label": "Раскрытие темы",
             "points": 1
           },
           {
-            "id": "f8dcc9d3-82f0-4f7d-b671-2d8cbb200f81",
+            "id": "434c7157-5833-49f9-bc47-ab9c50c68e6d",
             "label": "Структура и логика",
             "points": 1
           },
           {
-            "id": "1f606a20-8864-4982-ab8a-04f9cc97b2b4",
+            "id": "9838be32-bc6c-4061-ab81-b78ea3d74ecd",
             "label": "Грамотность",
             "points": 1
           }
@@ -2229,17 +2234,17 @@
     },
     {
       "type": "rich_text",
-      "id": "377cc38d-1232-40f6-a46f-ee6eb892f285",
+      "id": "400b1281-1fd1-44c6-bc83-2e33cb9f0583",
       "html": "<h2>Английский язык</h2>"
     },
     {
       "type": "rich_text",
-      "id": "d0d66f00-53d2-446c-bea6-bc83ce854bf2",
+      "id": "7dfa396f-26c5-4f61-8d56-89bc3e7e4293",
       "html": "<h3>Слово — перевод</h3>"
     },
     {
       "type": "question",
-      "id": "fd22934c-2c57-417a-9d2f-bc0336fb5299",
+      "id": "2f266eb1-57e8-4994-98ce-ad2df1aa751b",
       "prompt": {
         "html": "<p>Match the word with its translation</p>"
       },
@@ -2248,68 +2253,68 @@
         "type": "matching",
         "left": [
           {
-            "id": "9ca08cfa-f339-4373-9a90-ebf55243efb7",
+            "id": "15fabb60-a9a2-4b93-87a3-b91642b9e711",
             "html": "house"
           },
           {
-            "id": "8b00c4e1-e885-473b-9e49-f1bcef002f09",
+            "id": "6bba12d8-e3d2-4dfc-a595-8934eb7c2498",
             "html": "book"
           },
           {
-            "id": "a9144bf2-4518-4939-8efd-21355ae504bf",
+            "id": "3167689f-55f3-4baa-8496-1ef5d784109a",
             "html": "water"
           },
           {
-            "id": "82fe411f-8cff-4538-8a01-570a436575a6",
+            "id": "9de262c4-dd3c-4e92-85ed-062fc966f37a",
             "html": "friend"
           },
           {
-            "id": "c9cafd52-d5d1-49d6-bf90-2271c03182b9",
+            "id": "f54952e3-91b9-415c-b0f0-f8fefa790905",
             "html": "school"
           }
         ],
         "right": [
           {
-            "id": "3562b934-0fc3-4a95-afa2-22d9075e97cb",
+            "id": "640f5cbb-5af6-4ee5-b64f-596811116a21",
             "html": "дом"
           },
           {
-            "id": "abbcb007-09ea-4163-96a8-0f7f6c6e9b7b",
+            "id": "a03857f4-9a15-4f4d-a041-58b4c0db40fc",
             "html": "книга"
           },
           {
-            "id": "5fadd503-65ad-41b8-bdf7-17759995404b",
+            "id": "4e73a815-d260-4b07-b773-853970c9ac44",
             "html": "вода"
           },
           {
-            "id": "ed4b6a8a-a41f-4a7d-bcce-b043a8400e2e",
+            "id": "dd8452e5-75ca-40b8-b3a1-d1981c195a64",
             "html": "друг"
           },
           {
-            "id": "31848adc-d066-41f9-b1e6-0d7b46f39466",
+            "id": "cfb84635-1e47-4050-b6df-677a98fabc67",
             "html": "школа"
           }
         ],
         "pairs": [
           [
-            "9ca08cfa-f339-4373-9a90-ebf55243efb7",
-            "3562b934-0fc3-4a95-afa2-22d9075e97cb"
+            "15fabb60-a9a2-4b93-87a3-b91642b9e711",
+            "640f5cbb-5af6-4ee5-b64f-596811116a21"
           ],
           [
-            "8b00c4e1-e885-473b-9e49-f1bcef002f09",
-            "abbcb007-09ea-4163-96a8-0f7f6c6e9b7b"
+            "6bba12d8-e3d2-4dfc-a595-8934eb7c2498",
+            "a03857f4-9a15-4f4d-a041-58b4c0db40fc"
           ],
           [
-            "a9144bf2-4518-4939-8efd-21355ae504bf",
-            "5fadd503-65ad-41b8-bdf7-17759995404b"
+            "3167689f-55f3-4baa-8496-1ef5d784109a",
+            "4e73a815-d260-4b07-b773-853970c9ac44"
           ],
           [
-            "82fe411f-8cff-4538-8a01-570a436575a6",
-            "ed4b6a8a-a41f-4a7d-bcce-b043a8400e2e"
+            "9de262c4-dd3c-4e92-85ed-062fc966f37a",
+            "dd8452e5-75ca-40b8-b3a1-d1981c195a64"
           ],
           [
-            "c9cafd52-d5d1-49d6-bf90-2271c03182b9",
-            "31848adc-d066-41f9-b1e6-0d7b46f39466"
+            "f54952e3-91b9-415c-b0f0-f8fefa790905",
+            "cfb84635-1e47-4050-b6df-677a98fabc67"
           ]
         ],
         "scoring": "all_or_nothing",
@@ -2318,18 +2323,18 @@
     },
     {
       "type": "rich_text",
-      "id": "8af91239-9d69-46d3-89d7-0c16db80b337",
+      "id": "c720f0a7-56df-44df-80f5-0c45e20da3ef",
       "html": "<h3>Listening</h3>"
     },
     {
       "type": "audio",
-      "id": "79cfd151-8ae9-4263-b5dd-ca15704e6b42",
+      "id": "3039b5de-e9aa-4b46-9b25-e8f1b140581d",
       "assetId": "media:en-listening-anna.mp3",
       "transcript": "Hello! My name is Anna. I am eleven years old, and I live in Moscow. I go to school every day. My favourite subject is English, and after school I like to play the piano."
     },
     {
       "type": "question",
-      "id": "e3f985c5-3d97-42a6-b394-15069efd35c6",
+      "id": "f6f759f6-a35b-42cd-b5ee-ce781a84be89",
       "prompt": {
         "html": "<p>What is the text about?</p>"
       },
@@ -2339,22 +2344,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "ee558097-e9d8-4491-9aa2-b4c0469c1408",
+            "id": "1a61f3b4-5667-4918-8e73-750446b0da33",
             "html": "A girl introducing herself",
             "correct": true
           },
           {
-            "id": "1a6059f5-9e57-4e72-b88e-47b0d187c606",
+            "id": "1f3828f0-a905-4719-9209-c3415c8270af",
             "html": "A weather forecast",
             "correct": false
           },
           {
-            "id": "c0f48d2d-e071-4ce3-83af-4009c0bf1ca4",
+            "id": "1020a66a-b979-407b-a174-787950719688",
             "html": "A recipe",
             "correct": false
           },
           {
-            "id": "ee23e6f2-9414-4c04-acf7-e749d31f548e",
+            "id": "93bcd103-288c-4f0d-aef4-3dfb8360fafc",
             "html": "A football match",
             "correct": false
           }
@@ -2363,7 +2368,7 @@
     },
     {
       "type": "question",
-      "id": "ef0eb744-c01b-40bd-968f-31ef9c018719",
+      "id": "b6bd5eb6-29d0-4b98-bff0-299236e0d730",
       "prompt": {
         "html": "<p>Anna is eleven years old.</p>"
       },
@@ -2375,12 +2380,12 @@
     },
     {
       "type": "rich_text",
-      "id": "319da994-b468-4efe-8f03-4c15ea0d9f85",
+      "id": "03fcecf1-4c66-4e91-9604-d7ebaea242f6",
       "html": "<h3>Грамматика: выбери форму</h3>"
     },
     {
       "type": "question",
-      "id": "3b13e873-d608-4e78-bf55-c41321b518df",
+      "id": "2df305b5-88e2-40d0-8e13-42e797f93f80",
       "prompt": {
         "html": "<p>Choose the correct verb form</p>"
       },
@@ -2402,12 +2407,12 @@
     },
     {
       "type": "rich_text",
-      "id": "1a89c2bf-98b8-4a23-b0a6-fd0ef6eb2b26",
+      "id": "f68f6a31-2d8b-4dfd-b9d0-61fabca0ecf3",
       "html": "<h3>Порядок слов в предложении</h3>"
     },
     {
       "type": "question",
-      "id": "926f10fa-d5da-4b4f-9e08-cd6007556d1f",
+      "id": "14dbc1a2-3c86-4501-b065-c96590d23f98",
       "prompt": {
         "html": "<p>Put the words in the correct order</p>"
       },
@@ -2416,23 +2421,23 @@
         "type": "ordering",
         "items": [
           {
-            "id": "56c9861b-fc1a-45b6-86cf-225933e0a3b5",
+            "id": "c28aac94-84f1-4b98-8fd6-057d4d168c7a",
             "html": "Where"
           },
           {
-            "id": "d337a1c5-77c2-4fa7-b2dc-8603aa02d790",
+            "id": "5c6db726-48d5-40de-9c76-982d30de22a8",
             "html": "do"
           },
           {
-            "id": "c4074ef9-34d5-495f-9fc5-d0aaf56c1438",
+            "id": "0626e802-738e-47ea-b194-0e826fe5135e",
             "html": "you"
           },
           {
-            "id": "c593c1c5-61fc-40ab-a190-7445cb0d3fa7",
+            "id": "4b7827fe-8611-49d1-b93b-f47ecd479f0b",
             "html": "live"
           },
           {
-            "id": "07a14d12-575e-4072-9c63-8e487277d86c",
+            "id": "3409d477-d190-4ca7-a270-153d8908d4c0",
             "html": "?"
           }
         ]
@@ -2440,17 +2445,17 @@
     },
     {
       "type": "rich_text",
-      "id": "e1334fdb-a0da-448b-8137-c2c1d67a17ac",
+      "id": "08c9d6fa-a573-4591-bf07-6c5bdce03dbb",
       "html": "<h3>Диалог с пропусками</h3>"
     },
     {
       "type": "rich_text",
-      "id": "c2c0bb67-20c5-40f8-96ff-e76c6b9f5378",
+      "id": "f6ffbde7-9016-4ea5-af4f-527f8ed34902",
       "html": "<p>Complete the dialogue.</p>"
     },
     {
       "type": "question",
-      "id": "53612f0b-5a9e-4709-b67f-97fcec272ece",
+      "id": "5b450a33-1e6f-45b0-96ac-fa9e4334ec2c",
       "prompt": {
         "html": "<p>— Hello! ___</p>"
       },
@@ -2470,7 +2475,7 @@
     },
     {
       "type": "question",
-      "id": "503f3075-4592-45c9-bbcd-d79cfaf88088",
+      "id": "0fe9d52f-bc2d-4609-b1b6-2d469073b50d",
       "prompt": {
         "html": "<p>— ___ Thank you, bye!</p>"
       },
@@ -2490,17 +2495,17 @@
     },
     {
       "type": "rich_text",
-      "id": "933fde00-588e-40a2-b166-8e8279629ffa",
+      "id": "aa2b84c1-e132-4f23-97e5-1ef67e55a4b3",
       "html": "<h3>Word formation</h3>"
     },
     {
       "type": "rich_text",
-      "id": "b9143bb0-f1e2-43e2-8b2e-6d7efa5a982d",
+      "id": "4d6a2366-da04-403b-b7e7-d09d5532abf5",
       "html": "<p>Form the correct word from the word in brackets.</p>"
     },
     {
       "type": "question",
-      "id": "85ce232c-6c20-4106-818d-192e9d09593d",
+      "id": "8f33b191-d296-40c9-90d8-c7f6419fc97c",
       "prompt": {
         "html": "<p>happy → ______ (noun)</p>"
       },
@@ -2520,7 +2525,7 @@
     },
     {
       "type": "question",
-      "id": "300d9911-2aab-49b7-aa3a-e7229f40209c",
+      "id": "09098100-ce37-47a5-a6ec-748e503e09e0",
       "prompt": {
         "html": "<p>act → ______ (adjective)</p>"
       },
@@ -2540,7 +2545,7 @@
     },
     {
       "type": "question",
-      "id": "0c28fc6a-3d5b-44d7-9d99-1c290391a9d9",
+      "id": "011dd2e5-4d9c-466e-a316-c074275446f3",
       "prompt": {
         "html": "<p>friend → ______ (adjective)</p>"
       },
@@ -2560,17 +2565,17 @@
     },
     {
       "type": "rich_text",
-      "id": "cf6da238-ec02-4781-8cf0-40e13c4c8909",
+      "id": "56053842-2daa-4967-b968-d8ebf1fe3711",
       "html": "<h2>Математика</h2>"
     },
     {
       "type": "rich_text",
-      "id": "74f51d1f-b0f0-4b32-bc38-df6d5e94ab51",
+      "id": "1937f9d4-ab51-4835-9f2c-30ad028ed162",
       "html": "<h3>Реши уравнение</h3>"
     },
     {
       "type": "question",
-      "id": "d23521b1-62d8-4150-8342-52e6c6a3c69e",
+      "id": "b6218325-03f8-4947-9db8-a134023e1da5",
       "prompt": {
         "html": "<p>Решите уравнение 3x + 5 = 20 и укажите x</p>"
       },
@@ -2587,22 +2592,22 @@
     },
     {
       "type": "rich_text",
-      "id": "bf647668-3e5b-4514-b840-9cddb514d086",
+      "id": "39b8f40d-6e06-4063-8f9b-c10a6f679244",
       "html": "<h3>Формула → подстановка → ответ</h3>"
     },
     {
       "type": "formula",
-      "id": "c186b46e-59db-44f5-9618-f6e41c3caf87",
+      "id": "877105cb-5804-4a34-965c-346ad524a0dd",
       "latex": "S = v \\cdot t"
     },
     {
       "type": "rich_text",
-      "id": "55276003-1712-4ef5-8708-566fb4a52c8e",
+      "id": "ce738e03-5454-4043-b8af-30c84d54f2d9",
       "html": "<p>Автомобиль ехал со скоростью 60 км/ч в течение 2 часов. Подставим значения в формулу.</p>"
     },
     {
       "type": "question",
-      "id": "94198845-40be-4f76-b01e-68c300445042",
+      "id": "08309f85-3049-4f05-a994-f8e6a3f97897",
       "prompt": {
         "html": "<p>Чему равно пройденное расстояние S (в км)?</p>"
       },
@@ -2619,12 +2624,12 @@
     },
     {
       "type": "rich_text",
-      "id": "d70a7fa5-57e7-47cd-8a6e-40798f2a2bfc",
+      "id": "e0541aa4-7c9c-4fa6-ad9b-88f1d5d52564",
       "html": "<h3>Шаги доказательства</h3>"
     },
     {
       "type": "question",
-      "id": "96e5cd41-1db9-4ed2-9a33-d77273e53d9b",
+      "id": "116ee4d5-cc97-48f7-b233-81423a1f63a8",
       "prompt": {
         "html": "<p>Расставьте шаги доказательства теоремы о сумме углов треугольника</p>"
       },
@@ -2633,19 +2638,19 @@
         "type": "ordering",
         "items": [
           {
-            "id": "c723fc83-5bb2-4ba5-a372-88d6044d82dc",
+            "id": "dd620bb6-c427-405d-9564-8174860a0ed8",
             "html": "Проведём через вершину C прямую, параллельную стороне AB."
           },
           {
-            "id": "8828c166-fed8-497a-b4af-84ae8016f91d",
+            "id": "5acb324d-1dc1-4366-867d-7787c390b3fc",
             "html": "Углы при параллельных прямых и секущей равны как накрест лежащие."
           },
           {
-            "id": "36debf7f-4e4a-4ac5-8734-05a82abc3ff7",
+            "id": "a5b2bd97-5254-4fa8-a0a8-dc9e2a0c1c73",
             "html": "Угол при вершине C и два накрест лежащих угла лежат на одной прямой."
           },
           {
-            "id": "b7be839b-77af-44b4-ab5e-aabab47d6097",
+            "id": "d36913dd-30ba-4e2d-b1e9-2fc16947270d",
             "html": "Сумма углов на прямой равна 180° — значит, сумма углов треугольника равна 180°."
           }
         ]
@@ -2653,19 +2658,19 @@
     },
     {
       "type": "rich_text",
-      "id": "1a395de8-4411-4437-9033-198c7fdfdb05",
+      "id": "184a88dd-3f41-4ead-be95-746250848ff2",
       "html": "<h3>Задача с чертежом</h3>"
     },
     {
       "type": "image",
-      "id": "b59e9b7d-d927-4512-b667-3e00fb2401dd",
+      "id": "cc635286-ed52-46d4-80f4-ed53162de3df",
       "assetId": "media:math-rectangle.svg",
       "caption": "Прямоугольник ABCD",
       "zoomable": false
     },
     {
       "type": "question",
-      "id": "024e54ed-b38f-44e3-bde2-272ffea10dad",
+      "id": "c0e011e8-f176-4493-a452-f5a52c968a9d",
       "prompt": {
         "html": "<p>Найдите площадь прямоугольника (в см²)</p>"
       },
@@ -2682,17 +2687,17 @@
     },
     {
       "type": "rich_text",
-      "id": "4d57c25e-e253-4208-8bc0-39736be54eeb",
+      "id": "93e39b77-aa26-4194-bff1-d8e775a35496",
       "html": "<h3>Найди ошибку в решении</h3>"
     },
     {
       "type": "rich_text",
-      "id": "9c6896ec-45fd-4d5f-aebe-508d2fbf0b7c",
+      "id": "c2856b02-b7e2-4066-9c9b-fe8502ac1191",
       "html": "<h3>Решение уравнения 2x + 3 = 11</h3><p>Шаг 1. 2x + 3 = 11.<br>Шаг 2. 2x = 11 + 3 = 14.<br>Шаг 3. x = 7.</p>"
     },
     {
       "type": "question",
-      "id": "57bf9d49-010a-46f0-821d-08575c1cc432",
+      "id": "74810d4b-f88e-4be1-9868-0390f29d1412",
       "prompt": {
         "html": "<p>На каком шаге допущена ошибка?</p>"
       },
@@ -2702,22 +2707,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "7e0092f2-9e3f-4172-8679-954cd6ddb157",
+            "id": "6eafbf1a-8265-4776-b35a-7f2e21f865b8",
             "html": "Шаг 1",
             "correct": false
           },
           {
-            "id": "a44a3d2c-8e5a-4105-b3c0-f0b7cab3a632",
+            "id": "fdfe8a7e-c16c-45d4-a03b-51ce43396cd5",
             "html": "Шаг 2",
             "correct": true
           },
           {
-            "id": "fbe4db36-5341-4698-9d19-5f642b051bb5",
+            "id": "58b8442f-b24f-40ea-a417-b681de2aaa68",
             "html": "Шаг 3",
             "correct": false
           },
           {
-            "id": "74473903-f1c1-4f46-b072-0d2d3031eb15",
+            "id": "0a32720e-63ca-4599-a5bd-f9161fbc7a34",
             "html": "Ошибки нет",
             "correct": false
           }
@@ -2726,12 +2731,12 @@
     },
     {
       "type": "rich_text",
-      "id": "787013cb-2473-4a53-a998-2aae04a281f7",
+      "id": "e1f34040-c07e-4959-acc4-7ab648236e76",
       "html": "<h3>Устный счёт</h3>"
     },
     {
       "type": "question",
-      "id": "2b6e99e1-8dd5-49e6-b2f3-fe18f24221d8",
+      "id": "6980a3ae-7105-42e1-8897-4a5845a9f652",
       "prompt": {
         "html": "<p>1. 7 + 8</p>"
       },
@@ -2748,7 +2753,7 @@
     },
     {
       "type": "question",
-      "id": "0c76f32a-e22d-45fb-88ce-5922e1e0c3a5",
+      "id": "c529f622-e89b-4dfc-a0c2-6d63dd43b62c",
       "prompt": {
         "html": "<p>2. 12 − 5</p>"
       },
@@ -2765,7 +2770,7 @@
     },
     {
       "type": "question",
-      "id": "e097a74c-eec3-4d4a-bd68-f5bd54f82b6f",
+      "id": "8583d6a0-d35a-431f-8fb4-4405f73e0464",
       "prompt": {
         "html": "<p>3. 6 × 4</p>"
       },
@@ -2782,7 +2787,7 @@
     },
     {
       "type": "question",
-      "id": "e6acce27-b65c-48e0-9fad-a517f649dc8e",
+      "id": "9b60f824-792f-4f22-bf03-3e695384f629",
       "prompt": {
         "html": "<p>4. 36 ÷ 6</p>"
       },
@@ -2799,7 +2804,7 @@
     },
     {
       "type": "question",
-      "id": "c425c00b-3c6a-4cbf-93d8-7138996ab9de",
+      "id": "d3883e8e-1147-477b-9431-a18dec1c56b7",
       "prompt": {
         "html": "<p>5. 15 + 27</p>"
       },
@@ -2816,7 +2821,7 @@
     },
     {
       "type": "question",
-      "id": "d1a0a2ab-efbe-468e-817b-7cae2f780bba",
+      "id": "c4237457-c2b2-4b0a-8a37-8de3d9537488",
       "prompt": {
         "html": "<p>6. 100 − 45</p>"
       },
@@ -2833,7 +2838,7 @@
     },
     {
       "type": "question",
-      "id": "bdcfc012-ef90-4935-aecb-b906f579d009",
+      "id": "b8198bae-af0b-447b-9f29-1639d20cced3",
       "prompt": {
         "html": "<p>7. 9 × 9</p>"
       },
@@ -2850,7 +2855,7 @@
     },
     {
       "type": "question",
-      "id": "0f4067dc-2f19-47b4-b7f6-df0e9e7dce7b",
+      "id": "77271b8a-f3e2-4763-befd-ae066cafcf0b",
       "prompt": {
         "html": "<p>8. 144 ÷ 12</p>"
       },
@@ -2867,7 +2872,7 @@
     },
     {
       "type": "question",
-      "id": "2c5c372f-7724-45f9-90f2-6d65cfbe5e8d",
+      "id": "384ee37b-6bb3-4634-8a48-ffb640a58e02",
       "prompt": {
         "html": "<p>9. 13 + 19</p>"
       },
@@ -2884,7 +2889,7 @@
     },
     {
       "type": "question",
-      "id": "39c38705-6b2d-4810-9b51-b92d1bfd7506",
+      "id": "53ee7482-be93-4216-b60e-019fc16dbd9e",
       "prompt": {
         "html": "<p>10. 8 × 7</p>"
       },
@@ -2901,17 +2906,17 @@
     },
     {
       "type": "rich_text",
-      "id": "7d89ba99-bb18-4583-ab18-d7e4839f5226",
+      "id": "075fe70b-408f-4d9b-a228-8363dc5defaf",
       "html": "<h2>Физика</h2>"
     },
     {
       "type": "rich_text",
-      "id": "259de2bb-fb94-4927-9024-32d755556e48",
+      "id": "ffe442a4-1519-44b8-996a-b9c150a17f55",
       "html": "<h3>Задача с единицами измерения</h3>"
     },
     {
       "type": "question",
-      "id": "d8b5250a-4c74-49a5-897b-5c806e7c18c4",
+      "id": "30d76d4c-98ba-4637-bf56-175166a9d600",
       "prompt": {
         "html": "<p>Автомобиль проехал 90 км за 1,5 часа. Найдите его скорость.</p>"
       },
@@ -2929,17 +2934,17 @@
     },
     {
       "type": "rich_text",
-      "id": "e2f8aab0-600f-40c3-85b4-c5b5986566fd",
+      "id": "94e92e6d-e3bf-4947-8961-e79ec9aa41ec",
       "html": "<h3>Лабораторная: таблица измерений</h3>"
     },
     {
       "type": "rich_text",
-      "id": "c2dbd245-bbb4-466e-a485-e317b354fed0",
+      "id": "8e455b8b-9417-45f4-a299-20d675abeb67",
       "html": "<p>За 10 полных колебаний маятника секундомер показал 15 с. Заполните таблицу и вычислите период одного колебания (T = t / N).</p>"
     },
     {
       "type": "question",
-      "id": "81fec00e-b303-4fd2-8f46-50e9a2e39522",
+      "id": "54bf202f-948e-4358-aabc-2bfdc688e107",
       "prompt": {
         "html": "<p>Заполните таблицу результатами измерений</p>"
       },
@@ -2964,7 +2969,7 @@
             },
             {
               "kind": "input",
-              "id": "07d5fcc1-8d6e-43c5-a758-5e62ac1d2821",
+              "id": "9ed214be-c154-4a48-8288-43ab5ee9e69a",
               "answers": [
                 {
                   "value": "10",
@@ -2983,7 +2988,7 @@
             },
             {
               "kind": "input",
-              "id": "a6f7ade3-b2aa-4a23-96b2-f641cd66a743",
+              "id": "4a80c2dd-85ac-4b2a-8154-b3939f2a0261",
               "answers": [
                 {
                   "value": "15",
@@ -3002,7 +3007,7 @@
             },
             {
               "kind": "input",
-              "id": "6844f78a-437c-45e0-9b48-f7e1d5b52433",
+              "id": "7f133524-54c7-4862-975a-a3495d905587",
               "answers": [
                 {
                   "value": "1.5",
@@ -3019,7 +3024,7 @@
     },
     {
       "type": "question",
-      "id": "b73bd404-9446-4b81-abd4-8e8d7ca65e95",
+      "id": "58a2d41f-7a88-466f-9412-f2a82db71149",
       "prompt": {
         "html": "<p>Сформулируйте вывод по результатам измерений</p>"
       },
@@ -3030,12 +3035,12 @@
         "allowAttachments": false,
         "rubric": [
           {
-            "id": "b92f0a79-25f5-4004-b7e9-daa9a931bcae",
+            "id": "6db3e160-d3d5-4e2f-a407-14154e6e0198",
             "label": "Верно вычислен период",
             "points": 1
           },
           {
-            "id": "7bb8a548-ae1a-4f88-ad14-e6dfea18e355",
+            "id": "db0f0cb2-0666-40d9-a29d-a8d0f73f3f86",
             "label": "Объяснена формула T = t/N",
             "points": 1
           }
@@ -3044,19 +3049,19 @@
     },
     {
       "type": "rich_text",
-      "id": "c416a876-8ddc-4319-ad4b-1e88b17616cf",
+      "id": "1f108b7c-cd53-48de-a9f2-e15768644ba2",
       "html": "<h3>Чтение графика</h3>"
     },
     {
       "type": "image",
-      "id": "6244e603-4dc5-4bef-ad52-5aaaa995de07",
+      "id": "c4f90178-583a-4a1e-99b6-5519fba2f757",
       "assetId": "media:phys-graph.svg",
       "caption": "Зависимость координаты тела от времени",
       "zoomable": true
     },
     {
       "type": "question",
-      "id": "8cc5d0c4-68b1-4c24-be4e-2d97b8f15539",
+      "id": "1e1c231b-c0df-4639-bbb0-51bc53d2274d",
       "prompt": {
         "html": "<p>Что происходит на графике равномерного движения при t = 0?</p>"
       },
@@ -3066,22 +3071,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "fae46fd2-8dec-4bd1-a221-4f3086a2cfb6",
+            "id": "1822680e-db52-445f-93fc-83251b83a191",
             "html": "Тело находится в начальной точке",
             "correct": true
           },
           {
-            "id": "e0b4e194-01e9-46d2-bf35-239ca327ff4d",
+            "id": "b06b2163-6db9-40b1-b592-df441645a144",
             "html": "Тело покоится в конце пути",
             "correct": false
           },
           {
-            "id": "40ab0949-3569-4f4b-8261-af597750060d",
+            "id": "85661aeb-19b4-4c1a-98ff-1ba16088c86f",
             "html": "Тело движется назад",
             "correct": false
           },
           {
-            "id": "846523a2-f548-4ef6-b418-78e8978526ec",
+            "id": "bb42c87b-bbc2-4478-b53f-63e122d31a23",
             "html": "График не определён",
             "correct": false
           }
@@ -3090,7 +3095,7 @@
     },
     {
       "type": "question",
-      "id": "5d5035d4-54b0-409e-8e97-6c337d37ab59",
+      "id": "a4584c37-dac4-4720-a1ce-406a3bc7b930",
       "prompt": {
         "html": "<p>Тело прошло 8 м за 4 с равномерного движения. Определите скорость (в м/с)</p>"
       },
@@ -3107,12 +3112,12 @@
     },
     {
       "type": "rich_text",
-      "id": "c0daa4e7-2f3d-41ab-ae2d-8827995cf885",
+      "id": "9b138923-17b7-41b7-88f0-c3db0670d6f4",
       "html": "<h3>Формула — что выражает</h3>"
     },
     {
       "type": "question",
-      "id": "303ba653-129d-4d99-aff3-a3397afd7d0d",
+      "id": "ff28b9d6-55f7-49ee-a08d-a85bbe96c6d5",
       "prompt": {
         "html": "<p>Сопоставьте формулу и величину</p>"
       },
@@ -3121,44 +3126,44 @@
         "type": "matching",
         "left": [
           {
-            "id": "fd8ecfeb-02fb-402a-b5e7-e1b13f1cea31",
+            "id": "e910e66b-90d8-49f8-9a8f-ee96a42803ee",
             "html": "v = s/t"
           },
           {
-            "id": "e6ca0ab3-3228-47e2-977a-d8e84c45d361",
+            "id": "a7e289ab-c770-4596-a78d-63579fa68c3f",
             "html": "F = ma"
           },
           {
-            "id": "e82258e4-e2ff-48bc-b4ec-32baf1434b0c",
+            "id": "85619919-62ce-4977-a18f-82ca6188d6f4",
             "html": "p = mv"
           }
         ],
         "right": [
           {
-            "id": "e63265b6-c23a-417f-924a-e09b0dd3c504",
+            "id": "809699a6-763b-475f-807d-99e0e71ab02d",
             "html": "скорость"
           },
           {
-            "id": "14074724-dc6f-415b-bfa3-d852ccfc9c21",
+            "id": "f346bf2f-428e-4ed5-a32d-ec6e9ab7d1b1",
             "html": "сила"
           },
           {
-            "id": "3833d6c1-174b-4b5b-83ab-2e8c21e02acf",
+            "id": "ccea0777-1e61-46c9-bfb2-c8dd3ccbcca6",
             "html": "импульс"
           }
         ],
         "pairs": [
           [
-            "fd8ecfeb-02fb-402a-b5e7-e1b13f1cea31",
-            "e63265b6-c23a-417f-924a-e09b0dd3c504"
+            "e910e66b-90d8-49f8-9a8f-ee96a42803ee",
+            "809699a6-763b-475f-807d-99e0e71ab02d"
           ],
           [
-            "e6ca0ab3-3228-47e2-977a-d8e84c45d361",
-            "14074724-dc6f-415b-bfa3-d852ccfc9c21"
+            "a7e289ab-c770-4596-a78d-63579fa68c3f",
+            "f346bf2f-428e-4ed5-a32d-ec6e9ab7d1b1"
           ],
           [
-            "e82258e4-e2ff-48bc-b4ec-32baf1434b0c",
-            "3833d6c1-174b-4b5b-83ab-2e8c21e02acf"
+            "85619919-62ce-4977-a18f-82ca6188d6f4",
+            "ccea0777-1e61-46c9-bfb2-c8dd3ccbcca6"
           ]
         ],
         "scoring": "all_or_nothing",
@@ -3167,12 +3172,12 @@
     },
     {
       "type": "rich_text",
-      "id": "70559645-1152-4d86-8d19-6b2fe6b9d995",
+      "id": "90a2e0fe-463a-45c8-acc0-29f9988727f8",
       "html": "<h3>Качественный вопрос «почему»</h3>"
     },
     {
       "type": "question",
-      "id": "778a78b2-dc66-4f33-93e5-6e12e34aacd8",
+      "id": "1d7f9d08-2de0-4bc8-bbaf-b2c8545d2168",
       "prompt": {
         "html": "<p>Объясните, почему в жаркий день асфальт нагревается сильнее, чем трава рядом с ним</p>"
       },
@@ -3183,12 +3188,12 @@
         "allowAttachments": false,
         "rubric": [
           {
-            "id": "935205fd-df6a-430d-8d2d-38e81373f5e8",
+            "id": "5f83151e-5bf1-43a9-a34e-c4cec3c7729f",
             "label": "Верное объяснение (разная теплоёмкость/поглощение света)",
             "points": 1
           },
           {
-            "id": "e79e669e-ccaf-47d9-8040-bc9feddd6b61",
+            "id": "854acf5f-83ef-4d56-a0a1-7c3898eb2d13",
             "label": "Использованы физические термины",
             "points": 1
           }
@@ -3197,19 +3202,19 @@
     },
     {
       "type": "rich_text",
-      "id": "30a9af47-291f-4045-b28b-55cf672db263",
+      "id": "42508946-a78e-4a42-b6a7-325545fb4a85",
       "html": "<h3>Схема электрической цепи</h3>"
     },
     {
       "type": "image",
-      "id": "481e49c8-910b-4343-ba86-020d199703a5",
+      "id": "7e1d5de2-ba8d-40a0-9424-af16a3c248e3",
       "assetId": "media:phys-circuit.svg",
       "caption": "Схема электрической цепи",
       "zoomable": false
     },
     {
       "type": "question",
-      "id": "42980e94-4eb1-4560-8c2b-3d8b2d5a8245",
+      "id": "47df6942-1460-4f41-9a0d-e6a413d0aeaa",
       "prompt": {
         "html": "<p>Опишите, как соединены элементы цепи и что произойдёт, если разомкнуть ключ</p>"
       },
@@ -3220,12 +3225,12 @@
         "allowAttachments": false,
         "rubric": [
           {
-            "id": "bd7bfcfd-19ff-4630-aed6-8ea0a07782c9",
+            "id": "c0796bee-3106-4dbc-886d-520fb48decad",
             "label": "Верно описано последовательное соединение",
             "points": 1
           },
           {
-            "id": "e6cca2c2-6859-4ec8-b8e1-2458b084ad9f",
+            "id": "09f8122c-727b-475e-b339-b60b9277f269",
             "label": "Верно объяснён разрыв цепи",
             "points": 1
           }
@@ -3234,17 +3239,17 @@
     },
     {
       "type": "rich_text",
-      "id": "e0931ab9-ac8b-49f6-859c-56f4600ebf56",
+      "id": "9fcdb544-ea5a-4e4a-9bbb-636d1de2b9ca",
       "html": "<h2>Химия</h2>"
     },
     {
       "type": "rich_text",
-      "id": "91158cf4-2666-4422-94f7-1a858164a74b",
+      "id": "0235edd4-6f59-47de-a14c-1ceb70c939e7",
       "html": "<h3>Классификация веществ</h3>"
     },
     {
       "type": "question",
-      "id": "a4470edc-59bc-403e-ac75-9e57f85f9a01",
+      "id": "0a8beb0b-96a7-4e50-a509-08a82814a368",
       "prompt": {
         "html": "<p>Разложите вещества по группам</p>"
       },
@@ -3254,56 +3259,56 @@
         "shuffle": true,
         "categories": [
           {
-            "id": "c3a31f81-45e6-49ae-aba1-b94cbcdf0be5",
+            "id": "5defd2d2-2b0f-48c2-bfc7-45375bd57b84",
             "label": "Металлы"
           },
           {
-            "id": "aa01a2d2-a0ae-4e6e-8fa5-42b366043fb7",
+            "id": "b3586124-8025-4a22-b54e-44dae35370ee",
             "label": "Неметаллы"
           }
         ],
         "items": [
           {
-            "id": "95e18a38-c9b4-44ef-b62e-89de4e43b20c",
+            "id": "b32cbcca-8913-4449-bd21-ac4c86d3a6fe",
             "html": "натрий",
-            "categoryId": "c3a31f81-45e6-49ae-aba1-b94cbcdf0be5"
+            "categoryId": "5defd2d2-2b0f-48c2-bfc7-45375bd57b84"
           },
           {
-            "id": "0b569921-5605-4200-b052-6ce2888d3548",
+            "id": "451fbf5f-4567-42ac-a1b9-9215b934b521",
             "html": "железо",
-            "categoryId": "c3a31f81-45e6-49ae-aba1-b94cbcdf0be5"
+            "categoryId": "5defd2d2-2b0f-48c2-bfc7-45375bd57b84"
           },
           {
-            "id": "7e0b7608-a2a6-4428-b19d-b2f892f54cc8",
+            "id": "23f73264-1e6c-489e-af48-2fd51d40a5e0",
             "html": "медь",
-            "categoryId": "c3a31f81-45e6-49ae-aba1-b94cbcdf0be5"
+            "categoryId": "5defd2d2-2b0f-48c2-bfc7-45375bd57b84"
           },
           {
-            "id": "52c10239-f880-4144-87b7-525d0356cfbf",
+            "id": "44c501e5-0bde-45e1-8e64-e09fee2b7620",
             "html": "кислород",
-            "categoryId": "aa01a2d2-a0ae-4e6e-8fa5-42b366043fb7"
+            "categoryId": "b3586124-8025-4a22-b54e-44dae35370ee"
           },
           {
-            "id": "5ab343f0-7957-4a18-a59a-835bf7c8eb66",
+            "id": "c282e5af-0d69-4979-ad0b-70cb3e2b5c0f",
             "html": "водород",
-            "categoryId": "aa01a2d2-a0ae-4e6e-8fa5-42b366043fb7"
+            "categoryId": "b3586124-8025-4a22-b54e-44dae35370ee"
           }
         ]
       }
     },
     {
       "type": "rich_text",
-      "id": "fddc2da0-51fc-4ae1-bea6-d18c57294535",
+      "id": "f68873f6-6c6f-4f43-8c2d-65c0978c383d",
       "html": "<h3>Цепочка превращений</h3>"
     },
     {
       "type": "rich_text",
-      "id": "9a66a560-b022-467f-a79c-68c7f5f8af2a",
+      "id": "dae2bf6d-cf96-45d2-8487-bf21fe35a3ff",
       "html": "<p>Схема цепочки: Na → (реакция с O₂) → B → (реакция с H₂O) → C → (реакция с CO₂) → D</p>"
     },
     {
       "type": "question",
-      "id": "8a8ea309-5594-44a2-897f-75277c579206",
+      "id": "3729e955-84e2-4b6a-969f-bf845bf49d07",
       "prompt": {
         "html": "<p>Продукт реакции 1 (B)</p>"
       },
@@ -3323,7 +3328,7 @@
     },
     {
       "type": "question",
-      "id": "15f6c6ab-f057-47c3-9c60-f67582b623e8",
+      "id": "e1a91ba5-c53a-48a4-b12f-8fb76dc3a99e",
       "prompt": {
         "html": "<p>Продукт реакции 2 (C)</p>"
       },
@@ -3343,7 +3348,7 @@
     },
     {
       "type": "question",
-      "id": "80ce091b-f46a-4a07-9c09-dabd1c1816a4",
+      "id": "961ed042-8c93-4ce2-8c28-03a5195145d8",
       "prompt": {
         "html": "<p>Продукт реакции 3 (D)</p>"
       },
@@ -3363,12 +3368,12 @@
     },
     {
       "type": "rich_text",
-      "id": "aa047efd-bdf1-47bb-a3c4-be3d43723c64",
+      "id": "aa104301-680e-4167-84f6-6375e6e4980f",
       "html": "<h3>Расчётная задача по уравнению</h3>"
     },
     {
       "type": "question",
-      "id": "9ad75f16-f71b-423f-83c1-fca395630f19",
+      "id": "d685e028-da18-485d-a198-9dd72a6cd806",
       "prompt": {
         "html": "<p>Вычислите массу оксида магния MgO, образующегося при сгорании 4,8 г магния (M(Mg) = 24 г/моль, M(MgO) = 40 г/моль): 2Mg + O₂ → 2MgO</p>"
       },
@@ -3386,17 +3391,17 @@
     },
     {
       "type": "rich_text",
-      "id": "5e524685-60bc-4e70-ae95-fae1e205267d",
+      "id": "317c8de9-53e1-4a53-98bc-585cf4a540b4",
       "html": "<h3>Уравняй реакцию</h3>"
     },
     {
       "type": "rich_text",
-      "id": "f441f8ed-936a-4cbe-9234-1e4712697d1e",
+      "id": "b91183b6-bc3c-41d8-a021-2be913d91bf6",
       "html": "<p>Уравнение: __Fe + __O₂ → __Fe₂O₃</p>"
     },
     {
       "type": "question",
-      "id": "660fb8a1-39a3-4daa-9bec-c515dc2abdb7",
+      "id": "d2d1ac62-15f6-4191-8df7-7418174e99cf",
       "prompt": {
         "html": "<p>Впишите коэффициенты через пробел, в порядке слева направо</p>"
       },
@@ -3416,12 +3421,12 @@
     },
     {
       "type": "rich_text",
-      "id": "cc9b6300-b276-4f1c-b88c-7c34502abc7a",
+      "id": "75499e6f-4b2e-4774-a034-e4b11a74a8b1",
       "html": "<h3>Элемент — свойство</h3>"
     },
     {
       "type": "question",
-      "id": "44f9366a-5645-45b3-96c7-a3212fae1e91",
+      "id": "e89bb216-1b70-47eb-a016-25812e2ef075",
       "prompt": {
         "html": "<p>Сопоставьте элемент и его свойство</p>"
       },
@@ -3430,44 +3435,44 @@
         "type": "matching",
         "left": [
           {
-            "id": "f7f8f8eb-f503-4339-a5ff-45f1ef898519",
+            "id": "8829f7e8-3ed5-4c82-a3c6-028efc46d068",
             "html": "Натрий"
           },
           {
-            "id": "cd09e276-b7ca-454e-b0a1-10425d169087",
+            "id": "d2180aff-a658-4a15-9b79-b5ebd1729b2a",
             "html": "Хлор"
           },
           {
-            "id": "ba81f9fb-ab8e-4a36-8986-44a02e909137",
+            "id": "aa9ce56a-e8f6-4604-a5a9-69ac89631415",
             "html": "Гелий"
           }
         ],
         "right": [
           {
-            "id": "c82d8c8c-c9cf-4d16-8ef5-ad03286ba588",
+            "id": "dad31e7a-318f-49b9-9570-4fc3422d07c5",
             "html": "Щелочной металл"
           },
           {
-            "id": "c8cb0097-a0e5-4033-8e6c-efacac976a8d",
+            "id": "8ca4d22d-4789-4dcf-976c-dfb5bfb560fe",
             "html": "Галоген"
           },
           {
-            "id": "56ef8a63-9ea2-404f-9b66-bc10c03d3625",
+            "id": "5ba8a502-a077-465e-9103-5bc4ec876a3a",
             "html": "Инертный газ"
           }
         ],
         "pairs": [
           [
-            "f7f8f8eb-f503-4339-a5ff-45f1ef898519",
-            "c82d8c8c-c9cf-4d16-8ef5-ad03286ba588"
+            "8829f7e8-3ed5-4c82-a3c6-028efc46d068",
+            "dad31e7a-318f-49b9-9570-4fc3422d07c5"
           ],
           [
-            "cd09e276-b7ca-454e-b0a1-10425d169087",
-            "c8cb0097-a0e5-4033-8e6c-efacac976a8d"
+            "d2180aff-a658-4a15-9b79-b5ebd1729b2a",
+            "8ca4d22d-4789-4dcf-976c-dfb5bfb560fe"
           ],
           [
-            "ba81f9fb-ab8e-4a36-8986-44a02e909137",
-            "56ef8a63-9ea2-404f-9b66-bc10c03d3625"
+            "aa9ce56a-e8f6-4604-a5a9-69ac89631415",
+            "5ba8a502-a077-465e-9103-5bc4ec876a3a"
           ]
         ],
         "scoring": "all_or_nothing",
@@ -3476,19 +3481,19 @@
     },
     {
       "type": "rich_text",
-      "id": "02ad5367-de99-4beb-9a66-0b80cc411e1b",
+      "id": "66b2cf07-826c-4319-811d-f4f369f0c584",
       "html": "<h3>Техника безопасности</h3>"
     },
     {
       "type": "image",
-      "id": "a23cfc10-6dd9-43c1-8c94-afadeab101b9",
+      "id": "786c3cad-3217-4dfc-adb4-2d6eb375a984",
       "assetId": "media:chem-safety.svg",
       "caption": "На лабораторной работе",
       "zoomable": false
     },
     {
       "type": "question",
-      "id": "d4584307-64f6-41bf-ab68-a2cd67b823e4",
+      "id": "08887f0b-57af-4142-86ea-4522737ce5f2",
       "prompt": {
         "html": "<p>Какое правило техники безопасности нарушено на изображении?</p>"
       },
@@ -3498,22 +3503,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "527519f4-c6b3-4011-892c-2b75d3edf458",
+            "id": "36360193-6e28-4697-8e85-ec42f5d9c74e",
             "html": "Нельзя пробовать вещества на вкус",
             "correct": true
           },
           {
-            "id": "e3f52005-95e2-44aa-802c-c67a44b078d8",
+            "id": "d145d35c-6b12-435c-a02d-f80e0b1d0b5c",
             "html": "Нельзя мыть посуду",
             "correct": false
           },
           {
-            "id": "52c32e6c-e25d-4b43-a7b5-851d86b76cc9",
+            "id": "092a3412-b1e4-4297-83dd-b28f2f7f4df8",
             "html": "Нельзя записывать результаты",
             "correct": false
           },
           {
-            "id": "4d32f96e-70c4-4db5-9af1-5f8455189dd3",
+            "id": "d1ba5eb0-fbbd-495b-beb4-48e68c1a4054",
             "html": "Нельзя работать в перчатках",
             "correct": false
           }
@@ -3522,24 +3527,24 @@
     },
     {
       "type": "rich_text",
-      "id": "289d83a0-65ae-4498-8d36-411331e18661",
+      "id": "ee350d63-78c5-45cb-8c39-281addadc08b",
       "html": "<h2>Биология</h2>"
     },
     {
       "type": "rich_text",
-      "id": "04c5b72b-a954-4c57-ac39-36dda0aab889",
+      "id": "28ffe759-590c-4bb2-8ff5-b252702e5b38",
       "html": "<h3>Подпиши схему</h3>"
     },
     {
       "type": "image",
-      "id": "fb4c00ae-1d89-4f53-8f66-7df438b063be",
+      "id": "54a48fec-16d4-442b-91d6-d3f4e9345ca5",
       "assetId": "media:bio-cell.svg",
       "caption": "Строение клетки",
       "zoomable": false
     },
     {
       "type": "question",
-      "id": "645cb34b-a94b-4eae-be34-e23bc8a0866b",
+      "id": "8b576b29-4271-45ad-b0fb-a32ec93c0abe",
       "prompt": {
         "html": "<p>Часть 1 (управляет всеми процессами клетки)</p>"
       },
@@ -3559,7 +3564,7 @@
     },
     {
       "type": "question",
-      "id": "57f61bcf-9f7d-4f6d-92aa-600aed0c29b3",
+      "id": "c2b88c1d-60ed-4d71-a7b0-05ff06ba71bb",
       "prompt": {
         "html": "<p>Часть 2 (защищает клетку снаружи)</p>"
       },
@@ -3579,7 +3584,7 @@
     },
     {
       "type": "question",
-      "id": "78f28097-10c3-4541-8676-20ca5f69bb97",
+      "id": "87424d4d-b016-4a40-b0fd-45539c849942",
       "prompt": {
         "html": "<p>Часть 3 (вещество, заполняющее клетку)</p>"
       },
@@ -3599,12 +3604,12 @@
     },
     {
       "type": "rich_text",
-      "id": "aa84ff85-1e53-42bc-9b33-8310da60fd9b",
+      "id": "7992df2e-62f3-4383-a092-b2b12d48e78f",
       "html": "<h3>Классификация организмов</h3>"
     },
     {
       "type": "question",
-      "id": "9efd0bdc-8d9a-4a31-aca7-8e035bc376af",
+      "id": "05be3cee-77f6-42fd-a33a-127a22bcaf40",
       "prompt": {
         "html": "<p>Разложите организмов по группам</p>"
       },
@@ -3614,51 +3619,51 @@
         "shuffle": true,
         "categories": [
           {
-            "id": "8350ea4c-5038-434e-bd6b-c4f474dd7610",
+            "id": "98d4e462-0734-44d3-afdc-146f716c3dd8",
             "label": "Позвоночные"
           },
           {
-            "id": "43ec1539-d244-4aed-aaa0-4eed2336eb2f",
+            "id": "741cd12e-9158-459b-bb6d-d733b4bcb38f",
             "label": "Беспозвоночные"
           }
         ],
         "items": [
           {
-            "id": "f684f00e-2bec-4916-845b-46e711101c2c",
+            "id": "0679869f-779e-4f5c-8d8f-cf3bc25dd660",
             "html": "лягушка",
-            "categoryId": "8350ea4c-5038-434e-bd6b-c4f474dd7610"
+            "categoryId": "98d4e462-0734-44d3-afdc-146f716c3dd8"
           },
           {
-            "id": "37ead0fe-91bb-4017-b348-3febf597032f",
+            "id": "54cdb4d1-37ef-4601-a0d6-b3e223489dc2",
             "html": "окунь",
-            "categoryId": "8350ea4c-5038-434e-bd6b-c4f474dd7610"
+            "categoryId": "98d4e462-0734-44d3-afdc-146f716c3dd8"
           },
           {
-            "id": "0042ec24-f5e5-41c9-9566-d38b57d3cdfe",
+            "id": "e1bd6380-7529-478d-af5f-0e8c6e132e0b",
             "html": "дождевой червь",
-            "categoryId": "43ec1539-d244-4aed-aaa0-4eed2336eb2f"
+            "categoryId": "741cd12e-9158-459b-bb6d-d733b4bcb38f"
           },
           {
-            "id": "a63146a7-b87c-4c47-8348-873aa8856617",
+            "id": "639b4788-7f28-402b-b3ac-ebc7b801fab9",
             "html": "медуза",
-            "categoryId": "43ec1539-d244-4aed-aaa0-4eed2336eb2f"
+            "categoryId": "741cd12e-9158-459b-bb6d-d733b4bcb38f"
           },
           {
-            "id": "25b30ef4-a7fd-40a2-b5fc-bf7051245e80",
+            "id": "c46b7689-417c-4b7e-89dd-c2fbfae2ba95",
             "html": "улитка",
-            "categoryId": "43ec1539-d244-4aed-aaa0-4eed2336eb2f"
+            "categoryId": "741cd12e-9158-459b-bb6d-d733b4bcb38f"
           }
         ]
       }
     },
     {
       "type": "rich_text",
-      "id": "61b036f9-c906-4d36-8f55-d43aa04a56e3",
+      "id": "0811790a-baa0-49b7-8944-5fc9139af5a0",
       "html": "<h3>Последовательность процесса</h3>"
     },
     {
       "type": "question",
-      "id": "1c3bfc9e-4664-4759-9db3-b2efeb0d8d0d",
+      "id": "e4547d8a-8851-4923-a440-89d36cf3d2aa",
       "prompt": {
         "html": "<p>Расставьте фазы митоза в правильном порядке</p>"
       },
@@ -3667,19 +3672,19 @@
         "type": "ordering",
         "items": [
           {
-            "id": "24254f20-531b-4837-be02-4579f0a4e1c1",
+            "id": "384e28df-4624-412d-923b-8209e3eccb06",
             "html": "Профаза"
           },
           {
-            "id": "f6ff79f3-576d-4297-8fad-5773072631e7",
+            "id": "84919509-84a1-47e3-b80f-dc9ac7c52408",
             "html": "Метафаза"
           },
           {
-            "id": "30d59fcf-902f-4cd0-b5af-3ff9c7ce0d9a",
+            "id": "4d7eb930-3b23-4c1b-8e3e-9e34a91e81a6",
             "html": "Анафаза"
           },
           {
-            "id": "d60a7b89-57ca-41a3-b047-3d626a5745c7",
+            "id": "726478ff-6e6d-4568-b294-2d64c12e5dc6",
             "html": "Телофаза"
           }
         ]
@@ -3687,12 +3692,12 @@
     },
     {
       "type": "rich_text",
-      "id": "30932b70-4974-4846-9ff6-856acb922925",
+      "id": "41569449-7546-4f28-ba15-4fe3959741a0",
       "html": "<h3>Сравнительная таблица</h3>"
     },
     {
       "type": "question",
-      "id": "a821c1fb-d82d-4ce2-9889-c2093eae9388",
+      "id": "1e702a3b-88ba-438e-be74-8c8c35fc12c9",
       "prompt": {
         "html": "<p>Заполните таблицу сравнения растительной и животной клетки</p>"
       },
@@ -3721,7 +3726,7 @@
             },
             {
               "kind": "input",
-              "id": "1a8f6658-d2e4-4991-9e8a-23d8afc3422b",
+              "id": "82157a4a-2efc-44e2-b95f-08680a3d3d0e",
               "answers": [
                 {
                   "value": "есть",
@@ -3734,7 +3739,7 @@
             },
             {
               "kind": "input",
-              "id": "b265d140-73fb-4254-9263-e89726858b70",
+              "id": "187b88d7-ab33-432e-bfe3-dc08711eaf60",
               "answers": [
                 {
                   "value": "нет",
@@ -3751,7 +3756,7 @@
     },
     {
       "type": "question",
-      "id": "2e1573de-6452-4d6c-9976-00da8cdd05af",
+      "id": "df17f115-38be-4d4f-8316-3bc8622fb6a8",
       "prompt": {
         "html": "<p>Сформулируйте вывод из сравнения</p>"
       },
@@ -3762,7 +3767,7 @@
         "allowAttachments": false,
         "rubric": [
           {
-            "id": "80efa3bb-1e04-4d20-abe2-afe9b145dfbd",
+            "id": "16d85bbe-134c-4f3d-ace8-e366ddb73fe7",
             "label": "Названо хотя бы одно верное отличие",
             "points": 1
           }
@@ -3771,19 +3776,19 @@
     },
     {
       "type": "rich_text",
-      "id": "a8545953-ab11-425d-b5bf-d3777e5d5604",
+      "id": "ebfce870-897a-4b39-8635-ee1449102fde",
       "html": "<h3>Определи по фотографии</h3>"
     },
     {
       "type": "image",
-      "id": "de15024b-26d5-437c-be69-bb986a59bdf7",
+      "id": "069ee1ab-db40-4a0b-a613-7ae6c2b8082f",
       "assetId": "media:bio-catfish.jpg",
       "caption": "Фото: Naturalis Biodiversity Center, CC0",
       "zoomable": true
     },
     {
       "type": "question",
-      "id": "e0e69e1a-b639-4e23-81eb-8bbcda9f799d",
+      "id": "7de90d5c-86cc-4af2-9370-2094d9ceb48b",
       "prompt": {
         "html": "<p>Что изображено на фотографии?</p>"
       },
@@ -3793,22 +3798,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "44983b45-d636-4c2b-a4a4-1f717cd47de2",
+            "id": "1c9ceaa3-5357-4e79-8810-41475068e167",
             "html": "Сом",
             "correct": true
           },
           {
-            "id": "24743e2b-f2cf-479e-9696-6136c64bd0cb",
+            "id": "2ed2e3d8-a30d-4830-8dae-8874fb4fe1fa",
             "html": "Щука",
             "correct": false
           },
           {
-            "id": "1bb49025-798c-449b-8605-e15df7bb8808",
+            "id": "1861361a-19e9-4336-99e6-a1218920ea3f",
             "html": "Карась",
             "correct": false
           },
           {
-            "id": "ea9e8c74-5c22-4c6b-afa3-1fd7e6ea555a",
+            "id": "574443ac-8622-4b9a-8a4e-2957f9a1c827",
             "html": "Окунь",
             "correct": false
           }
@@ -3817,24 +3822,24 @@
     },
     {
       "type": "rich_text",
-      "id": "75a2ef3f-1377-4fad-9557-7d85f6a409ae",
+      "id": "0dedd272-f098-4c58-838a-d134f9cee2d1",
       "html": "<h2>География</h2>"
     },
     {
       "type": "rich_text",
-      "id": "2b405423-0bb8-4293-a49b-00b070e2ee05",
+      "id": "275ddaa5-08f0-4879-82d4-f9b145be2eb7",
       "html": "<h3>Контурная карта</h3>"
     },
     {
       "type": "image",
-      "id": "5e7f4081-35cd-4211-8026-7c792fd0a6bf",
+      "id": "04a51e3f-0b69-4deb-af9d-e1de0924c48b",
       "assetId": "media:geo-baikal.svg",
       "caption": "Контурная карта",
       "zoomable": false
     },
     {
       "type": "question",
-      "id": "6e463111-215f-44a4-88f4-f960d63a9c3c",
+      "id": "f2af3c2a-c79b-47bf-87da-c2839a6c88ea",
       "prompt": {
         "html": "<p>Назовите отмеченный объект</p>"
       },
@@ -3854,12 +3859,12 @@
     },
     {
       "type": "rich_text",
-      "id": "8e5cf3d9-edd9-48e8-b206-770f34b6153c",
+      "id": "f5e2672b-2c81-4179-b097-ae64d4962467",
       "html": "<h3>Страна — столица</h3>"
     },
     {
       "type": "question",
-      "id": "209c09ab-c877-4cb8-89cc-a565acf35b2f",
+      "id": "1768a61e-6c20-4f40-9d8d-3ddfceef8288",
       "prompt": {
         "html": "<p>Сопоставьте страну и столицу</p>"
       },
@@ -3868,68 +3873,68 @@
         "type": "matching",
         "left": [
           {
-            "id": "862ff37c-e3b4-436c-ad82-fe9666eceee0",
+            "id": "e613005c-3978-4ce2-81e5-b3a1567164e0",
             "html": "Франция"
           },
           {
-            "id": "5c5d859c-2fb4-4f46-bc4b-cb9a78b231ac",
+            "id": "5a935c96-9c33-4bff-8ef8-776b0c734340",
             "html": "Германия"
           },
           {
-            "id": "4325df55-b18a-4f4d-aa7f-e91f5dcc297f",
+            "id": "022be096-41e8-4883-a29d-a5e8d2841a02",
             "html": "Италия"
           },
           {
-            "id": "4ab62c88-1445-4016-8992-147ff6735634",
+            "id": "292098cf-6839-4324-b817-5bfc7fd9cca7",
             "html": "Испания"
           },
           {
-            "id": "502363cc-f8c0-4d31-8f31-3aed007a5a3b",
+            "id": "5fd40ea3-80f1-4485-bc3d-289f018c95c3",
             "html": "Япония"
           }
         ],
         "right": [
           {
-            "id": "382b799c-84c7-4b26-9255-45323f689b13",
+            "id": "1591d018-f0f6-4d0a-8f08-253d0fa5b018",
             "html": "Париж"
           },
           {
-            "id": "051dba7f-c5be-4d03-add3-cac0299c6854",
+            "id": "c07bb9ef-94e2-4ba7-bbfd-60460126221a",
             "html": "Берлин"
           },
           {
-            "id": "b31d0a26-ce22-4938-9ec6-103dae6faf2e",
+            "id": "c9db1f8a-ac8e-4f4b-af96-e53eb3acd37c",
             "html": "Рим"
           },
           {
-            "id": "7ec6d17c-4d32-4957-b03b-62e36d121d5c",
+            "id": "6fa2c85e-039d-4ee8-b4ab-9b359a5a2e55",
             "html": "Мадрид"
           },
           {
-            "id": "b446c479-43a8-4858-98df-c7ee062b19c7",
+            "id": "40a4a576-c355-4ebb-bdab-9e55136cb7cf",
             "html": "Токио"
           }
         ],
         "pairs": [
           [
-            "862ff37c-e3b4-436c-ad82-fe9666eceee0",
-            "382b799c-84c7-4b26-9255-45323f689b13"
+            "e613005c-3978-4ce2-81e5-b3a1567164e0",
+            "1591d018-f0f6-4d0a-8f08-253d0fa5b018"
           ],
           [
-            "5c5d859c-2fb4-4f46-bc4b-cb9a78b231ac",
-            "051dba7f-c5be-4d03-add3-cac0299c6854"
+            "5a935c96-9c33-4bff-8ef8-776b0c734340",
+            "c07bb9ef-94e2-4ba7-bbfd-60460126221a"
           ],
           [
-            "4325df55-b18a-4f4d-aa7f-e91f5dcc297f",
-            "b31d0a26-ce22-4938-9ec6-103dae6faf2e"
+            "022be096-41e8-4883-a29d-a5e8d2841a02",
+            "c9db1f8a-ac8e-4f4b-af96-e53eb3acd37c"
           ],
           [
-            "4ab62c88-1445-4016-8992-147ff6735634",
-            "7ec6d17c-4d32-4957-b03b-62e36d121d5c"
+            "292098cf-6839-4324-b817-5bfc7fd9cca7",
+            "6fa2c85e-039d-4ee8-b4ab-9b359a5a2e55"
           ],
           [
-            "502363cc-f8c0-4d31-8f31-3aed007a5a3b",
-            "b446c479-43a8-4858-98df-c7ee062b19c7"
+            "5fd40ea3-80f1-4485-bc3d-289f018c95c3",
+            "40a4a576-c355-4ebb-bdab-9e55136cb7cf"
           ]
         ],
         "scoring": "all_or_nothing",
@@ -3938,19 +3943,19 @@
     },
     {
       "type": "rich_text",
-      "id": "35566648-feda-4764-8fe7-4ff7526a41d7",
+      "id": "e9082f1c-30b0-43f9-acec-c62f26e44c91",
       "html": "<h3>Координаты точки</h3>"
     },
     {
       "type": "image",
-      "id": "d79a9c55-1992-4445-a284-f6ae0c4e6b0a",
+      "id": "cd6f9899-eb14-4d84-bcf2-a61003b143a8",
       "assetId": "media:geo-moscow.svg",
       "caption": "Градусная сетка",
       "zoomable": true
     },
     {
       "type": "question",
-      "id": "530367b2-f397-480d-bb8e-c46975f0274a",
+      "id": "cbf02666-5626-478c-ae44-5aa9c097ca30",
       "prompt": {
         "html": "<p>Широта города Москвы</p>"
       },
@@ -3968,7 +3973,7 @@
     },
     {
       "type": "question",
-      "id": "5ce0eb12-406c-4db3-b5c7-9e8fc298a41f",
+      "id": "8d9654e0-8baa-46bb-8d38-9cc172f72f4e",
       "prompt": {
         "html": "<p>Долгота города Москвы</p>"
       },
@@ -3986,19 +3991,19 @@
     },
     {
       "type": "rich_text",
-      "id": "4958f664-3770-49ca-ac7d-30cf11f0f665",
+      "id": "fb7148c4-6045-40a4-9a4f-bfe376d47693",
       "html": "<h3>Чтение климатограммы</h3>"
     },
     {
       "type": "image",
-      "id": "c9f4fa75-c4b1-4cdc-96de-653d3227f68c",
+      "id": "59ad5c5b-0fa3-47e8-9e83-bf5049bf19c6",
       "assetId": "media:geo-climatogram.svg",
       "caption": "Климатограмма Москвы",
       "zoomable": true
     },
     {
       "type": "question",
-      "id": "a6e0d291-35b2-4ba4-86a1-51314dc1de84",
+      "id": "89ba0d98-41c9-4f7a-8151-644be7cc5b38",
       "prompt": {
         "html": "<p>Какой месяц самый тёплый?</p>"
       },
@@ -4008,22 +4013,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "1a8b5d4b-c890-46aa-9d4e-c0a171d3d8e9",
+            "id": "e87fb25a-d0f5-4ed7-ad17-e88a158263a9",
             "html": "Июль",
             "correct": true
           },
           {
-            "id": "6cb6fae6-d60f-413c-a2f5-8e8c7c590d2e",
+            "id": "73ad6c7f-b0ab-4f4f-81d9-ba45aab13632",
             "html": "Январь",
             "correct": false
           },
           {
-            "id": "4a7cbbd7-dede-4335-abe7-9a444468a14b",
+            "id": "336f4758-88c0-4d9a-84f2-368233e73f21",
             "html": "Март",
             "correct": false
           },
           {
-            "id": "10858ea8-74f5-4856-82d1-b4d51343d307",
+            "id": "d5741077-a8e7-4655-9425-8ae3c2bd9ae0",
             "html": "Октябрь",
             "correct": false
           }
@@ -4032,7 +4037,7 @@
     },
     {
       "type": "question",
-      "id": "71fe517e-3da8-42e2-8bb2-d4949204e13b",
+      "id": "bcd41bae-8d52-4a46-8393-bc0c50c52259",
       "prompt": {
         "html": "<p>Какое среднегодовое количество осадков (в мм)?</p>"
       },
@@ -4049,12 +4054,12 @@
     },
     {
       "type": "rich_text",
-      "id": "a5ccd4a2-5ac5-4ff2-9cdd-b4561388e499",
+      "id": "3f45af76-bdb5-4446-ba42-4e76bcc02b8c",
       "html": "<h3>Природные зоны</h3>"
     },
     {
       "type": "question",
-      "id": "b6423b8d-17b2-4ff3-90ba-1f545187fc58",
+      "id": "b45060b5-752a-4734-afd8-309bbcaa4bf2",
       "prompt": {
         "html": "<p>Разложите по природным зонам</p>"
       },
@@ -4064,61 +4069,61 @@
         "shuffle": true,
         "categories": [
           {
-            "id": "a8ec4370-1a17-4537-b791-2d0bd182f2a1",
+            "id": "e29113d6-32dc-4211-9b29-17f5a05c1f88",
             "label": "Тундра"
           },
           {
-            "id": "5b8fc409-2883-4366-af16-f7964c4e56df",
+            "id": "f0e775af-f6b0-4720-8bf7-838a93135964",
             "label": "Пустыня"
           }
         ],
         "items": [
           {
-            "id": "c8ba0b9c-41a6-45a9-b2bf-bd6ce8be3e25",
+            "id": "011ff8e6-0c60-4271-aa43-ebe8f08425da",
             "html": "морошка",
-            "categoryId": "a8ec4370-1a17-4537-b791-2d0bd182f2a1"
+            "categoryId": "e29113d6-32dc-4211-9b29-17f5a05c1f88"
           },
           {
-            "id": "9c7ab364-39c5-4a79-a215-3dbdce4eb193",
+            "id": "9c2d91c5-e6c8-44d0-8f57-11858443d766",
             "html": "лишайник",
-            "categoryId": "a8ec4370-1a17-4537-b791-2d0bd182f2a1"
+            "categoryId": "e29113d6-32dc-4211-9b29-17f5a05c1f88"
           },
           {
-            "id": "37437ca7-e7da-48eb-a1b6-eccc1a2caad0",
+            "id": "384ab06f-76a7-4807-bcfb-9fb09282ede0",
             "html": "песец",
-            "categoryId": "a8ec4370-1a17-4537-b791-2d0bd182f2a1"
+            "categoryId": "e29113d6-32dc-4211-9b29-17f5a05c1f88"
           },
           {
-            "id": "10be57a6-68e7-4aba-b081-b22e6033a1f8",
+            "id": "a5867293-89b5-4f15-b100-704ad825e052",
             "html": "кактус",
-            "categoryId": "5b8fc409-2883-4366-af16-f7964c4e56df"
+            "categoryId": "f0e775af-f6b0-4720-8bf7-838a93135964"
           },
           {
-            "id": "e86f1bf5-f9f6-4cf6-b3f4-03906d592044",
+            "id": "c0ea0e65-dae8-4bf7-a8f8-75610e97160c",
             "html": "верблюд",
-            "categoryId": "5b8fc409-2883-4366-af16-f7964c4e56df"
+            "categoryId": "f0e775af-f6b0-4720-8bf7-838a93135964"
           },
           {
-            "id": "045f5e43-2e1c-4d96-a402-9bd855aa96a7",
+            "id": "a086bc57-d87b-4e85-8cec-4a60db5e79f4",
             "html": "саксаул",
-            "categoryId": "5b8fc409-2883-4366-af16-f7964c4e56df"
+            "categoryId": "f0e775af-f6b0-4720-8bf7-838a93135964"
           }
         ]
       }
     },
     {
       "type": "rich_text",
-      "id": "6dfef60d-28a6-458b-8c72-dc9a4e5d9099",
+      "id": "4ba08837-a6fc-4cac-b886-20b15c7daa86",
       "html": "<h2>История и обществознание</h2>"
     },
     {
       "type": "rich_text",
-      "id": "9bb4cdc6-9d6c-46b2-8c37-51f672854149",
+      "id": "574f773f-01a5-4524-a510-feba81fd4c76",
       "html": "<h3>Лента времени</h3>"
     },
     {
       "type": "question",
-      "id": "f2c8bd0f-7737-4200-b85d-4b007d5e55f8",
+      "id": "3492712c-605d-45ca-84d5-a9c5e7277c35",
       "prompt": {
         "html": "<p>Расставьте события в хронологическом порядке</p>"
       },
@@ -4127,23 +4132,23 @@
         "type": "ordering",
         "items": [
           {
-            "id": "b5a93c37-27f1-491b-ac06-24d4d5e5d259",
+            "id": "425d755a-04c5-45ac-8c18-eb28553b731c",
             "html": "Крещение Руси (988 год)"
           },
           {
-            "id": "73b4ce9e-e5d0-44fa-9eaf-2498408c61d8",
+            "id": "8f8650c1-dec6-491b-a900-ef4aa1ecebe2",
             "html": "Куликовская битва (1380 год)"
           },
           {
-            "id": "a0eb804f-461b-4260-a020-86f5211aaeae",
+            "id": "09a8b8ed-d120-421e-9c63-0a2dd108d15d",
             "html": "Отмена крепостного права (1861 год)"
           },
           {
-            "id": "e41e4adf-2756-4d7f-91a3-da54a34af108",
+            "id": "4f786213-a52a-4160-83a8-7b4e7fa5f4b1",
             "html": "Октябрьская революция (1917 год)"
           },
           {
-            "id": "05f3bbc0-556f-45df-af6b-d64f40fd1895",
+            "id": "63c58797-de96-42f2-8f7d-550344f8a82e",
             "html": "Победа в Великой Отечественной войне (1945 год)"
           }
         ]
@@ -4151,12 +4156,12 @@
     },
     {
       "type": "rich_text",
-      "id": "fb4e00f3-e352-48a6-96a1-b52c49721140",
+      "id": "a9279c00-5787-42cc-ab13-11b54fbf87f4",
       "html": "<h3>Дата — событие</h3>"
     },
     {
       "type": "question",
-      "id": "8e38df52-82d6-413a-b779-84e481773c16",
+      "id": "7eb1f703-5dec-411f-9e44-c765edf9dfd9",
       "prompt": {
         "html": "<p>Сопоставьте дату и событие</p>"
       },
@@ -4165,68 +4170,68 @@
         "type": "matching",
         "left": [
           {
-            "id": "e96d5882-9ae6-4ba7-90bc-125dff7750aa",
+            "id": "f6fa7839-bfef-4712-bd12-ff56e4e04254",
             "html": "1812"
           },
           {
-            "id": "d8ef02b3-670f-4b8e-8f66-850efe3aba87",
+            "id": "a70f6dcb-aa36-47e4-9cc1-629b8f2ac63b",
             "html": "1861"
           },
           {
-            "id": "e61d5206-05b2-4d55-8563-91ac268bf3db",
+            "id": "c9acfc7c-c5de-47a1-bc86-d55a3c818ba9",
             "html": "1917"
           },
           {
-            "id": "482537d0-4089-4ab6-ad84-4014077e12cf",
+            "id": "7d1cfb23-92ae-4240-9d53-52300b34b558",
             "html": "1941"
           },
           {
-            "id": "e067f135-3221-41da-8b52-637b3c59c07a",
+            "id": "d50ec96e-dce4-4827-920e-b128daa4574e",
             "html": "1961"
           }
         ],
         "right": [
           {
-            "id": "6b7f0a8d-2cf0-4b00-be0c-11a18eab328c",
+            "id": "02a66232-e356-446a-8877-6bf5fcf228c4",
             "html": "Отечественная война с Наполеоном"
           },
           {
-            "id": "03d30b77-d468-43e6-9794-77d93891e906",
+            "id": "c5a0b7aa-e9dc-442f-aad3-feb50aa5e1ea",
             "html": "Отмена крепостного права"
           },
           {
-            "id": "33a7d5c9-1043-4186-8b08-51adac5a41f2",
+            "id": "9a1668a5-dfe7-4ec2-8d7a-89038f999260",
             "html": "Октябрьская революция"
           },
           {
-            "id": "c49c555e-3705-4ba7-8b3c-eeb6339a3de8",
+            "id": "d340cd18-1585-491e-bdb1-7be94850b66c",
             "html": "Начало Великой Отечественной войны"
           },
           {
-            "id": "0f10eb6f-2085-493e-a1b6-16c48c23e238",
+            "id": "c4a20143-285e-47c0-b8fd-c5709ffec828",
             "html": "Полёт Юрия Гагарина в космос"
           }
         ],
         "pairs": [
           [
-            "e96d5882-9ae6-4ba7-90bc-125dff7750aa",
-            "6b7f0a8d-2cf0-4b00-be0c-11a18eab328c"
+            "f6fa7839-bfef-4712-bd12-ff56e4e04254",
+            "02a66232-e356-446a-8877-6bf5fcf228c4"
           ],
           [
-            "d8ef02b3-670f-4b8e-8f66-850efe3aba87",
-            "03d30b77-d468-43e6-9794-77d93891e906"
+            "a70f6dcb-aa36-47e4-9cc1-629b8f2ac63b",
+            "c5a0b7aa-e9dc-442f-aad3-feb50aa5e1ea"
           ],
           [
-            "e61d5206-05b2-4d55-8563-91ac268bf3db",
-            "33a7d5c9-1043-4186-8b08-51adac5a41f2"
+            "c9acfc7c-c5de-47a1-bc86-d55a3c818ba9",
+            "9a1668a5-dfe7-4ec2-8d7a-89038f999260"
           ],
           [
-            "482537d0-4089-4ab6-ad84-4014077e12cf",
-            "c49c555e-3705-4ba7-8b3c-eeb6339a3de8"
+            "7d1cfb23-92ae-4240-9d53-52300b34b558",
+            "d340cd18-1585-491e-bdb1-7be94850b66c"
           ],
           [
-            "e067f135-3221-41da-8b52-637b3c59c07a",
-            "0f10eb6f-2085-493e-a1b6-16c48c23e238"
+            "d50ec96e-dce4-4827-920e-b128daa4574e",
+            "c4a20143-285e-47c0-b8fd-c5709ffec828"
           ]
         ],
         "scoring": "all_or_nothing",
@@ -4235,17 +4240,17 @@
     },
     {
       "type": "rich_text",
-      "id": "2e2c3563-5382-4930-a8dc-bc49b8ee2904",
+      "id": "b1dbcfd8-8a51-4cce-8080-ab2a8a09a58d",
       "html": "<h3>Работа с историческим источником</h3>"
     },
     {
       "type": "rich_text",
-      "id": "93aef733-ff13-4dc6-b0ae-b4d7bc40342c",
+      "id": "3bbf7a6a-484b-47c6-a051-8daef36cd09d",
       "html": "<h3>Фрагмент источника (в изложении)</h3><p>По манифесту 19 февраля 1861 года крестьяне получали личную свободу и гражданские права, но были обязаны выкупать землю у помещиков.</p>"
     },
     {
       "type": "question",
-      "id": "2dd389b9-2b16-460e-9192-67b1134dc551",
+      "id": "2f93230d-9287-4067-b221-1f25f99981a2",
       "prompt": {
         "html": "<p>В каком году был издан документ, о котором идёт речь?</p>"
       },
@@ -4255,22 +4260,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "47f2b7e4-0454-40fb-942a-17855b685ae2",
+            "id": "7a9d1aa2-0d9f-4f96-9775-ff66c046ad49",
             "html": "1861",
             "correct": true
           },
           {
-            "id": "52158426-a77a-40bc-9305-79d1fca907da",
+            "id": "9a19b7b7-92ca-47d8-bf1f-3d47b4e6c225",
             "html": "1905",
             "correct": false
           },
           {
-            "id": "9ce37e1b-5ef6-4d39-b73f-9a4f6c089594",
+            "id": "93d28245-ca4c-434a-a7cf-c6a9f2628ab4",
             "html": "1917",
             "correct": false
           },
           {
-            "id": "f0aa833c-4d4f-4d9d-a916-73fe9847fb6f",
+            "id": "bba95b11-17d6-4504-829b-d86af2eb1216",
             "html": "1825",
             "correct": false
           }
@@ -4279,7 +4284,7 @@
     },
     {
       "type": "question",
-      "id": "391deb3f-e248-433b-916a-a14583825b2c",
+      "id": "1712a1cd-0c07-4a87-9016-e9a37a069c46",
       "prompt": {
         "html": "<p>Что получили крестьяне согласно документу?</p>"
       },
@@ -4289,22 +4294,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "6bed5365-9a71-4bf8-a81a-8b04344c175c",
+            "id": "9a44f301-ec46-422c-a63f-e09841817097",
             "html": "Личную свободу",
             "correct": true
           },
           {
-            "id": "3d91957e-43d9-44e1-bbe3-a97a93ccbc8d",
+            "id": "c1db79fc-0e86-4c27-908c-da92d8ee5320",
             "html": "Землю бесплатно",
             "correct": false
           },
           {
-            "id": "814dc2e2-f1c0-47fa-8d61-dd36256f14d7",
+            "id": "272c3caf-f994-4e7e-9032-6ea9c21a1cdf",
             "html": "Дворянский титул",
             "correct": false
           },
           {
-            "id": "0d1cb202-781e-4d46-b5cb-a0c8a4c530c3",
+            "id": "ec68a6e5-3c28-410a-8d04-126afd331735",
             "html": "Право голоса на выборах",
             "correct": false
           }
@@ -4313,7 +4318,7 @@
     },
     {
       "type": "question",
-      "id": "5661e883-7ece-47d7-93ed-397b27e566ee",
+      "id": "d8fa61fe-bf0e-4c2f-90c1-db5fc872289b",
       "prompt": {
         "html": "<p>Как называется описываемое историческое событие?</p>"
       },
@@ -4323,22 +4328,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "e88ba199-6b4e-4995-8f57-269df38db622",
+            "id": "1e10c0b8-63f3-4e93-8a7e-ec68cd978e6a",
             "html": "Отмена крепостного права",
             "correct": true
           },
           {
-            "id": "172c7de8-63dc-423d-b300-337e0c270379",
+            "id": "2829faa5-5335-4b8b-b333-b5d80fdc2742",
             "html": "Октябрьская революция",
             "correct": false
           },
           {
-            "id": "cd905a3d-28cc-466a-abce-f12158303b47",
+            "id": "0eadd241-62d5-4a99-be71-03eea5a86ea0",
             "html": "Смутное время",
             "correct": false
           },
           {
-            "id": "8da8d0cd-dbc0-4a96-bc2e-fc314fb46f92",
+            "id": "80438519-f6c8-4b13-8546-38cbad4348de",
             "html": "Опричнина",
             "correct": false
           }
@@ -4347,7 +4352,7 @@
     },
     {
       "type": "question",
-      "id": "57100525-8d50-4a17-b0ff-6f6db3b83dc5",
+      "id": "87fced97-745f-47a9-b8d7-18aead5c2a94",
       "prompt": {
         "html": "<p>Как этот документ характеризует эпоху?</p>"
       },
@@ -4358,12 +4363,12 @@
         "allowAttachments": false,
         "rubric": [
           {
-            "id": "d1d9916a-e266-4ff2-afda-00d3882d3c01",
+            "id": "2601e765-e1e4-4345-b2cf-3944da37b583",
             "label": "Верно указан переход от крепостной зависимости",
             "points": 1
           },
           {
-            "id": "757000de-2aae-44bf-b90f-74d764181876",
+            "id": "37d64c40-8ec0-4512-a6a1-c862abbd8ba0",
             "label": "Ответ связный и по существу",
             "points": 1
           }
@@ -4372,19 +4377,19 @@
     },
     {
       "type": "rich_text",
-      "id": "d2b31d1f-dcab-4433-80a3-a3b52012a2c5",
+      "id": "86936b81-f231-43ff-9305-8e9aceb34bc0",
       "html": "<h3>Узнай личность по портрету</h3>"
     },
     {
       "type": "image",
-      "id": "66dd4a34-1267-44e6-acd6-b47b2bf1e182",
+      "id": "8449fdac-0cd3-4a1a-9bf4-2e7ca985ce84",
       "assetId": "media:hist-alexander2.jpg",
       "caption": "Н. А. Лавров, портрет (XIX в.)",
       "zoomable": true
     },
     {
       "type": "question",
-      "id": "7403f855-2836-46b2-bb9a-633ec7640325",
+      "id": "567249ce-bf93-4160-b26a-f9865ef72bd6",
       "prompt": {
         "html": "<p>Кто изображён на портрете?</p>"
       },
@@ -4394,22 +4399,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "5972e4ee-2bda-4bf8-941c-2fa10d2fd624",
+            "id": "2bc2ef61-f4d9-4f51-8420-c0b262ab77f6",
             "html": "Александр II",
             "correct": true
           },
           {
-            "id": "33854e0c-7492-4ee3-8132-f3ba7b0ca247",
+            "id": "e8e1887f-bdd6-46bb-8511-f17d91e4015b",
             "html": "Николай I",
             "correct": false
           },
           {
-            "id": "e1350191-05c3-40a4-b7f0-91cb52860de5",
+            "id": "8cf41d7a-1f48-4830-a6df-afd7ed50b0c1",
             "html": "Пётр I",
             "correct": false
           },
           {
-            "id": "8132d19b-69a6-4b8e-8038-7908b34623ec",
+            "id": "abc1dd52-3abb-4ca5-a5cf-8af40cc507ff",
             "html": "Александр I",
             "correct": false
           }
@@ -4418,19 +4423,19 @@
     },
     {
       "type": "rich_text",
-      "id": "8a53f549-a99b-44f4-85bf-c57fb132ebc1",
+      "id": "341f118d-bd74-4c4f-b448-61a7afa28d5c",
       "html": "<h3>Карта сражения / территории</h3>"
     },
     {
       "type": "image",
-      "id": "9643dbd9-6b8e-4460-9f5c-a53f5e735b4a",
+      "id": "d07a6c67-cf0f-44de-9aa8-d8e1bcbe48bd",
       "assetId": "media:hist-borodino.jpg",
       "caption": "Карта сражения 24–26 августа 1812 года",
       "zoomable": true
     },
     {
       "type": "question",
-      "id": "2d162e42-d765-42c7-82a1-122ca726796d",
+      "id": "afdb4c98-5074-46e7-835d-108ae66e1a1d",
       "prompt": {
         "html": "<p>Назовите отмеченное сражение</p>"
       },
@@ -4454,17 +4459,17 @@
     },
     {
       "type": "rich_text",
-      "id": "9ea81a61-b7b2-433c-bfee-f22045968d1c",
+      "id": "bac5ee51-e963-4b07-9d9d-0061a4ac660e",
       "html": "<h3>Правовой кейс</h3>"
     },
     {
       "type": "rich_text",
-      "id": "3b20415c-2d43-4e2c-a88a-f225a9632417",
+      "id": "db2b9cb7-b1e9-435e-8dfe-eb361b8620f1",
       "html": "<h3>Ситуация</h3><p>Пятнадцатилетний подросток устроился на работу без согласия родителей.</p>"
     },
     {
       "type": "question",
-      "id": "6d1d4c0e-b0e8-4ddf-8e08-4dc9aee06a11",
+      "id": "b2da9629-d1b8-4e81-8041-fb2253949fc3",
       "prompt": {
         "html": "<p>Как должна быть разрешена эта ситуация с точки зрения закона?</p>"
       },
@@ -4475,7 +4480,7 @@
         "allowAttachments": false,
         "rubric": [
           {
-            "id": "43340d05-8069-46c4-952c-3f33b08f70d8",
+            "id": "c5ff4055-0cf7-4ac7-abac-7eabc3e74179",
             "label": "Упомянуто требование согласия родителя/опекуна для подростка 14–15 лет",
             "points": 1
           }
@@ -4484,12 +4489,12 @@
     },
     {
       "type": "rich_text",
-      "id": "010aa385-81b9-4311-bd7c-ac1030675248",
+      "id": "ac4116db-4015-40e9-a137-fe292f14a030",
       "html": "<h3>Признаки понятия</h3>"
     },
     {
       "type": "question",
-      "id": "94b8060a-3f84-4347-85c3-cef66024a8be",
+      "id": "001bf954-54f4-4166-a614-f0d51baaf738",
       "prompt": {
         "html": "<p>Отметьте признаки, характерные для понятия «демократия»</p>"
       },
@@ -4499,22 +4504,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "ea3f4f5e-32dd-438c-84e6-018e5c643dd9",
+            "id": "4ed98609-1ecb-4988-b8ec-35ab81cf3a2d",
             "html": "Выборность органов власти",
             "correct": true
           },
           {
-            "id": "9a943bae-e5a1-4f66-ba26-11993122776c",
+            "id": "7f3e7be2-b069-4464-acac-e830e7b89ddd",
             "html": "Разделение властей",
             "correct": true
           },
           {
-            "id": "d4a41403-5db4-48fe-8978-7f44c9286794",
+            "id": "2c0a374b-b4bc-41ef-a181-bfa3b7179495",
             "html": "Наследственная передача власти",
             "correct": false
           },
           {
-            "id": "e9b8a787-568e-4233-8ab8-d8b785fd9c93",
+            "id": "51c186f6-891a-45c8-aedb-78049fb14279",
             "html": "Многопартийность",
             "correct": true
           }
@@ -4523,22 +4528,22 @@
     },
     {
       "type": "rich_text",
-      "id": "20e2ca3b-1bdf-4794-9645-d1e037b972ba",
+      "id": "73375c2d-62e3-4c7d-8b62-0c7d44c2165a",
       "html": "<h2>Информатика</h2>"
     },
     {
       "type": "rich_text",
-      "id": "9f1cf8db-a4be-443e-a366-84adc0d39a7b",
+      "id": "d0635b96-9079-4f40-9483-81f9e0511831",
       "html": "<h3>Что выведет программа</h3>"
     },
     {
       "type": "rich_text",
-      "id": "29c80afe-8e23-477b-b847-2b9679b14996",
+      "id": "2214d4b3-a117-41d4-b92e-4a9d88c847aa",
       "html": "<pre>for i in range(3):\n    print(i)</pre>"
     },
     {
       "type": "question",
-      "id": "7ff2598d-948a-42a8-9285-a8bab3a7b6f3",
+      "id": "6da9a917-315c-4ca9-a658-aa5e264c1982",
       "prompt": {
         "html": "<p>Что выведет программа (числа через пробел)?</p>"
       },
@@ -4558,17 +4563,17 @@
     },
     {
       "type": "rich_text",
-      "id": "19fd5984-5060-4ef3-b5b3-486acc307b78",
+      "id": "d8f7145e-dfc0-45c7-a220-34309255c115",
       "html": "<h3>Код с пропусками</h3>"
     },
     {
       "type": "rich_text",
-      "id": "a53814c7-bd94-42fe-b7b3-8776131bf90f",
+      "id": "9b324de4-e09d-4989-8d51-55e37e781e06",
       "html": "<pre>def add(a, b):\n    return a ___ b</pre>"
     },
     {
       "type": "question",
-      "id": "128a9030-b531-4d71-b332-66c5551edfff",
+      "id": "c566b0ff-f216-4cdf-aae1-88d95e6240be",
       "prompt": {
         "html": "<p>Пропуск 1 — оператор сложения</p>"
       },
@@ -4588,12 +4593,12 @@
     },
     {
       "type": "rich_text",
-      "id": "109377b8-bd35-4e4e-b439-83fc0c15ac70",
+      "id": "d3d780b4-48f8-4a3d-8699-74be2af82e4b",
       "html": "<pre>for i in range(___):\n    print(i)  # выведет 0 1 2 3 4</pre>"
     },
     {
       "type": "question",
-      "id": "a44b6667-3908-42a6-9ee1-b44467dee0b9",
+      "id": "82f448af-4332-478d-9f0b-c4f6433b85b9",
       "prompt": {
         "html": "<p>Пропуск 2 — сколько чисел нужно вывести</p>"
       },
@@ -4610,17 +4615,17 @@
     },
     {
       "type": "rich_text",
-      "id": "7fd57730-69d1-4edc-8654-ec599b1095e0",
+      "id": "b76ff881-6fbb-46b8-b82d-297496401a64",
       "html": "<h3>Трассировка алгоритма</h3>"
     },
     {
       "type": "rich_text",
-      "id": "591cc084-4ac6-4b42-ac9e-a51f17629994",
+      "id": "4e6dc810-93bd-4d45-a86d-f9390324ef89",
       "html": "<pre>i = 1\ns = 0\nwhile i &lt;= 3:\n    s = s + i\n    i = i + 1</pre>"
     },
     {
       "type": "question",
-      "id": "993990f1-7870-4f27-b0c6-68a8553dd7d8",
+      "id": "a3026f24-221f-4581-914b-4703e9efb4c1",
       "prompt": {
         "html": "<p>Заполните таблицу трассировки</p>"
       },
@@ -4649,7 +4654,7 @@
             },
             {
               "kind": "input",
-              "id": "50d34e94-adef-487e-9d60-f2b68f8676e5",
+              "id": "bbe2645a-c137-4664-bb56-3568b8403cee",
               "answers": [
                 {
                   "value": "2",
@@ -4662,7 +4667,7 @@
             },
             {
               "kind": "input",
-              "id": "108cc56b-5373-4804-9628-b6916b2c2833",
+              "id": "4cf3280f-ef47-4778-b51b-0accc5350726",
               "answers": [
                 {
                   "value": "1",
@@ -4681,7 +4686,7 @@
             },
             {
               "kind": "input",
-              "id": "e6417e89-f301-4c17-94f0-57b3181d9d77",
+              "id": "6db9e216-e99a-4d7e-8822-9fa88b7db051",
               "answers": [
                 {
                   "value": "3",
@@ -4694,7 +4699,7 @@
             },
             {
               "kind": "input",
-              "id": "f4045d93-49a7-4dd1-a327-432c2b22f590",
+              "id": "750c515f-21d7-419a-96b8-e4a60c9c16ec",
               "answers": [
                 {
                   "value": "3",
@@ -4713,7 +4718,7 @@
             },
             {
               "kind": "input",
-              "id": "9608ee56-dd70-4460-906b-329c3edccf13",
+              "id": "2f4a552f-f35f-409a-8202-a08fc8a1d0c8",
               "answers": [
                 {
                   "value": "4",
@@ -4726,7 +4731,7 @@
             },
             {
               "kind": "input",
-              "id": "487fe951-574b-4931-b6fc-8e840dd4af20",
+              "id": "3fac98e7-3e68-4fa8-aa0d-0756a5c1c92e",
               "answers": [
                 {
                   "value": "6",
@@ -4743,7 +4748,7 @@
     },
     {
       "type": "question",
-      "id": "9be32d3f-443f-47a5-898e-1bc5105d910f",
+      "id": "84f2ed68-f480-4199-b5b2-f3ee1983fedc",
       "prompt": {
         "html": "<p>Итоговое значение переменной s</p>"
       },
@@ -4763,12 +4768,12 @@
     },
     {
       "type": "rich_text",
-      "id": "6f002030-cdff-4df6-ad3c-506cabffbb22",
+      "id": "8971f73e-8a86-4507-8c60-c363e5189e94",
       "html": "<h3>Порядок блоков алгоритма</h3>"
     },
     {
       "type": "question",
-      "id": "9596bdeb-e8cf-4a47-a674-75798fb73af9",
+      "id": "51751a94-ac4b-40fe-8340-bc4cbb7dc188",
       "prompt": {
         "html": "<p>Расставьте шаги алгоритма поиска максимума в массиве по порядку</p>"
       },
@@ -4777,19 +4782,19 @@
         "type": "ordering",
         "items": [
           {
-            "id": "e3386f31-eb4b-45c1-858d-9eeb3a7a029d",
+            "id": "b969835c-d139-46ba-85dc-445058deacb0",
             "html": "Взять первый элемент массива как текущий максимум"
           },
           {
-            "id": "e1f27a22-aeba-4e8c-b289-82bb40f42d74",
+            "id": "aeb81cf1-e72a-4dd7-a89b-c591f4c66f66",
             "html": "Перейти к следующему элементу массива"
           },
           {
-            "id": "be05d524-05c7-4d05-a3f6-f8424207360a",
+            "id": "4da1561c-70f5-404a-8daa-3337571793e0",
             "html": "Если элемент больше текущего максимума — обновить максимум"
           },
           {
-            "id": "ec5adeed-d2f7-4b79-8cf5-d976b56b377c",
+            "id": "a106ed12-1a52-4fee-bad8-88099c09e756",
             "html": "Повторять, пока не закончится массив"
           }
         ]
@@ -4797,12 +4802,12 @@
     },
     {
       "type": "rich_text",
-      "id": "fc01a206-cf38-489b-b947-0511bd9d0627",
+      "id": "71a91128-e870-4cf0-a248-99a31f1bb5a2",
       "html": "<h3>Перевод систем счисления</h3>"
     },
     {
       "type": "question",
-      "id": "98ef012e-9f88-4bb3-9600-5c251bcdc199",
+      "id": "4bb5437e-5403-4007-a854-519266bf1ca1",
       "prompt": {
         "html": "<p>Переведите число 13 (десятичное) в двоичную систему счисления</p>"
       },
@@ -4819,12 +4824,12 @@
     },
     {
       "type": "rich_text",
-      "id": "3c9022b4-acd7-4b1e-a55a-fed9a2f5ae2d",
+      "id": "8dc0c90a-3050-41cc-aa16-68c804244cb0",
       "html": "<h3>Таблица истинности</h3>"
     },
     {
       "type": "table",
-      "id": "9d3a99ef-31be-49d7-bd26-a0a478d13fde",
+      "id": "e4daecce-f4fb-467e-a454-af27dbc895d9",
       "rows": [
         [
           "A",
@@ -4855,7 +4860,7 @@
     },
     {
       "type": "question",
-      "id": "c1c1f1b0-82d5-4606-b427-bad1a2071f1d",
+      "id": "a4e47741-b01c-492d-bdf5-51ff804e5649",
       "prompt": {
         "html": "<p>При каких значениях A и B выражение A ∧ B истинно?</p>"
       },
@@ -4865,22 +4870,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "e06db035-8a33-4c98-82cc-8c26bba6c670",
+            "id": "293aba21-94fb-4a9f-9be5-b9b70a15e30c",
             "html": "A=0, B=0",
             "correct": false
           },
           {
-            "id": "d9f7eec3-eddf-4ba2-9084-c8eedb9ce335",
+            "id": "78f57d6e-cb58-4983-bbd9-e7e3c3b7a02a",
             "html": "A=0, B=1",
             "correct": false
           },
           {
-            "id": "11d8f043-736a-42a5-affa-efcd50c897da",
+            "id": "8566c588-0d4b-4b89-93c1-016ca4456f18",
             "html": "A=1, B=0",
             "correct": false
           },
           {
-            "id": "a2e70fbb-9c67-4d6b-ae16-22b086ba2b55",
+            "id": "8b7b5062-da88-41a7-aa50-4809ee51671f",
             "html": "A=1, B=1",
             "correct": true
           }
@@ -4889,23 +4894,23 @@
     },
     {
       "type": "rich_text",
-      "id": "674c93f5-5cfb-4a2c-a300-0edb09923d89",
+      "id": "38a2c1ae-cd99-428c-9638-4f791ddc1d95",
       "html": "<h2>Музыка, ИЗО, ОБЖ</h2>"
     },
     {
       "type": "rich_text",
-      "id": "506105c8-a245-4f5f-ba49-b64f27091ac0",
+      "id": "e15be891-fdd9-4b6a-b13e-500dc209832c",
       "html": "<h3>Музыкальный фрагмент</h3>"
     },
     {
       "type": "audio",
-      "id": "73d5c0f2-a58a-4758-8be4-368b64e784e3",
+      "id": "16b0bb87-56d3-476a-b183-ddaaed3a8ad9",
       "assetId": "media:art-bach-partita3.mp3",
       "transcript": "И. С. Бах. Партита № 3 ми мажор для скрипки соло, BWV 1006 — Прелюдия (фрагмент)"
     },
     {
       "type": "question",
-      "id": "ce279ceb-87a1-49e2-aea3-7cb20ae6582a",
+      "id": "fdea7ee2-683e-4ff1-9731-fca969ddb0bb",
       "prompt": {
         "html": "<p>Какой инструмент исполняет мелодию?</p>"
       },
@@ -4915,22 +4920,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "f09e52ae-720a-4992-91dc-fbb1461afbea",
+            "id": "b575e340-d99b-4c55-9001-ba4960037cf5",
             "html": "Скрипка",
             "correct": true
           },
           {
-            "id": "cd92fadf-bbc1-49aa-acf4-b82da8d8bc94",
+            "id": "e2b6137f-d9a5-4e0e-8aeb-090ce49967ac",
             "html": "Труба",
             "correct": false
           },
           {
-            "id": "97f110d6-c1d1-47c2-8175-c0f6956ba895",
+            "id": "0a203fb6-36ea-444f-bee1-0eed987f2d1f",
             "html": "Барабан",
             "correct": false
           },
           {
-            "id": "b3526fb9-18bb-498a-90fb-0abf3735d37a",
+            "id": "771208d0-0c64-4f25-8a5e-305034c324a2",
             "html": "Флейта",
             "correct": false
           }
@@ -4939,19 +4944,19 @@
     },
     {
       "type": "rich_text",
-      "id": "dfe9026d-5da2-4281-82fb-d33bddd35ac2",
+      "id": "885b77f6-80d7-416d-bfdb-6b3ef65a294d",
       "html": "<h3>Анализ репродукции</h3>"
     },
     {
       "type": "image",
-      "id": "167127cc-473f-4d18-a96d-41cd3fe4d625",
+      "id": "e1c6ad01-77f4-4f80-bece-1cfa3e09304a",
       "assetId": "media:art-shishkin.jpg",
       "caption": "И. И. Шишкин, К. А. Савицкий. «Утро в сосновом лесу», 1889",
       "zoomable": true
     },
     {
       "type": "question",
-      "id": "0b35ad35-6d8c-491e-8525-7ef5949d07f5",
+      "id": "fab2fac3-dc5b-4606-9dd0-7cc7548603ae",
       "prompt": {
         "html": "<p>Опишите и проанализируйте изображение: что изображено, какое настроение передаёт картина?</p>"
       },
@@ -4962,12 +4967,12 @@
         "allowAttachments": false,
         "rubric": [
           {
-            "id": "12ae9502-b120-40d8-a3f3-f064d55327ad",
+            "id": "40b949c6-bae7-47e5-985e-a77c4369b21e",
             "label": "Описан сюжет картины",
             "points": 1
           },
           {
-            "id": "77d3a1cd-3804-44ec-8b25-9c409fc8f6f0",
+            "id": "8dc6acf9-08ca-4409-9bc8-5e30650f83b3",
             "label": "Отмечено настроение/впечатление",
             "points": 1
           }
@@ -4976,19 +4981,19 @@
     },
     {
       "type": "rich_text",
-      "id": "a5e82bf2-a2d6-4852-97fa-bc391b0f956c",
+      "id": "e431a52e-6c89-4fbe-a64d-3f0423ebe719",
       "html": "<h3>Узнай стиль или эпоху</h3>"
     },
     {
       "type": "image",
-      "id": "35abbfd5-89f9-44b4-86d7-54e59307e5d1",
+      "id": "bef698a4-1ba4-4fbc-8906-80c0829a0842",
       "assetId": "media:art-monet.jpg",
       "caption": "Картина 1872 года",
       "zoomable": true
     },
     {
       "type": "question",
-      "id": "83d6e1c6-a15b-4880-96c6-1b7aa19a2fe0",
+      "id": "01723913-f88b-4c47-905d-1e673423839d",
       "prompt": {
         "html": "<p>К какому стилю/эпохе относится изображение?</p>"
       },
@@ -4998,22 +5003,22 @@
         "shuffle": false,
         "options": [
           {
-            "id": "176dc9a1-3088-404f-af37-1c961b7fc7de",
+            "id": "594f985f-3bde-4147-9426-25eb829c79c7",
             "html": "Импрессионизм",
             "correct": true
           },
           {
-            "id": "019f9782-21f3-43ee-a3ec-93007dbdd771",
+            "id": "b7afe8a4-39a9-4908-bd85-8accbcb80ac7",
             "html": "Классицизм",
             "correct": false
           },
           {
-            "id": "c684ae11-5914-473e-b1d3-7daffe78e9da",
+            "id": "edaa2165-78c1-4b9e-8244-ac0f4a92ae29",
             "html": "Кубизм",
             "correct": false
           },
           {
-            "id": "818e4da2-cced-4c55-884d-618015ef1450",
+            "id": "f01dd4b8-a577-4760-85a3-dca3107ebc20",
             "html": "Готика",
             "correct": false
           }
@@ -5022,12 +5027,12 @@
     },
     {
       "type": "rich_text",
-      "id": "e2bf1990-28b1-47da-a023-370d77d5064c",
+      "id": "7b6c4f98-e1a8-4c84-a0be-4c73fd24bf8f",
       "html": "<h3>Алгоритм действий в ЧС</h3>"
     },
     {
       "type": "question",
-      "id": "fa98f06b-3820-44c2-bac5-6b093daa325b",
+      "id": "b696d715-de55-4e05-a408-2e48eeed7464",
       "prompt": {
         "html": "<p>Расставьте действия при пожарной тревоге по порядку</p>"
       },
@@ -5036,19 +5041,19 @@
         "type": "ordering",
         "items": [
           {
-            "id": "a3989b15-6946-41ea-bc70-f06d53d0cb6d",
+            "id": "287f47f7-fb6f-4471-9d7c-735cd5712734",
             "html": "Услышав сигнал пожарной тревоги, прекратите работу"
           },
           {
-            "id": "68b8b238-8721-4b86-9f8d-263ece910169",
+            "id": "b1abc08a-d54b-4f1f-8c2e-f381ca953048",
             "html": "Отключите электроприборы"
           },
           {
-            "id": "30c6127f-c4d6-40db-80e4-10fb0e63a789",
+            "id": "e7c372a3-fbbf-4b85-bb67-68f9c04fab82",
             "html": "Возьмите документы и покиньте помещение по эвакуационному выходу"
           },
           {
-            "id": "3d4b9f93-feeb-4d34-a3b9-400f56f7974c",
+            "id": "689e8252-c75e-4c99-aff7-bbc921728522",
             "html": "Соберитесь в установленном месте сбора и сообщите о своём присутствии"
           }
         ]
@@ -5057,438 +5062,438 @@
   ],
   "groups": [
     {
-      "id": "69cfb7e4-5eff-40aa-9438-a94610f0764b",
+      "id": "e306d006-c562-4320-ad4e-58521f573db7",
       "templateId": "problem_walkthrough",
       "label": "Разбор задачи",
       "blockIds": [
-        "d592c8ff-99e1-4a06-a99e-3785b5685f24",
-        "23ba737a-ede7-430b-a344-b14bfcd2b852",
-        "06388557-5dff-4a9f-ae87-35a3cf01715d",
-        "dbb06518-c212-47c8-bf84-8cba44c78b94",
-        "ff54a7e3-fa6b-4727-81eb-df6a7a547bc6"
+        "d151a941-4f75-4850-b4a4-469d8f3be294",
+        "66464702-ea25-4ced-9bd2-9ef5919549d4",
+        "d9c87a27-2ae9-4400-881c-b7fcc96ca2ef",
+        "4d146002-9998-45f0-99b7-2f07385d90c3",
+        "6d58c9c5-20f9-4470-b24a-1f04ebdbd926"
       ]
     },
     {
-      "id": "17c38f5a-057a-4774-8221-92682ab052f6",
+      "id": "d9a3d280-3b4c-44d1-814a-9abc305ce145",
       "templateId": "quiz_block",
       "label": "Блок проверки",
       "blockIds": [
-        "467018fe-7e07-4ba6-9427-47eb43d73d42",
-        "61b08dde-08aa-4b58-abf2-7f201ce0dce6",
-        "5cadc849-6e10-476b-a7b8-040fe79850d8",
-        "66b0d090-6dcd-41fe-a7c6-21d4e62d34b8"
+        "25080374-1dbb-4b31-976c-5713c74f9b7d",
+        "a8baead3-4686-45ac-8c5d-eaa6c7b30fe5",
+        "837eb520-6c50-4417-b841-64682451987d",
+        "2f94c6f9-07ca-49d3-8cdb-cb5306e599d9"
       ]
     },
     {
-      "id": "f4ddc232-d263-44c4-be9e-7442e8433bde",
+      "id": "7d123f3f-beef-4d70-9472-1f9522f5969d",
       "templateId": "spelling_dictation",
       "label": "Словарный диктант",
       "blockIds": [
-        "a88d19fc-899f-4cf4-b643-0774cf496294",
-        "7ee8e5d0-be64-4842-8ae2-f24ac9df83bd",
-        "7b7d32ba-91f9-46e0-a7ea-cbfa7a0e0391",
-        "0dcd2449-03e2-4463-9ddd-80ba7bd9c134",
-        "d854d344-6a9e-4f12-9d47-ba536257e010",
-        "cd62c3e0-4fac-4b1a-8660-d10f3d4ec0cc"
+        "95b04dfd-28b6-43b1-b83a-b553a64d494b",
+        "767d0be5-61f6-4dc0-9e35-50883209939e",
+        "e82863d2-2fa1-4ff7-90fb-5d6259293e9d",
+        "c66f029b-fa69-493c-8e4a-46706dfa7e39",
+        "0d4e63a1-02a2-45ed-abd8-89b119a2d0b6",
+        "6e770e65-bfec-41b6-995b-8a424c3d69f7"
       ]
     },
     {
-      "id": "e65bfe48-ece4-46f9-a83d-2fa5958c9395",
+      "id": "c299e86e-30b0-4fb9-bf5b-7d8501f857a4",
       "templateId": "definition_block",
       "label": "Определение и теорема",
       "blockIds": [
-        "8bfb93f3-109c-4ded-8e03-5ea647c6fc82",
-        "f07c2283-cea9-422f-86b2-8a16951f9ea8",
-        "292ee52a-c34b-4212-a92d-8b9f1fdcb3fd"
+        "d0eaa1b9-fdd2-46c8-82e4-907ca0e2881e",
+        "ae074c6b-d141-422c-9aea-0ae93e84675a",
+        "a3461b2f-83dd-4185-afae-bf9197d0e92f"
       ]
     },
     {
-      "id": "95d07fe2-f2d9-4179-ba48-ed178f494711",
+      "id": "a556f45a-7286-400a-aefd-3da96b244953",
       "templateId": "paragraph_with_check",
       "label": "Параграф с проверкой",
       "blockIds": [
-        "ae1f1d1e-3eba-47e4-9ae3-1caf3fb734ec",
-        "adf646bf-263d-4cdd-b263-49cd753c3cb3",
-        "8ee5e886-3250-4136-bb09-030d932d42ee"
+        "ddf3e104-045d-4db9-a691-780294d2d732",
+        "fe90e2b0-0667-44e4-a7c6-ae5056715cd6",
+        "9ef7b16a-61e0-4529-8828-9fcabdf5580d"
       ]
     },
     {
-      "id": "59f274b7-2140-41b6-87dd-65275c8223a9",
+      "id": "2c8f0349-3f0f-480a-8dd1-dd15cee490ac",
       "templateId": "ru_missing_letter",
       "label": "Вставь пропущенную букву",
       "blockIds": [
-        "9096a1b9-2618-4f60-8ae6-6803b67ad415",
-        "20150196-615e-4b23-b7c1-e9d6e2c42fdc",
-        "ecabbed1-57e6-4ef9-90d5-26468dc92353",
-        "2589aaf4-a7ce-4b46-9a45-2e35c679ffcc",
-        "5ada9324-62ed-4569-b770-c8f3c5d69af0",
-        "26c14d8b-320d-40ee-9961-dbc76f25ccca",
-        "f6fd18af-188a-45fc-b628-b266d10fea50",
-        "c110b820-0560-4cf3-86ec-252fca0c43bf",
-        "cffc5563-4a59-4bb7-9bbe-b796a094fbd0"
+        "d008a0dd-a074-4c97-8c30-655ddc7446a0",
+        "6f8032cf-716d-4c64-9357-c976470aa335",
+        "760e6466-3e16-4332-bcef-c14010539e3f",
+        "75085c34-c330-4134-9163-82d9244f4287",
+        "191ea770-b3ed-4d66-89d1-36368d5d3c1e",
+        "13f84a39-72bb-4a3a-97a0-c718d8003c78",
+        "e6a570ed-2d46-49a9-9048-ad13c4a0ba42",
+        "53b59329-97ec-4c14-83a0-dbc5236d1adc",
+        "eacade27-c46d-4e35-8e9b-617d96ba97fc"
       ]
     },
     {
-      "id": "9d659b4a-c626-4d9f-b2f9-67be761735e3",
+      "id": "a85c1380-f42e-43a9-9a74-6f26e1d58b96",
       "templateId": "ru_punctuation",
       "label": "Расставь знаки препинания",
       "blockIds": [
-        "5937cbc6-4bd4-48f8-a99e-2fa4050c8f7b",
-        "4e98070f-161d-4a18-8e89-8e01e1345be2"
+        "508634b1-9560-4b4e-b5d6-12e0fbb28710",
+        "25747734-a164-4ce1-887e-077ef594d8f1"
       ]
     },
     {
-      "id": "97e9a66e-835f-4b76-98f9-97756abc4f73",
+      "id": "2759e8a3-8e8e-4898-9601-81ebf948e6b0",
       "templateId": "ru_stress",
       "label": "Орфоэпическая разминка",
       "blockIds": [
-        "f40cb904-b88c-4a2e-8695-0996c64ef0c7",
-        "3ef97b4d-92df-4c89-bb36-f3583a2f43b0",
-        "547f83f7-72f1-4b94-8bbd-091bb2a6c609",
-        "0bb9a930-8f4f-4067-8cec-706e58ae70ec",
-        "f6f0e200-4420-4fe4-8513-989c4fbba62f",
-        "9612495b-8397-41ea-a514-35f29c115edb"
+        "29a4b947-4a5b-4cc4-9977-494eba7b403a",
+        "a5d89a09-4671-4bc0-b514-971333731ec6",
+        "6cf70a64-8c52-4d62-b222-7e0347be2e6e",
+        "2e8878c3-a5ff-4736-bcdf-f3164209ee66",
+        "7bd9602a-2cf6-49f0-a6cf-afdaf699ee9b",
+        "27bafb74-5b75-4a5c-998a-8dfe6dbcb7d6"
       ]
     },
     {
-      "id": "9d2f0028-ea38-49d5-b906-7a654057fa1c",
+      "id": "dd737bd0-9128-429b-bc93-fb63160b5c00",
       "templateId": "ru_word_parts",
       "label": "Разбор слова по составу",
       "blockIds": [
-        "2398d14e-81bf-4b38-ab72-1e3a3dd5375a",
-        "1d1d9962-7dfb-4bbd-8f7a-1ff978a474dd",
-        "68810d9e-1ac5-4e0e-89bf-3ab7c89a5ac8",
-        "60e3dd51-d7e9-4020-a615-63f1ec5ee897",
-        "7a3f6d5e-956b-461c-a328-d1448a65c9a0"
+        "d423fcf8-7658-4991-a325-d7b9ff145cdb",
+        "771841de-c1b6-4689-a006-89a5e85a3b55",
+        "d34b5f32-e974-4120-9e22-1201b614bdec",
+        "879b2e85-0003-46ba-9bf9-d291ac040cc9",
+        "ddbad1c2-8be2-4db2-914e-7ba0fea5a127"
       ]
     },
     {
-      "id": "b3ec40a0-df9e-48af-bd72-dfa2b35d551f",
+      "id": "ee639f5c-5beb-423a-aac0-e24f85aff765",
       "templateId": "ru_fix_error",
       "label": "Найди и исправь ошибку",
       "blockIds": [
-        "54e6b3ff-442a-49c3-bda4-9aa415a3fbe0",
-        "bbf8d4ad-70bc-4954-bb17-7518ccf1688f"
+        "173216d3-ed88-4775-abe0-a0caf2e54b81",
+        "79a9bf3c-8af2-485b-b540-7868132e3aee"
       ]
     },
     {
-      "id": "baaf3312-01b8-4605-a0bd-2ec5755c3e39",
+      "id": "a94824c2-8214-4401-81cb-14eab02a5854",
       "templateId": "ru_text_work",
       "label": "Работа с текстом (ОГЭ/ЕГЭ)",
       "blockIds": [
-        "544805bb-2382-46a0-a287-9e5157261746",
-        "fc9fbbc4-a106-406b-a1fd-f6a1384e42b3",
-        "a0a6a393-fd5e-4d2d-9d41-a59ca7664610",
-        "56aa8e94-e016-420e-9d31-28618acf5566",
-        "0fd68a52-a424-4f5e-82d5-8a4ef80d51e4",
-        "e4d23aeb-165d-4046-aa41-661fc3b80584"
+        "b34bae9f-81f7-487e-a981-8a963309fd80",
+        "c4b4509e-d0a4-44fd-ad8c-0a223a059c8c",
+        "d8dd8921-e167-4e2a-ac2c-64d5f7683112",
+        "dd64418c-85de-4364-b0de-ff1444d39b48",
+        "ab5c11eb-d501-460a-897c-4edd81a81c39",
+        "657923d6-7835-4ea2-8dc3-207b7aec3876"
       ]
     },
     {
-      "id": "98528735-814d-4b94-be88-e752a8051b60",
+      "id": "00138e08-e896-4520-9050-181f267f8bce",
       "templateId": "lit_quote_analysis",
       "label": "Цитата и анализ",
       "blockIds": [
-        "cba39fd4-5c14-4fd5-b866-e5af05711258",
-        "4220cb8a-d4c7-41a5-8476-0577c8435075"
+        "7fa4c24e-a8c3-4de9-908d-38bcbcee5ce9",
+        "66a11d38-b886-4153-a9f1-3cbe21f30d8c"
       ]
     },
     {
-      "id": "78cbe418-937a-4930-a137-e64397475cc4",
+      "id": "135dd1ae-8dc6-4e56-ab70-4c00b1f9805f",
       "templateId": "lit_author_match",
       "label": "Кто автор строк",
       "blockIds": [
-        "37eab5b9-4524-41f8-aa53-183820a33c61",
-        "41697927-cec5-4747-8deb-0155ba7ab931"
+        "d2ece788-5940-49fd-b1d5-4e1454021a06",
+        "108dfb0b-a190-4929-9bd5-6050dbdd495d"
       ]
     },
     {
-      "id": "41f56c57-c035-48fb-899f-6834a607a428",
+      "id": "734956fb-f7ef-4f2c-9086-d30e03d92088",
       "templateId": "lit_expressive_means",
       "label": "Средства выразительности",
       "blockIds": [
-        "cec654a9-996e-4ec5-8c40-714525a1222e",
-        "e890add8-9603-4bf0-97ef-56b01b4c69a3"
+        "38e117ad-8dda-4c6f-b8a0-2a7384268ae0",
+        "8b0081c9-0d2a-452a-a193-83ab8226bb91"
       ]
     },
     {
-      "id": "cb1e91a5-a5db-465c-993e-bda813cc5d6e",
+      "id": "c8b6efa0-b77c-4608-86cf-62f3102b85c3",
       "templateId": "en_listening",
       "label": "Listening",
       "blockIds": [
-        "79cfd151-8ae9-4263-b5dd-ca15704e6b42",
-        "e3f985c5-3d97-42a6-b394-15069efd35c6",
-        "ef0eb744-c01b-40bd-968f-31ef9c018719"
+        "3039b5de-e9aa-4b46-9b25-e8f1b140581d",
+        "f6f759f6-a35b-42cd-b5ee-ce781a84be89",
+        "b6bd5eb6-29d0-4b98-bff0-299236e0d730"
       ]
     },
     {
-      "id": "582fc984-8a24-4c1b-9a9e-794b7f6d47d8",
+      "id": "ef3be951-4745-4f71-ae41-f981ede32d86",
       "templateId": "en_dialogue_gaps",
       "label": "Диалог с пропусками",
       "blockIds": [
-        "c2c0bb67-20c5-40f8-96ff-e76c6b9f5378",
-        "53612f0b-5a9e-4709-b67f-97fcec272ece",
-        "503f3075-4592-45c9-bbcd-d79cfaf88088"
+        "f6ffbde7-9016-4ea5-af4f-527f8ed34902",
+        "5b450a33-1e6f-45b0-96ac-fa9e4334ec2c",
+        "0fe9d52f-bc2d-4609-b1b6-2d469073b50d"
       ]
     },
     {
-      "id": "df5b9106-0abb-406e-80af-9159ffda7471",
+      "id": "31f7f25d-f34f-47b5-9fa3-69800fc820b3",
       "templateId": "en_word_formation",
       "label": "Word formation",
       "blockIds": [
-        "b9143bb0-f1e2-43e2-8b2e-6d7efa5a982d",
-        "85ce232c-6c20-4106-818d-192e9d09593d",
-        "300d9911-2aab-49b7-aa3a-e7229f40209c",
-        "0c28fc6a-3d5b-44d7-9d99-1c290391a9d9"
+        "4d6a2366-da04-403b-b7e7-d09d5532abf5",
+        "8f33b191-d296-40c9-90d8-c7f6419fc97c",
+        "09098100-ce37-47a5-a6ec-748e503e09e0",
+        "011dd2e5-4d9c-466e-a316-c074275446f3"
       ]
     },
     {
-      "id": "fbb8c29c-f96d-4bc1-aee2-69420fc96a41",
+      "id": "98fa45c9-fa84-4526-b8b3-5ea10e556b7e",
       "templateId": "math_formula_chain",
       "label": "Формула → подстановка → ответ",
       "blockIds": [
-        "c186b46e-59db-44f5-9618-f6e41c3caf87",
-        "55276003-1712-4ef5-8708-566fb4a52c8e",
-        "94198845-40be-4f76-b01e-68c300445042"
+        "877105cb-5804-4a34-965c-346ad524a0dd",
+        "ce738e03-5454-4043-b8af-30c84d54f2d9",
+        "08309f85-3049-4f05-a994-f8e6a3f97897"
       ]
     },
     {
-      "id": "9f0e5ac3-aaf9-40e5-b554-2132a2bf9875",
+      "id": "0633fb9e-ce6c-477d-9b66-eb6c26778ddc",
       "templateId": "math_figure_problem",
       "label": "Задача с чертежом",
       "blockIds": [
-        "b59e9b7d-d927-4512-b667-3e00fb2401dd",
-        "024e54ed-b38f-44e3-bde2-272ffea10dad"
+        "cc635286-ed52-46d4-80f4-ed53162de3df",
+        "c0e011e8-f176-4493-a452-f5a52c968a9d"
       ]
     },
     {
-      "id": "8b09ce81-f673-4d2b-ad73-fe37d78d2175",
+      "id": "0d695b39-90b3-4452-a47c-0be140c11f00",
       "templateId": "math_find_error",
       "label": "Найди ошибку в решении",
       "blockIds": [
-        "9c6896ec-45fd-4d5f-aebe-508d2fbf0b7c",
-        "57bf9d49-010a-46f0-821d-08575c1cc432"
+        "c2856b02-b7e2-4066-9c9b-fe8502ac1191",
+        "74810d4b-f88e-4be1-9868-0390f29d1412"
       ]
     },
     {
-      "id": "910050cd-4bed-4c42-9829-cce87ee7f979",
+      "id": "11c195d9-deea-4a79-84f1-82063e6616b3",
       "templateId": "phys_lab_table",
       "label": "Лабораторная: таблица измерений",
       "blockIds": [
-        "c2dbd245-bbb4-466e-a485-e317b354fed0",
-        "81fec00e-b303-4fd2-8f46-50e9a2e39522",
-        "b73bd404-9446-4b81-abd4-8e8d7ca65e95"
+        "8e455b8b-9417-45f4-a299-20d675abeb67",
+        "54bf202f-948e-4358-aabc-2bfdc688e107",
+        "58a2d41f-7a88-466f-9412-f2a82db71149"
       ]
     },
     {
-      "id": "fe60a476-2061-46ac-ac2c-e29a5d67b4d4",
+      "id": "71443bb4-1da5-45b8-8bca-efe1857f8c0d",
       "templateId": "phys_graph_reading",
       "label": "Чтение графика",
       "blockIds": [
-        "6244e603-4dc5-4bef-ad52-5aaaa995de07",
-        "8cc5d0c4-68b1-4c24-be4e-2d97b8f15539",
-        "5d5035d4-54b0-409e-8e97-6c337d37ab59"
+        "c4f90178-583a-4a1e-99b6-5519fba2f757",
+        "1e1c231b-c0df-4639-bbb0-51bc53d2274d",
+        "a4584c37-dac4-4720-a1ce-406a3bc7b930"
       ]
     },
     {
-      "id": "3aa990e0-610a-44be-96ad-e7410b45564b",
+      "id": "cf8ffe3b-4ae6-48c1-9cb6-765284e1da92",
       "templateId": "phys_circuit_scheme",
       "label": "Схема электрической цепи",
       "blockIds": [
-        "481e49c8-910b-4343-ba86-020d199703a5",
-        "42980e94-4eb1-4560-8c2b-3d8b2d5a8245"
+        "7e1d5de2-ba8d-40a0-9424-af16a3c248e3",
+        "47df6942-1460-4f41-9a0d-e6a413d0aeaa"
       ]
     },
     {
-      "id": "0e8ecb83-c8cb-4941-91cb-6d59ee110e3b",
+      "id": "5a7aa719-7c21-4d3c-babc-3f290a8d1859",
       "templateId": "chem_chain",
       "label": "Цепочка превращений",
       "blockIds": [
-        "9a66a560-b022-467f-a79c-68c7f5f8af2a",
-        "8a8ea309-5594-44a2-897f-75277c579206",
-        "15f6c6ab-f057-47c3-9c60-f67582b623e8",
-        "80ce091b-f46a-4a07-9c09-dabd1c1816a4"
+        "dae2bf6d-cf96-45d2-8487-bf21fe35a3ff",
+        "3729e955-84e2-4b6a-969f-bf845bf49d07",
+        "e1a91ba5-c53a-48a4-b12f-8fb76dc3a99e",
+        "961ed042-8c93-4ce2-8c28-03a5195145d8"
       ]
     },
     {
-      "id": "8beb751e-d571-4642-a45f-f493e62c42f4",
+      "id": "650b8c2d-1d45-451d-b20e-af9c7c7a164f",
       "templateId": "chem_balance_eq",
       "label": "Уравняй реакцию",
       "blockIds": [
-        "f441f8ed-936a-4cbe-9234-1e4712697d1e",
-        "660fb8a1-39a3-4daa-9bec-c515dc2abdb7"
+        "b91183b6-bc3c-41d8-a021-2be913d91bf6",
+        "d2d1ac62-15f6-4191-8df7-7418174e99cf"
       ]
     },
     {
-      "id": "85d40970-0a00-4b93-bbbf-73b462d05e23",
+      "id": "778d19cf-6474-4e79-891b-6b1f10518d41",
       "templateId": "chem_safety",
       "label": "Техника безопасности",
       "blockIds": [
-        "a23cfc10-6dd9-43c1-8c94-afadeab101b9",
-        "d4584307-64f6-41bf-ab68-a2cd67b823e4"
+        "786c3cad-3217-4dfc-adb4-2d6eb375a984",
+        "08887f0b-57af-4142-86ea-4522737ce5f2"
       ]
     },
     {
-      "id": "a7dbde3c-494e-41c2-b858-2a581c32a261",
+      "id": "288428fb-0d26-402e-b326-57178444e924",
       "templateId": "bio_label_scheme",
       "label": "Подпиши схему",
       "blockIds": [
-        "fb4c00ae-1d89-4f53-8f66-7df438b063be",
-        "645cb34b-a94b-4eae-be34-e23bc8a0866b",
-        "57f61bcf-9f7d-4f6d-92aa-600aed0c29b3",
-        "78f28097-10c3-4541-8676-20ca5f69bb97"
+        "54a48fec-16d4-442b-91d6-d3f4e9345ca5",
+        "8b576b29-4271-45ad-b0fb-a32ec93c0abe",
+        "c2b88c1d-60ed-4d71-a7b0-05ff06ba71bb",
+        "87424d4d-b016-4a40-b0fd-45539c849942"
       ]
     },
     {
-      "id": "dcf85460-a114-4490-8c23-7454b0533be8",
+      "id": "b840497d-cf43-4a54-a7b2-29fbe487dd54",
       "templateId": "bio_compare_table",
       "label": "Сравнительная таблица",
       "blockIds": [
-        "a821c1fb-d82d-4ce2-9889-c2093eae9388",
-        "2e1573de-6452-4d6c-9976-00da8cdd05af"
+        "1e702a3b-88ba-438e-be74-8c8c35fc12c9",
+        "df17f115-38be-4d4f-8316-3bc8622fb6a8"
       ]
     },
     {
-      "id": "52b07ba2-dc2f-41b3-9ac2-d44656d9b7be",
+      "id": "af452274-3faa-4c0f-a500-73365aa42a41",
       "templateId": "bio_identify_photo",
       "label": "Определи по фотографии",
       "blockIds": [
-        "de15024b-26d5-437c-be69-bb986a59bdf7",
-        "e0e69e1a-b639-4e23-81eb-8bbcda9f799d"
+        "069ee1ab-db40-4a0b-a613-7ae6c2b8082f",
+        "7de90d5c-86cc-4af2-9370-2094d9ceb48b"
       ]
     },
     {
-      "id": "f9d1c20c-bdbc-4f48-9067-361537e8d9c9",
+      "id": "ccc0fd28-63d6-4d14-83c7-d05e639cd605",
       "templateId": "geo_contour_map",
       "label": "Контурная карта",
       "blockIds": [
-        "5e7f4081-35cd-4211-8026-7c792fd0a6bf",
-        "6e463111-215f-44a4-88f4-f960d63a9c3c"
+        "04a51e3f-0b69-4deb-af9d-e1de0924c48b",
+        "f2af3c2a-c79b-47bf-87da-c2839a6c88ea"
       ]
     },
     {
-      "id": "c24d780e-dd26-4bec-968d-59ae8fb58c3a",
+      "id": "d578c53a-e379-4e32-a329-c9f530997601",
       "templateId": "geo_coordinates",
       "label": "Координаты точки",
       "blockIds": [
-        "d79a9c55-1992-4445-a284-f6ae0c4e6b0a",
-        "530367b2-f397-480d-bb8e-c46975f0274a",
-        "5ce0eb12-406c-4db3-b5c7-9e8fc298a41f"
+        "cd6f9899-eb14-4d84-bcf2-a61003b143a8",
+        "cbf02666-5626-478c-ae44-5aa9c097ca30",
+        "8d9654e0-8baa-46bb-8d38-9cc172f72f4e"
       ]
     },
     {
-      "id": "e986f138-1836-473a-a2e4-f78eb30442b0",
+      "id": "c24655cf-c6b4-40e4-bbb3-da947e177519",
       "templateId": "geo_climatogram",
       "label": "Чтение климатограммы",
       "blockIds": [
-        "c9f4fa75-c4b1-4cdc-96de-653d3227f68c",
-        "a6e0d291-35b2-4ba4-86a1-51314dc1de84",
-        "71fe517e-3da8-42e2-8bb2-d4949204e13b"
+        "59ad5c5b-0fa3-47e8-9e83-bf5049bf19c6",
+        "89ba0d98-41c9-4f7a-8151-644be7cc5b38",
+        "bcd41bae-8d52-4a46-8393-bc0c50c52259"
       ]
     },
     {
-      "id": "7772eb19-b067-429b-86fd-db844ed4c3bb",
+      "id": "89328c65-adba-4dbc-9288-da857dbf7bd8",
       "templateId": "hist_source_work",
       "label": "Работа с историческим источником",
       "blockIds": [
-        "93aef733-ff13-4dc6-b0ae-b4d7bc40342c",
-        "2dd389b9-2b16-460e-9192-67b1134dc551",
-        "391deb3f-e248-433b-916a-a14583825b2c",
-        "5661e883-7ece-47d7-93ed-397b27e566ee",
-        "57100525-8d50-4a17-b0ff-6f6db3b83dc5"
+        "3bbf7a6a-484b-47c6-a051-8daef36cd09d",
+        "2f93230d-9287-4067-b221-1f25f99981a2",
+        "1712a1cd-0c07-4a87-9016-e9a37a069c46",
+        "d8fa61fe-bf0e-4c2f-90c1-db5fc872289b",
+        "87fced97-745f-47a9-b8d7-18aead5c2a94"
       ]
     },
     {
-      "id": "a4c1c178-2d17-4141-ac7a-2c70c0429d42",
+      "id": "13b6c09a-c8f7-47a0-8d2c-39f9a558c553",
       "templateId": "hist_recognize_person",
       "label": "Узнай личность по портрету",
       "blockIds": [
-        "66dd4a34-1267-44e6-acd6-b47b2bf1e182",
-        "7403f855-2836-46b2-bb9a-633ec7640325"
+        "8449fdac-0cd3-4a1a-9bf4-2e7ca985ce84",
+        "567249ce-bf93-4160-b26a-f9865ef72bd6"
       ]
     },
     {
-      "id": "b3a1c054-df1c-4032-b310-dd96acfaaf56",
+      "id": "ab4d9595-7b13-40a2-94f5-35c8bb9e6c7e",
       "templateId": "hist_battle_map",
       "label": "Карта сражения / территории",
       "blockIds": [
-        "9643dbd9-6b8e-4460-9f5c-a53f5e735b4a",
-        "2d162e42-d765-42c7-82a1-122ca726796d"
+        "d07a6c67-cf0f-44de-9aa8-d8e1bcbe48bd",
+        "afdb4c98-5074-46e7-835d-108ae66e1a1d"
       ]
     },
     {
-      "id": "7cb38c83-c813-4dc1-9c97-9917d959a766",
+      "id": "f90b112f-4eb4-406a-b887-cf316c1ff0bd",
       "templateId": "hist_legal_case",
       "label": "Правовой кейс",
       "blockIds": [
-        "3b20415c-2d43-4e2c-a88a-f225a9632417",
-        "6d1d4c0e-b0e8-4ddf-8e08-4dc9aee06a11"
+        "db2b9cb7-b1e9-435e-8dfe-eb361b8620f1",
+        "b2da9629-d1b8-4e81-8041-fb2253949fc3"
       ]
     },
     {
-      "id": "e59ee1b2-60e2-4103-9e34-ccc427fc453e",
+      "id": "cd8c6ffd-0643-4a53-9bbc-b93600447d45",
       "templateId": "inf_program_output",
       "label": "Что выведет программа",
       "blockIds": [
-        "29c80afe-8e23-477b-b847-2b9679b14996",
-        "7ff2598d-948a-42a8-9285-a8bab3a7b6f3"
+        "2214d4b3-a117-41d4-b92e-4a9d88c847aa",
+        "6da9a917-315c-4ca9-a658-aa5e264c1982"
       ]
     },
     {
-      "id": "32a06f15-29b8-4049-9b83-69f7397f59fe",
+      "id": "50d9affb-24e5-4e4a-915b-8118ff0babf0",
       "templateId": "inf_code_gaps",
       "label": "Код с пропусками",
       "blockIds": [
-        "a53814c7-bd94-42fe-b7b3-8776131bf90f",
-        "128a9030-b531-4d71-b332-66c5551edfff",
-        "109377b8-bd35-4e4e-b439-83fc0c15ac70",
-        "a44b6667-3908-42a6-9ee1-b44467dee0b9"
+        "9b324de4-e09d-4989-8d51-55e37e781e06",
+        "c566b0ff-f216-4cdf-aae1-88d95e6240be",
+        "d3d780b4-48f8-4a3d-8699-74be2af82e4b",
+        "82f448af-4332-478d-9f0b-c4f6433b85b9"
       ]
     },
     {
-      "id": "8c864084-03ad-4fb9-aea9-31df0bcae492",
+      "id": "4f45e4e2-9a49-4d17-9f99-b7c6d714e276",
       "templateId": "inf_algorithm_trace",
       "label": "Трассировка алгоритма",
       "blockIds": [
-        "591cc084-4ac6-4b42-ac9e-a51f17629994",
-        "993990f1-7870-4f27-b0c6-68a8553dd7d8",
-        "9be32d3f-443f-47a5-898e-1bc5105d910f"
+        "4e6dc810-93bd-4d45-a86d-f9390324ef89",
+        "a3026f24-221f-4581-914b-4703e9efb4c1",
+        "84f2ed68-f480-4199-b5b2-f3ee1983fedc"
       ]
     },
     {
-      "id": "8a951c7e-f2a9-41ce-aed8-8eb1399f6e4c",
+      "id": "07830a27-f763-464c-a721-a1a215d4d70a",
       "templateId": "inf_truth_table",
       "label": "Таблица истинности",
       "blockIds": [
-        "9d3a99ef-31be-49d7-bd26-a0a478d13fde",
-        "c1c1f1b0-82d5-4606-b427-bad1a2071f1d"
+        "e4daecce-f4fb-467e-a454-af27dbc895d9",
+        "a4e47741-b01c-492d-bdf5-51ff804e5649"
       ]
     },
     {
-      "id": "b2d2775c-ab93-4ab4-9dde-fb8329d04abb",
+      "id": "6272cb03-07e2-46cb-96e3-7fe7fd7a9a4d",
       "templateId": "art_audio_question",
       "label": "Музыкальный фрагмент",
       "blockIds": [
-        "73d5c0f2-a58a-4758-8be4-368b64e784e3",
-        "ce279ceb-87a1-49e2-aea3-7cb20ae6582a"
+        "16b0bb87-56d3-476a-b183-ddaaed3a8ad9",
+        "fdea7ee2-683e-4ff1-9731-fca969ddb0bb"
       ]
     },
     {
-      "id": "fba3d7c6-eea1-48ad-956e-0a25c7646835",
+      "id": "0c51608e-1690-4262-b835-19d4d87ad34e",
       "templateId": "art_reproduction_analysis",
       "label": "Анализ репродукции",
       "blockIds": [
-        "167127cc-473f-4d18-a96d-41cd3fe4d625",
-        "0b35ad35-6d8c-491e-8525-7ef5949d07f5"
+        "e1c6ad01-77f4-4f80-bece-1cfa3e09304a",
+        "fab2fac3-dc5b-4606-9dd0-7cc7548603ae"
       ]
     },
     {
-      "id": "3099bb71-1fcc-44ea-949c-6e8381766934",
+      "id": "ec039fc4-4bcd-4ba1-86fa-3635dc60629b",
       "templateId": "art_recognize_style",
       "label": "Узнай стиль или эпоху",
       "blockIds": [
-        "35abbfd5-89f9-44b4-86d7-54e59307e5d1",
-        "83d6e1c6-a15b-4880-96c6-1b7aa19a2fe0"
+        "bef698a4-1ba4-4fbc-8906-80c0829a0842",
+        "01723913-f88b-4c47-905d-1e673423839d"
       ]
     }
   ]

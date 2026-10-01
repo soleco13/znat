@@ -298,11 +298,7 @@ export function ContentBlockView({ block }: { block: Exclude<Block, { type: "que
     case "audio":
       return <AudioAssetView block={block} />;
     case "video":
-      return (
-        <div className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-          Видео
-        </div>
-      );
+      return <VideoAssetView block={block} />;
     case "embed":
       return (
         <div className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
@@ -351,6 +347,40 @@ function ImageAssetView({ block }: { block: Extract<Block, { type: "image" }> })
         <figcaption className="mt-1 text-xs text-muted-foreground">{block.caption}</figcaption>
       )}
     </figure>
+  );
+}
+
+/**
+ * Видео из медиатеки — `<video>` по подписанной ссылке (Caddy отдаёт её с
+ * Range, перемотка работает). Старые блоки со ссылкой вместо id медиатеки
+ * (поле «Ссылка на видео» в редакторе) CSP всё равно не пустит — для них
+ * прежняя заглушка.
+ */
+const MEDIA_ASSET_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function VideoAssetView({ block }: { block: Extract<Block, { type: "video" }> }) {
+  if (!MEDIA_ASSET_ID.test(block.assetId)) {
+    return (
+      <div className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+        Видео
+      </div>
+    );
+  }
+  return <VideoFromLibrary assetId={block.assetId} />;
+}
+
+function VideoFromLibrary({ assetId }: { assetId: string }) {
+  const { url, error } = useAssetUrl(assetId);
+  if (error) return <p className="text-xs text-destructive">Не удалось загрузить видео</p>;
+  if (!url) return <p className="text-xs text-muted-foreground">Загрузка видео…</p>;
+  return (
+    <video
+      src={url}
+      controls
+      playsInline
+      preload="metadata"
+      className="aspect-video w-full rounded-lg border border-border bg-black"
+    />
   );
 }
 
