@@ -60,7 +60,15 @@ function ControlButton({
  * «картинка в картинке», полный экран и горячие клавиши. Клавиши слушаем
  * на window, пока плеер на странице, кроме ввода в поля.
  */
-export function RecordingPlayer({ src, className }: { src: string; className?: string }) {
+export function RecordingPlayer({
+  src,
+  poster,
+  className,
+}: {
+  src: string;
+  poster?: string | null;
+  className?: string;
+}) {
   const frameRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const idleTimer = useRef<number | undefined>(undefined);
@@ -220,6 +228,7 @@ export function RecordingPlayer({ src, className }: { src: string; className?: s
         ref={videoRef}
         key={src}
         src={src}
+        poster={poster ?? undefined}
         playsInline
         preload="metadata"
         className="absolute inset-0 size-full"

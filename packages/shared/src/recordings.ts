@@ -78,6 +78,8 @@ export const recordingWithDownloadSchema = recordingSummarySchema.extend({
   url: z.string().nullable(),
   /** Момент протухания `url`. `null`, если `url === null`. */
   urlExpiresAt: z.string().datetime().nullable(),
+  /** Кадр из записи для обложки (JPEG, тот же TTL, что у `url`). `null`, пока не посчитан. */
+  posterUrl: z.string().nullable(),
 });
 export type RecordingWithDownload = z.infer<typeof recordingWithDownloadSchema>;
 

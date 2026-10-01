@@ -57,7 +57,15 @@ const { repoMock, egressMock, lessonsMock, roomsMock, storageMock, schoolSetting
   },
 }));
 
+const posterMock = vi.hoisted(() => ({
+  posterKeyFor: (key: string) => key.replace(/\.mp4$/, ".jpg"),
+  posterExists: vi.fn().mockResolvedValue(false),
+  enqueuePoster: vi.fn().mockResolvedValue(true),
+  removePoster: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("./repo.js", () => repoMock);
+vi.mock("./poster.js", () => posterMock);
 vi.mock("./egress-client.js", () => egressMock);
 vi.mock("../lessons/service.js", () => lessonsMock);
 vi.mock("../rooms/service.js", () => roomsMock);
@@ -222,6 +230,7 @@ describe("applyEgressEvent (Э10 — статус от вебхука к стр�
     expect(patch.durationSec).toBe(3600);
     expect(patch.sizeBytes).toBe(1024);
     expect((patch.expiresAt as Date).toISOString()).toBe("2026-12-04T11:00:00.000Z"); // +90 дней
+    expect(posterMock.enqueuePoster).toHaveBeenCalledWith(expect.stringMatching(/\.mp4$/), 3600);
   });
 
   it("не откатывает терминальный статус более ранним из вебхука не по порядку", async () => {
@@ -249,6 +258,16 @@ describe("getLessonRecordings (Э10.4 — presigned по роли)", () => {
     expect(ready.url).toBe("/files/signed?exp=1&sig=x");
     expect(live.url).toBeNull();
     expect(res.active?.id).toBe("r-live");
+  });
+
+  it("обложка — только если кадр уже посчитан", async () => {
+    repoMock.listRecordingsForLesson.mockResolvedValue([
+      row({ id: "r-ready", status: "ready", storageKey: "recordings/x/y/r-ready.mp4" }),
+    ]);
+    posterMock.posterExists.mockResolvedValueOnce(false);
+    expect((await service.getLessonRecordings(adminUser, LESSON)).recordings[0]!.posterUrl).toBeNull();
+    posterMock.posterExists.mockResolvedValueOnce(true);
+    expect((await service.getLessonRecordings(adminUser, LESSON)).recordings[0]!.posterUrl).not.toBeNull();
   });
 
   it("ученику — отказ", async () => {

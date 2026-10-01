@@ -26,7 +26,7 @@ import { Kbd } from "@/shared/ui/kbd";
 import { Loader } from "@/shared/ui/loader";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { getLesson } from "@/features/lessons/lessons-api.js";
-import { EXPIRY_WARN_DAYS, recordingHref } from "./RecordingCard.js";
+import { EXPIRY_WARN_DAYS, PosterImage, recordingHref } from "./RecordingCard.js";
 import { RecordingPlayer } from "./RecordingPlayer.js";
 import {
   daysLeft,
@@ -167,7 +167,7 @@ export function LessonRecordingPage() {
         <div className="flex flex-wrap items-start gap-7">
           <section className="flex min-w-0 flex-[999_1_640px] flex-col gap-[22px]">
             <div className="-mx-4 overflow-hidden bg-[#0b1220] sm:mx-0 sm:rounded-lg sm:shadow-md">
-              {rec.status === "ready" && rec.url ? <RecordingPlayer src={rec.url} /> : <PlayerState rec={rec} />}
+              {rec.status === "ready" && rec.url ? <RecordingPlayer src={rec.url} poster={rec.posterUrl} /> : <PlayerState rec={rec} />}
             </div>
 
             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -222,8 +222,9 @@ export function LessonRecordingPage() {
                   const ready = o.status === "ready";
                   const row = (
                     <>
-                      <span className="relative flex aspect-video w-24 shrink-0 items-center justify-center rounded-[9px] bg-foreground text-white">
-                        <Play className={cn("size-3.5 fill-current", !ready && "opacity-40")} aria-hidden />
+                      <span className="relative flex aspect-video w-24 shrink-0 items-center justify-center overflow-hidden rounded-[9px] bg-foreground text-white">
+                        {ready ? <PosterImage src={o.posterUrl} /> : null}
+                        <Play className={cn("relative size-3.5 fill-current drop-shadow", !ready && "opacity-40")} aria-hidden />
                         {ready && o.durationSec != null ? (
                           <span className="absolute bottom-1 right-1 rounded-[4px] bg-black/60 px-1 text-[10.5px] font-semibold tabular-nums">
                             {formatDuration(o.durationSec)}

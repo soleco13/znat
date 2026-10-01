@@ -22,6 +22,7 @@ import { getSignedFileUrl, deleteFile, getDiskUsage } from "../storage/service.j
 import type { EgressInfo } from "livekit-server-sdk";
 import * as egress from "./egress-client.js";
 import * as repo from "./repo.js";
+import { enqueuePoster, posterExists, posterKeyFor, removePoster } from "./poster.js";
 import type { RecordingRow } from "./repo.js";
 
 /**
@@ -59,14 +60,17 @@ function toSummary(row: RecordingRow): RecordingSummary {
  * (§10.10 ТЗ). Ссылка появляется только для `ready` — у остальных файла
  * ещё/уже нет.
  */
-function toWithDownload(row: RecordingRow): RecordingWithDownload {
+async function toWithDownload(row: RecordingRow): Promise<RecordingWithDownload> {
   const base = toSummary(row);
   if (row.status !== "ready" || !row.storageKey) {
-    return { ...base, url: null, urlExpiresAt: null };
+    return { ...base, url: null, urlExpiresAt: null, posterUrl: null };
   }
   const url = getSignedFileUrl(row.storageKey, env.RECORDING_URL_TTL_SEC);
   const urlExpiresAt = new Date(Date.now() + env.RECORDING_URL_TTL_SEC * 1000).toISOString();
-  return { ...base, url, urlExpiresAt };
+  const posterUrl = (await posterExists(row.storageKey))
+    ? getSignedFileUrl(posterKeyFor(row.storageKey), env.RECORDING_URL_TTL_SEC)
+    : null;
+  return { ...base, url, urlExpiresAt, posterUrl };
 }
 
 /**
@@ -233,7 +237,7 @@ export async function getLessonRecordings(
   const active = rows.find((r) => ACTIVE_RECORDING_STATUSES.includes(r.status)) ?? null;
   return {
     active: active ? toSummary(active) : null,
-    recordings: rows.map(toWithDownload),
+    recordings: await Promise.all(rows.map(toWithDownload)),
   };
 }
 
@@ -281,15 +285,15 @@ async function denormalizeRecordings(
   const teacherIds = [...lessonTitles.values()].map((l) => l.teacherId);
   const teacherNames = await usersService.getUserNames(schoolId, teacherIds);
 
-  return rows.map((row) => {
+  return Promise.all(rows.map(async (row) => {
     const lesson = lessonTitles.get(row.lessonId);
     const teacherName = lesson ? teacherNames.get(lesson.teacherId)?.fullName : undefined;
     return {
-      ...toWithDownload(row),
+      ...(await toWithDownload(row)),
       lessonTitle: lesson?.title ?? "Урок удалён",
       teacherName: teacherName ?? "—",
     };
-  });
+  }));
 }
 
 /**
@@ -366,7 +370,10 @@ export async function adminDeleteRecording(
   if (ACTIVE_RECORDING_STATUSES.includes(row.status)) {
     throw new AppError(409, "recording_active", "Сначала остановите запись, потом можно удалить");
   }
-  if (row.storageKey) await deleteFile(row.storageKey);
+  if (row.storageKey) {
+    await deleteFile(row.storageKey);
+    await removePoster(row.storageKey);
+  }
   await repo.updateRecording(row.id, { status: "deleted", sizeBytes: null });
 }
 
@@ -407,6 +414,11 @@ export async function applyEgressEvent(input: {
   }
 
   await repo.updateRecording(row.id, patch);
+
+  // Обложка — в фоне: вебхук не ждёт ffmpeg.
+  if (input.status === "ready" && row.status !== "ready" && row.storageKey) {
+    void enqueuePoster(row.storageKey, patch.durationSec ?? null);
+  }
 
   // Запись перешла из активной в терминальную (egress завершил сам —
   // комната закрылась, лимит, сбой) — снять баннер согласия у всех.
@@ -470,7 +482,10 @@ export async function runRetentionCleanup(): Promise<number> {
   let deleted = 0;
   for (const row of expired) {
     try {
-      if (row.storageKey) await deleteFile(row.storageKey);
+      if (row.storageKey) {
+        await deleteFile(row.storageKey);
+        await removePoster(row.storageKey);
+      }
       await repo.updateRecording(row.id, { status: "deleted", sizeBytes: null });
       deleted += 1;
     } catch (err) {
@@ -480,6 +495,19 @@ export async function runRetentionCleanup(): Promise<number> {
   return deleted;
 }
 
+/**
+ * Досчёт обложек: записи, готовые до появления обложек, и те, чей вебхук
+ * пришёл, пока API лежал. Идёт тем же часовым свипом, по одной.
+ */
+export async function backfillPosters(): Promise<void> {
+  const rows = await repo.listReadyRecordings();
+  for (const row of rows) {
+    if (row.storageKey && !(await posterExists(row.storageKey))) {
+      await enqueuePoster(row.storageKey, row.durationSec);
+    }
+  }
+}
+
 // --- Свип ретеншна: тот же приём, что startDeckReconcileSweep (интервал,
 //     unref, идемпотентный старт). Запускается из server.ts. ---
 const RETENTION_SWEEP_INTERVAL_MS = 60 * 60 * 1000; // раз в час
@@ -487,14 +515,13 @@ let retentionTimer: ReturnType<typeof setInterval> | null = null;
 
 export function startRecordingRetentionSweep(): void {
   if (retentionTimer) return;
-  void runRetentionCleanup().catch((err: unknown) => {
-    console.error("recordings: initial retention cleanup failed", err);
-  });
-  retentionTimer = setInterval(() => {
-    void runRetentionCleanup().catch((err: unknown) => {
-      console.error("recordings: retention sweep failed", err);
-    });
-  }, RETENTION_SWEEP_INTERVAL_MS);
+  const sweep = () =>
+    runRetentionCleanup()
+      .catch((err: unknown) => console.error("recordings: retention sweep failed", err))
+      .then(() => backfillPosters())
+      .catch((err: unknown) => console.error("recordings: poster backfill failed", err));
+  void sweep();
+  retentionTimer = setInterval(() => void sweep(), RETENTION_SWEEP_INTERVAL_MS);
   retentionTimer.unref?.();
 }
 

@@ -166,3 +166,8 @@ export async function listExpiredRecordings(limit = 50): Promise<RecordingRow[]>
     .where(and(eq(recordings.status, "ready"), lt(recordings.expiresAt, sql`now()`)))
     .limit(limit);
 }
+
+/** Все готовые записи (по всем школам) — для досчёта обложек. */
+export async function listReadyRecordings(): Promise<RecordingRow[]> {
+  return db.select().from(recordings).where(eq(recordings.status, "ready"));
+}

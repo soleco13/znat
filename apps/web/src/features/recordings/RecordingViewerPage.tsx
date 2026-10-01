@@ -155,6 +155,7 @@ export function RecordingViewerPage() {
                   ref={videoRef}
                   key={data.url}
                   src={data.url}
+                  poster={data.posterUrl ?? undefined}
                   controls
                   className="absolute inset-0 size-full"
                   onWaiting={() => setBuffering(true)}

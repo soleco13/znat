@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Play } from "lucide-react";
 import type { RecordingStatus } from "@school/shared";
@@ -14,28 +15,47 @@ export function recordingHref(rec: { id: string; lessonId: string }): string {
 /** Меньше недели до удаления — предупреждаем, пока запись ещё можно скачать. */
 export const EXPIRY_WARN_DAYS = 7;
 
-/** Кадр-заглушка 16:9: у записей нет превью, поэтому тёмная плашка + состояние. */
+/** Кадр из записи, пока не посчитан или не загрузился — тёмная плашка под ним. */
+export function PosterImage({ src }: { src: string | null }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) return null;
+  return (
+    <img
+      src={src}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      onError={() => setFailed(true)}
+      className="absolute inset-0 size-full object-cover"
+    />
+  );
+}
+
+/** Обложка 16:9: кадр из записи (если уже есть) или тёмная плашка + состояние. */
 export function RecordingThumb({
   status,
   durationSec,
+  posterUrl = null,
   className,
 }: {
   status: RecordingStatus;
   durationSec: number | null;
+  posterUrl?: string | null;
   className?: string;
 }) {
   const ready = status === "ready";
   return (
     <div
       className={cn(
-        "relative flex aspect-video items-center justify-center bg-foreground text-white",
+        "relative flex aspect-video items-center justify-center overflow-hidden bg-foreground text-white",
         status === "failed" && "bg-[#1f1417]",
         (status === "processing" || status === "starting") && "bg-[#1c1a12]",
         className,
       )}
     >
+      {ready ? <PosterImage src={posterUrl} /> : null}
       {ready ? (
-        <span className="flex size-11 items-center justify-center rounded-full bg-white/15 transition-colors duration-150 group-hover:bg-white/25">
+        <span className="relative flex size-11 items-center justify-center rounded-full bg-black/45 backdrop-blur-[2px] transition-colors duration-150 group-hover:bg-black/60">
           <Play className="ml-0.5 size-[18px] fill-current" aria-hidden />
         </span>
       ) : status === "failed" ? (
@@ -61,7 +81,7 @@ export function RecordingCard({ rec, detailed = false }: { rec: LessonRecordingI
   const soon = left != null && left <= EXPIRY_WARN_DAYS;
   const body = (
     <>
-      <RecordingThumb status={rec.status} durationSec={rec.durationSec} />
+      <RecordingThumb status={rec.status} durationSec={rec.durationSec} posterUrl={rec.posterUrl} />
       <div className="flex flex-col gap-2.5 px-4 pb-4 pt-3.5">
         <div className="flex min-w-0 flex-col gap-0.5">
           <span className="truncate text-[15px] font-semibold text-foreground">{rec.lessonTitle}</span>

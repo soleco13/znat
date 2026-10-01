@@ -28,6 +28,8 @@ RUN pnpm install --frozen-lockfile --prod
 
 FROM node:22-bookworm-slim AS runtime
 RUN corepack enable
+# ffmpeg — кадр-обложка готовой записи урока (modules/recordings/poster.ts).
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV NODE_ENV=production
 RUN groupadd --system app && useradd --system --gid app --create-home app
