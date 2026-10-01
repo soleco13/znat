@@ -1,6 +1,6 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Link2Off } from "lucide-react";
+import { Link2Off, WifiOff } from "lucide-react";
 
 import { ApiError } from "@/shared/api-client";
 import { useAsync } from "@/shared/hooks/use-async";
@@ -21,6 +21,30 @@ const prefetchRoom = () => warmChunk("src/features/room/RoomPage.tsx");
 
 const NAME_MAX = 80;
 
+/** Ссылка точно не годится — сервер урок по ней не нашёл. Всё остальное (сеть, 502 на деплое, 429) — временный сбой. */
+const isDeadLink = (err: unknown) => err instanceof ApiError && err.status === 404;
+
+const RETRY_DELAYS_MS = [1000, 2000, 4000, 8000];
+
+/** Карточка урока с тихими повторами: на сбое связи или перезапуске сервера ученик не должен видеть «ссылка недействительна». */
+async function fetchLessonInfoWithRetry(token: string, deadLink: { current: boolean }) {
+  deadLink.current = false;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fetchGuestLessonInfo(token);
+    } catch (err) {
+      if (isDeadLink(err)) {
+        deadLink.current = true;
+        throw err;
+      }
+      const delay = RETRY_DELAYS_MS[attempt];
+      if (delay === undefined) throw err;
+      console.warn("guest join: lesson info failed, retrying", err);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+}
+
 /**
  * Э12.6 — экран входа ученика по прямой ссылке (`/j/:token`). Вне `AppShell`
  * и `RequireAuth`: у ученика аккаунта нет (§0 план-ТЗ). Поток: карточка
@@ -30,7 +54,8 @@ const NAME_MAX = 80;
 export function GuestJoinPage() {
   const { token = "" } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const info = useAsync(() => fetchGuestLessonInfo(token), [token]);
+  const deadLink = useRef(false);
+  const info = useAsync(() => fetchLessonInfoWithRetry(token, deadLink), [token]);
 
   // Пока ученик вводит имя, в фоне качаем урок, а за ним — доску и задания.
   // Именно по очереди: параллельно доска (~725 КБ) делила бы медленный канал
@@ -63,6 +88,19 @@ export function GuestJoinPage() {
     <StatusScreen>
         {info.loading ? (
           <CenteredSpinner label="Загружаем урок…" />
+        ) : info.error && !deadLink.current ? (
+          <Empty className="p-0 md:p-0">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <WifiOff aria-hidden />
+              </EmptyMedia>
+              <EmptyTitle as="h1">Не удалось открыть урок</EmptyTitle>
+              <EmptyDescription>Проверьте интернет и попробуйте ещё раз.</EmptyDescription>
+            </EmptyHeader>
+            <Button size="lg" className="mt-4 w-full" onClick={info.reload}>
+              Повторить
+            </Button>
+          </Empty>
         ) : info.error ? (
           <Empty className="p-0 md:p-0">
             <EmptyHeader>

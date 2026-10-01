@@ -29,13 +29,19 @@ export function MaterialPicker({
   className?: string;
 }) {
   const [items, setItems] = useState<MaterialSummary[] | null>(null);
+  const [platformItems, setPlatformItems] = useState<MaterialSummary[]>([]);
 
   // Обновляем список и при открытии выпадашки — материал, опубликованный
   // методистом уже во время урока, должен появиться без перезагрузки комнаты.
+  // Материалы Матиса лежат в отдельном пространстве — `GET /materials` без
+  // `source` их не отдаёт, хотя выдать их на урок можно (`getLatestMaterial`).
   const load = useCallback(() => {
     listMaterials({})
       .then((res) => setItems(res.items))
       .catch(() => setItems((prev) => prev ?? []));
+    listMaterials({ source: "platform" })
+      .then((res) => setPlatformItems(res.items))
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -44,6 +50,9 @@ export function MaterialPicker({
 
   const published = items?.filter((m) => m.status === "published") ?? [];
   const drafts = items?.filter((m) => m.status !== "published") ?? [];
+  // Для сотрудников самого Матиса это те же материалы, что и свои.
+  const ownIds = new Set(items?.map((m) => m.id));
+  const platform = platformItems.filter((m) => !ownIds.has(m.id));
 
   return (
     <Select
@@ -56,7 +65,7 @@ export function MaterialPicker({
         <SelectValue placeholder={items === null ? "Загрузка…" : "Выберите материал"} />
       </SelectTrigger>
       <SelectContent>
-        {items && items.length === 0 ? (
+        {items && items.length === 0 && platform.length === 0 ? (
           <div className="px-2 py-4 text-center text-xs text-muted-foreground">
             В библиотеке пока нет материалов
           </div>
@@ -65,6 +74,16 @@ export function MaterialPicker({
           <SelectGroup>
             <SelectLabel>Опубликованные</SelectLabel>
             {published.map((m) => (
+              <SelectItem key={m.id} value={m.id}>
+                {m.title}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        ) : null}
+        {platform.length > 0 ? (
+          <SelectGroup>
+            <SelectLabel>Матис</SelectLabel>
+            {platform.map((m) => (
               <SelectItem key={m.id} value={m.id}>
                 {m.title}
               </SelectItem>
