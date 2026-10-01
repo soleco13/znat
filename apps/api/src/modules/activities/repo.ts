@@ -2,8 +2,8 @@ import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import {
   activities,
+  lessons,
   materialAnnotations,
-  materials,
   materialVersions,
   responses,
 } from "../../db/schema.js";
@@ -11,7 +11,8 @@ import type { AnnotationStroke, QuestionResponse } from "@school/shared";
 
 /**
  * Активность вместе с координатами материала (Э8.2: `activities` ссылается
- * на `material_versions`, `schoolId` берётся джойном через `materials`).
+ * на `material_versions`). `schoolId` — школа УРОКА, не материала: материал
+ * Матиса лежит в служебном пространстве, а задание по нему — в школе урока.
  * Э12.5: задание всегда на уроке, режим/группа убраны.
  */
 export interface ActivityRow {
@@ -36,7 +37,7 @@ const activitySelection = {
   materialVersionId: activities.materialVersionId,
   materialId: materialVersions.materialId,
   materialVersion: materialVersions.version,
-  schoolId: materials.schoolId,
+  schoolId: lessons.schoolId,
   assignedBy: activities.assignedBy,
   deadline: activities.deadline,
   timerSeconds: activities.timerSeconds,
@@ -50,7 +51,7 @@ function withMaterial() {
     .select(activitySelection)
     .from(activities)
     .innerJoin(materialVersions, eq(materialVersions.id, activities.materialVersionId))
-    .innerJoin(materials, eq(materials.id, materialVersions.materialId));
+    .innerJoin(lessons, eq(lessons.id, activities.lessonId));
 }
 
 export async function insertActivity(input: {
@@ -356,7 +357,7 @@ export async function listPendingManualGrading(
   assignedBy: string | null,
 ): Promise<PendingManualGradingRow[]> {
   const conditions = [
-    eq(materials.schoolId, schoolId),
+    eq(lessons.schoolId, schoolId),
     eq(responses.submitted, true),
     eq(responses.autoGraded, false),
     isNull(responses.gradedBy),
@@ -376,7 +377,7 @@ export async function listPendingManualGrading(
     .from(responses)
     .innerJoin(activities, eq(activities.id, responses.activityId))
     .innerJoin(materialVersions, eq(materialVersions.id, activities.materialVersionId))
-    .innerJoin(materials, eq(materials.id, materialVersions.materialId))
+    .innerJoin(lessons, eq(lessons.id, activities.lessonId))
     .where(and(...conditions))
     .orderBy(responses.submittedAt);
 
@@ -400,7 +401,7 @@ export async function findResponseForGrading(responseId: string): Promise<Manual
     .select({
       id: responses.id,
       assignedBy: activities.assignedBy,
-      schoolId: materials.schoolId,
+      schoolId: lessons.schoolId,
       materialVersionId: activities.materialVersionId,
       questionId: responses.questionId,
       gradedBy: responses.gradedBy,
@@ -410,7 +411,7 @@ export async function findResponseForGrading(responseId: string): Promise<Manual
     .from(responses)
     .innerJoin(activities, eq(activities.id, responses.activityId))
     .innerJoin(materialVersions, eq(materialVersions.id, activities.materialVersionId))
-    .innerJoin(materials, eq(materials.id, materialVersions.materialId))
+    .innerJoin(lessons, eq(lessons.id, activities.lessonId))
     .where(eq(responses.id, responseId))
     .limit(1);
   return rows[0] ?? null;
