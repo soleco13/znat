@@ -41,13 +41,56 @@ const ALLOWED_TAGS = [
   "span",
 ];
 
+const ALLOWED_ATTR = ["href", "target", "rel", "style"];
+
 /**
  * `style` разрешён (Э13) — редактор пишет `font-family`/`color` инлайном
- * (`<span style="…">`). DOMPurify по умолчанию вычищает опасное содержимое
- * `style` (`expression()`, `url(javascript:…)`), оставляя безопасные
- * CSS-свойства.
+ * (`<span style="…">`). Содержимое `style` DOMPurify НЕ разбирает: проходили
+ * `url(…)` (запрос на любой адрес — в т.ч. из Chrome записи урока, который
+ * живёт в сети сервера) и `position: fixed` (материал перекрывал страницу
+ * ученика поддельным интерфейсом). Оставляем только оформление текста.
  */
-const ALLOWED_ATTR = ["href", "target", "rel", "style"];
+const ALLOWED_STYLE_PROPS = new Set([
+  "color",
+  "background-color",
+  "font-family",
+  "font-weight",
+  "font-style",
+  "text-decoration",
+  "text-align",
+]);
+const SAFE_STYLE_VALUE = /^[\w\s#%.,()'"-]+$/;
+
+function filterStyle(style: string): string {
+  return style
+    .split(";")
+    .map((decl) => {
+      const colon = decl.indexOf(":");
+      if (colon < 0) return null;
+      const prop = decl.slice(0, colon).trim().toLowerCase();
+      const value = decl.slice(colon + 1).trim();
+      if (!ALLOWED_STYLE_PROPS.has(prop) || !SAFE_STYLE_VALUE.test(value) || /url\s*\(|expression/i.test(value)) {
+        return null;
+      }
+      return `${prop}: ${value}`;
+    })
+    .filter((decl): decl is string => decl !== null)
+    .join("; ");
+}
+
+DOMPurify.addHook("uponSanitizeAttribute", (_node, data) => {
+  if (data.attrName !== "style") return;
+  const filtered = filterStyle(data.attrValue);
+  if (filtered) data.attrValue = filtered;
+  else data.keepAttr = false;
+});
+
+// Ссылка из материала в новой вкладке не получает доступ к нашей (`window.opener`).
+DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+  if (node.tagName === "A" && node.hasAttribute("target")) {
+    node.setAttribute("rel", "noopener noreferrer");
+  }
+});
 
 export function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html, {
