@@ -61,7 +61,12 @@ export function MaterialPlayer({
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await autosave.flush();
+      // Не сохранились ответы — не сдаём: сервер оценил бы их как пустые, а
+      // после сдачи исправить уже нельзя.
+      if (!(await autosave.flush())) {
+        setSubmitError("Не удалось сохранить ответы — проверьте интернет и нажмите ещё раз");
+        return;
+      }
       const result = await submitActivity(autosaveActivityId);
       setSubmitResult(result);
       setSubmittedAt(new Date().toISOString());
