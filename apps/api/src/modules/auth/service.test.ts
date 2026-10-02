@@ -129,13 +129,21 @@ describe("refresh — гонка вкладок", () => {
   });
 
   it("только что ротированный токен (вторая вкладка) — новая пара, цепочка не отзывается", async () => {
-    repoMock.findRefreshTokenByHash.mockResolvedValue(
-      record({ revokedAt: new Date(Date.now() - 2_000), replacedByHash: "next" }),
-    );
+    repoMock.findRefreshTokenByHash
+      .mockResolvedValueOnce(record({ revokedAt: new Date(Date.now() - 2_000), replacedByHash: "next" }))
+      .mockResolvedValueOnce(record({ tokenHash: "next" }));
     const result = await refresh("tok");
     expect(result.accessToken).toEqual(expect.any(String));
     expect(repoMock.revokeFamily).not.toHaveBeenCalled();
     expect(repoMock.rotateRefreshToken).not.toHaveBeenCalled();
+  });
+
+  it("только что ротированный, но цепочку потом отозвали (сброс пароля) — отказ", async () => {
+    repoMock.findRefreshTokenByHash
+      .mockResolvedValueOnce(record({ revokedAt: new Date(Date.now() - 2_000), replacedByHash: "next" }))
+      .mockResolvedValueOnce(record({ tokenHash: "next", revokedAt: new Date(), replacedByHash: null }));
+    await expect(refresh("tok")).rejects.toMatchObject({ code: "refresh_token_reused" });
+    expect(repoMock.insertRefreshToken).not.toHaveBeenCalled();
   });
 
   it("давно использованный токен — отзыв всей цепочки (признак кражи)", async () => {

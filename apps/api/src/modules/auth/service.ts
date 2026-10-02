@@ -153,6 +153,12 @@ export async function refresh(presentedToken: string) {
       await repo.revokeFamily(record.familyId);
       throw new AppError(401, "refresh_token_reused", "Обнаружено повторное использование токена");
     }
+    // Окно прощает только гонку ротации. Если после неё цепочку отозвали
+    // (выход, сброс или смена пароля), последний токен цепочки отозван без
+    // преемника — иначе украденный токен переживал бы отзыв всех сессий.
+    if (!(await isChainStillActive(record.replacedByHash))) {
+      throw new AppError(401, "refresh_token_reused", "Обнаружено повторное использование токена");
+    }
   }
   if (record.expiresAt.getTime() < Date.now()) {
     throw new AppError(401, "refresh_token_expired", "Срок действия токена истёк");
@@ -183,6 +189,19 @@ export async function refresh(presentedToken: string) {
     refreshExpiresAt: nextRefresh.expiresAt,
     user,
   };
+}
+
+const REFRESH_CHAIN_MAX_HOPS = 10;
+
+async function isChainStillActive(successorHash: string | null): Promise<boolean> {
+  let hash = successorHash;
+  for (let hop = 0; hash && hop < REFRESH_CHAIN_MAX_HOPS; hop++) {
+    const next = await repo.findRefreshTokenByHash(hash);
+    if (!next) return false;
+    if (!next.revokedAt) return true;
+    hash = next.replacedByHash;
+  }
+  return false;
 }
 
 export async function logout(presentedToken: string) {
