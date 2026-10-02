@@ -14,6 +14,7 @@ import { AppError } from "../../plugins/errors.js";
 import * as materialsService from "../materials/service.js";
 import * as usersService from "../users/service.js";
 import * as repo from "./repo.js";
+import { logTaskFailure } from "../../plugins/logger.js";
 
 /** 32 случайных байта → 64 hex-символа. Секрет прямой ссылки урока (§1.6 план-ТЗ). */
 function mintJoinToken(): string {
@@ -174,7 +175,7 @@ export async function rotateJoinLink(schoolId: string, id: string) {
   const row = await repo.setJoinToken(id, schoolId, token);
   if (!row) throw new AppError(404, "not_found", "Урок не найден");
   for (const listener of joinLinkRotatedListeners) {
-    await listener(id).catch((err: unknown) => console.error("lessons: join link rotation listener failed", id, err));
+    await listener(id).catch((err: unknown) => logTaskFailure("lessons.join_link_rotation_listener", err, { lessonId: id }));
   }
   return { joinToken: token, joinPath: joinPath(token) };
 }

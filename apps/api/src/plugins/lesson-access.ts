@@ -10,6 +10,7 @@ import {
 import * as roomsService from "../modules/rooms/service.js";
 import * as usersService from "../modules/users/service.js";
 import { AppError } from "./errors.js";
+import { setLogContext } from "./logger.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -63,6 +64,17 @@ async function resolveStaffActor(request: FastifyRequest, lessonId: string): Pro
  * по-прежнему делает сервис `rooms`/`canvas` — здесь только аутентификация и
  * привязка actor к уроку из пути.
  */
+/** Урок и участник (он же LiveKit identity) — во все строки лога этого запроса. */
+function withLogContext<T extends LessonActor>(actor: T): T {
+  setLogContext({
+    participantId: actor.participantId,
+    schoolId: actor.schoolId,
+    ...(actor.lessonId ? { lessonId: actor.lessonId } : {}),
+    ...(actor.kind === "staff" ? { userId: actor.participantId } : {}),
+  });
+  return actor;
+}
+
 export default fp(async function lessonAccessPlugin(app: FastifyInstance) {
   app.decorate("requireLessonAccess", async (request: FastifyRequest) => {
     const lessonId = (request.params as { id?: string }).id;
@@ -72,7 +84,7 @@ export default fp(async function lessonAccessPlugin(app: FastifyInstance) {
 
     const header = request.headers.authorization;
     if (header?.startsWith("Bearer ")) {
-      request.lessonActor = await resolveStaffActor(request, lessonId);
+      request.lessonActor = withLogContext(await resolveStaffActor(request, lessonId));
       return;
     }
 
@@ -83,7 +95,7 @@ export default fp(async function lessonAccessPlugin(app: FastifyInstance) {
         throw new AppError(403, "guest_wrong_lesson", "Гостевая сессия относится к другому уроку");
       }
       await roomsService.assertGuestNotLockedOut(actor.lessonId, actor.participantId);
-      request.lessonActor = actor;
+      request.lessonActor = withLogContext(actor);
       return;
     }
 
@@ -95,7 +107,7 @@ export default fp(async function lessonAccessPlugin(app: FastifyInstance) {
     if (header?.startsWith("Bearer ")) {
       // `lessonId` неизвестен из пути — сервис проставит проверку урока по
       // загруженной активности; для staff-actor поле здесь не используется.
-      request.lessonActor = await resolveStaffActor(request, "");
+      request.lessonActor = withLogContext(await resolveStaffActor(request, ""));
       return;
     }
 
@@ -105,7 +117,7 @@ export default fp(async function lessonAccessPlugin(app: FastifyInstance) {
       // сверит его с `activity.lessonId`.
       const actor = await resolveGuestSession(cookie);
       await roomsService.assertGuestNotLockedOut(actor.lessonId, actor.participantId);
-      request.lessonActor = actor;
+      request.lessonActor = withLogContext(actor);
       return;
     }
 

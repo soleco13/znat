@@ -25,6 +25,7 @@ import * as presence from "./presence.js";
 import type { PresenceEntry } from "./presence.js";
 import * as repo from "./repo.js";
 import { emitRoomEvent } from "./events.js";
+import { logTaskFailure, logger } from "../../plugins/logger.js";
 
 const RECONNECT_GRACE_MS = 30_000;
 const HEARTBEAT_TIMEOUT_MS = 60_000;
@@ -192,7 +193,7 @@ async function scheduleAutoEndIfEmpty(lessonId: string): Promise<void> {
         await presence.setEntryLocked(lessonId, false);
         activeLessons.delete(lessonId);
       } catch (err) {
-        console.error("rooms: room cleanup failed", lessonId, err);
+        logTaskFailure("rooms.cleanup", err, { lessonId });
       }
     })();
   }, EMPTY_ROOM_AUTOEND_MS);
@@ -864,7 +865,7 @@ async function evictAllGuestsAfterLinkRotation(lessonId: string): Promise<void> 
     // и вебхук participant_joined выкидывает только отозванных.
     await guestsService.revokeGuestSession(guestId);
     await evictGuest(lesson.schoolId, lessonId, guestId, "link_rotated").catch((err: unknown) =>
-      console.error("rooms: не удалось вывести гостя после перевыпуска ссылки", lessonId, guestId, err),
+      logTaskFailure("rooms.remove_guest_after_link_rotation", err, { lessonId, participantId: guestId }),
     );
   }
   await scheduleAutoEndIfEmpty(lessonId);
@@ -1117,7 +1118,7 @@ async function mediaConnectedIds(lessonId: string): Promise<Set<string>> {
     if (!livekitRoom) return new Set();
     return await mediaService.listConnectedIdentities(livekitRoom);
   } catch (err) {
-    console.error("rooms: livekit participants unavailable", lessonId, err);
+    logger().warn({ err, lessonId, integration: "livekit" }, "rooms: livekit participants unavailable");
     return new Set();
   }
 }
@@ -1174,7 +1175,7 @@ export async function runPresenceSweepOnce(): Promise<void> {
   for (const lessonId of await presence.listRoomIds()) activeLessons.add(lessonId);
   await Promise.all(
     [...activeLessons].map((lessonId) =>
-      sweepRoom(lessonId).catch((err) => console.error("rooms: sweep failed", lessonId, err)),
+      sweepRoom(lessonId).catch((err) => logTaskFailure("rooms.presence_sweep", err, { lessonId })),
     ),
   );
 }
@@ -1182,7 +1183,7 @@ export async function runPresenceSweepOnce(): Promise<void> {
 export function startPresenceSweep(): void {
   if (sweepInterval) return;
   sweepInterval = setInterval(() => {
-    runPresenceSweepOnce().catch((err) => console.error("rooms: sweep failed", err));
+    runPresenceSweepOnce().catch((err) => logTaskFailure("rooms.presence_sweep", err));
   }, SWEEP_INTERVAL_MS);
   sweepInterval.unref?.();
 }
@@ -1205,7 +1206,7 @@ export async function runChatRetentionOnce(now = new Date()): Promise<number> {
 export function startChatRetentionSweep(): void {
   if (chatRetentionTimer) return;
   chatRetentionTimer = setInterval(() => {
-    runChatRetentionOnce().catch((err) => console.error("rooms: chat retention failed", err));
+    runChatRetentionOnce().catch((err) => logTaskFailure("rooms.chat_retention", err));
   }, CHAT_RETENTION_SWEEP_INTERVAL_MS);
   chatRetentionTimer.unref?.();
 }

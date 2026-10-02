@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { access, rename, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { env } from "../../plugins/env.js";
+import { logTaskFailure } from "../../plugins/logger.js";
 
 /**
  * Обложка записи — один кадр из готового mp4 (JPEG 640px, ~30–60 КБ), лежит
@@ -85,7 +86,7 @@ async function generate(storageKey: string, durationSec: number | null): Promise
     return true;
   } catch (err) {
     await rm(tmpPath, { force: true });
-    console.error("recordings: poster failed", storageKey, err instanceof Error ? err.message : err);
+    logTaskFailure("recordings.poster", err, { storageKey });
     return false;
   }
 }

@@ -24,6 +24,7 @@ import * as egress from "./egress-client.js";
 import * as repo from "./repo.js";
 import { enqueuePoster, posterExists, posterKeyFor, removePoster } from "./poster.js";
 import type { RecordingRow } from "./repo.js";
+import { logTaskFailure } from "../../plugins/logger.js";
 
 /**
  * Э10 — запись уроков (§10.4 ТЗ). Оркестрация: кто может нажать «Запись»,
@@ -489,7 +490,7 @@ export async function runRetentionCleanup(): Promise<number> {
       await repo.updateRecording(row.id, { status: "deleted", sizeBytes: null });
       deleted += 1;
     } catch (err) {
-      console.error("recordings: retention cleanup failed", row.id, err);
+      logTaskFailure("recordings.retention_cleanup", err, { recordingId: row.id });
     }
   }
   return deleted;
@@ -517,9 +518,9 @@ export function startRecordingRetentionSweep(): void {
   if (retentionTimer) return;
   const sweep = () =>
     runRetentionCleanup()
-      .catch((err: unknown) => console.error("recordings: retention sweep failed", err))
+      .catch((err: unknown) => logTaskFailure("recordings.retention_sweep", err))
       .then(() => backfillPosters())
-      .catch((err: unknown) => console.error("recordings: poster backfill failed", err));
+      .catch((err: unknown) => logTaskFailure("recordings.poster_backfill", err));
   void sweep();
   retentionTimer = setInterval(() => void sweep(), RETENTION_SWEEP_INTERVAL_MS);
   retentionTimer.unref?.();

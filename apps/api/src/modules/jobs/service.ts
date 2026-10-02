@@ -22,6 +22,7 @@ import {
   type ConvertJobResult,
 } from "@school/shared";
 import { env } from "../../plugins/env.js";
+import { logTaskFailure } from "../../plugins/logger.js";
 
 const connection = { url: env.REDIS_URL, maxRetriesPerRequest: null } as const;
 
@@ -86,19 +87,19 @@ export function startConvertEvents(handlers: ConvertJobHandlers): void {
     const progress = data as ConvertJobProgress;
     if (typeof progress?.total !== "number") return;
     void Promise.resolve(handlers.onProgress(jobId, progress)).catch((err: unknown) => {
-      console.error("jobs: onProgress handler failed", jobId, err);
+      logTaskFailure("jobs.on_progress", err, { jobId });
     });
   });
 
   events.on("completed", ({ jobId, returnvalue }) => {
     void Promise.resolve(handlers.onCompleted(jobId, returnvalue)).catch((err: unknown) => {
-      console.error("jobs: onCompleted handler failed", jobId, err);
+      logTaskFailure("jobs.on_completed", err, { jobId });
     });
   });
 
   events.on("failed", ({ jobId, failedReason }) => {
     void Promise.resolve(handlers.onFailed(jobId, failedReason)).catch((err: unknown) => {
-      console.error("jobs: onFailed handler failed", jobId, err);
+      logTaskFailure("jobs.on_failed", err, { jobId });
     });
   });
 }

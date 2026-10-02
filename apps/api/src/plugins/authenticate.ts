@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import type { AccessTokenPayload } from "@school/shared";
 import { verifyAccessToken } from "../modules/auth/service.js";
 import { AppError } from "./errors.js";
+import { setLogContext } from "./logger.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -25,5 +26,6 @@ export default fp(async function authenticatePlugin(app: FastifyInstance) {
     } catch {
       throw new AppError(401, "invalid_token", "Недействительный или просроченный access-токен");
     }
+    setLogContext({ userId: request.user.sub, schoolId: request.user.schoolId });
   });
 });

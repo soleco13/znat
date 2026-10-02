@@ -25,6 +25,7 @@ import * as jobsService from "../jobs/service.js";
 import type { ConvertJobHandlers } from "../jobs/service.js";
 import * as roomsService from "../rooms/service.js";
 import * as repo from "./repo.js";
+import { logTaskFailure } from "../../plugins/logger.js";
 
 /** Слайды доски видны только во время активного урока — тот же длинный TTL,
  *  что у изображений доски (Э3.10): ссылка кладётся в ответ и переживает урок. */
@@ -416,7 +417,7 @@ export async function reconcileStuckDecks(): Promise<void> {
       }
       // in-progress — ничего, дождёмся события или следующего свипа.
     } catch (err) {
-      console.error("decks: reconcile failed", deck.id, err);
+      logTaskFailure("decks.reconcile", err, { deckId: deck.id });
     }
   }
 }
@@ -424,11 +425,11 @@ export async function reconcileStuckDecks(): Promise<void> {
 export function startDeckReconcileSweep(): void {
   if (reconcileTimer) return;
   void reconcileStuckDecks().catch((err: unknown) => {
-    console.error("decks: initial reconcile failed", err);
+    logTaskFailure("decks.initial_reconcile", err);
   });
   reconcileTimer = setInterval(() => {
     void reconcileStuckDecks().catch((err: unknown) => {
-      console.error("decks: reconcile sweep failed", err);
+      logTaskFailure("decks.reconcile_sweep", err);
     });
   }, RECONCILE_INTERVAL_MS);
   reconcileTimer.unref?.();

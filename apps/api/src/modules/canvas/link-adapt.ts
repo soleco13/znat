@@ -6,6 +6,7 @@ import {
   type onStatelessPayload,
 } from "@hocuspocus/server";
 import * as Y from "yjs";
+import { logEvent, logger } from "../../plugins/logger.js";
 
 /**
  * Адаптация доски под плохую связь участника — только для ЕГО подключения.
@@ -144,7 +145,7 @@ export async function adaptBroadcastsToLink(payload: Pick<afterLoadDocumentPaylo
   if (docs.has(document)) return;
   const internals = document as unknown as DocumentInternals;
   if (typeof internals.broadcast !== "function" || typeof internals.broadcastUpdate !== "function") {
-    console.warn("canvas: внутренности Hocuspocus изменились — адаптация доски под слабую связь выключена");
+    logger().warn("canvas: внутренности Hocuspocus изменились — адаптация доски под слабую связь выключена");
     return;
   }
   const doc: DocState = { lastBroadcastSV: Y.encodeStateVector(document), poor: new Map() };
@@ -209,7 +210,7 @@ export async function handleLinkStateless(
   }
   if (msg.poor !== clientPoor.has(payload.connection)) {
     const userId = (payload.connection.context as { userId?: string } | undefined)?.userId ?? "unknown";
-    console.info(`canvas: слабая связь ${msg.poor ? "вкл" : "выкл"} lesson=${payload.document.name} participant=${userId}`);
+    logEvent("client_event", { clientEvent: "board_link_quality_changed", poorLink: msg.poor, lessonId: payload.document.name, participantId: userId });
   }
   if (msg.poor) clientPoor.add(payload.connection);
   else {

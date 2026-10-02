@@ -13,6 +13,7 @@ import * as authService from "../auth/service.js";
 import * as invitesService from "../invites/service.js";
 import * as mailService from "../mail/service.js";
 import * as repo from "./repo.js";
+import { logTaskFailure } from "../../plugins/logger.js";
 
 const VERIFICATION_TOKEN_TTL_HOURS = 24;
 /** Неподтверждённый аккаунт живёт неделю, потом фоновая чистка его удаляет. */
@@ -58,7 +59,7 @@ async function sendVerificationLink(email: string, rawToken: string): Promise<vo
   try {
     await mailService.sendVerificationEmail(email, verifyLink);
   } catch (err) {
-    console.error("registration: не удалось отправить письмо подтверждения", err);
+    logTaskFailure("mail.verification", err, { integration: "smtp" });
   }
 }
 
@@ -239,7 +240,7 @@ export async function runUnverifiedCleanupOnce(now = new Date()): Promise<number
 export function startUnverifiedCleanup(): void {
   if (unverifiedCleanupTimer) return;
   unverifiedCleanupTimer = setInterval(() => {
-    runUnverifiedCleanupOnce().catch((err) => console.error("registration: unverified cleanup failed", err));
+    runUnverifiedCleanupOnce().catch((err) => logTaskFailure("registration.unverified_cleanup", err));
   }, UNVERIFIED_CLEANUP_INTERVAL_MS);
   unverifiedCleanupTimer.unref?.();
 }

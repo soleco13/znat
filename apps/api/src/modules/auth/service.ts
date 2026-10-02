@@ -7,6 +7,7 @@ import { env } from "../../plugins/env.js";
 import * as mailService from "../mail/service.js";
 import { AppError } from "../../plugins/errors.js";
 import * as repo from "./repo.js";
+import { logTaskFailure } from "../../plugins/logger.js";
 
 const ACCESS_TOKEN_TTL = "15m";
 const REFRESH_TOKEN_TTL_DAYS = 30;
@@ -244,7 +245,7 @@ export async function runRefreshTokenCleanupOnce(): Promise<number> {
 export function startRefreshTokenCleanup(): void {
   if (refreshTokenCleanupTimer) return;
   refreshTokenCleanupTimer = setInterval(() => {
-    runRefreshTokenCleanupOnce().catch((err) => console.error("auth: refresh token cleanup failed", err));
+    runRefreshTokenCleanupOnce().catch((err) => logTaskFailure("auth.refresh_token_cleanup", err));
   }, REFRESH_TOKEN_CLEANUP_INTERVAL_MS);
   refreshTokenCleanupTimer.unref?.();
 }
@@ -279,7 +280,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
   try {
     await mailService.sendPasswordResetEmail(user.email, `${env.PUBLIC_ORIGIN}/reset-password?token=${rawToken}`);
   } catch (err) {
-    console.error("auth: не удалось отправить письмо сброса пароля", err);
+    logTaskFailure("mail.password_reset", err, { integration: "smtp" });
   }
 }
 

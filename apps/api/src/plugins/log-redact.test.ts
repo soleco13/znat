@@ -13,6 +13,11 @@ describe("redactUrl", () => {
     expect(redactUrl("/files/k?exp=1&sig=abc")).toBe("/files/k?exp=1&sig=%5Bredacted%5D");
   });
 
+  it("вырезает токен ссылки урока из пути (страница и API входа гостя)", () => {
+    expect(redactUrl("/j/abc123def")).toBe("/j/[redacted]");
+    expect(redactUrl("/api/v1/j/abc123def/enter")).toBe("/api/v1/j/[redacted]/enter");
+  });
+
   it("адрес без секретов не меняет", () => {
     expect(redactUrl("/api/v1/lessons/1?page=2")).toBe("/api/v1/lessons/1?page=2");
     expect(redactUrl("/health")).toBe("/health");

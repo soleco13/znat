@@ -3,8 +3,12 @@ import type { FastifyRequest } from "fastify";
 /** Параметры адреса, которые дают доступ сами по себе: access/recorder-токены WS и подпись ссылок на файлы. */
 const SECRET_QUERY_PARAMS = ["token", "recorderToken", "sig"];
 
+/** Ссылка урока `/j/<token>` (страница и API входа гостя) — сама по себе пропуск в урок. */
+const JOIN_LINK_PATH = /(^|\/)j\/[^/?#]+/;
+
 /** Токен в `/ws?token=…` иначе целиком оседал в логах при каждом подключении к уроку. */
 export function redactUrl(url: string): string {
+  url = url.replace(JOIN_LINK_PATH, "$1j/[redacted]");
   const q = url.indexOf("?");
   if (q === -1) return url;
   const params = new URLSearchParams(url.slice(q + 1));

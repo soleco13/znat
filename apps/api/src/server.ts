@@ -17,7 +17,8 @@ import lessonAccessPlugin from "./plugins/lesson-access.js";
 import recorderAccessPlugin from "./plugins/recorder-access.js";
 import metricsPlugin from "./plugins/metrics.js";
 import { isStaticAppRequest, rateLimitKey, rateLimitMax } from "./plugins/rate-limit-key.js";
-import { serializeRequest } from "./plugins/log-redact.js";
+import { genRequestId, logEvent, logger, loggerOptions, setRootLogger } from "./plugins/logger.js";
+import requestContextPlugin from "./plugins/request-context.js";
 import { UPLOAD_LIMITS } from "./plugins/uploads.js";
 import { checkHealth } from "./plugins/health.js";
 import { initErrorReporting } from "./plugins/sentry.js";
@@ -66,12 +67,15 @@ export function buildServer() {
   initErrorReporting();
 
   const app = Fastify({
-    logger: {
-      level: env.NODE_ENV === "production" ? "info" : "debug",
-      serializers: { req: serializeRequest },
-    },
+    logger: loggerOptions(),
+    genReqId: genRequestId,
+    requestIdLogLabel: "requestId",
+    // Строку на запрос пишет plugins/request-context.ts (с длительностью и контекстом).
+    disableRequestLogging: true,
     trustProxy: true,
   });
+  setRootLogger(app.log);
+  app.register(requestContextPlugin);
 
   app.register(cookie, { secret: env.COOKIE_SECRET });
   // Маршруты передают свой лимит (plugins/uploads.ts); здесь — самый строгий
@@ -117,7 +121,7 @@ export function buildServer() {
     async (request, reply) => {
       const { link, who } = request.query;
       if ((link === "poor" || link === "ok") && who && /^[0-9a-f-]{36}$/.test(who)) {
-        console.info(`media: слабая связь ${link === "poor" ? "вкл" : "выкл"} participant=${who}`);
+        logEvent("client_event", { clientEvent: "link_quality_changed", poorLink: link === "poor", participantId: who });
       }
       return reply.header("Cache-Control", "no-store").status(204).send();
     },
@@ -246,6 +250,15 @@ async function main() {
     rateLimitRedis.disconnect();
     process.exit(0);
   };
+  // Без этого необработанный reject ронял процесс (Node 22) со стеком в stderr
+  // мимо JSON-лога — вместе со всеми идущими уроками и без следа причины.
+  process.on("unhandledRejection", (reason) => {
+    logEvent("process_unhandled_rejection", { err: reason }, "error");
+  });
+  process.on("uncaughtException", (err) => {
+    logEvent("process_uncaught_exception", { err }, "fatal");
+    process.exit(1);
+  });
   process.on("SIGTERM", () => void shutdown("SIGTERM"));
   process.on("SIGINT", () => void shutdown("SIGINT"));
 
@@ -254,6 +267,7 @@ async function main() {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   main().catch((err) => {
+    logger().fatal({ err }, "server failed to start");
     console.error(err);
     process.exit(1);
   });
