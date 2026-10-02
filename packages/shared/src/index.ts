@@ -17,3 +17,4 @@ export * from "./schools.js";
 export * from "./inn-ogrn.js";
 export * from "./registration.js";
 export * from "./invites.js";
+export * from "./telemetry.js";

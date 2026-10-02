@@ -1,0 +1,48 @@
+import { z } from "zod";
+
+/**
+ * Клиентские события урока, которые сервер иначе не видит: подключение к
+ * LiveKit, переподключения WebSocket, синхронизация доски, загрузка PDF.
+ * Браузер шлёт их пачками в `POST /telemetry`, сервер пишет в общий лог
+ * рядом со своими событиями — по сессии вкладки (`X-Client-Session`) и
+ * participantId вся цепочка урока одного человека собирается одним фильтром.
+ */
+export const CLIENT_EVENT_NAMES = [
+  "livekit_connection_started",
+  "livekit_connected",
+  "livekit_connection_failed",
+  "livekit_reconnecting",
+  "livekit_reconnected",
+  "livekit_disconnected",
+  "websocket_disconnected",
+  "websocket_reconnect",
+  "whiteboard_sync_started",
+  "whiteboard_synced",
+  "whiteboard_sync_failed",
+  "whiteboard_disconnected",
+  "pdf_load_started",
+  "pdf_loaded",
+  "pdf_load_failed",
+  "client_error",
+] as const;
+export type ClientEventName = (typeof CLIENT_EVENT_NAMES)[number];
+
+/** Только плоские примитивы — ни объектов, ни длинных строк в лог из браузера. */
+export const clientEventFieldValueSchema = z.union([z.string().max(300), z.number(), z.boolean(), z.null()]);
+export type ClientEventFieldValue = z.infer<typeof clientEventFieldValueSchema>;
+
+export const clientEventSchema = z.object({
+  event: z.enum(CLIENT_EVENT_NAMES),
+  /** Время события в браузере (ISO) — сервер пишет ещё и своё время приёма. */
+  ts: z.string().datetime(),
+  fields: z
+    .record(z.string().max(40), clientEventFieldValueSchema)
+    .refine((o) => Object.keys(o).length <= 20, "too many fields")
+    .optional(),
+});
+export type ClientEvent = z.infer<typeof clientEventSchema>;
+
+export const clientEventBatchSchema = z.object({
+  events: z.array(clientEventSchema).min(1).max(50),
+});
+export type ClientEventBatch = z.infer<typeof clientEventBatchSchema>;
