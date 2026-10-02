@@ -410,6 +410,27 @@ describe("защита от утёкшей ссылки: лимит, закры�
     await roomsService.handleParticipantJoinedWebhook("room-1", "guest-2");
     expect(mediaServiceMock.removeParticipant).toHaveBeenCalledTimes(1);
   });
+
+  it("вебхук LiveKit приводит грант переподключившегося гостя к текущим правам", async () => {
+    lessonsServiceMock.getLessonByLivekitRoom.mockResolvedValue(baseLesson({ livekitRoom: "room-1" }));
+    await roomsService.join(guestActor("guest-1"), LESSON_ID);
+    const current = (await presenceModule.getParticipant(LESSON_ID, "guest-1"))!.permissions;
+    mediaServiceMock.updateLivePermissions.mockClear();
+
+    await roomsService.handleParticipantJoinedWebhook("room-1", "guest-1");
+    expect(mediaServiceMock.updateLivePermissions).toHaveBeenCalledWith("room-1", "guest-1", current, "guest");
+  });
+
+  it("закрытый вход: гость, не бывший на уроке, получает отказ и на доске/чате", async () => {
+    await roomsService.join(staffActor(), LESSON_ID);
+    await roomsService.setEntryLocked(SCHOOL_ID, LESSON_ID, teacherToken(), true);
+    await expect(roomsService.assertGuestNotLockedOut(LESSON_ID, "guest-spare")).rejects.toMatchObject({
+      statusCode: 403,
+      code: "lesson_entry_locked",
+    });
+    repoMock.findCanonicalParticipant.mockResolvedValueOnce({ id: "row", kind: "guest", displayName: "Ученик" });
+    await expect(roomsService.assertGuestNotLockedOut(LESSON_ID, "guest-returning")).resolves.toBeUndefined();
+  });
 });
 
 describe("Э12.4: гость на уроке — журнал, presence, чат, рука", () => {

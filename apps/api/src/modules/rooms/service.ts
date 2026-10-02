@@ -890,8 +890,29 @@ export async function setEntryLocked(
  * обход приложения. Выкидываем такого сразу после входа.
  */
 export async function handleParticipantJoinedWebhook(livekitRoom: string, userId: string): Promise<void> {
-  if (!(await guestsService.isGuestSessionRevoked(userId))) return;
-  await mediaService.removeParticipant(livekitRoom, userId);
+  if (await guestsService.isGuestSessionRevoked(userId)) {
+    await mediaService.removeParticipant(livekitRoom, userId);
+    return;
+  }
+  // Медиа-токен гостя живёт всю гостевую сессию, а права в нём — на момент
+  // выдачи. Отозванное учителем право (микрофон/камера/экран) возвращалось,
+  // если ученик переподключался к LiveKit со старым токеном в обход join —
+  // при каждом подключении приводим грант к текущим правам из presence.
+  const lesson = await lessonsService.getLessonByLivekitRoom(livekitRoom);
+  if (!lesson) return;
+  const entry = await presence.getParticipant(lesson.id, userId);
+  if (entry) {
+    if (entry.kind === "staff") return;
+    await mediaService.updateLivePermissions(livekitRoom, userId, entry.permissions, entry.kind);
+    return;
+  }
+  // Presence уже снят (вышел и вернулся после grace) — права как у входящего
+  // заново гостя: сохранённый грант учителя или настройки урока.
+  const wasGuest = await repo.findCanonicalParticipant(lesson.id, { userId: null, guestId: userId });
+  if (!wasGuest) return;
+  const permissions =
+    (await presence.getGrantedPermissions(lesson.id, userId)) ?? guestPermissionsFromSettings(lesson.settings);
+  await mediaService.updateLivePermissions(livekitRoom, userId, permissions, "guest");
 }
 
 /**
