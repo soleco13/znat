@@ -74,7 +74,7 @@ export function errorFields(err: unknown): { errorName: string; errorMessage: st
 }
 
 /** Путь страницы без токена ссылки урока (`/j/<token>` — сам по себе пропуск в урок). */
-function safePath(): string {
+export function safePath(): string {
   return location.pathname.replace(/\/j\/[^/]+/, "/j/[redacted]");
 }
 
