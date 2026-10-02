@@ -38,6 +38,8 @@ interface ZipEntry {
   offset: number;
 }
 
+const MAX_ZIP_ENTRY_BYTES = 32 * 1024 * 1024;
+
 /** Central directory ZIP-архива: имя записи → метаданные для чтения. */
 function parseZipCentralDirectory(buf: Buffer): Map<string, ZipEntry> {
   const EOCD_SIG = 0x06054b50;
@@ -80,7 +82,9 @@ function readZipEntryBytes(buf: Buffer, entry: ZipEntry): Buffer {
   const dataStart = entry.offset + 30 + nameLen + extraLen;
   const compressed = buf.subarray(dataStart, dataStart + entry.compSize);
   if (entry.method === 0) return Buffer.from(compressed);
-  if (entry.method === 8) return inflateRawSync(compressed);
+  // Без потолка запись в пару килобайт разворачивалась в гигабайты (zip-бомба)
+  // и роняла конвертер. XML заметок и презентации столько не весит.
+  if (entry.method === 8) return inflateRawSync(compressed, { maxOutputLength: MAX_ZIP_ENTRY_BYTES });
   throw new Error(`неподдерживаемый метод сжатия ZIP: ${entry.method}`);
 }
 
