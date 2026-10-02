@@ -12,14 +12,15 @@ import * as pdfjs from "pdfjs-dist";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?worker";
 
-pdfjs.GlobalWorkerOptions.workerPort = new PdfWorker();
-
 /** Одна презентация парсится один раз — миниатюры и полноразмерный слайд делят документ. */
 const docCache = new Map<string, Promise<PDFDocumentProxy>>();
 
 function loadPdf(url: string): Promise<PDFDocumentProxy> {
   let doc = docCache.get(url);
   if (!doc) {
+    // Воркер (1,3 МБ) — только при первом PDF, а не при каждом открытии доски:
+    // модуль входит в кусок доски, а PDF-презентации на уроке бывают редко.
+    pdfjs.GlobalWorkerOptions.workerPort ??= new PdfWorker();
     doc = (async () => {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`PDF ${res.status}`);
