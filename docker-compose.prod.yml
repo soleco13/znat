@@ -41,6 +41,21 @@ services:
 
   app:
     cpuset: "1"
+    # Логи контейнера пропадают при каждом пересоздании (деплое), а разбирать
+    # урок часто приходится на следующий день: дубль в файл на хосте
+    # (plugins/logger.ts, LOG_FILE). Каталог /var/log/znat — владелец uid 999
+    # (пользователь app в образе), ротация — /etc/logrotate.d/znat на хосте
+    # (copytruncate). Пример конфига — deploy/logrotate-znat.
+    environment:
+      LOG_FILE: /var/log/znat/api.log
+    volumes:
+      - /var/log/znat:/var/log/znat
+    # Свой json-лог Docker без ограничения рос бы до заполнения диска.
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
 
   postgres:
     cpuset: "1"

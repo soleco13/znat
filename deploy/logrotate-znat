@@ -1,0 +1,13 @@
+# /etc/logrotate.d/znat — ротация JSON-логов API (LOG_FILE, docker-compose.prod.yml).
+# Файл открыт приложением на дозапись — copytruncate, без перезапуска.
+/var/log/znat/*.log {
+    daily
+    maxsize 200M
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    su root root
+}
