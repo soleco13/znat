@@ -53,6 +53,7 @@ import type {
 
 import { cn } from "@/lib/utils";
 import { ApiError, apiFetch } from "@/shared/api-client";
+import { errorFields, track } from "@/shared/telemetry";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -178,6 +179,27 @@ const ROOM_TOAST = { position: "top-center" as const, duration: 6000 };
 /** Ошибка действия в уроке (права, режим, чат…) — плашкой, одна за раз. */
 function showRoomError(message: string) {
   toast.error(message, { ...ROOM_TOAST, id: "room-error" });
+}
+
+/**
+ * Второстепенные данные урока (чат, презентации, задания) — с повторами: на
+ * мобильной сети один оборванный запрос оставлял пустой чат или список
+ * презентаций, неотличимый от «их нет». После последней неудачи — в лог.
+ */
+async function loadWithRetry<T>(load: () => Promise<T>, what: string, attempts = 3): Promise<T> {
+  for (let i = 1; ; i++) {
+    try {
+      return await load();
+    } catch (err) {
+      // 403/404 — повтор не поможет.
+      const final = i >= attempts || (err instanceof ApiError && err.status >= 400 && err.status < 500 && err.status !== 429);
+      if (final) {
+        track("client_error", { area: "room_load", what, ...errorFields(err) });
+        throw err;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 3000 * i));
+    }
+  }
 }
 
 /** Сколько переподключение должно длиться, чтобы показать ученику оверлей. */
@@ -531,13 +553,38 @@ export function RoomPage() {
   useEffect(() => {
     if (!lessonId || !joined) return;
     prefetchLessonStage();
-    apiFetch<{ items: ChatMessage[] }>(`/lessons/${lessonId}/chat`)
+  }, [lessonId, joined]);
+
+  // История чата — при входе и после каждого переподключения соединения
+  // урока: пока оно было разорвано, новые сообщения не приходили и терялись
+  // молча. Сливаем по id, чтобы не сбить счётчик непрочитанных.
+  const chatLoadedRef = useRef(false);
+  const socketConnected = status === "connected";
+  useEffect(() => {
+    if (!lessonId || !joined || !socketConnected) return;
+    let cancelled = false;
+    loadWithRetry(() => apiFetch<{ items: ChatMessage[] }>(`/lessons/${lessonId}/chat`), "chat")
       .then((data) => {
-        setChat([...data.items].reverse());
-        setChatSeen(data.items.length);
+        if (cancelled) return;
+        const fetched = [...data.items].reverse();
+        if (!chatLoadedRef.current) {
+          chatLoadedRef.current = true;
+          setChat(fetched);
+          setChatSeen(fetched.length);
+          return;
+        }
+        setChat((prev) => {
+          const known = new Set(prev.map((m) => m.id));
+          const missed = fetched.filter((m) => !known.has(m.id));
+          if (missed.length === 0) return prev;
+          return [...prev, ...missed].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+        });
       })
       .catch(() => undefined);
-  }, [lessonId, joined]);
+    return () => {
+      cancelled = true;
+    };
+  }, [lessonId, joined, socketConnected]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -555,7 +602,7 @@ export function RoomPage() {
       setLessonTitle(guestSession?.lessonTitle ?? null);
       return;
     }
-    apiFetch<LessonSummary>(`/lessons/${lessonId}`)
+    loadWithRetry(() => apiFetch<LessonSummary>(`/lessons/${lessonId}`), "lesson")
       .then((l) => {
         setLessonTitle(l.title);
         setLessonJoinPath(l.joinPath);
@@ -573,7 +620,7 @@ export function RoomPage() {
 
   const refreshDecks = useCallback(() => {
     if (!lessonId) return;
-    apiFetch<{ decks: Deck[] }>(`/lessons/${lessonId}/decks`)
+    loadWithRetry(() => apiFetch<{ decks: Deck[] }>(`/lessons/${lessonId}/decks`), "decks")
       .then((data) => setDecks(data.decks))
       .catch(() => undefined);
   }, [lessonId]);
@@ -584,7 +631,7 @@ export function RoomPage() {
 
   useEffect(() => {
     if (!lessonId || !joined) return;
-    listLessonActivities(lessonId)
+    loadWithRetry(() => listLessonActivities(lessonId), "activities")
       .then((data) => {
         const latest = data.items[0];
         if (latest) setActiveActivityId((prev) => prev ?? latest.id);
@@ -632,10 +679,11 @@ export function RoomPage() {
 
   async function toggleHand() {
     if (!lessonId || !self) return;
+    const raised = !self.handRaised;
     await apiFetch(`/lessons/${lessonId}/hand-raise`, {
       method: "POST",
-      body: JSON.stringify({ raised: !self.handRaised }),
-    }).catch(() => undefined);
+      body: JSON.stringify({ raised }),
+    }).catch(() => showRoomError(raised ? "Не удалось поднять руку — попробуйте ещё раз" : "Не удалось опустить руку"));
   }
 
   async function togglePermission(userId: string, key: PermissionKey, value: boolean) {
@@ -725,7 +773,11 @@ export function RoomPage() {
     await apiFetch(`/lessons/${lessonId}/chat`, {
       method: "POST",
       body: JSON.stringify({ body }),
-    }).catch(() => showRoomError("Сообщение не отправлено"));
+    }).catch(() => {
+      // Текст возвращаем в поле, если человек ещё не начал новое сообщение.
+      setChatDraft((draft) => draft || body);
+      showRoomError("Сообщение не отправлено");
+    });
   }
 
   const openSettings = () => setSettingsOpen(true);
