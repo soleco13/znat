@@ -46,6 +46,7 @@ describe("логгер", () => {
       password: "[redacted]",
       nested: { accessToken: "[redacted]" },
       service: "api",
+      level: "info",
     });
     expect(typeof service.time).toBe("string");
     const access = lines.find((l) => l.event === "http_request")!;

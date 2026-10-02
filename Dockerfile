@@ -53,5 +53,10 @@ RUN node -e "const p='./packages/shared/package.json';const j=require(p);j.main=
 RUN mkdir -p /data/assets /data/web-assets && chown -R app:app /data/assets /data/web-assets
 USER app
 
+# Версия в каждой строке лога (plugins/logger.ts): какая сборка была на уроке.
+# Сборка: APP_VERSION=$(git rev-parse --short HEAD) docker compose build app
+ARG APP_VERSION=dev
+ENV APP_VERSION=$APP_VERSION
+
 EXPOSE 3000
 CMD ["node", "apps/api/dist/server.js"]

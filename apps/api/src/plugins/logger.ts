@@ -120,6 +120,8 @@ export function loggerOptions(): NonNullable<FastifyServerOptions["logger"]> {
     level: env.LOG_LEVEL ?? (env.NODE_ENV === "production" ? "info" : "debug"),
     base: { service: "api", env: env.NODE_ENV, version: SERVICE_VERSION },
     timestamp: () => `,"time":"${new Date().toISOString()}"`,
+    // Уровень словом ("warn"), а не числом pino (40): так его ждут Loki/Grafana и люди.
+    formatters: { level: (label: string) => ({ level: label }) },
     // requestId уже есть в привязках request.log — не дублируем его ключом из контекста.
     mixin(_merge: object, _level: number, instance?: { bindings?: () => Record<string, unknown> }) {
       const store = storage.getStore();
