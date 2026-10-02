@@ -87,6 +87,12 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
       );
     };
 
+    // До первого await: ошибка сокета без слушателя — необработанное
+    // событие 'error' и падение процесса вместе со всеми уроками.
+    socket.on("error", (err: Error) => {
+      wsLog.warn({ err }, "room ws error");
+    });
+
     // Э10.6 — recorder шаблона записи: read-only слушатель `roomEvents`
     // (стейдж/задания), НЕ участник урока. Сознательно в обход
     // `attachSocket`/presence ниже — recorder не должен попасть в список
@@ -106,34 +112,42 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
         if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(message));
       };
 
-      // Стейдж сразу при подключении — если запись стартовала при уже
-      // открытой доске, recorder не должен ждать следующего stage_changed.
-      // «Активность уже идёт» так восстановить нечем (§ докстринг
-      // EgressPage.tsx) — тот же пробел, что и у живого участника,
-      // подключившегося без initial join().
-      send({ type: "stage_changed", stage: await roomsService.getCurrentLessonStage(lessonId) });
-      // Presence сразу при подключении — recorder должен видеть уже
-      // сидящих в уроке участников (лента камер в EgressPage.tsx), а не
-      // ждать их participant_joined (тот шлётся только НОВЫМ входам). Тот
-      // же снимок, что получает живой участник сразу после attachSocket
-      // ниже.
-      send({ type: "presence", participants: await roomsService.listParticipantsSnapshot(lessonId) });
-
+      // Подписка и уборка — до await (см. комментарий у участника ниже).
       const onEvent = (message: ServerRoomMessage) => send(message);
       roomEvents.on(lessonId, onEvent);
-
       const pingTimer = setInterval(() => {
         if (socket.readyState === socket.OPEN) socket.ping();
       }, PING_INTERVAL_MS);
-
-      socket.on("close", (code: number, reason: Buffer) => {
+      const cleanup = () => {
         clearInterval(pingTimer);
         roomEvents.off(lessonId, onEvent);
+      };
+      socket.on("close", (code: number, reason: Buffer) => {
+        cleanup();
         logClose(code, reason);
       });
-      socket.on("error", (err: Error) => {
-        wsLog.warn({ err }, "recorder ws error");
-      });
+      if (socket.readyState === socket.CLOSED) {
+        cleanup();
+        return;
+      }
+
+      try {
+        // Стейдж сразу при подключении — если запись стартовала при уже
+        // открытой доске, recorder не должен ждать следующего stage_changed.
+        // «Активность уже идёт» так восстановить нечем (§ докстринг
+        // EgressPage.tsx) — тот же пробел, что и у живого участника,
+        // подключившегося без initial join().
+        send({ type: "stage_changed", stage: await roomsService.getCurrentLessonStage(lessonId) });
+        // Presence сразу при подключении — recorder должен видеть уже
+        // сидящих в уроке участников (лента камер в EgressPage.tsx), а не
+        // ждать их participant_joined (тот шлётся только НОВЫМ входам). Тот
+        // же снимок, что получает живой участник сразу после attachSocket
+        // ниже.
+        send({ type: "presence", participants: await roomsService.listParticipantsSnapshot(lessonId) });
+      } catch (err) {
+        wsLog.error({ err }, "recorder initial snapshot failed");
+        socket.close(1011, "snapshot_failed");
+      }
       return;
     }
 
@@ -163,25 +177,41 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
       if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(message));
     };
 
-    send({ type: "presence", participants: (await roomsService.listParticipantsSnapshot(lessonId)) });
-
-    // Э10.3, 152-ФЗ: зашли в уже идущий урок, где запись уже стартовала —
-    // сразу показать баннер согласия, не дожидаясь следующего старта/стопа.
-    if (await recordingsService.isLessonRecordingActive(lessonId)) {
-      send({ type: "recording_status", active: true });
-    }
-
     const onEvent = (message: ServerRoomMessage) => {
       send(message);
       if (message.type === "participant_removed" && message.userId === userId) {
         socket.close(4005, "removed_from_lesson");
       }
     };
-    roomEvents.on(lessonId, onEvent);
 
+    // Подписки и уборка — сразу после attachSocket, до любого await: клиент
+    // на плохой сети мог закрыть сокет, пока грузился снимок, — тогда close
+    // уже прошёл, слушатель roomEvents и таймер пинга оставались навсегда,
+    // а участник числился «на связи» до зачистки.
+    roomEvents.on(lessonId, onEvent);
     const pingTimer = setInterval(() => {
       if (socket.readyState === socket.OPEN) socket.ping();
     }, PING_INTERVAL_MS);
+    let cleanedUp = false;
+    const cleanup = () => {
+      if (cleanedUp) return;
+      cleanedUp = true;
+      clearInterval(pingTimer);
+      roomEvents.off(lessonId, onEvent);
+      roomsService
+        .markDisconnected(lessonId, userId)
+        .catch((err: unknown) => wsLog.warn({ err }, "room mark disconnected failed"));
+    };
+
+    socket.on("close", (code: number, reason: Buffer) => {
+      logClose(code, reason);
+      cleanup();
+    });
+    // Закрылся, пока шёл attachSocket, — событие close уже было без нас.
+    if (socket.readyState === socket.CLOSED) {
+      cleanup();
+      return;
+    }
 
     socket.on("pong", () => {
       roomsService
@@ -195,15 +225,21 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
         .catch((err: unknown) => wsLog.warn({ err }, "room heartbeat failed"));
     });
 
-    socket.on("close", (code: number, reason: Buffer) => {
-      clearInterval(pingTimer);
-      roomEvents.off(lessonId, onEvent);
-      logClose(code, reason);
-      void roomsService.markDisconnected(lessonId, userId);
-    });
+    try {
+      send({ type: "presence", participants: await roomsService.listParticipantsSnapshot(lessonId) });
 
-    socket.on("error", (err: Error) => {
-      wsLog.warn({ err }, "room ws error");
-    });
+      // Э10.3, 152-ФЗ: зашли в уже идущий урок, где запись уже стартовала —
+      // сразу показать баннер согласия, не дожидаясь следующего старта/стопа.
+      if (await recordingsService.isLessonRecordingActive(lessonId)) {
+        send({ type: "recording_status", active: true });
+      }
+    } catch (err) {
+      // Без снимка участник видел бы пустой список — переподключится заново.
+      wsLog.error({ err }, "room initial snapshot failed");
+      cleanup();
+      socket.close(1011, "snapshot_failed");
+      return;
+    }
+
   });
 }
