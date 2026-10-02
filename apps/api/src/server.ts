@@ -10,6 +10,7 @@ import websocket from "@fastify/websocket";
 import { env } from "./plugins/env.js";
 import { syncAssetsArchive } from "./plugins/web-assets-archive.js";
 import errorsPlugin from "./plugins/errors.js";
+import sameOriginPlugin from "./plugins/same-origin.js";
 import authenticatePlugin from "./plugins/authenticate.js";
 import rbacPlugin from "./plugins/rbac.js";
 import lessonAccessPlugin from "./plugins/lesson-access.js";
@@ -96,6 +97,7 @@ export function buildServer() {
   app.register(websocket, { options: { maxPayload: WS_MAX_PAYLOAD_BYTES } });
 
   app.register(errorsPlugin);
+  app.register(sameOriginPlugin);
   app.register(authenticatePlugin);
   app.register(rbacPlugin);
   app.register(lessonAccessPlugin);
