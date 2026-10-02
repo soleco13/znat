@@ -32,7 +32,9 @@ vi.mock("argon2", () => ({ default: argonMock }));
 vi.mock("../../db/redis.js", () => ({ redis: redisMock }));
 vi.mock("../mail/service.js", () => mailMock);
 
-const { login, refresh, requestPasswordReset, resetPassword, changePassword } = await import("./service.js");
+const { login, refresh, requestPasswordReset, resetPassword, changePassword, issueSessionForUser } = await import(
+  "./service.js"
+);
 
 const USER = {
   id: "22222222-2222-2222-2222-222222222222",
@@ -100,6 +102,13 @@ describe("login — лимит неудач на аккаунт", () => {
     argonMock.verify.mockResolvedValue(true);
     await login(USER.email, "password123");
     expect(redisMock.del).toHaveBeenCalledWith(`login:fail:${USER.email}`);
+  });
+});
+
+describe("issueSessionForUser", () => {
+  it("отключённому аккаунту сессия не выдаётся (в т.ч. по ссылке подтверждения почты)", async () => {
+    await expect(issueSessionForUser({ ...USER, isActive: false })).rejects.toMatchObject({ statusCode: 401 });
+    expect(repoMock.insertRefreshToken).not.toHaveBeenCalled();
   });
 });
 

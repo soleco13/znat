@@ -51,6 +51,7 @@ function userRow(overrides: Record<string, unknown> = {}) {
     email: "tutor@example.com",
     fullName: "Иван Петров",
     role: "admin",
+    isActive: true,
     ...overrides,
   };
 }
@@ -96,6 +97,13 @@ describe("resendVerification", () => {
       expect.objectContaining({ userId: USER_ID, tokenHash: expect.any(String) }),
     );
     expect(mailServiceMock.sendVerificationEmail).toHaveBeenCalledOnce();
+  });
+
+  it("аккаунт отключён админом — письмо не уходит", async () => {
+    repoMock.findUnverifiedUserByEmail.mockResolvedValue(userRow({ isActive: false }));
+    await resendVerification("tutor@example.com");
+    expect(repoMock.insertVerificationToken).not.toHaveBeenCalled();
+    expect(mailServiceMock.sendVerificationEmail).not.toHaveBeenCalled();
   });
 
   it("нет такого аккаунта — молча ничего не делает (без перебора адресов)", async () => {

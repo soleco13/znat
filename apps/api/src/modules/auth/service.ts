@@ -50,9 +50,14 @@ async function issueRefreshToken(userId: string, familyId: string) {
  * подтверждения почты при self-signup (`registration` модуль) — токены не
  * дублируются в двух местах.
  */
-export async function issueSessionForUser<T extends { id: string; schoolId: string; role: string }>(
+export async function issueSessionForUser<T extends { id: string; schoolId: string; role: string; isActive: boolean }>(
   user: T,
 ) {
+  // Последний рубеж для всех путей входа: подтверждение почты раньше
+  // выдавало сессию отключённому админом аккаунту.
+  if (!user.isActive) {
+    throw new AppError(401, "invalid_credentials", "Пользователь недоступен");
+  }
   await repo.touchLastLogin(user.id);
 
   const familyId = randomUUID();

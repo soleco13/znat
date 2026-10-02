@@ -215,7 +215,7 @@ export async function resendVerification(email: string): Promise<void> {
   const cooldownSet = await redis.set(`mail:resend:${email}`, "1", "EX", RESEND_COOLDOWN_SECONDS, "NX");
   if (cooldownSet !== "OK") return;
   const user = await repo.findUnverifiedUserByEmail(email);
-  if (!user) return;
+  if (!user || !user.isActive) return;
   const { rawToken, tokenHash, expiresAt } = newVerificationToken();
   await repo.insertVerificationToken({ userId: user.id, tokenHash, expiresAt });
   await sendVerificationLink(user.email, rawToken);
