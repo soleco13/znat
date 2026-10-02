@@ -3,7 +3,7 @@ import { Excalidraw, convertToExcalidrawElements } from "@excalidraw/excalidraw"
 import type { ExcalidrawImperativeAPI, NormalizedZoomValue } from "@excalidraw/excalidraw/types";
 import type { BinaryFileData, DataURL } from "@excalidraw/excalidraw/types";
 import type { FileId, OrderedExcalidrawElement } from "@excalidraw/excalidraw/element/types";
-import { HocuspocusProvider } from "@hocuspocus/provider";
+import { HocuspocusProvider, WebSocketStatus } from "@hocuspocus/provider";
 import { ExcalidrawBinding } from "y-excalidraw";
 import * as Y from "yjs";
 import {
@@ -17,7 +17,7 @@ import {
   Undo2,
   X,
 } from "lucide-react";
-import { CANVAS_IMAGE_MAX_BYTES, GUEST_CANVAS_TOKEN_MARKER } from "@school/shared";
+import { CANVAS_AUTH_RETRYABLE_REASONS, CANVAS_IMAGE_MAX_BYTES, GUEST_CANVAS_TOKEN_MARKER } from "@school/shared";
 import type { CanvasImageUploadResponse, Deck } from "@school/shared";
 
 import { cn } from "@/lib/utils";
@@ -83,6 +83,8 @@ const FIRST_PAGE_ID = "board-page-1";
 const MAX_BOARD_PAGES = 3;
 /** Сколько правки могут ждать подтверждения сервера без единого ack, прежде чем считаем синхронизацию сломанной. */
 const SYNC_STALL_MS = 5000;
+/** Потолок паузы перед повторной авторизацией доски после временного отказа. */
+const AUTH_RETRY_MAX_MS = 15_000;
 
 /** Стабильный цвет курсора участника — из userId, без похода на сервер (Э3.9). */
 function cursorColorFor(userId: string): string {
@@ -328,6 +330,28 @@ export function Board({
     // в `cs` связывает их с серверными строками этого подключения.
     let syncStartedAt = Date.now();
     let connects = 0;
+    let authFailures = 0;
+    let authRetryTimer: ReturnType<typeof setTimeout> | null = null;
+    let destroyed = false;
+    // Hocuspocus после отказа в авторизации оставляет сокет открытым и сам
+    // не повторяет: доска висела на «Загружаем доску…» или, хуже, после
+    // переподключения посреди урока молча переставала синхронизироваться.
+    // Новый токен уходит только при открытии сокета — переоткрываем его.
+    const reopenSocket = () => {
+      authRetryTimer = null;
+      if (destroyed) return;
+      const socket = nextProvider.configuration.websocketProvider;
+      if (socket.status !== WebSocketStatus.Connected) {
+        void socket.connect();
+        return;
+      }
+      const onDisconnect = () => {
+        socket.off("disconnect", onDisconnect);
+        if (!destroyed) void socket.connect();
+      };
+      socket.on("disconnect", onDisconnect);
+      socket.disconnect();
+    };
     track("whiteboard_sync_started", { lessonId });
     const nextProvider = new HocuspocusProvider({
       url: `${protocol}//${location.host}/collab?cs=${encodeURIComponent(clientSessionId)}`,
@@ -341,8 +365,15 @@ export function Board({
       onSynced: ({ state }) => {
         if (state) track("whiteboard_synced", { lessonId, durationMs: Date.now() - syncStartedAt, connects });
       },
+      onAuthenticated: () => {
+        authFailures = 0;
+      },
       onAuthenticationFailed: ({ reason }) => {
-        track("whiteboard_sync_failed", { lessonId, stage: "auth", reason });
+        track("whiteboard_sync_failed", { lessonId, stage: "auth", reason, attempt: authFailures });
+        if (!CANVAS_AUTH_RETRYABLE_REASONS.includes(reason) || authRetryTimer) return;
+        const delay = Math.min(1000 * 2 ** authFailures, AUTH_RETRY_MAX_MS);
+        authFailures += 1;
+        authRetryTimer = setTimeout(reopenSocket, delay);
       },
       onClose: ({ event }) => {
         track("whiteboard_disconnected", { lessonId, closeCode: event.code, online: navigator.onLine });
@@ -351,6 +382,8 @@ export function Board({
     setProvider(nextProvider);
 
     return () => {
+      destroyed = true;
+      if (authRetryTimer) clearTimeout(authRetryTimer);
       setProvider(null);
       setPages([]);
       setActivePageId(null);

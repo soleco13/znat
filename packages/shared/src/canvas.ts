@@ -20,3 +20,13 @@ export const canvasImageUploadResponseSchema = z.object({
   height: z.number().int().positive(),
 });
 export type CanvasImageUploadResponse = z.infer<typeof canvasImageUploadResponseSchema>;
+
+/**
+ * Причины отказа в подключении к доске (`/collab`), после которых клиент
+ * переподключается сам: сбой БД/Redis на сервере или токен, который можно
+ * обновить. Остальные коды (`forbidden`, `removed_from_lesson`, …) —
+ * окончательные. Hocuspocus после отказа не закрывает сокет и сам не
+ * повторяет авторизацию — без переподключения доска стояла бы до
+ * перезагрузки страницы.
+ */
+export const CANVAS_AUTH_RETRYABLE_REASONS: readonly string[] = ["retry", "invalid_token", "missing_token"];

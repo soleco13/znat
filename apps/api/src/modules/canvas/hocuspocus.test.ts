@@ -766,3 +766,33 @@ describe("limitGuestCanvasInbound", () => {
     ).resolves.toBeUndefined();
   });
 });
+
+describe("причина отказа подключения к доске (клиент решает, переподключаться ли)", () => {
+  it("сбой БД при проверке урока → reason «retry»", async () => {
+    authServiceMock.verifyAccessToken.mockResolvedValue(tokenFor({}));
+    lessonsServiceMock.getLesson.mockRejectedValue(new Error("canceling statement due to statement timeout"));
+    await expect(
+      authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig: fakeConnectionConfig(), requestHeaders: new Headers() }),
+    ).rejects.toMatchObject({ reason: "retry" });
+  });
+
+  it("истёкший JWT → reason «invalid_token» (клиент возьмёт свежий)", async () => {
+    authServiceMock.verifyAccessToken.mockRejectedValue(Object.assign(new Error("exp"), { code: "ERR_JWT_EXPIRED" }));
+    await expect(
+      authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig: fakeConnectionConfig(), requestHeaders: new Headers() }),
+    ).rejects.toMatchObject({ reason: "invalid_token" });
+  });
+
+  it("чужой урок → окончательный reason «forbidden»", async () => {
+    authServiceMock.verifyAccessToken.mockResolvedValue(tokenFor({ sub: OTHER_STUDENT_ID }));
+    await expect(
+      authenticateCanvasConnection({ token: "t", documentName: LESSON_ID, connectionConfig: fakeConnectionConfig(), requestHeaders: new Headers() }),
+    ).rejects.toMatchObject({ reason: "forbidden" });
+  });
+
+  it("нет токена и куки → «missing_token»", async () => {
+    await expect(
+      authenticateCanvasConnection({ token: "", documentName: LESSON_ID, connectionConfig: fakeConnectionConfig(), requestHeaders: new Headers() }),
+    ).rejects.toMatchObject({ reason: "missing_token" });
+  });
+});

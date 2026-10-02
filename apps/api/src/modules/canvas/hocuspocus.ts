@@ -14,7 +14,7 @@ import { randomInt, randomUUID } from "node:crypto";
 import { generateKeyBetween } from "fractional-indexing";
 import * as Y from "yjs";
 import { encodeStateAsUpdate } from "yjs";
-import { z } from "zod";
+import { z, ZodError } from "zod";
 import { GUEST_CANVAS_TOKEN_MARKER } from "@school/shared";
 import type { AccessTokenPayload, ParticipantKind } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
@@ -391,14 +391,30 @@ export async function authenticateCanvasConnection(
     });
     return result;
   } catch (err) {
-    const known = err instanceof AppError;
+    const reason = canvasAuthFailureReason(err);
     logEvent(
       "whiteboard_sync_failed",
-      { ...fields, stage: "auth", reason: known ? err.code : "internal_error", ...(known ? {} : { err }) },
-      known ? "warn" : "error",
+      { ...fields, stage: "auth", reason, ...(reason === "retry" ? { err } : {}) },
+      reason === "retry" ? "error" : "warn",
     );
-    throw err;
+    // Hocuspocus отдаёт клиенту `error.reason` (по умолчанию «permission-denied»
+    // на всё подряд) — по нему клиент решает, переподключаться ли.
+    throw Object.assign(err instanceof Error ? err : new Error(String(err)), { reason });
   }
+}
+
+/**
+ * Причина отказа для клиента: код `AppError` — окончательный отказ (кроме
+ * `missing_token`), подпись/срок JWT — `invalid_token` (клиент возьмёт свежий
+ * токен), всё остальное (БД, Redis) — `retry`. Список повторяемых —
+ * `CANVAS_AUTH_RETRYABLE_REASONS`.
+ */
+export function canvasAuthFailureReason(err: unknown): string {
+  if (err instanceof AppError) return err.code;
+  if (err instanceof ZodError) return "invalid_token";
+  const code = (err as { code?: unknown } | null)?.code;
+  if (typeof code === "string" && /^ERR_JW[STEK]/.test(code)) return "invalid_token";
+  return "retry";
 }
 
 /**
