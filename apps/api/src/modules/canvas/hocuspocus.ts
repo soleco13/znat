@@ -492,7 +492,73 @@ export async function storeCanvasDocument(
     await repo.saveDoc(payload.documentName, state);
   } catch (err) {
     logEvent("whiteboard_store_failed", { lessonId: payload.documentName, bytes: state.byteLength, err }, "error");
+    unsavedCanvasDocuments.add(payload.documentName);
+    scheduleStoreRetry(payload.documentName);
     throw err;
+  }
+  unsavedCanvasDocuments.delete(payload.documentName);
+  storeRetryAttempts.delete(payload.documentName);
+}
+
+/**
+ * Документы, последнее сохранение которых упало. Hocuspocus после ошибки
+ * `onStoreDocument` оставляет документ в памяти, но сам не повторяет —
+ * следующая попытка была бы только со следующей правкой. А если все уже
+ * ушли, через 5 минут `sweepIdleCanvasDocuments` выгружал документ, и
+ * несохранённые штрихи пропадали. Пока документ здесь — повторяем
+ * сохранение и запрещаем выгрузку (`vetoUnloadDuringGracePeriod`).
+ */
+const unsavedCanvasDocuments = new Set<string>();
+const storeRetryTimers = new Map<string, NodeJS.Timeout>();
+const storeRetryAttempts = new Map<string, number>();
+const STORE_RETRY_BASE_MS = 5000;
+const STORE_RETRY_MAX_MS = 60_000;
+
+/** Сохранить документ сейчас — под тем же мьютексом, что и штатное сохранение Hocuspocus. */
+async function storeNow(documentName: string): Promise<void> {
+  const document = hocuspocus.documents.get(documentName);
+  if (!document) return;
+  await document.saveMutex.runExclusive(() => storeCanvasDocument({ documentName, document }));
+}
+
+function scheduleStoreRetry(documentName: string): void {
+  if (storeRetryTimers.has(documentName)) return;
+  const attempt = storeRetryAttempts.get(documentName) ?? 0;
+  storeRetryAttempts.set(documentName, attempt + 1);
+  const timer = setTimeout(() => {
+    storeRetryTimers.delete(documentName);
+    if (!unsavedCanvasDocuments.has(documentName)) return;
+    // Ошибку уже записал storeCanvasDocument и запланировал следующий повтор.
+    storeNow(documentName).catch(() => undefined);
+  }, Math.min(STORE_RETRY_BASE_MS * 2 ** attempt, STORE_RETRY_MAX_MS));
+  timer.unref?.();
+  storeRetryTimers.set(documentName, timer);
+}
+
+/** Есть ли у документа несохранённые из-за сбоя изменения (для тестов и метрик). */
+export function hasUnsavedCanvasChanges(documentName: string): boolean {
+  return unsavedCanvasDocuments.has(documentName);
+}
+
+/**
+ * Остановка сервера: дописать в БД всё, что ждёт отложенного сохранения
+ * (`debounce` 3 с, до 10 с) или не сохранилось из-за сбоя. Раньше при
+ * деплое во время урока последние штрихи доски терялись. Ждёт не дольше
+ * `timeoutMs`: Docker даёт контейнеру 10 с на остановку.
+ */
+export async function flushCanvasDocuments(timeoutMs = 6000): Promise<void> {
+  hocuspocus.flushPendingStores();
+  await Promise.allSettled([...unsavedCanvasDocuments].map((name) => storeNow(name)));
+  const deadline = Date.now() + timeoutMs;
+  const busy = () =>
+    [...hocuspocus.documents.values()].some(
+      (d) => d.saveMutex.isLocked() || hocuspocus.debouncer.isCurrentlyExecuting(`onStoreDocument-${d.name}`),
+    );
+  while (busy() && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  if (busy() || unsavedCanvasDocuments.size > 0) {
+    logEvent("whiteboard_store_failed", { stage: "shutdown", unsaved: unsavedCanvasDocuments.size }, "error");
   }
 }
 
@@ -550,6 +616,10 @@ export async function trackEmptySinceOnDisconnect(
 export async function vetoUnloadDuringGracePeriod(
   payload: Pick<beforeUnloadDocumentPayload, "documentName">,
 ): Promise<void> {
+  // Выгрузить документ с несохранёнными изменениями — потерять их.
+  if (unsavedCanvasDocuments.has(payload.documentName)) {
+    throw new Error("unsaved_changes");
+  }
   const since = emptySince.get(payload.documentName);
   if (since === undefined) {
     emptySince.set(payload.documentName, Date.now());

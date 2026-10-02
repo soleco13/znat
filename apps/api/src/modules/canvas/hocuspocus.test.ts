@@ -66,6 +66,8 @@ const {
   assertCanDrawForLesson,
   loadCanvasDocument,
   storeCanvasDocument,
+  hasUnsavedCanvasChanges,
+  flushCanvasDocuments,
   clearEmptySinceOnConnect,
   trackEmptySinceOnDisconnect,
   vetoUnloadDuringGracePeriod,
@@ -794,5 +796,44 @@ describe("причина отказа подключения к доске (кл
     await expect(
       authenticateCanvasConnection({ token: "", documentName: LESSON_ID, connectionConfig: fakeConnectionConfig(), requestHeaders: new Headers() }),
     ).rejects.toMatchObject({ reason: "missing_token" });
+  });
+});
+
+describe("несохранённая доска не теряется", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    repoMock.saveDoc.mockReset();
+  });
+
+  it("упавшее сохранение запрещает выгрузку и повторяется само", async () => {
+    vi.useFakeTimers();
+    const name = "lesson-store-failed";
+    const doc = new Doc();
+    doc.getText("note").insert(0, "штрих");
+    // Настоящий Y.Doc с мьютексом, как у документа Hocuspocus.
+    Object.assign(doc, { name, saveMutex: { runExclusive: (fn: () => unknown) => fn(), isLocked: () => false } });
+    hocuspocus.documents.set(name, doc as unknown as HocuspocusDocument);
+    repoMock.saveDoc.mockRejectedValueOnce(new Error("db down"));
+
+    await expect(storeCanvasDocument({ documentName: name, document: doc as unknown as HocuspocusDocument })).rejects.toThrow("db down");
+    expect(hasUnsavedCanvasChanges(name)).toBe(true);
+
+    // Грейс-период давно прошёл — но несохранённое выгружать нельзя.
+    await trackEmptySinceOnDisconnect({ documentName: name, document: fakeDocument(0) });
+    vi.setSystemTime(Date.now() + 10 * 60 * 1000);
+    await expect(vetoUnloadDuringGracePeriod({ documentName: name })).rejects.toThrow("unsaved_changes");
+
+    repoMock.saveDoc.mockResolvedValue(undefined);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(repoMock.saveDoc).toHaveBeenCalledTimes(2);
+    expect(hasUnsavedCanvasChanges(name)).toBe(false);
+    hocuspocus.documents.delete(name);
+  });
+
+  it("остановка сервера сбрасывает отложенные сохранения", async () => {
+    const flushSpy = vi.spyOn(hocuspocus, "flushPendingStores");
+    await flushCanvasDocuments(100);
+    expect(flushSpy).toHaveBeenCalledTimes(1);
+    flushSpy.mockRestore();
   });
 });

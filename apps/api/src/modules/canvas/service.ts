@@ -1,5 +1,6 @@
 import {
   disconnectCanvasParticipant,
+  flushCanvasDocuments,
   getActiveCanvasDocumentsCount,
   getCanvasDocumentsWithPendingUpdatesCount,
   getRateLimitedCanvasMessagesCount,
@@ -39,6 +40,7 @@ export function closeCanvasDocument(lessonId: string): void {
 
 export {
   disconnectCanvasParticipant,
+  flushCanvasDocuments,
   getActiveCanvasDocumentsCount,
   getCanvasDocumentsWithPendingUpdatesCount,
   getRateLimitedCanvasMessagesCount,

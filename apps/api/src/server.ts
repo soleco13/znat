@@ -49,7 +49,7 @@ import {
   stopDeckReconcileSweep,
 } from "./modules/decks/service.js";
 import { startConvertEvents, stopConvertEvents } from "./modules/jobs/service.js";
-import { startCanvasUnloadSweep, stopCanvasUnloadSweep } from "./modules/canvas/service.js";
+import { flushCanvasDocuments, startCanvasUnloadSweep, stopCanvasUnloadSweep } from "./modules/canvas/service.js";
 import {
   startChatRetentionSweep,
   startPresenceSweep,
@@ -246,7 +246,10 @@ async function main() {
     stopRefreshTokenCleanup();
     stopUnverifiedCleanup();
     await stopConvertEvents();
+    // Сокеты доски закрываются в app.close() — после этого Hocuspocus
+    // сохраняет опустевшие документы; дожидаемся записи до закрытия пула БД.
     await app.close();
+    await flushCanvasDocuments();
     await pool.end();
     redis.disconnect();
     rateLimitRedis.disconnect();
