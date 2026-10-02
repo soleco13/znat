@@ -263,6 +263,10 @@ const LINK_ROTATED_SCREEN = {
 /** Отказ во входе, который повтором не исправить, — экран вместо «Повторить». */
 function blockedScreenFor(err: unknown): { title: string; text: string } | null {
   if (err instanceof ApiError && err.code === "guest_link_rotated") return LINK_ROTATED_SCREEN;
+  // Гостевая сессия истекла — повтором не войти, нужна ссылка заново.
+  if (err instanceof ApiError && err.status === 401 && err.code === "invalid_guest_session") {
+    return { title: "Нужно войти заново", text: "Откройте ссылку на урок ещё раз — так вы вернётесь в урок." };
+  }
   if (!(err instanceof ApiError) || err.status !== 403) return null;
   switch (err.code) {
     case "removed_from_lesson":

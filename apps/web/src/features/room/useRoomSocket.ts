@@ -10,6 +10,8 @@ const MAX_BACKOFF_MS = 16_000;
 const NOT_JOINED_CLOSE_CODE = 4003;
 /** Учитель удалил участника из урока — переподключаться незачем. */
 const REMOVED_CLOSE_CODE = 4005;
+/** Сервер не принял личность (`rooms/ws.ts`): у гостя — в том числе удалён или ссылку перевыпустили. */
+const INVALID_TOKEN_CLOSE_CODE = 4001;
 
 /**
  * WS-канал комнаты урока: только пуш от сервера, переподключение с экспоненциальным
@@ -113,8 +115,15 @@ export function useRoomSocket(
         const delay = Math.min(1000 * 2 ** attempt, MAX_BACKOFF_MS);
         attempt += 1;
         if (report) track("websocket_reconnect", { channel: "room", lessonId, attempt: connects, delayMs: delay, closeCode: event.code });
+        // Гостя удалили или перевыпустили ссылку, пока его соединение было
+        // разорвано, — сообщение об этом он не получил, а сокет теперь
+        // отвергается кодом 4001. Без повторного /join он переподключался
+        // бесконечно под оверлеем «Связь прервалась»; /join вернёт 403 и
+        // покажет экран «Вас удалили из урока».
+        const shouldRejoin =
+          event.code === NOT_JOINED_CLOSE_CODE || (event.code === INVALID_TOKEN_CLOSE_CODE && mode === "guest");
         const rejoin =
-          event.code === NOT_JOINED_CLOSE_CODE && onNotJoinedRef.current
+          shouldRejoin && onNotJoinedRef.current
             ? onNotJoinedRef.current().catch(() => undefined)
             : Promise.resolve();
         void rejoin.then(() => {
