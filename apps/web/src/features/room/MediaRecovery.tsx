@@ -34,13 +34,18 @@ export const MEDIA_CONNECT_OPTIONS: RoomConnectOptions = {
   peerConnectionTimeout: 30_000,
 };
 
-/** Причины отключения, после которых заново подключаться НЕ надо — это не сеть. */
+/**
+ * Причины отключения, после которых заново подключаться НЕ надо — это не сеть.
+ * `ROOM_DELETED`/`ROOM_CLOSED` сюда не входят: урок постоянный (Э12.9), и
+ * если медиакомнату закрыли под живым участником (рестарт LiveKit, зачистка
+ * пустой комнаты), правильный выход — войти заново; раньше видео и звук
+ * просто пропадали без объяснения. Удаление из урока останавливает
+ * восстановление через `onBlocked` (403 на /join).
+ */
 const FINAL_DISCONNECT_REASONS = new Set<DisconnectReason>([
   DisconnectReason.CLIENT_INITIATED,
   DisconnectReason.DUPLICATE_IDENTITY,
   DisconnectReason.PARTICIPANT_REMOVED,
-  DisconnectReason.ROOM_DELETED,
-  DisconnectReason.ROOM_CLOSED,
 ]);
 const CHECK_MS = 5000;
 const RETRY_MAX_MS = 30_000;
@@ -61,19 +66,26 @@ export function MediaRecovery({
   restoreCamera,
   onRejoined,
   onBlocked,
+  onTakenOver,
+  resumeSignal,
 }: {
   lessonId: string;
   restoreCamera: (participant: LocalParticipant) => Promise<unknown>;
   onRejoined: (data: JoinLessonResponse) => void;
   /** Ошибка /join, после которой пробовать бессмысленно (удалён, урок закрыт). `true` — перестать. */
   onBlocked: (err: unknown) => boolean;
+  /** Тот же человек вошёл в урок с другой вкладки/устройства — медиа здесь отключено. */
+  onTakenOver: () => void;
+  /** Меняется — человек нажал «Продолжить здесь»: подключаемся снова. */
+  resumeSignal: number;
 }) {
   const room = useRoomContext();
-  const callbacks = useRef({ restoreCamera, onRejoined, onBlocked });
-  callbacks.current = { restoreCamera, onRejoined, onBlocked };
+  const callbacks = useRef({ restoreCamera, onRejoined, onBlocked, onTakenOver });
+  callbacks.current = { restoreCamera, onRejoined, onBlocked, onTakenOver };
+  // Что было включено — переживает перезапуск эффекта по «Продолжить здесь».
+  const wantedRef = useRef({ camera: false, microphone: false });
 
   useEffect(() => {
-    let wanted = { camera: false, microphone: false };
     let finished = false;
     let busy = false;
     let attempt = 0;
@@ -82,7 +94,7 @@ export function MediaRecovery({
     // Что было включено, пока связь была: при обрыве публикации уже сняты.
     const remember = () => {
       if (room.state !== ConnectionState.Connected) return;
-      wanted = {
+      wantedRef.current = {
         camera: room.localParticipant.isCameraEnabled,
         microphone: room.localParticipant.isMicrophoneEnabled,
       };
@@ -99,12 +111,12 @@ export function MediaRecovery({
         attempt = 0;
         // Не вернулись микрофон или камера — человек должен узнать, иначе он
         // говорит, а его после восстановления связи не слышно.
-        if (wanted.microphone) {
+        if (wantedRef.current.microphone) {
           await room.localParticipant
             .setMicrophoneEnabled(true)
             .catch((err: unknown) => reportMediaDeviceError("microphone", err));
         }
-        if (wanted.camera) {
+        if (wantedRef.current.camera) {
           await callbacks.current
             .restoreCamera(room.localParticipant)
             .catch((err: unknown) => reportMediaDeviceError("camera", err));
@@ -124,6 +136,7 @@ export function MediaRecovery({
 
     const onDisconnected = (reason?: DisconnectReason) => {
       if (reason !== undefined && FINAL_DISCONNECT_REASONS.has(reason)) finished = true;
+      if (reason === DisconnectReason.DUPLICATE_IDENTITY) callbacks.current.onTakenOver();
     };
 
     room.on(RoomEvent.Reconnecting, remember);
@@ -134,6 +147,8 @@ export function MediaRecovery({
     // `Disconnected` (первое подключение не удалось или переподключения
     // исчерпаны), подключаем заново. Пока идёт подключение или LiveKit
     // переподключается сам, состояние другое — не вмешиваемся.
+    // «Продолжить здесь» — не ждать следующей проверки.
+    if (resumeSignal > 0) void recover();
     const interval = setInterval(() => {
       remember();
       void recover();
@@ -146,7 +161,7 @@ export function MediaRecovery({
       room.off(RoomEvent.LocalTrackUnpublished, remember);
       room.off(RoomEvent.Disconnected, onDisconnected);
     };
-  }, [room, lessonId]);
+  }, [room, lessonId, resumeSignal]);
 
   return null;
 }

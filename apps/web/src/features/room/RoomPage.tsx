@@ -511,6 +511,10 @@ export function RoomPage() {
   // переподключения служебного канала на мобильной сети частые, видео и звук
   // под ними не прерываются — перекрывать урок из-за них не нужно.
   const [longReconnect, setLongReconnect] = useState(false);
+  // Тот же человек вошёл в урок с другой вкладки/устройства — здесь LiveKit
+  // отключил медиа. Раньше плитки просто гасли, без объяснения.
+  const [mediaTakenOver, setMediaTakenOver] = useState(false);
+  const [mediaResumeSignal, setMediaResumeSignal] = useState(0);
   useEffect(() => {
     if (status !== "reconnecting") {
       setLongReconnect(false);
@@ -1708,6 +1712,30 @@ export function RoomPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {mediaTakenOver ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-6">
+          <div
+            role="alertdialog"
+            aria-live="assertive"
+            className="flex w-full max-w-[400px] flex-col items-center gap-3 rounded-xl border border-border bg-card p-6 text-center shadow-lg"
+          >
+            <h2 className="text-lg font-bold tracking-tight">Урок открыт в другом окне</h2>
+            <p className="text-sm text-text-2 [text-wrap:pretty]">
+              Вы вошли в этот урок с другой вкладки или устройства, поэтому здесь звук и видео выключены.
+            </p>
+            <Button
+              className="h-9 px-3.5 text-sm"
+              onClick={() => {
+                setMediaTakenOver(false);
+                setMediaResumeSignal((n) => n + 1);
+              }}
+            >
+              Продолжить здесь
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       {/* Только WS-канал (`status`), НЕ LiveKit-медиа — оно продолжает
           работать под оверлеем, урок не прерывается. */}
       {status === "reconnecting" && longReconnect && everConnectedRef.current ? (
@@ -1845,6 +1873,8 @@ export function RoomPage() {
               if (screen) setBlocked(screen);
               return screen !== null;
             }}
+            onTakenOver={() => setMediaTakenOver(true)}
+            resumeSignal={mediaResumeSignal}
           />
         ) : null}
         {clientMediaSettings?.pipEnabled !== false ? (
