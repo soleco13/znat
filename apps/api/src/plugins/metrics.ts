@@ -10,9 +10,24 @@ import {
 import { getActiveLessonTrafficSnapshot } from "../modules/rooms/service.js";
 import { getRecordingLoadSnapshot } from "../modules/recordings/service.js";
 import { uploadsInMemoryBytes } from "./uploads.js";
+import { pool } from "../db/client.js";
 
 const register = new client.Registry();
 client.collectDefaultMetrics({ register });
+
+// Насыщение пула Postgres (max 20): `waiting` > 0 — запросы стоят в очереди
+// за соединением, задержка растёт не из-за самой БД.
+new client.Gauge({
+  name: "db_pool_connections",
+  help: "Соединения пула Postgres процесса: total/idle/waiting",
+  labelNames: ["state"],
+  registers: [register],
+  collect() {
+    this.set({ state: "total" }, pool.totalCount);
+    this.set({ state: "idle" }, pool.idleCount);
+    this.set({ state: "waiting" }, pool.waitingCount);
+  },
+});
 
 const httpRequestDuration = new client.Histogram({
   name: "http_request_duration_seconds",
