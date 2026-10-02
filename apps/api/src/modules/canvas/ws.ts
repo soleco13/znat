@@ -1,6 +1,8 @@
+import { randomUUID } from "node:crypto";
 import type { IncomingMessage } from "node:http";
 import type { FastifyInstance } from "fastify";
 import { hocuspocus } from "./hocuspocus.js";
+import { logEvent, safeClientId } from "../../plugins/logger.js";
 
 /**
  * Hocuspocus v4 требует веб-стандартный `Request`, а не Node-шный
@@ -9,7 +11,7 @@ import { hocuspocus } from "./hocuspocus.js";
  * заметки Э3.1 в docs/CURRENT_STAGE.md). `@fastify/websocket` даёт нам
  * только `request.raw` (`IncomingMessage`), поэтому конвертируем вручную.
  */
-function toWebRequest(raw: IncomingMessage): Request {
+function toWebRequest(raw: IncomingMessage, extra: Record<string, string>): Request {
   const host = raw.headers.host ?? "localhost";
   const url = new URL(raw.url ?? "/", `http://${host}`);
   const headers = new Headers();
@@ -21,6 +23,8 @@ function toWebRequest(raw: IncomingMessage): Request {
       headers.set(key, value);
     }
   }
+  // connId и сессия вкладки — для логов хуков Hocuspocus (onAuthenticate), где Fastify-запроса уже нет.
+  for (const [key, value] of Object.entries(extra)) headers.set(key, value);
   return new Request(url, { headers });
 }
 
@@ -35,19 +39,33 @@ function toWebRequest(raw: IncomingMessage): Request {
  * образец для ws-адаптера).
  */
 export default async function canvasWsRoutes(app: FastifyInstance) {
-  app.get("/collab", { websocket: true }, async (socket, request) => {
-    const clientConnection = hocuspocus.handleConnection(socket, toWebRequest(request.raw));
+  app.get<{ Querystring: { cs?: string } }>("/collab", { websocket: true }, async (socket, request) => {
+    const connId = randomUUID();
+    const connectedAt = Date.now();
+    const clientSessionId = safeClientId(request.query.cs);
+    const wsLog = request.log.child({ connId, channel: "board", ...(clientSessionId ? { clientSessionId } : {}) });
+    logEvent("websocket_connected", {}, "info", wsLog);
+    const clientConnection = hocuspocus.handleConnection(
+      socket,
+      toWebRequest(request.raw, { "x-conn-id": connId, ...(clientSessionId ? { "x-client-session": clientSessionId } : {}) }),
+    );
 
     socket.on("message", (data: Buffer) => {
       clientConnection.handleMessage(data);
     });
 
     socket.on("close", (code: number, reason: Buffer) => {
+      logEvent(
+        "websocket_disconnected",
+        { closeCode: code, closeReason: reason.toString().slice(0, 100) || null, durationMs: Date.now() - connectedAt },
+        "info",
+        wsLog,
+      );
       clientConnection.handleClose({ code, reason: reason.toString() });
     });
 
     socket.on("error", (err: Error) => {
-      request.log.warn({ err }, "collab ws error");
+      wsLog.warn({ err }, "collab ws error");
     });
   });
 }

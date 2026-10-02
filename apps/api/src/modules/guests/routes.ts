@@ -4,6 +4,8 @@ import { env } from "../../plugins/env.js";
 import { GUEST_COOKIE_NAME } from "./service.js";
 import * as guestsService from "./service.js";
 import * as roomsService from "../rooms/service.js";
+import { AppError } from "../../plugins/errors.js";
+import { logEvent, setLogContext } from "../../plugins/logger.js";
 
 /**
  * Э12.4 — гостевой вход ученика (§1.4/§1.6 план-ТЗ). Публичные, без
@@ -30,9 +32,18 @@ export default async function guestsRoutes(app: FastifyInstance) {
     rateLimited,
     async (request, reply) => {
       const body = guestEnterRequestSchema.parse(request.body);
-      const session = await guestsService.enterAsGuest(request.params.token, body.name);
-      // Новый гость в уроке ещё не был — при закрытом входе куку не выдаём.
-      await roomsService.assertGuestNotLockedOut(session.payload.lessonId, session.payload.guestId);
+      let session;
+      try {
+        session = await guestsService.enterAsGuest(request.params.token, body.name);
+        setLogContext({ lessonId: session.payload.lessonId, participantId: session.payload.guestId });
+        // Новый гость в уроке ещё не был — при закрытом входе куку не выдаём.
+        await roomsService.assertGuestNotLockedOut(session.payload.lessonId, session.payload.guestId);
+      } catch (err) {
+        const reason = err instanceof AppError ? err.code : "internal_error";
+        logEvent("auth_failure", { method: "guest_link", reason }, "warn", request.log);
+        throw err;
+      }
+      logEvent("auth_success", { method: "guest_link" }, "info", request.log);
 
       reply.setCookie(GUEST_COOKIE_NAME, session.token, {
         httpOnly: true,

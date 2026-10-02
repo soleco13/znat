@@ -9,6 +9,8 @@ import {
   encodeStateVectorFromUpdate,
 } from "yjs";
 import type { Document as HocuspocusDocument } from "@hocuspocus/server";
+import type { FastifyBaseLogger } from "fastify";
+import { setRootLogger } from "../../plugins/logger.js";
 import type { AccessTokenPayload } from "@school/shared";
 // Э10.6: НЕ мокаем — чистый модуль без сторонних импортов (см. его докстринг),
 // секрет для теста уже в apps/api/vitest.config.ts (JWT_RECORDER_SECRET).
@@ -670,7 +672,11 @@ describe("postAnswerToBoard (Э8.10, §7.3 ТЗ: «вынести чей-то о
 });
 
 describe("видимость отброшенных и застрявших правок доски", () => {
-  const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  const warn = vi.fn();
+  const noop = () => undefined;
+  setRootLogger({ info: noop, warn, error: noop, debug: noop, fatal: noop, trace: noop } as unknown as FastifyBaseLogger);
+
+  beforeEach(() => warn.mockClear());
 
   afterEach(() => {
     warn.mockClear();
@@ -693,7 +699,7 @@ describe("видимость отброшенных и застрявших пр
 
     expect(getRejectedReadOnlyUpdatesCount()).toBe(before + 1);
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(String(warn.mock.calls[0]?.[0])).toContain(STUDENT_ID);
+    expect(warn.mock.calls[0]?.[0]).toMatchObject({ event: "whiteboard_update_rejected", participantId: STUDENT_ID });
   });
 
   it("лог — не чаще раза в минуту на участника, счётчик — каждый отказ", async () => {

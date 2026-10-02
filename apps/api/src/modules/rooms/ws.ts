@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { ServerRoomMessage } from "@school/shared";
@@ -7,6 +8,8 @@ import { verifyRecorderToken } from "../recorder-auth/service.js";
 import * as recordingsService from "../recordings/service.js";
 import { roomEvents } from "./events.js";
 import * as roomsService from "./service.js";
+import { AppError } from "../../plugins/errors.js";
+import { logEvent, safeClientId } from "../../plugins/logger.js";
 
 const PING_INTERVAL_MS = 20_000;
 
@@ -19,6 +22,10 @@ const querySchema = z.object({
   // другим секретом и не участник урока — см. handleRecorderConnection).
   recorderToken: z.string().min(1).optional(),
   lessonId: z.string().uuid(),
+  // Корреляция с клиентом: сессия вкладки и номер попытки подключения
+  // (0 — первое, дальше — переподключения useRoomSocket).
+  cs: z.string().optional(),
+  attempt: z.coerce.number().int().min(0).max(100000).optional(),
 });
 
 /**
@@ -31,13 +38,13 @@ const querySchema = z.object({
 async function resolveParticipantId(
   query: z.infer<typeof querySchema>,
   cookieToken: string | undefined,
-): Promise<string | null> {
+): Promise<{ participantId: string } | { reason: string }> {
   if (query.token) {
     try {
       const payload = await verifyAccessToken(query.token);
-      return payload.sub;
+      return { participantId: payload.sub };
     } catch {
-      return null;
+      return { reason: "invalid_token" };
     }
   }
   if (cookieToken) {
@@ -45,14 +52,14 @@ async function resolveParticipantId(
     // после перевыпуска ссылки старая кука не должна снова подключить WS.
     try {
       const actor = await resolveGuestSession(cookieToken);
-      if (actor.lessonId !== query.lessonId) return null;
+      if (actor.lessonId !== query.lessonId) return { reason: "guest_wrong_lesson" };
       await roomsService.assertGuestNotLockedOut(actor.lessonId, actor.participantId);
-      return actor.participantId;
-    } catch {
-      return null;
+      return { participantId: actor.participantId };
+    } catch (err) {
+      return { reason: err instanceof AppError ? err.code : "invalid_guest_session" };
     }
   }
-  return null;
+  return { reason: "missing_credentials" };
 }
 
 export default async function roomsWsRoutes(app: FastifyInstance) {
@@ -62,7 +69,23 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
       socket.close(4000, "invalid_query");
       return;
     }
-    const { lessonId, recorderToken } = parsedQuery.data;
+    const { lessonId, recorderToken, cs, attempt = 0 } = parsedQuery.data;
+    const connectedAt = Date.now();
+    const clientSessionId = safeClientId(cs);
+    let wsLog = request.log.child({
+      connId: randomUUID(),
+      channel: recorderToken ? "recorder" : "room",
+      lessonId,
+      ...(clientSessionId ? { clientSessionId } : {}),
+    });
+    const logClose = (code: number, reason: Buffer) => {
+      logEvent(
+        "websocket_disconnected",
+        { closeCode: code, closeReason: reason.toString().slice(0, 100) || null, durationMs: Date.now() - connectedAt },
+        "info",
+        wsLog,
+      );
+    };
 
     // Э10.6 — recorder шаблона записи: read-only слушатель `roomEvents`
     // (стейдж/задания), НЕ участник урока. Сознательно в обход
@@ -73,9 +96,11 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
     if (recorderToken) {
       const payload = await verifyRecorderToken(recorderToken);
       if (!payload || payload.lessonId !== lessonId) {
+        logEvent("websocket_rejected", { reason: "invalid_recorder_token", closeCode: 4001 }, "warn", wsLog);
         socket.close(4001, "invalid_token");
         return;
       }
+      logEvent("websocket_connected", { attempt }, "info", wsLog);
 
       const send = (message: ServerRoomMessage) => {
         if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(message));
@@ -101,30 +126,38 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
         if (socket.readyState === socket.OPEN) socket.ping();
       }, PING_INTERVAL_MS);
 
-      socket.on("close", () => {
+      socket.on("close", (code: number, reason: Buffer) => {
         clearInterval(pingTimer);
         roomEvents.off(lessonId, onEvent);
+        logClose(code, reason);
       });
       socket.on("error", (err: Error) => {
-        request.log.warn({ err, lessonId }, "recorder ws error");
+        wsLog.warn({ err }, "recorder ws error");
       });
       return;
     }
 
-    const userId = await resolveParticipantId(
+    const resolved = await resolveParticipantId(
       parsedQuery.data,
       request.cookies?.[GUEST_COOKIE_NAME],
     );
-    if (!userId) {
+    if ("reason" in resolved) {
+      logEvent("websocket_rejected", { reason: resolved.reason, closeCode: 4001, attempt }, "warn", wsLog);
       socket.close(4001, "invalid_token");
       return;
     }
+    const userId = resolved.participantId;
+    wsLog = wsLog.child({ participantId: userId });
 
     const self = await roomsService.attachSocket(lessonId, userId);
     if (!self) {
+      // Нет в presence: join не делался или участника уже вывели по таймауту.
+      logEvent("websocket_rejected", { reason: "not_joined", closeCode: 4003, attempt }, "warn", wsLog);
       socket.close(4003, "not_joined");
       return;
     }
+    logEvent("websocket_connected", { attempt }, "info", wsLog);
+    if (attempt > 0) logEvent("websocket_reconnect", { attempt }, "info", wsLog);
 
     const send = (message: ServerRoomMessage) => {
       if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(message));
@@ -154,19 +187,23 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
       roomsService
         .touchHeartbeat(lessonId, userId)
         .then((present) => {
-          if (!present) socket.close(4003, "not_joined");
+          if (!present) {
+            logEvent("websocket_rejected", { reason: "presence_lost", closeCode: 4003 }, "warn", wsLog);
+            socket.close(4003, "not_joined");
+          }
         })
-        .catch((err: unknown) => request.log.warn({ err, lessonId, userId }, "room heartbeat failed"));
+        .catch((err: unknown) => wsLog.warn({ err }, "room heartbeat failed"));
     });
 
-    socket.on("close", () => {
+    socket.on("close", (code: number, reason: Buffer) => {
       clearInterval(pingTimer);
       roomEvents.off(lessonId, onEvent);
+      logClose(code, reason);
       void roomsService.markDisconnected(lessonId, userId);
     });
 
     socket.on("error", (err: Error) => {
-      request.log.warn({ err, lessonId, userId }, "room ws error");
+      wsLog.warn({ err }, "room ws error");
     });
   });
 }

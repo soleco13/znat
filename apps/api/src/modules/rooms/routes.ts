@@ -11,6 +11,8 @@ import {
   updateParticipantPermissionsRequestSchema,
 } from "@school/shared";
 import * as roomsService from "./service.js";
+import { AppError } from "../../plugins/errors.js";
+import { logEvent } from "../../plugins/logger.js";
 
 /**
  * Э12.4: эндпоинты урока делятся на два периметра.
@@ -24,7 +26,34 @@ export default async function roomsRoutes(app: FastifyInstance) {
   const lessonAccess = { preHandler: app.requireLessonAccess };
 
   app.post<{ Params: { id: string } }>("/lessons/:id/join", lessonAccess, async (request, reply) => {
-    const result = await roomsService.join(request.lessonActor, request.params.id);
+    const actor = request.lessonActor;
+    const started = performance.now();
+    logEvent("lesson_join_started", { kind: actor.kind }, "info", request.log);
+    let result;
+    try {
+      result = await roomsService.join(actor, request.params.id);
+    } catch (err) {
+      const reason = err instanceof AppError ? err.code : "internal_error";
+      logEvent(
+        "lesson_join_failed",
+        { kind: actor.kind, reason, durationMs: Math.round(performance.now() - started) },
+        reason === "internal_error" ? "error" : "warn",
+        request.log,
+      );
+      throw err;
+    }
+    logEvent(
+      "lesson_join_success",
+      {
+        kind: actor.kind,
+        durationMs: Math.round(performance.now() - started),
+        participants: result.participants.length,
+        lessonMode: result.lessonMode,
+        entryLocked: result.entryLocked,
+      },
+      "info",
+      request.log,
+    );
     return reply.send(result);
   });
 

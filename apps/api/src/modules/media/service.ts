@@ -1,6 +1,7 @@
 import { AccessToken, ParticipantInfo_State, RoomServiceClient, TrackSource } from "livekit-server-sdk";
 import type { MediaConnection, ParticipantKind, ParticipantPermissions } from "@school/shared";
 import { env } from "../../plugins/env.js";
+import { logEvent } from "../../plugins/logger.js";
 
 // `LIVEKIT_URL` — серверный адрес (ws://.../wss://...), SDK сам меняет схему на http(s)
 // при твёрп-запросах (проверено по исходнику livekit-server-sdk/src/TwirpRPC.ts).
@@ -81,10 +82,12 @@ export async function createParticipantConnection(params: {
   kind: ParticipantKind;
   permissions: ParticipantPermissions;
 }): Promise<MediaConnection> {
+  const started = performance.now();
+  const ttlSeconds = mediaTokenTtlSeconds(params.kind);
   const at = new AccessToken(env.LIVEKIT_API_KEY, env.LIVEKIT_API_SECRET, {
     identity: params.userId,
     name: params.fullName,
-    ttl: mediaTokenTtlSeconds(params.kind),
+    ttl: ttlSeconds,
     // Э6.1 / Э12.4: вид участника (`staff | guest`) как LiveKit-атрибут —
     // клиенту (`TeacherVideoTile`) нужно отличить камеру персонала от камеры
     // ученика с granted canPublishVideo без похода за отдельным WS
@@ -92,8 +95,19 @@ export async function createParticipantConnection(params: {
     // отличие от прав) не требуется.
     attributes: { kind: params.kind },
   });
-  at.addGrant({ roomJoin: true, room: params.livekitRoom, ...buildPublishGrant(params.permissions, params.kind) });
+  const grant = buildPublishGrant(params.permissions, params.kind);
+  at.addGrant({ roomJoin: true, room: params.livekitRoom, ...grant });
   const token = await at.toJwt();
+  // identity = participantId: по нему строки LiveKit-сервера (docker logs
+  // livekit) и вебхуки сводятся к этому входу в урок. Сам токен — нет.
+  logEvent("livekit_token_created", {
+    livekitRoom: params.livekitRoom,
+    identity: params.userId,
+    kind: params.kind,
+    ttlSeconds,
+    canPublishSources: grant.canPublishSources.map((s) => TrackSource[s]),
+    durationMs: Math.round((performance.now() - started) * 10) / 10,
+  });
   return { token, url: env.LIVEKIT_PUBLIC_URL };
 }
 

@@ -18,6 +18,7 @@ import { z } from "zod";
 import { GUEST_CANVAS_TOKEN_MARKER } from "@school/shared";
 import type { AccessTokenPayload, ParticipantKind } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
+import { logEvent, safeClientId } from "../../plugins/logger.js";
 import { verifyAccessToken } from "../auth/service.js";
 import { GUEST_COOKIE_NAME, resolveGuestSession } from "../guests/service.js";
 import { verifyRecorderToken } from "../recorder-auth/service.js";
@@ -168,9 +169,7 @@ export async function trackReadOnlyRejection(
   const now = Date.now();
   if (now - (byUser.get(userId) ?? 0) < REJECTION_LOG_INTERVAL_MS) return;
   byUser.set(userId, now);
-  console.warn(
-    `canvas: отброшена правка read-only подключения lesson=${payload.documentName} participant=${userId}`,
-  );
+  logEvent("whiteboard_update_rejected", { lessonId: payload.documentName, participantId: userId, reason: "read_only" }, "warn");
 }
 
 /**
@@ -201,7 +200,7 @@ export async function limitGuestCanvasInbound(
   budget.bytes += payload.update.byteLength;
   if (budget.bytes > GUEST_CANVAS_BYTES_PER_MINUTE) {
     rateLimitedCanvasMessages++;
-    console.warn(`canvas: превышен объём правок lesson=${payload.documentName} participant=${ctx.userId}`);
+    logEvent("whiteboard_update_rejected", { lessonId: payload.documentName, participantId: ctx.userId, reason: "rate_limited" }, "warn");
     throw Object.assign(new Error("canvas_rate_limited"), { code: 4429, reason: "too_much_data" });
   }
 }
@@ -341,7 +340,7 @@ async function resolveCanvasConnectionActor(
  * именно `connectionConfig` (не результат хука) читается при создании
  * `Connection`; возвращаемое значение уходит только в `context`.
  */
-export async function authenticateCanvasConnection(
+async function authenticateCanvasConnectionUnlogged(
   payload: Pick<
     onAuthenticatePayload,
     "token" | "documentName" | "connectionConfig" | "requestHeaders"
@@ -360,6 +359,46 @@ export async function authenticateCanvasConnection(
   payload.connectionConfig.readOnly =
     actor.kind === "recorder" ? true : !(await resolveCanDraw(actor.kind, lessonId, actor.participantId));
   return { userId: actor.participantId, role: actor.role };
+}
+
+/** Поля подключения к доске для лога: connId и сессию вкладки кладёт canvas/ws.ts в заголовки. */
+function boardConnectionFields(
+  headers: { get(name: string): string | null } | undefined,
+  documentName: string,
+): Record<string, unknown> {
+  return {
+    channel: "board",
+    lessonId: documentName,
+    connId: headers?.get("x-conn-id") ?? null,
+    clientSessionId: safeClientId(headers?.get("x-client-session")) ?? null,
+  };
+}
+
+export async function authenticateCanvasConnection(
+  payload: Pick<
+    onAuthenticatePayload,
+    "token" | "documentName" | "connectionConfig" | "requestHeaders"
+  >,
+): Promise<{ userId: string; role: string }> {
+  const fields = boardConnectionFields(payload.requestHeaders, payload.documentName);
+  try {
+    const result = await authenticateCanvasConnectionUnlogged(payload);
+    logEvent("whiteboard_sync_started", {
+      ...fields,
+      participantId: result.userId,
+      role: result.role,
+      readOnly: payload.connectionConfig.readOnly,
+    });
+    return result;
+  } catch (err) {
+    const known = err instanceof AppError;
+    logEvent(
+      "whiteboard_sync_failed",
+      { ...fields, stage: "auth", reason: known ? err.code : "internal_error", ...(known ? {} : { err }) },
+      known ? "warn" : "error",
+    );
+    throw err;
+  }
 }
 
 /**
@@ -393,8 +432,14 @@ export async function assertCanDrawForLesson(
 export async function loadCanvasDocument(
   payload: Pick<onLoadDocumentPayload, "documentName">,
 ): Promise<Buffer | undefined> {
-  const ydoc = await repo.loadDoc(payload.documentName);
-  return ydoc ? dropStuckPendingUpdates(ydoc) : undefined;
+  try {
+    const ydoc = await repo.loadDoc(payload.documentName);
+    return ydoc ? dropStuckPendingUpdates(ydoc) : undefined;
+  } catch (err) {
+    // Доска урока не загрузилась из Postgres — все подключения к ней висят.
+    logEvent("whiteboard_sync_failed", { channel: "board", lessonId: payload.documentName, stage: "load", err }, "error");
+    throw err;
+  }
 }
 
 /**
@@ -427,7 +472,12 @@ export async function storeCanvasDocument(
   payload: Pick<onStoreDocumentPayload, "documentName" | "document">,
 ): Promise<void> {
   const state = Buffer.from(encodeStateAsUpdate(payload.document));
-  await repo.saveDoc(payload.documentName, state);
+  try {
+    await repo.saveDoc(payload.documentName, state);
+  } catch (err) {
+    logEvent("whiteboard_store_failed", { lessonId: payload.documentName, bytes: state.byteLength, err }, "error");
+    throw err;
+  }
 }
 
 /** Э3.3 плана: выгрузка Y.Doc из памяти через 5 минут после ухода последнего участника. */

@@ -3,6 +3,7 @@ import { TrackSource, WebhookReceiver } from "livekit-server-sdk";
 import { env } from "../../plugins/env.js";
 import * as roomsService from "./service.js";
 import * as recordingsService from "../recordings/service.js";
+import { logEvent } from "../../plugins/logger.js";
 
 /**
  * LiveKit сам зовёт этот эндпоинт (Э2.7, §10.5 ТЗ, https://docs.livekit.io/home/server/webhooks).
@@ -11,6 +12,31 @@ import * as recordingsService from "../recordings/service.js";
  * который проверяет сам `WebhookReceiver` по тому же `LIVEKIT_API_KEY/SECRET`,
  * что и выдача токенов участникам.
  */
+/**
+ * Имена `DisconnectReason` (@livekit/protocol, не прямая зависимость) — в логе
+ * читаемая причина вместо числа. Неизвестное значение пишется числом.
+ */
+const DISCONNECT_REASONS = [
+  "UNKNOWN_REASON",
+  "CLIENT_INITIATED",
+  "DUPLICATE_IDENTITY",
+  "SERVER_SHUTDOWN",
+  "PARTICIPANT_REMOVED",
+  "ROOM_DELETED",
+  "STATE_MISMATCH",
+  "JOIN_FAILURE",
+  "MIGRATION",
+  "SIGNAL_CLOSE",
+  "ROOM_CLOSED",
+  "USER_UNAVAILABLE",
+  "USER_REJECTED",
+];
+
+function disconnectReasonName(value: number | undefined): string | number | null {
+  if (value === undefined) return null;
+  return DISCONNECT_REASONS[value] ?? value;
+}
+
 const receiver = new WebhookReceiver(env.LIVEKIT_API_KEY, env.LIVEKIT_API_SECRET);
 
 export default async function livekitWebhookRoutes(app: FastifyInstance) {
@@ -36,6 +62,20 @@ export default async function livekitWebhookRoutes(app: FastifyInstance) {
 
       const roomName = event.room?.name;
       const userId = event.participant?.identity;
+
+      // Взгляд самого медиасервера: участник реально подключился/ушёл и почему
+      // (disconnectReason). identity = participantId из livekit_token_created.
+      if (event.event === "participant_joined" || event.event === "participant_left") {
+        logEvent(event.event === "participant_joined" ? "livekit_participant_joined" : "livekit_participant_left", {
+          livekitRoom: roomName ?? null,
+          identity: userId ?? null,
+          participantSid: event.participant?.sid ?? null,
+          disconnectReason:
+            event.event === "participant_left" ? disconnectReasonName(event.participant?.disconnectReason) : undefined,
+        }, "info", request.log);
+      } else if (event.event === "room_finished") {
+        logEvent("livekit_room_finished", { livekitRoom: roomName ?? null }, "info", request.log);
+      }
 
       if (event.event === "participant_joined" && roomName && userId) {
         await roomsService.handleParticipantJoinedWebhook(roomName, userId);

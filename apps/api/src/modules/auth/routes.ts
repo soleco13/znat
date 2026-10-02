@@ -9,6 +9,7 @@ import {
 import * as authService from "./service.js";
 import { AppError } from "../../plugins/errors.js";
 import { env } from "../../plugins/env.js";
+import { hashForLog, logEvent, setLogContext } from "../../plugins/logger.js";
 
 const REFRESH_COOKIE = "refresh_token";
 const REFRESH_COOKIE_PATH = "/api/v1/auth";
@@ -24,6 +25,10 @@ function setRefreshCookie(reply: import("fastify").FastifyReply, token: string, 
   });
 }
 
+function failureReason(err: unknown): string {
+  return err instanceof AppError ? err.code : "internal_error";
+}
+
 function toMeResponse(user: { id: string; schoolId: string; email: string; fullName: string; role: string }) {
   return meResponseSchema.parse({
     id: user.id,
@@ -37,7 +42,15 @@ function toMeResponse(user: { id: string; schoolId: string; email: string; fullN
 export default async function authRoutes(app: FastifyInstance) {
   app.post("/auth/login", async (request, reply) => {
     const body = loginRequestSchema.parse(request.body);
-    const result = await authService.login(body.email, body.password);
+    let result;
+    try {
+      result = await authService.login(body.email, body.password);
+    } catch (err) {
+      logEvent("auth_failure", { method: "password", reason: failureReason(err), emailHash: hashForLog(body.email) }, "warn", request.log);
+      throw err;
+    }
+    setLogContext({ userId: result.user.id, schoolId: result.user.schoolId });
+    logEvent("auth_success", { method: "password", role: result.user.role }, "info", request.log);
     setRefreshCookie(reply, result.refreshToken, result.refreshExpiresAt);
     return reply.send({ accessToken: result.accessToken, user: toMeResponse(result.user) });
   });
@@ -51,7 +64,17 @@ export default async function authRoutes(app: FastifyInstance) {
     if (!unsigned.valid || !unsigned.value) {
       throw new AppError(401, "invalid_refresh_token", "Недействительный refresh-токен");
     }
-    const result = await authService.refresh(unsigned.value);
+    let result;
+    try {
+      result = await authService.refresh(unsigned.value);
+    } catch (err) {
+      // Протухшая сессия — обычное дело; повторное предъявление токена — признак кражи.
+      const reason = failureReason(err);
+      logEvent("auth_failure", { method: "refresh", reason }, reason === "refresh_token_reused" ? "warn" : "info", request.log);
+      throw err;
+    }
+    setLogContext({ userId: result.user.id, schoolId: result.user.schoolId });
+    logEvent("auth_success", { method: "refresh", role: result.user.role }, "debug", request.log);
     setRefreshCookie(reply, result.refreshToken, result.refreshExpiresAt);
     return reply.send({ accessToken: result.accessToken, user: toMeResponse(result.user) });
   });
