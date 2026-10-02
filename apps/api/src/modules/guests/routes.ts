@@ -3,6 +3,7 @@ import { guestEnterRequestSchema, type GuestEnterResponse } from "@school/shared
 import { env } from "../../plugins/env.js";
 import { GUEST_COOKIE_NAME } from "./service.js";
 import * as guestsService from "./service.js";
+import * as roomsService from "../rooms/service.js";
 
 /**
  * Э12.4 — гостевой вход ученика (§1.4/§1.6 план-ТЗ). Публичные, без
@@ -30,6 +31,8 @@ export default async function guestsRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const body = guestEnterRequestSchema.parse(request.body);
       const session = await guestsService.enterAsGuest(request.params.token, body.name);
+      // Новый гость в уроке ещё не был — при закрытом входе куку не выдаём.
+      await roomsService.assertGuestNotLockedOut(session.payload.lessonId, session.payload.guestId);
 
       reply.setCookie(GUEST_COOKIE_NAME, session.token, {
         httpOnly: true,

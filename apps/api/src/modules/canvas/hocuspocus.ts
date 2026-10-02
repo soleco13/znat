@@ -64,6 +64,17 @@ export function setDrawPermissionResolver(resolver: DrawPermissionResolver): voi
   drawPermissionResolver = resolver;
 }
 
+/**
+ * Доп. проверка гостя при подключении к доске (закрытый вход урока). Её
+ * регистрирует `rooms` — по той же причине, что и `setDrawPermissionResolver`.
+ */
+type GuestAccessGate = (lessonId: string, guestId: string) => Promise<void>;
+let guestAccessGate: GuestAccessGate | null = null;
+
+export function setGuestAccessGate(gate: GuestAccessGate): void {
+  guestAccessGate = gate;
+}
+
 async function resolveCanDraw(kind: ParticipantKind, lessonId: string, participantId: string): Promise<boolean> {
   if (drawPermissionOverrides.get(lessonId)?.has(participantId) || !drawPermissionResolver) {
     return computeCanDraw(kind, lessonId, participantId);
@@ -316,6 +327,7 @@ async function resolveCanvasConnectionActor(
   if (guest.lessonId !== lessonId) {
     throw new AppError(403, "forbidden", "Гостевая сессия относится к другому уроку");
   }
+  await guestAccessGate?.(lessonId, guest.participantId);
   return { kind: "guest", participantId: guest.participantId, role: "guest" };
 }
 

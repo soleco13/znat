@@ -19,6 +19,7 @@ const {
     closeCanvasDocument: vi.fn(),
     setDrawPermission: vi.fn(),
     setDrawPermissionResolver: vi.fn(),
+    setGuestAccessGate: vi.fn(),
     disconnectCanvasParticipant: vi.fn(),
   },
   lessonsServiceMock: {

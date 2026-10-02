@@ -45,7 +45,9 @@ async function resolveParticipantId(
     // после перевыпуска ссылки старая кука не должна снова подключить WS.
     try {
       const actor = await resolveGuestSession(cookieToken);
-      return actor.lessonId === query.lessonId ? actor.participantId : null;
+      if (actor.lessonId !== query.lessonId) return null;
+      await roomsService.assertGuestNotLockedOut(actor.lessonId, actor.participantId);
+      return actor.participantId;
     } catch {
       return null;
     }

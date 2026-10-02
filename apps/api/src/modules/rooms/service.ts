@@ -46,6 +46,7 @@ let sweepInterval: NodeJS.Timeout | null = null;
 
 // Доска спрашивает право рисовать у presence (Redis), если в памяти процесса
 // его нет — например, после рестарта сервера посреди урока.
+canvasService.setGuestAccessGate(assertGuestNotLockedOut);
 canvasService.setDrawPermissionResolver(async (lessonId, participantId) => {
   const entry = await presence.getParticipant(lessonId, participantId);
   return entry ? entry.permissions.canDraw : null;
@@ -332,6 +333,20 @@ function guestPermissionsFromSettings(rawSettings: unknown): ParticipantPermissi
 }
 
 /**
+ * Закрытый вход пускает только гостей, которые уже были в уроке. Проверяется
+ * не только при входе в комнату: выдача гостевой сессии, доска, чат и
+ * задания принимали новую гостевую куку и при закрытом входе — удалённый
+ * ученик возвращался по той же ссылке под другим именем.
+ */
+export async function assertGuestNotLockedOut(lessonId: string, guestId: string): Promise<void> {
+  if (!(await presence.isEntryLocked(lessonId))) return;
+  const wasHere = await repo.findCanonicalParticipant(lessonId, { userId: null, guestId });
+  if (!wasHere) {
+    throw new AppError(403, "lesson_entry_locked", "Учитель закрыл вход в урок");
+  }
+}
+
+/**
  * Новый гость (его нет в presence) — два гейта от утёкшей ссылки:
  *  - учитель закрыл вход → пускаем только того, кто уже был на этом уроке
  *    (заснувший телефон, перезагрузка страницы), а не нового человека;
@@ -340,12 +355,7 @@ function guestPermissionsFromSettings(rawSettings: unknown): ParticipantPermissi
  * защита от сотен фейковых гостей, а не точный счётчик.
  */
 async function assertGuestCanEnter(lessonId: string, guestId: string): Promise<void> {
-  if (await presence.isEntryLocked(lessonId)) {
-    const wasHere = await repo.findCanonicalParticipant(lessonId, { userId: null, guestId });
-    if (!wasHere) {
-      throw new AppError(403, "lesson_entry_locked", "Учитель закрыл вход в урок");
-    }
-  }
+  await assertGuestNotLockedOut(lessonId, guestId);
   if ((await presence.countGuests(lessonId)) >= env.LESSON_MAX_GUESTS) {
     throw new AppError(403, "lesson_full", `В уроке уже ${env.LESSON_MAX_GUESTS} учеников — это максимум`);
   }

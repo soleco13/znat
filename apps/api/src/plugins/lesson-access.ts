@@ -7,6 +7,7 @@ import {
   resolveGuestSession,
   type LessonActor,
 } from "../modules/guests/service.js";
+import * as roomsService from "../modules/rooms/service.js";
 import * as usersService from "../modules/users/service.js";
 import { AppError } from "./errors.js";
 
@@ -81,6 +82,7 @@ export default fp(async function lessonAccessPlugin(app: FastifyInstance) {
       if (actor.lessonId !== lessonId) {
         throw new AppError(403, "guest_wrong_lesson", "Гостевая сессия относится к другому уроку");
       }
+      await roomsService.assertGuestNotLockedOut(actor.lessonId, actor.participantId);
       request.lessonActor = actor;
       return;
     }
@@ -101,7 +103,9 @@ export default fp(async function lessonAccessPlugin(app: FastifyInstance) {
     if (cookie) {
       // Гостевой actor несёт свой `lessonId` (из подписанного JWT) — сервис
       // сверит его с `activity.lessonId`.
-      request.lessonActor = await resolveGuestSession(cookie);
+      const actor = await resolveGuestSession(cookie);
+      await roomsService.assertGuestNotLockedOut(actor.lessonId, actor.participantId);
+      request.lessonActor = actor;
       return;
     }
 

@@ -8,6 +8,7 @@ import {
   postAnswerToBoard,
   setDrawPermission,
   setDrawPermissionResolver,
+  setGuestAccessGate,
   startCanvasUnloadSweep,
   stopCanvasUnloadSweep,
 } from "./hocuspocus.js";
@@ -45,6 +46,7 @@ export {
   postAnswerToBoard,
   setDrawPermission,
   setDrawPermissionResolver,
+  setGuestAccessGate,
   startCanvasUnloadSweep,
   stopCanvasUnloadSweep,
 };
