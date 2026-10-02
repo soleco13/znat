@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ServerRoomMessage } from "@school/shared";
 import { getFreshAccessToken } from "../../shared/api-client.js";
+import { clientSessionId, track } from "../../shared/telemetry.js";
 
 export type SocketStatus = "connecting" | "connected" | "reconnecting" | "closed";
 
@@ -43,7 +44,11 @@ export function useRoomSocket(
     let socket: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let attempt = 0;
+    /** Сколько раз подключались за жизнь хука: 0 — первое, дальше — переподключения (в лог сервера). */
+    let connects = 0;
+    let openedAt = 0;
     let stopped = false;
+    const report = mode !== "recorder";
 
     const connect = async () => {
       let tokenParam = "";
@@ -65,11 +70,15 @@ export function useRoomSocket(
         tokenParam = `&recorderToken=${encodeURIComponent(recorderToken)}`;
       }
       const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-      const url = `${protocol}//${location.host}/ws?lessonId=${encodeURIComponent(lessonId)}${tokenParam}`;
+      const correlation = `&cs=${encodeURIComponent(clientSessionId)}&attempt=${connects}`;
+      const url = `${protocol}//${location.host}/ws?lessonId=${encodeURIComponent(lessonId)}${tokenParam}${correlation}`;
       setStatus(attempt === 0 ? "connecting" : "reconnecting");
+      connects += 1;
+      openedAt = 0;
       socket = new WebSocket(url);
 
       socket.onopen = () => {
+        openedAt = Date.now();
         setStatus("connected");
       };
       socket.onmessage = (event) => {
@@ -85,6 +94,17 @@ export function useRoomSocket(
       };
       socket.onclose = (event) => {
         if (stopped) return;
+        if (report) {
+          track("websocket_disconnected", {
+            channel: "room",
+            lessonId,
+            closeCode: event.code,
+            wasClean: event.wasClean,
+            opened: openedAt > 0,
+            connectedMs: openedAt > 0 ? Date.now() - openedAt : null,
+            online: navigator.onLine,
+          });
+        }
         if (event.code === REMOVED_CLOSE_CODE) {
           setStatus("closed");
           return;
@@ -92,6 +112,7 @@ export function useRoomSocket(
         setStatus("reconnecting");
         const delay = Math.min(1000 * 2 ** attempt, MAX_BACKOFF_MS);
         attempt += 1;
+        if (report) track("websocket_reconnect", { channel: "room", lessonId, attempt: connects, delayMs: delay, closeCode: event.code });
         const rejoin =
           event.code === NOT_JOINED_CLOSE_CODE && onNotJoinedRef.current
             ? onNotJoinedRef.current().catch(() => undefined)

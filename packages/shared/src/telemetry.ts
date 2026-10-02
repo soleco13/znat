@@ -43,6 +43,8 @@ export const clientEventSchema = z.object({
 export type ClientEvent = z.infer<typeof clientEventSchema>;
 
 export const clientEventBatchSchema = z.object({
+  /** Сессия вкладки — дублирует X-Client-Session для navigator.sendBeacon, который не умеет заголовки. */
+  clientSessionId: z.string().max(64).optional(),
   events: z.array(clientEventSchema).min(1).max(50),
 });
 export type ClientEventBatch = z.infer<typeof clientEventBatchSchema>;

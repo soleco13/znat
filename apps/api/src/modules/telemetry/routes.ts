@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { clientEventBatchSchema } from "@school/shared";
 import { verifyAccessToken } from "../auth/service.js";
 import { GUEST_COOKIE_NAME, verifyGuestToken } from "../guests/service.js";
-import { setLogContext } from "../../plugins/logger.js";
+import { currentLogContext, safeClientId, setLogContext } from "../../plugins/logger.js";
 import * as telemetryService from "./service.js";
 
 /**
@@ -35,6 +35,10 @@ async function identify(request: FastifyRequest): Promise<void> {
 export default async function telemetryRoutes(app: FastifyInstance) {
   app.post("/telemetry", { bodyLimit: 64 * 1024 }, async (request, reply) => {
     const body = clientEventBatchSchema.parse(request.body);
+    if (!currentLogContext()?.clientSessionId) {
+      const fromBody = safeClientId(body.clientSessionId);
+      if (fromBody) setLogContext({ clientSessionId: fromBody });
+    }
     await identify(request);
     telemetryService.logClientEvents(body.events, request.log);
     return reply.status(204).send();

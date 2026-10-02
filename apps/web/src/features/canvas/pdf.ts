@@ -11,6 +11,7 @@
 import * as pdfjs from "pdfjs-dist";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?worker";
+import { errorFields, track } from "../../shared/telemetry.js";
 
 /** Одна презентация парсится один раз — миниатюры и полноразмерный слайд делят документ. */
 const docCache = new Map<string, Promise<PDFDocumentProxy>>();
@@ -21,11 +22,33 @@ function loadPdf(url: string): Promise<PDFDocumentProxy> {
     // Воркер (1,3 МБ) — только при первом PDF, а не при каждом открытии доски:
     // модуль входит в кусок доски, а PDF-презентации на уроке бывают редко.
     pdfjs.GlobalWorkerOptions.workerPort ??= new PdfWorker();
+    // В событие — только имя файла: подпись ссылки (`sig`) — пропуск к файлу.
+    const file = url.split("?")[0]?.split("/").pop() ?? null;
+    const started = Date.now();
+    track("pdf_load_started", { file });
     doc = (async () => {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`PDF ${res.status}`);
-      const buf = await res.arrayBuffer();
-      return pdfjs.getDocument({ data: new Uint8Array(buf) }).promise;
+      let stage = "fetch";
+      let status: number | null = null;
+      try {
+        const res = await fetch(url);
+        status = res.status;
+        if (!res.ok) throw new Error(`PDF ${res.status}`);
+        const buf = await res.arrayBuffer();
+        stage = "parse";
+        const pdf = await pdfjs.getDocument({ data: new Uint8Array(buf) }).promise;
+        track("pdf_loaded", { file, durationMs: Date.now() - started, pages: pdf.numPages, bytes: buf.byteLength });
+        return pdf;
+      } catch (err) {
+        track("pdf_load_failed", {
+          file,
+          stage,
+          status,
+          durationMs: Date.now() - started,
+          online: navigator.onLine,
+          ...errorFields(err),
+        });
+        throw err;
+      }
     })();
     docCache.set(url, doc);
     void doc.catch(() => docCache.delete(url));

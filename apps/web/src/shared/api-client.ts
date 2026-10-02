@@ -1,6 +1,17 @@
 import { useAuthStore } from "./auth-store.js";
+import { clientSessionId } from "./telemetry.js";
 
 const API_BASE = "/api/v1";
+
+/**
+ * Заголовки корреляции: сессия вкладки и id запроса. Сервер пишет их в каждую
+ * строку лога и возвращает X-Request-Id — по нему находится строка ошибки.
+ */
+function correlationHeaders(headers: Headers): Headers {
+  headers.set("X-Client-Session", clientSessionId);
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) headers.set("X-Request-Id", crypto.randomUUID());
+  return headers;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -36,7 +47,11 @@ let refreshInFlight: Promise<RefreshOutcome> | null = null;
 async function requestRefresh(): Promise<RefreshOutcome> {
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}/auth/refresh`, { method: "POST", credentials: "include" });
+    res = await fetch(`${API_BASE}/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+      headers: correlationHeaders(new Headers()),
+    });
   } catch {
     return "unavailable";
   }
@@ -106,7 +121,7 @@ export async function apiFetch<T>(
   _retry = true,
 ): Promise<T> {
   const accessToken = guestMode ? null : useAuthStore.getState().accessToken;
-  const headers = new Headers(options.headers);
+  const headers = correlationHeaders(new Headers(options.headers));
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
   if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");

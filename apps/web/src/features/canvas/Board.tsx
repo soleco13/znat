@@ -49,6 +49,7 @@ import { MediaLoader } from "@/shared/ui/media-loader";
 import { createCoalescingApi, paceUpstream, throttleWhen, useBoardLinkPoor } from "./board-link.js";
 import "@excalidraw/excalidraw/index.css";
 import "./Board.css";
+import { clientSessionId, track } from "../../shared/telemetry.js";
 
 /** Наибольшая сторона изображения при первой вставке на холст (мировые
  *  единицы, не зависят от zoom) — сервер уже прислал ресайз до 2000px
@@ -323,11 +324,29 @@ export function Board({
 
     const doc = new Y.Doc();
     const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+    // События доски — в серверный лог (shared/telemetry.ts); сессия вкладки
+    // в `cs` связывает их с серверными строками этого подключения.
+    let syncStartedAt = Date.now();
+    let connects = 0;
+    track("whiteboard_sync_started", { lessonId });
     const nextProvider = new HocuspocusProvider({
-      url: `${protocol}//${location.host}/collab`,
+      url: `${protocol}//${location.host}/collab?cs=${encodeURIComponent(clientSessionId)}`,
       name: lessonId,
       document: doc,
       token,
+      onConnect: () => {
+        connects += 1;
+        if (connects > 1) syncStartedAt = Date.now();
+      },
+      onSynced: ({ state }) => {
+        if (state) track("whiteboard_synced", { lessonId, durationMs: Date.now() - syncStartedAt, connects });
+      },
+      onAuthenticationFailed: ({ reason }) => {
+        track("whiteboard_sync_failed", { lessonId, stage: "auth", reason });
+      },
+      onClose: ({ event }) => {
+        track("whiteboard_disconnected", { lessonId, closeCode: event.code, online: navigator.onLine });
+      },
     });
     setProvider(nextProvider);
 
@@ -368,6 +387,7 @@ export function Board({
       stop();
       timer = setTimeout(() => {
         timer = null;
+        track("whiteboard_sync_failed", { lessonId, stage: "stall", unsyncedChanges: provider.unsyncedChanges });
         provider.forceSync();
       }, SYNC_STALL_MS);
     };
@@ -384,7 +404,7 @@ export function Board({
       stop();
       provider.off("unsyncedChanges", onUnsyncedChanges);
     };
-  }, [provider, canDraw]);
+  }, [provider, canDraw, lessonId]);
 
   useEffect(() => {
     if (!ydoc || !provider) return;

@@ -11,6 +11,7 @@ import {
 import type { JoinLessonResponse } from "@school/shared";
 
 import { apiFetch } from "@/shared/api-client";
+import { reportLiveKitConnectionFailed } from "./MediaTelemetry.js";
 
 /**
  * Медиа на плохой связи. Штатно LiveKit ждёт подключения 15 с с одним
@@ -98,6 +99,7 @@ export function MediaRecovery({
         if (wanted.microphone) await room.localParticipant.setMicrophoneEnabled(true).catch(() => undefined);
         if (wanted.camera) await callbacks.current.restoreCamera(room.localParticipant).catch(() => undefined);
       } catch (err) {
+        reportLiveKitConnectionFailed(lessonId, err, "recover");
         if (callbacks.current.onBlocked(err)) {
           finished = true;
           return;

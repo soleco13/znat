@@ -121,6 +121,7 @@ import { Loader } from "@/shared/ui/loader";
 import { BrandMark } from "@/shared/ui/brand-mark";
 import { PoorLinkMediaAdapter } from "./PoorLinkMedia.js";
 import { MEDIA_CONNECT_OPTIONS, MEDIA_RECONNECT_POLICY, MediaRecovery } from "./MediaRecovery.js";
+import { MediaTelemetry, reportLiveKitConnectionFailed } from "./MediaTelemetry.js";
 
 // Э5.1/Э5.2 — см. подробные комментарии ниже у <LiveKitRoom>. 720p + simulcast,
 // adaptiveStream/dynacast включены явно (в livekit-client по умолчанию off).
@@ -1761,7 +1762,9 @@ export function RoomPage() {
         // кнопке микрофона, плюс индикатор связи в шапке. Обрыв, который
         // LiveKit не пережил сам, чинит `MediaRecovery` ниже.
         onDisconnected={() => undefined}
+        onError={(err) => reportLiveKitConnectionFailed(lessonId ?? "", err, "initial")}
       >
+        {lessonId ? <MediaTelemetry lessonId={lessonId} /> : null}
         <ApplyAudioOutput deviceId={spkDeviceId} />
         <MicSync enabled={self?.permissions.canSpeak ?? false} />
         <VideoSubscriptionManager participants={participants} mode={lessonMode} />
