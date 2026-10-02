@@ -21,7 +21,7 @@ const {
     listResponsesByActivity: vi.fn(),
     markReviewed: vi.fn(),
     attemptSubmittedAt: vi.fn(),
-    upsertGradedResponse: vi.fn(),
+    upsertGradedResponses: vi.fn(),
     listPendingManualGrading: vi.fn(),
     findResponseForGrading: vi.fn(),
     persistManualGrade: vi.fn(),
@@ -183,7 +183,7 @@ beforeEach(() => {
   repoMock.listResponsesByActivity.mockResolvedValue([]);
   repoMock.markReviewed.mockResolvedValue(new Date("2026-09-04T09:40:00.000Z"));
   repoMock.attemptSubmittedAt.mockResolvedValue(null);
-  repoMock.upsertGradedResponse.mockResolvedValue(undefined);
+  repoMock.upsertGradedResponses.mockResolvedValue(undefined);
   repoMock.listPendingManualGrading.mockResolvedValue([]);
   repoMock.findResponseForGrading.mockResolvedValue(null);
   repoMock.persistManualGrade.mockResolvedValue(new Date("2026-09-04T09:50:00.000Z"));
@@ -889,7 +889,7 @@ describe("submitActivity (Э8.12, §8 ТЗ: POST /activities/:id/submit)", () =>
     const result = await submitActivity(guestA, ACTIVITY);
 
     expect(result).toMatchObject({ revealed: false, score: 0, maxScore: 0, feedback: [] });
-    expect(repoMock.upsertGradedResponse).toHaveBeenCalled();
+    expect(repoMock.upsertGradedResponses).toHaveBeenCalled();
   });
 
   it("неотвеченный вопрос — пустой ответ своего типа, 0 баллов, но НЕ пропуск (тот же движок)", async () => {
@@ -906,12 +906,14 @@ describe("submitActivity (Э8.12, §8 ТЗ: POST /activities/:id/submit)", () =>
     );
   });
 
-  it("пишет каждый вопрос через repo.upsertGradedResponse с attemptId/participantId попытки", async () => {
+  it("пишет все вопросы одним вызовом repo.upsertGradedResponses (одна транзакция) с attemptId/participantId попытки", async () => {
     repoMock.findResponsesByAttempt.mockResolvedValue([]);
     await submitActivity(guestA, ACTIVITY);
 
-    expect(repoMock.upsertGradedResponse).toHaveBeenCalledTimes(2);
-    expect(repoMock.upsertGradedResponse).toHaveBeenCalledWith(
+    expect(repoMock.upsertGradedResponses).toHaveBeenCalledTimes(1);
+    const [rows] = repoMock.upsertGradedResponses.mock.calls[0] as [unknown[]];
+    expect(rows).toHaveLength(2);
+    expect(rows).toContainEqual(
       expect.objectContaining({
         attemptId: deriveAttemptId(ACTIVITY, PARTICIPANT_A, 1),
         attemptNumber: 1,
@@ -925,7 +927,7 @@ describe("submitActivity (Э8.12, §8 ТЗ: POST /activities/:id/submit)", () =>
 
   it("персонал не сдаёт работу — 403", async () => {
     await expect(submitActivity(staffActor, ACTIVITY)).rejects.toMatchObject({ statusCode: 403 });
-    expect(repoMock.upsertGradedResponse).not.toHaveBeenCalled();
+    expect(repoMock.upsertGradedResponses).not.toHaveBeenCalled();
   });
 
   it("дедлайн прошёл — 409, сабмита не происходит", async () => {
@@ -934,7 +936,7 @@ describe("submitActivity (Э8.12, §8 ТЗ: POST /activities/:id/submit)", () =>
       deadline: new Date("2020-01-01T00:00:00.000Z"),
     });
     await expect(submitActivity(guestA, ACTIVITY)).rejects.toMatchObject({ statusCode: 409 });
-    expect(repoMock.upsertGradedResponse).not.toHaveBeenCalled();
+    expect(repoMock.upsertGradedResponses).not.toHaveBeenCalled();
   });
 
   it("гость другого урока — 403", async () => {

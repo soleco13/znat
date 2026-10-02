@@ -286,7 +286,7 @@ export interface GradeResultInput {
  * ответа нельзя ни при каких условиях (§ «Что не делегировать вслепую»
  * CLAUDE.md — соседняя область с движком проверки).
  */
-export async function upsertGradedResponse(input: {
+export interface GradedResponseInput {
   attemptId: string;
   activityId: string;
   materialId: string;
@@ -296,10 +296,29 @@ export async function upsertGradedResponse(input: {
   response: QuestionResponse;
   attemptNumber: number;
   result: GradeResultInput;
-}): Promise<void> {
+}
+
+/**
+ * Все ответы попытки на сабмите — одной транзакцией. По одному сбой БД
+ * посреди сдачи оставлял часть вопросов «сданными», часть черновиками:
+ * черновики уже не принимались (`attemptSubmittedAt`), а ученик видел
+ * «не удалось сдать».
+ */
+export async function upsertGradedResponses(inputs: GradedResponseInput[]): Promise<void> {
+  if (inputs.length === 0) return;
   const now = new Date();
+  await db.transaction(async (tx) => {
+    for (const input of inputs) await upsertGradedResponse(tx, input, now);
+  });
+}
+
+async function upsertGradedResponse(
+  executor: Pick<typeof db, "insert">,
+  input: GradedResponseInput,
+  now: Date,
+): Promise<void> {
   const { result } = input;
-  await db
+  await executor
     .insert(responses)
     .values({
       attemptId: input.attemptId,

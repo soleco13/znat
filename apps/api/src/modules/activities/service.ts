@@ -917,8 +917,10 @@ function emptyResponseFor(type: QuestionResponse["type"]): QuestionResponse {
  * Идемпотентна: повторный вызов пересчитывает автопроверяемые вопросы
  * (детерминированно — тот же материал, тот же ответ, тот же результат) и
  * НЕ трогает уже выставленную учителем ручную оценку (гарантия —
- * `repo.upsertGradedResponse`, читать её докстринг). После первого успешного
- * вызова `saveResponse` (Э8.7) отказывает — попытка зафиксирована.
+ * `repo.upsertGradedResponse`, читать её докстринг). Все ответы попытки
+ * пишутся одной транзакцией (`repo.upsertGradedResponses`): сдача либо
+ * целиком, либо никак. После первого успешного вызова `saveResponse` (Э8.7)
+ * отказывает — попытка зафиксирована.
  *
  * `score`/`maxScore` в ответе считают ТОЛЬКО автопроверяемые вопросы —
  * `settings.showFeedback` (когда его когда-либо доделают) здесь не
@@ -945,6 +947,7 @@ export async function submitActivity(
   const savedByQuestion = new Map(saved.map((r) => [r.questionId, r.response]));
 
   const feedback: SubmitFeedbackItem[] = [];
+  const graded: repo.GradedResponseInput[] = [];
   let score = 0;
   let maxScore = 0;
 
@@ -959,7 +962,7 @@ export async function submitActivity(
 
     const result = materialsService.gradeResponse(block.interaction, response, block.points);
 
-    await repo.upsertGradedResponse({
+    graded.push({
       attemptId,
       activityId,
       materialId: activity.materialId,
@@ -981,6 +984,7 @@ export async function submitActivity(
     maxScore += result.maxScore;
     if (result.autoGraded) score += result.score;
   }
+  await repo.upsertGradedResponses(graded);
 
   if (!activity.revealResults) {
     return { attemptId, revealed: false, score: 0, maxScore: 0, feedback: [] };
