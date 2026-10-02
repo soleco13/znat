@@ -115,8 +115,8 @@ export function importQuestionsFromDocument(file: File): Promise<ImportedQuestio
  * Резолв `assetId` (уже сохранённого в блоке материала) в подписанную
  * ссылку (§8 ТЗ `GET /assets/:id/url`) — доступен любой роли, в том числе
  * ученику, в отличие от `listMediaAssets`/`uploadMediaAsset` выше:
- * используется и живым превью редактора, и реальным плеером (оба через
- * `ContentBlockView`, `MaterialPlayer.tsx`).
+ * используется и живым превью редактора, и плеером ученика (оба через
+ * учебник, `textbook/TextbookBlocks.tsx`).
  */
 export function getAssetUrl(assetId: string): Promise<AssetUrl> {
   return apiFetch<AssetUrl>(`/assets/${assetId}/url`);

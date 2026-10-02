@@ -10,9 +10,7 @@ import { ScrollArea } from "@/shared/ui/scroll-area";
 import { CenteredSpinner } from "@/shared/ui/spinner";
 import { ActivityPlayer } from "../materials/ActivityPlayer.js";
 import { ActivityTeacherTabs } from "../materials/ActivityTeacherTabs.js";
-import { ContentBlockView } from "../materials/MaterialPlayer.js";
-import { QuestionPlayer } from "../materials/QuestionPlayer.js";
-import { SlideDeck } from "../materials/SlideDeck.js";
+import { TextbookView } from "../materials/textbook/TextbookView.js";
 import { MaterialAnnotationLayer } from "../materials/MaterialAnnotationLayer.js";
 import { useEditableAnnotations, useStudentAnnotationsPoll } from "../materials/useMaterialAnnotations.js";
 import { getStudentAttempt } from "../materials/activity-api.js";
@@ -295,67 +293,32 @@ function StudentAttemptView({
     attempt.material.blocks.filter((b) => b.type === "question").map((b) => [b.id, b]),
   );
 
-  // `data-annot-block` только на самом вопросе — его высота совпадает с
-  // плеером ученика; строка «ответ/верный ответ» ниже — вне якоря (у ученика
-  // её нет), см. `MaterialAnnotationLayer` (Э13).
-  const renderBlock = (block: (typeof publicMaterial.blocks)[number]) =>
-    block.type === "question" ? (
-      <div className="space-y-1.5">
-        <div data-annot-block={block.id}>
-          <QuestionPlayer
-            block={block}
-            value={attempt.responses[block.id]}
-            onChange={() => undefined}
-            disabled
-          />
-        </div>
-        <StudentAnswerLine
-          full={questionById.get(block.id)}
-          response={attempt.responses[block.id]}
-        />
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        {attempt.submittedAt ? (
+          <Badge variant="green">сдано</Badge>
+        ) : (
+          <Badge variant="gray">в работе</Badge>
+        )}
+        {attempt.lastActivityAt ? (
+          <span>изменено {new Date(attempt.lastActivityAt).toLocaleTimeString("ru-RU")}</span>
+        ) : null}
       </div>
-    ) : (
-      <div data-annot-block={block.id}>
-        <ContentBlockView block={block} />
-      </div>
-    );
-
-  const statusBar = (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-      <span>
-        Ответов: {attempt.answered}/{attempt.total}
-      </span>
-      {attempt.submittedAt ? (
-        <Badge variant="green">сдано</Badge>
-      ) : (
-        <Badge variant="gray">в работе</Badge>
-      )}
-      {attempt.lastActivityAt ? (
-        <span>изменено {new Date(attempt.lastActivityAt).toLocaleTimeString("ru-RU")}</span>
-      ) : null}
-    </div>
-  );
-
-  if (attempt.material.settings.layout === "slides") {
-    return (
-      <SlideDeck
-        blocks={publicMaterial.blocks}
-        groups={attempt.material.groups}
-        renderBlock={renderBlock}
-        header={statusBar}
+      {/* Тот же учебник, что у ученика: пометки учителя привязаны к блокам
+          и ложатся на ту же вёрстку. Строка «ответ / верный ответ» — под
+          заданием, видна только учителю. */}
+      <TextbookView
+        material={publicMaterial}
+        responses={attempt.responses}
+        disabled
+        showHead={false}
         overlay={overlay}
         initialBlockId={openAtBlockId}
+        renderAfterTask={(id) => (
+          <StudentAnswerLine full={questionById.get(id)} response={attempt.responses[id]} />
+        )}
       />
-    );
-  }
-
-  return (
-    <div className="relative space-y-3">
-      {statusBar}
-      {publicMaterial.blocks.map((block) => (
-        <div key={block.id}>{renderBlock(block)}</div>
-      ))}
-      {overlay}
     </div>
   );
 }
@@ -369,7 +332,7 @@ function StudentAnswerLine({
 }) {
   if (!full || full.type !== "question") return null;
   return (
-    <div className="grid gap-2 rounded-lg border border-border bg-secondary/50 p-2.5 text-sm sm:grid-cols-2">
+    <div className="mt-3 grid gap-2 rounded-lg border border-border bg-secondary/50 p-2.5 text-sm sm:grid-cols-2">
       <div>
         <p className="text-xs font-medium text-text-3">Ответ ученика</p>
         <p className="font-semibold text-foreground">

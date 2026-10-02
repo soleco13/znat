@@ -46,9 +46,7 @@ import { CenteredSpinner } from "@/shared/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { SimpleTooltip } from "@/shared/ui/tooltip";
 import { toast } from "@/shared/ui/sonner";
-import { ContentBlockView } from "./MaterialPlayer.js";
-import { QuestionPlayer } from "./QuestionPlayer.js";
-import { SlideDeck } from "./SlideDeck.js";
+import { TextbookView } from "./textbook/TextbookView.js";
 import { isPlaceholderMeta } from "./material-templates.js";
 import { MaterialDocEditor } from "./editor/MaterialDocEditor.js";
 import {
@@ -586,44 +584,19 @@ function MetaChip({
 function PreviewSheet({ material, readOnly }: { material: Material; readOnly: boolean }) {
   const [responses, setResponses] = useState<Record<string, QuestionResponse>>({});
   const publicMaterial = stripMaterialAnswerKeys(material, "editor-preview");
-  const slides = material.settings.layout === "slides";
-
-  const renderBlock = (block: (typeof publicMaterial.blocks)[number]) =>
-    block.type === "question" ? (
-      <QuestionPlayer
-        block={block}
-        value={responses[block.id]}
-        onChange={(r) => setResponses((prev) => ({ ...prev, [block.id]: r }))}
-      />
-    ) : (
-      <ContentBlockView block={block} />
-    );
 
   return (
     <div className="mx-auto w-full max-w-[720px] pb-24">
-      <div className="mb-4 rounded-lg border border-border bg-secondary/50 px-3 py-2 text-xs text-muted-foreground">
+      <div className="mb-6 rounded-lg border border-border bg-secondary/50 px-3 py-2 text-xs text-muted-foreground">
         {readOnly
           ? "Просмотр материала. Редактируют методист и администратор."
-          : slides
-            ? "Так материал видит ученик — слайдами. Ответы можно потыкать, они не сохраняются."
-            : "Так материал видит ученик. Ответы можно потыкать — они не сохраняются."}
+          : "Так материал видит ученик. Ответы можно потыкать, они не сохраняются."}
       </div>
-      <h1 className="ds-page-title mb-4">{material.title}</h1>
-      {publicMaterial.blocks.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Материал пуст</p>
-      ) : slides ? (
-        <SlideDeck
-          blocks={publicMaterial.blocks}
-          groups={material.groups}
-          renderBlock={renderBlock}
-        />
-      ) : (
-        <div className="flex flex-col gap-3">
-          {publicMaterial.blocks.map((block) => (
-            <div key={block.id}>{renderBlock(block)}</div>
-          ))}
-        </div>
-      )}
+      <TextbookView
+        material={publicMaterial}
+        responses={responses}
+        onResponseChange={(id, r) => setResponses((prev) => ({ ...prev, [id]: r }))}
+      />
     </div>
   );
 }

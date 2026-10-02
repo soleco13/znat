@@ -1,11 +1,9 @@
 import type {
-  PublicQuestionBlock,
   PublicQuestionInteraction,
   QuestionResponse,
 } from "@school/shared";
 
 import { sanitizeHtml } from "@/shared/sanitize-html";
-import { Badge } from "@/shared/ui/badge";
 import { Input } from "@/shared/ui/input";
 import {
   CategorizePlayer,
@@ -17,62 +15,13 @@ import {
 } from "./AdvancedInteractionPlayers.js";
 
 /**
- * Плеер заданий (Э8.4/8.5, §16 ТЗ: клавиатурная навигация во всех типах).
+ * Поля ответа заданий (Э8.4/8.5, §16 ТЗ: клавиатурная навигация во всех типах).
  * Принципиально — НАТИВНЫЕ элементы формы (radio/checkbox/text/number):
  * клавиатурная навигация и семантика для скринридеров бесплатно и корректно.
  * `interaction` уже очищен от ключа ответа (`PublicQuestionInteraction`).
- * Компонент контролируемый (`value`/`onChange`), без собственного состояния.
+ * Компоненты контролируемые (`value`/`onChange`), без собственного состояния.
+ * Формулировку, баллы и подсказку рисует учебник (`textbook/TextbookTask`).
  */
-export function QuestionPlayer({
-  block,
-  value,
-  onChange,
-  disabled = false,
-}: {
-  block: PublicQuestionBlock;
-  value: QuestionResponse | undefined;
-  onChange: (response: QuestionResponse) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <div className="mb-2 flex items-start justify-between gap-3">
-        <div
-          className="prose text-sm"
-          dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.prompt.html) }}
-        />
-        <Badge variant="muted" className="shrink-0">
-          {block.points} {pointsLabel(block.points)}
-        </Badge>
-      </div>
-      {block.hint && <HintDisclosure html={block.hint.html} />}
-      <div className="mt-3">
-        <InteractionPlayer
-          questionId={block.id}
-          interaction={block.interaction}
-          value={value}
-          onChange={onChange}
-          disabled={disabled}
-        />
-      </div>
-    </div>
-  );
-}
-
-function pointsLabel(points: number): string {
-  if (points === 1) return "балл";
-  if (points >= 2 && points <= 4) return "балла";
-  return "баллов";
-}
-
-function HintDisclosure({ html }: { html: string }) {
-  return (
-    <details className="mb-2 text-xs text-muted-foreground">
-      <summary className="cursor-pointer font-medium">Подсказка</summary>
-      <div className="prose mt-1" dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} />
-    </details>
-  );
-}
 
 /** Общий класс для строки-варианта с нативным input внутри. Высота строки —
  *  под тач-таргет (телефон/планшет), не только под 16px нативный контрол. */
@@ -80,7 +29,7 @@ const OPTION_ROW =
   "flex cursor-pointer items-center gap-2.5 rounded-md border border-transparent px-2 py-2.5 text-sm transition-colors hover:bg-secondary active:bg-secondary has-[:checked]:border-primary/40 has-[:checked]:bg-accent has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60";
 const NATIVE_CONTROL = "size-4 shrink-0 accent-[hsl(var(--primary))]";
 
-function InteractionPlayer({
+export function InteractionPlayer({
   questionId,
   interaction,
   value,

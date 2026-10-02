@@ -27,7 +27,7 @@ MathfieldElement.soundsDirectory = null;
  * размещает пространство имён `JSX` (React 19 уже переносило его).
  *
  * KaTeX-рендер формулы для ЧТЕНИЯ (превью/плеер, не редактирование) — не
- * здесь, а в `MaterialPlayer.tsx` (`ContentBlockView`, `case "formula"`):
+ * здесь, а в учебнике (`textbook/TextbookBlocks.tsx`, `Formula`):
  * `<math-field>` уже показывает формулу типографически набранной по мере
  * ввода, отдельный read-only превью рядом с полем был бы дублем того же
  * самого.

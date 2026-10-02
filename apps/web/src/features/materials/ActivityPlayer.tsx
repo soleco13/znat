@@ -48,7 +48,7 @@ export function ActivityPlayer({
     [],
   );
 
-  const handleSlideChange = useCallback(
+  const handlePositionChange = useCallback(
     (blockId: string) => {
       if (posTimer.current) clearTimeout(posTimer.current);
       posTimer.current = setTimeout(() => {
@@ -71,7 +71,7 @@ export function ActivityPlayer({
       autosaveActivityId={activityId}
       slideOverlay={annotationOverlay}
       initialSlideBlockId={activity.currentBlockId}
-      onSlideChange={handleSlideChange}
+      onPositionChange={handlePositionChange}
     />
   );
 }
