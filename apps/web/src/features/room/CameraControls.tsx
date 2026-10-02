@@ -3,6 +3,7 @@ import { useLocalParticipant } from "@livekit/components-react";
 import { VideoPresets, type VideoEncoding, type VideoResolution } from "livekit-client";
 import { Video, VideoOff } from "lucide-react";
 
+import { reportMediaDeviceError } from "./media-device-errors.js";
 import { RoomControlButton, type RoomControlVariant } from "./RoomControlButton.js";
 import { useSelfCameraUiStore } from "./self-camera-ui-store.js";
 
@@ -56,9 +57,10 @@ export function SelfCameraButton({
       onToggle={() => {
         const next = !desiredOn;
         setDesiredOn(next);
-        localParticipant.setCameraEnabled(next, { resolution: maxResolution }, { videoEncoding: encoding }).catch(() => {
+        localParticipant.setCameraEnabled(next, { resolution: maxResolution }, { videoEncoding: encoding }).catch((err: unknown) => {
           // Не получилось — откатываем намерение к тому, что реально есть.
           setDesiredOn(localParticipant.isCameraEnabled);
+          if (next) reportMediaDeviceError("camera", err);
         });
       }}
       caption="Камера"

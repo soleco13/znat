@@ -1,6 +1,7 @@
 import { useIsSpeaking, useLocalParticipant, useParticipants } from "@livekit/components-react";
 import { Mic, MicOff } from "lucide-react";
 
+import { reportMediaDeviceError } from "./media-device-errors.js";
 import { RoomControlButton, type RoomControlVariant } from "./RoomControlButton.js";
 
 /**
@@ -30,7 +31,12 @@ export function SelfMicButton({
       activeLabel="Микрофон"
       inactiveLabel="Включить звук"
       speaking={speaking && isMicrophoneEnabled}
-      onToggle={() => localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled)}
+      onToggle={() => {
+        const next = !isMicrophoneEnabled;
+        localParticipant.setMicrophoneEnabled(next).catch((err: unknown) => {
+          if (next) reportMediaDeviceError("microphone", err);
+        });
+      }}
       caption="Микрофон"
       disabled={disabled}
       title={disabled ? disabledReason : undefined}

@@ -23,6 +23,7 @@ export const CLIENT_EVENT_NAMES = [
   "pdf_load_started",
   "pdf_loaded",
   "pdf_load_failed",
+  "media_device_failed",
   "client_error",
 ] as const;
 export type ClientEventName = (typeof CLIENT_EVENT_NAMES)[number];

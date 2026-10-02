@@ -11,6 +11,7 @@ import {
 import type { JoinLessonResponse } from "@school/shared";
 
 import { apiFetch } from "@/shared/api-client";
+import { reportMediaDeviceError } from "./media-device-errors.js";
 import { reportLiveKitConnectionFailed } from "./MediaTelemetry.js";
 
 /**
@@ -96,8 +97,18 @@ export function MediaRecovery({
         callbacks.current.onRejoined(data);
         await room.connect(data.media.url, data.media.token, MEDIA_CONNECT_OPTIONS);
         attempt = 0;
-        if (wanted.microphone) await room.localParticipant.setMicrophoneEnabled(true).catch(() => undefined);
-        if (wanted.camera) await callbacks.current.restoreCamera(room.localParticipant).catch(() => undefined);
+        // Не вернулись микрофон или камера — человек должен узнать, иначе он
+        // говорит, а его после восстановления связи не слышно.
+        if (wanted.microphone) {
+          await room.localParticipant
+            .setMicrophoneEnabled(true)
+            .catch((err: unknown) => reportMediaDeviceError("microphone", err));
+        }
+        if (wanted.camera) {
+          await callbacks.current
+            .restoreCamera(room.localParticipant)
+            .catch((err: unknown) => reportMediaDeviceError("camera", err));
+        }
       } catch (err) {
         reportLiveKitConnectionFailed(lessonId, err, "recover");
         if (callbacks.current.onBlocked(err)) {
