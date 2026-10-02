@@ -13,6 +13,9 @@ import { StatusScreen } from "./ui/status-screen.js";
 
 type Access = "checking" | "allowed" | "denied";
 
+/** Пауза между попытками, пока сервер недоступен (деплой, обрыв сети). */
+const RETRY_MS = 3000;
+
 /**
  * Э12.6 — доступ к комнате урока для двух периметров: персонал с аккаунтом
  * (access-токен, восстанавливается через `/auth/refresh`) и гость-ученик
@@ -30,6 +33,7 @@ export function RequireRoomAccess({ children }: { children: ReactNode }) {
   // он тут ученик. `guestMode` в api-клиенте выставляем под выбранный путь,
   // чтобы staff-Bearer не «перебил» гостевую куку на сервере.
   const [access, setAccess] = useState<Access>(hasGuest ? "allowed" : "checking");
+  const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,8 +55,14 @@ export function RequireRoomAccess({ children }: { children: ReactNode }) {
       // 3. Ни того, ни другого (перезагрузка / прямой переход по URL). Сперва
       //    пробуем восстановить гостя ЭТОГО урока — только потом staff-путь
       //    (иначе `refreshAccessToken` по staff-куке увёл бы гостя в staff).
-      const restored = await restoreGuestSession();
-      if (cancelled) return;
+      let restored = await restoreGuestSession();
+      while (restored === "unavailable" && !cancelled) {
+        setUnavailable(true);
+        await new Promise((resolve) => setTimeout(resolve, RETRY_MS));
+        if (cancelled) return;
+        restored = await restoreGuestSession();
+      }
+      if (cancelled || restored === "unavailable") return;
       if (restored && restored.lessonId === id) {
         setAccess("allowed");
         return;
@@ -65,7 +75,8 @@ export function RequireRoomAccess({ children }: { children: ReactNode }) {
       // Сервер недоступен (деплой, обрыв сети) — ждём, а не показываем «нет доступа».
       let outcome = await refreshAccessTokenDetailed();
       while (outcome === "unavailable" && !cancelled) {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        setUnavailable(true);
+        await new Promise((resolve) => setTimeout(resolve, RETRY_MS));
         if (cancelled) return;
         outcome = await refreshAccessTokenDetailed();
       }
@@ -77,7 +88,8 @@ export function RequireRoomAccess({ children }: { children: ReactNode }) {
     };
   }, [accessToken, hasGuest, id]);
 
-  if (access === "checking") return <FullscreenLoader label="Проверяем доступ…" />;
+  if (access === "checking")
+    return <FullscreenLoader label={unavailable ? "Сервер недоступен, переподключаемся…" : "Проверяем доступ…"} />;
 
   if (access === "denied") {
     return (

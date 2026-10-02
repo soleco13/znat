@@ -1,6 +1,6 @@
 import type { GuestEnterResponse, GuestLessonInfo, GuestSession } from "@school/shared";
 
-import { apiFetch, setGuestMode } from "@/shared/api-client";
+import { ApiError, apiFetch, setGuestMode } from "@/shared/api-client";
 import { useGuestSessionStore } from "./guest-session-store.js";
 
 /** Публичная карточка урока по ссылке (`GET /j/:token`) — имя урока + настройки. */
@@ -33,9 +33,11 @@ export async function enterGuestLesson(
  * Восстановление гостевой личности из куки при перезагрузке страницы урока
  * (`GET /guest/session`). Возвращает `null`, если куки нет или сессия
  * недействительна (истекла / ссылку перевыпустили) — тогда нужен перезаход
- * по ссылке.
+ * по ссылке. `"unavailable"` — сервер не ответил (деплой, обрыв сети): раньше
+ * это тоже давало `null`, и ученик, обновивший страницу во время деплоя,
+ * видел «Нет доступа к уроку».
  */
-export async function restoreGuestSession(): Promise<GuestSession | null> {
+export async function restoreGuestSession(): Promise<GuestSession | null | "unavailable"> {
   try {
     // `_retry: false` — на 401 не дёргаем staff-`/auth/refresh`: это гостевой
     // эндпоинт, персональный токен ему не поможет, а лишний перезапрос
@@ -44,7 +46,8 @@ export async function restoreGuestSession(): Promise<GuestSession | null> {
     setGuestMode(true);
     useGuestSessionStore.getState().setSession(session);
     return session;
-  } catch {
-    return null;
+  } catch (err) {
+    if (err instanceof ApiError && err.status >= 400 && err.status < 500 && err.status !== 429) return null;
+    return "unavailable";
   }
 }

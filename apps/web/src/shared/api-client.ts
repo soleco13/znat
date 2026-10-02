@@ -1,3 +1,4 @@
+import type { MeResponse } from "@school/shared";
 import { useAuthStore } from "./auth-store.js";
 import { clientSessionId } from "./telemetry.js";
 
@@ -40,32 +41,49 @@ export function setGuestMode(on: boolean): void {
   guestMode = on;
 }
 
+/**
+ * Сколько ждать ответа API. Без предела запрос на «зависшей» мобильной сети
+ * или при недоступном Redis на сервере не завершался никогда: вход в урок
+ * висел на «Подключаем звук и видео…» без кнопки «Повторить». Загрузки файлов
+ * (`FormData`) не ограничиваем — большой файл на медленной сети идёт дольше.
+ */
+const REQUEST_TIMEOUT_MS = 30_000;
+
+/** Таймаут запроса: сервер не ответил за `REQUEST_TIMEOUT_MS`. */
+export const TIMEOUT_ERROR_CODE = "timeout";
+
 export type RefreshOutcome = "ok" | "unauthorized" | "unavailable";
 
 let refreshInFlight: Promise<RefreshOutcome> | null = null;
 
 async function requestRefresh(): Promise<RefreshOutcome> {
-  let res: Response;
+  // Таймаут и разбор тела — внутри try: зависший или оборванный ответ раньше
+  // ронял промис, и экраны «Проверяем вход/доступ…» висели навсегда.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    res = await fetch(`${API_BASE}/auth/refresh`, {
+    const res = await fetch(`${API_BASE}/auth/refresh`, {
       method: "POST",
       credentials: "include",
       headers: correlationHeaders(new Headers()),
+      signal: controller.signal,
     });
+    // Выходим только когда сервер точно сказал «сессии нет». 502 во время
+    // деплоя, 429 или обрыв сети раньше тоже стирали вход — учителя
+    // выбрасывало на страницу логина посреди урока.
+    if (res.status === 401 || res.status === 403) {
+      useAuthStore.getState().clearAuth();
+      return "unauthorized";
+    }
+    if (!res.ok) return "unavailable";
+    const data = (await res.json()) as { accessToken: string; user: MeResponse };
+    useAuthStore.getState().setAuth(data.accessToken, data.user);
+    return "ok";
   } catch {
     return "unavailable";
+  } finally {
+    clearTimeout(timer);
   }
-  // Выходим только когда сервер точно сказал «сессии нет». 502 во время
-  // деплоя, 429 или обрыв сети раньше тоже стирали вход — учителя
-  // выбрасывало на страницу логина посреди урока.
-  if (res.status === 401 || res.status === 403) {
-    useAuthStore.getState().clearAuth();
-    return "unauthorized";
-  }
-  if (!res.ok) return "unavailable";
-  const data = await res.json();
-  useAuthStore.getState().setAuth(data.accessToken, data.user);
-  return "ok";
 }
 
 /**
@@ -77,9 +95,9 @@ async function requestRefresh(): Promise<RefreshOutcome> {
 export async function refreshAccessTokenDetailed(): Promise<RefreshOutcome> {
   if (!refreshInFlight) {
     const locks = typeof navigator !== "undefined" ? navigator.locks : undefined;
-    const run: Promise<RefreshOutcome> = locks
-      ? locks.request("auth-refresh", requestRefresh).then((outcome) => outcome)
-      : requestRefresh();
+    const run: Promise<RefreshOutcome> = (
+      locks ? locks.request("auth-refresh", requestRefresh).then((outcome) => outcome) : requestRefresh()
+    ).catch((): RefreshOutcome => "unavailable");
     refreshInFlight = run.finally(() => {
       refreshInFlight = null;
     });
@@ -127,24 +145,47 @@ export async function apiFetch<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-    credentials: "include",
-  });
+  const controller = new AbortController();
+  const outer = options.signal;
+  const onOuterAbort = () => controller.abort(outer?.reason);
+  if (outer?.aborted) controller.abort(outer.reason);
+  else outer?.addEventListener("abort", onOuterAbort, { once: true });
+  let timedOut = false;
+  const timer =
+    options.body instanceof FormData
+      ? null
+      : setTimeout(() => {
+          timedOut = true;
+          controller.abort();
+        }, REQUEST_TIMEOUT_MS);
 
-  if (res.status === 401 && _retry && !guestMode) {
-    const refreshed = await refreshAccessToken();
-    if (refreshed) {
-      return apiFetch<T>(path, options, false);
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      credentials: "include",
+      signal: controller.signal,
+    });
+
+    if (res.status === 401 && _retry && !guestMode) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        return await apiFetch<T>(path, options, false);
+      }
     }
-  }
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: "unknown_error", message: res.statusText }));
-    throw new ApiError(res.status, body.error ?? "unknown_error", body.message ?? res.statusText);
-  }
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: "unknown_error", message: res.statusText }));
+      throw new ApiError(res.status, body.error ?? "unknown_error", body.message ?? res.statusText);
+    }
 
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+    if (res.status === 204) return undefined as T;
+    return (await res.json()) as T;
+  } catch (err) {
+    if (timedOut) throw new ApiError(0, TIMEOUT_ERROR_CODE, "Сервер не отвечает — проверьте интернет");
+    throw err;
+  } finally {
+    if (timer) clearTimeout(timer);
+    outer?.removeEventListener("abort", onOuterAbort);
+  }
 }
