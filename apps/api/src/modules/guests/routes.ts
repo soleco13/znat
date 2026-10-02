@@ -17,7 +17,7 @@ import * as roomsService from "../rooms/service.js";
  */
 export default async function guestsRoutes(app: FastifyInstance) {
   const rateLimited = {
-    config: { rateLimit: { max: 300, timeWindow: "1 minute" } },
+    config: { rateLimit: { max: env.RATE_LIMIT_GUEST_ENTRY_PER_MINUTE, timeWindow: "1 minute" } },
   };
 
   app.get<{ Params: { token: string } }>("/j/:token", rateLimited, async (request, reply) => {

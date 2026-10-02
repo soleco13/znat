@@ -1,11 +1,12 @@
 import type { FastifyRequest } from "fastify";
 import { verifyAccessToken } from "../modules/auth/service.js";
 import { GUEST_COOKIE_NAME, verifyGuestToken } from "../modules/guests/service.js";
+import { env } from "./env.js";
 
 /** Запросов в минуту на одного вошедшего человека — с запасом на опросы и автосохранение во время задания. */
 export const IDENTITY_RATE_LIMIT_PER_MINUTE = 300;
 /** Анонимные запросы (лендинг, логин) — по IP. */
-export const ANONYMOUS_RATE_LIMIT_PER_MINUTE = 100;
+export const ANONYMOUS_RATE_LIMIT_PER_MINUTE = env.RATE_LIMIT_ANONYMOUS_PER_MINUTE;
 
 /**
  * Ключ лимита — личность, а не IP: класс за школьным роутером, семья или
