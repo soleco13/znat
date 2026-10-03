@@ -19,6 +19,8 @@ export function MaterialPlayer({
   slideOverlay,
   initialSlideBlockId = null,
   onPositionChange,
+  showHead = true,
+  barEnd,
 }: {
   activity: MyActivity;
   autosaveActivityId?: string | null;
@@ -30,6 +32,9 @@ export function MaterialPlayer({
   initialSlideBlockId?: string | null;
   /** Ученик читает этот блок (для отправки позиции на сервер). */
   onPositionChange?: (blockId: string) => void;
+  /** Заголовок материала над панелью; на уроке его заменяет шапка урока. */
+  showHead?: boolean;
+  barEnd?: React.ReactNode;
 }) {
   const [responses, setResponses] = useState<Record<string, QuestionResponse>>(
     () => ({ ...activity.savedResponses }),
@@ -91,6 +96,8 @@ export function MaterialPlayer({
       overlay={slideOverlay}
       initialBlockId={initialSlideBlockId}
       onPositionChange={onPositionChange}
+      showHead={showHead}
+      barEnd={barEnd}
     />
   );
 }

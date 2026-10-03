@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Minimize2, Pencil } from "lucide-react";
 import type { ActivityStudentAttempt, MaterialBlock, QuestionResponse } from "@school/shared";
 import { stripMaterialAnswerKeys } from "@school/shared";
 
@@ -8,6 +8,7 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { ScrollArea } from "@/shared/ui/scroll-area";
 import { CenteredSpinner } from "@/shared/ui/spinner";
+import { SimpleTooltip } from "@/shared/ui/tooltip";
 import { ActivityPlayer } from "../materials/ActivityPlayer.js";
 import { ActivityTeacherTabs } from "../materials/ActivityTeacherTabs.js";
 import { TextbookView } from "../materials/textbook/TextbookView.js";
@@ -34,23 +35,18 @@ export function ActivityStage({
   reviewSignal?: number;
   onClose?: () => void;
 }) {
+  if (!isTeacher) return <StudentActivityStage activityId={activityId} onClose={onClose} />;
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-      {isTeacher ? (
-        <TeacherActivityStage
-          activityId={activityId}
-          reviewSignal={reviewSignal}
-          onClose={onClose}
-        />
-      ) : (
-        <StudentActivityStage activityId={activityId} onClose={onClose} />
-      )}
+      <TeacherActivityStage activityId={activityId} reviewSignal={reviewSignal} onClose={onClose} />
     </div>
   );
 }
 
 /**
- * Ученик решает свою копию задания. Поверх материала — слой пометок учителя
+ * Ученик решает свою копию задания. Учебник занимает весь стейдж, без рамки
+ * и заголовка, как в макете «Учебник ученика»: название урока уже в шапке,
+ * «Свернуть» — в панели учебника. Поверх материала — слой пометок учителя
  * (Э13): read-only, `pointer-events: none`, опрашивается раз в 3 сек, чтобы
  * карандашные объяснения учителя появлялись сами, не мешая вводу ответов.
  */
@@ -63,31 +59,33 @@ function StudentActivityStage({
 }) {
   const strokes = useStudentAnnotationsPoll(activityId, true);
   return (
-    <>
-      <StageHeader
-        title="Задание"
-        onClose={onClose}
-        left={
-          strokes.length > 0 ? (
-            <Badge variant="blue" className="shrink-0">
-              <Pencil className="mr-1 size-3" aria-hidden />
-              пометки учителя
-            </Badge>
-          ) : undefined
-        }
-      />
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="mx-auto max-w-[1440px] p-4">
-          {/* Ширину не зажимаем: на широкой панели учебник раскрывается
-              разворотом. Слой пометок учителя уходит внутрь учебника — на
-              каждую страницу свой (см. `TextbookView`). */}
-          <ActivityPlayer
-            activityId={activityId}
-            annotationOverlay={<MaterialAnnotationLayer strokes={strokes} editable={false} />}
-          />
-        </div>
-      </ScrollArea>
-    </>
+    <ScrollArea className="h-full min-h-0 rounded-xl">
+      {/* Ширину не зажимаем: на широкой панели учебник раскрывается
+          разворотом. Слой пометок учителя уходит внутрь учебника — на
+          каждую страницу свой (см. `TextbookView`). Снизу — место под
+          плавающее окно учителя, чтобы оно не закрывало конец страницы. */}
+      <div className="pb-24">
+        <ActivityPlayer
+          activityId={activityId}
+          showHead={false}
+          annotationOverlay={<MaterialAnnotationLayer strokes={strokes} editable={false} />}
+          barEnd={
+            onClose ? (
+              <SimpleTooltip content="Свернуть задание">
+                <button
+                  type="button"
+                  aria-label="Свернуть задание"
+                  onClick={onClose}
+                  className="tb-iconbtn tb-iconbtn--muted"
+                >
+                  <Minimize2 aria-hidden />
+                </button>
+              </SimpleTooltip>
+            ) : undefined
+          }
+        />
+      </div>
+    </ScrollArea>
   );
 }
 

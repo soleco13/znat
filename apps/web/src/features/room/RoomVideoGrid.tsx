@@ -6,7 +6,18 @@ import {
   VideoTrack,
 } from "@livekit/components-react";
 import { ConnectionQuality, Track } from "livekit-client";
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Hand, MicOff, Pin, SignalLow } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Hand,
+  Maximize2,
+  MicOff,
+  Minimize2,
+  Pin,
+  SignalLow,
+} from "lucide-react";
 import type { LessonMode, ParticipantSnapshot } from "@school/shared";
 
 import { cn } from "@/lib/utils";
@@ -38,6 +49,9 @@ type TileSize = "lg" | "md" | "sm" | "xs";
  *    высоту и лента 3:4 под ним.
  *  - `variant="rail"` — узкая колонка 190px рядом с доской/демонстрацией
  *    (на телефоне — та же лента 3:4 под главным блоком).
+ *  - `variant="pip"` — только учитель, плавающим окном в правом нижнем углу
+ *    родителя (`position: relative`); сворачивается в плашку «Учитель».
+ *    Так камера учителя переносится, когда учебнику нужна вся ширина.
  */
 export function RoomVideoGrid({
   participants,
@@ -51,7 +65,7 @@ export function RoomVideoGrid({
   selfId: string | undefined;
   /** Режим урока — оставлен для §6.4, на форму сетки пока не влияет. */
   mode?: LessonMode;
-  variant?: "grid" | "rail";
+  variant?: "grid" | "rail" | "pip";
   /** «Ещё» → «Вид: сетка / докладчик» — клиентское предпочтение, только для `grid`. */
   layout?: "grid" | "speaker";
   onLayoutChange?: (layout: "grid" | "speaker") => void;
@@ -103,6 +117,7 @@ export function RoomVideoGrid({
 
   const [page, setPage] = useState(0);
   const [railExpanded, setRailExpanded] = useState(false);
+  const [pipOpen, setPipOpen] = useState(true);
 
   // Кого показывать крупно (телефон, «докладчик»): закреплённый → последний
   // говоривший (не сбрасывается в тишине, чтобы не прыгало) → учитель → первый.
@@ -267,6 +282,50 @@ export function RoomVideoGrid({
   };
 
   if (tiles.length === 0) return null;
+
+  if (variant === "pip") {
+    const teacher =
+      tiles.find((p) => p.kind === "staff" && p.userId !== selfId) ??
+      tiles.find((p) => p.userId !== selfId);
+    if (!teacher) return null;
+    const label = teacher.kind === "staff" ? "Учитель" : teacher.fullName;
+    return (
+      <div className={cn("absolute z-20", narrow ? "bottom-2.5 right-2.5" : "bottom-3.5 right-3.5")}>
+        {pipOpen ? (
+          <div
+            className={cn(
+              "relative rounded-xl shadow-[0_0_0_2px_hsl(var(--primary)),0_12px_28px_rgba(16,24,40,.22)]",
+              narrow ? "w-[120px]" : "w-[168px]",
+            )}
+          >
+            {renderTile(teacher, narrow ? "xs" : "sm", "aspect-[16/10] w-full")}
+            <button
+              type="button"
+              onClick={() => setPipOpen(false)}
+              aria-label={`Свернуть видео: ${label}`}
+              className="absolute right-1.5 top-1.5 flex size-7 items-center justify-center rounded-full bg-[rgba(16,24,40,.6)] text-white transition-colors hover:bg-[rgba(16,24,40,.8)]"
+            >
+              <Minimize2 className="size-3.5" aria-hidden />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPipOpen(true)}
+            aria-label={`Показать видео: ${label}`}
+            className="flex h-11 items-center gap-2 whitespace-nowrap rounded-full border border-border bg-card py-0 pl-1.5 pr-3.5 text-[13.5px] font-semibold text-foreground shadow-[0_8px_20px_rgba(16,24,40,.14)]"
+          >
+            <span className="relative flex size-8 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#eff4ff,#effcf9)] text-xs font-bold text-primary">
+              {initialsOf(teacher.fullName)}
+              <span className="absolute -bottom-px -right-px size-2.5 rounded-full border-2 border-card bg-success" />
+            </span>
+            {label}
+            <Maximize2 className="size-3.5 text-text-3" aria-hidden />
+          </button>
+        )}
+      </div>
+    );
+  }
 
   if (variant === "rail") {
     if (narrow) return strip(tiles);

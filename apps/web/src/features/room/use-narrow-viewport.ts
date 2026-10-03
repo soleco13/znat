@@ -15,3 +15,19 @@ export function useIsNarrowViewport(): boolean {
   }, []);
   return narrow;
 }
+
+/** Окно не уже `px` — например, хватает ли места рейлу камер рядом с учебником. */
+export function useMinViewportWidth(px: number): boolean {
+  const query = `(min-width: ${px}px)`;
+  const [matches, setMatches] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(query).matches,
+  );
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const onChange = () => setMatches(mql.matches);
+    onChange();
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, [query]);
+  return matches;
+}

@@ -60,6 +60,7 @@ export function TextbookView({
   initialBlockId = null,
   onPositionChange,
   renderAfterTask,
+  barEnd,
 }: {
   material: {
     title: string;
@@ -81,6 +82,8 @@ export function TextbookView({
   onPositionChange?: (blockId: string, pageIndex: number) => void;
   /** Доп. содержимое под заданием (учителю — ответ ученика и верный ответ). */
   renderAfterTask?: (blockId: string) => React.ReactNode;
+  /** Доп. кнопки в конце панели навигации (на уроке — «Свернуть»). */
+  barEnd?: React.ReactNode;
 }) {
   const book = useMemo(
     () => buildTextbook(material.blocks, material.settings.layout),
@@ -323,6 +326,8 @@ export function TextbookView({
             </>
           ) : null}
           <span className="tb-bar-grow" />
+          {/* Без шапки (на уроке) дедлайн и сохранение — в панели. */}
+          {!showHead && meta ? <span className="tb-bar-meta">{meta}</span> : null}
           {totalTasks > 0 ? (
             <span
               className={cn("tb-dots", totalTasks > MAX_DOTS && "tb-dots--count")}
@@ -360,6 +365,7 @@ export function TextbookView({
               <Plus aria-hidden />
             </button>
           </div>
+          {barEnd}
         </div>
 
         <div className={cn("tb-desk", sideArrows && "tb-desk--arrows")}>

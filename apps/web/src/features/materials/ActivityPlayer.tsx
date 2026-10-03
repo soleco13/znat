@@ -21,9 +21,13 @@ const POSITION_DEBOUNCE_MS = 800;
 export function ActivityPlayer({
   activityId,
   annotationOverlay,
+  showHead,
+  barEnd,
 }: {
   activityId: string;
   annotationOverlay?: React.ReactNode;
+  showHead?: boolean;
+  barEnd?: React.ReactNode;
 }) {
   const [activity, setActivity] = useState<MyActivity | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +76,8 @@ export function ActivityPlayer({
       slideOverlay={annotationOverlay}
       initialSlideBlockId={activity.currentBlockId}
       onPositionChange={handlePositionChange}
+      showHead={showHead}
+      barEnd={barEnd}
     />
   );
 }

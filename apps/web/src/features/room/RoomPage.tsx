@@ -108,7 +108,7 @@ import { formatClock, participantsCount } from "./format.js";
 import { ScreenShareAutoPip, type ScreenShareAutoPipHandle } from "./ScreenShareAutoPip.js";
 import { RoomControlButton, type RoomControlVariant } from "./RoomControlButton.js";
 import { useRoomIdentity } from "./use-room-identity.js";
-import { useIsNarrowViewport } from "./use-narrow-viewport.js";
+import { useIsNarrowViewport, useMinViewportWidth } from "./use-narrow-viewport.js";
 import { SelfMicButton } from "./MicControls.js";
 import { MicSync } from "./MicSync.js";
 import { ParticipantMenu } from "./ParticipantMenu.js";
@@ -2099,6 +2099,9 @@ function PeopleList({
   );
 }
 
+/** С этой ширины окна у ученика с заданием камеры стоят рейлом справа от учебника. */
+const STUDENT_RAIL_MIN_WIDTH = 1360;
+
 /**
  * Э12.7 §6.2 — контент стейджа при активном LiveKit (использует `useTracks`).
  *  - активная демонстрация экрана показывается поверх плиток И доски;
@@ -2147,6 +2150,7 @@ function StageContent({
   // демонстрацию, и пока она грузится, `ScreenShareTile` показывает лоадер.
   const screenSharing =
     useTracks([Track.Source.ScreenShare], { onlySubscribed: false }).length > 0;
+  const studentRail = useMinViewportWidth(STUDENT_RAIL_MIN_WIDTH);
 
   const main =
     view === "activity" && activityId ? (
@@ -2175,6 +2179,26 @@ function StageContent({
         onShowAll={onShowAll}
       />
     );
+
+  // Ученик с заданием: учебник на весь стейдж (разворот), как в макете
+  // «Учебник ученика». Камера учителя — в рейле справа, если окно не уже
+  // 1360px; иначе — плавающим окном поверх угла учебника (и на телефоне
+  // вместо ленты плиток под ним, которая съедала высоту страницы).
+  if (view === "activity" && activityId && !isTeacher) {
+    return (
+      <div className="flex min-h-0 flex-1 gap-3">
+        <div className="relative min-h-0 min-w-0 flex-1">
+          {main}
+          {studentRail ? null : (
+            <RoomVideoGrid participants={participants} selfId={selfId} variant="pip" />
+          )}
+        </div>
+        {studentRail ? (
+          <RoomVideoGrid participants={participants} selfId={selfId} mode={mode} variant="rail" onShowAll={onShowAll} />
+        ) : null}
+      </div>
+    );
+  }
 
   const railed =
     (view === "activity" && activityId) || screenSharing || (view === "board" && lessonId);
