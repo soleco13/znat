@@ -294,6 +294,9 @@ function formatClock(sec: number): string {
   return `${m}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
 }
 
+/** duration бывает NaN до метаданных и Infinity у потоков. */
+const finiteOr0 = (n: number) => (Number.isFinite(n) ? n : 0);
+
 /** Аудио из медиатеки: кнопка, полоса перемотки и время; расшифровка по запросу. */
 function Audio({ assetId, transcript }: { assetId: string; transcript?: string }) {
   const { url, error, retry } = useAssetUrl(assetId);
@@ -319,8 +322,15 @@ function Audio({ assetId, transcript }: { assetId: string; transcript?: string }
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onEnded={() => setPlaying(false)}
-        onLoadedMetadata={(e) => setTime((t) => ({ ...t, total: e.currentTarget.duration }))}
-        onTimeUpdate={(e) => setTime({ now: e.currentTarget.currentTime, total: e.currentTarget.duration })}
+        onLoadedMetadata={(e) => {
+          // Читаем до setState: апдейтер вызывается позже, когда currentTarget уже null.
+          const total = finiteOr0(e.currentTarget.duration);
+          setTime((t) => ({ ...t, total }));
+        }}
+        onTimeUpdate={(e) => {
+          const el = e.currentTarget;
+          setTime({ now: el.currentTime, total: finiteOr0(el.duration) });
+        }}
       />
       <div className="tb-audio-row">
         <button
