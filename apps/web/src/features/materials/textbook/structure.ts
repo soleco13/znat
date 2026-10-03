@@ -30,6 +30,8 @@ export interface TextbookStructure {
   taskNumber: Map<string, number>;
   /** Сквозной номер рисунка (с 1) по id блока-картинки. */
   figureNumber: Map<string, number>;
+  /** Сквозной номер формулы (с 1) по id блока-формулы. */
+  formulaNumber: Map<string, number>;
   /** Индекс страницы по id любого её блока. */
   pageOfBlock: Map<string, number>;
 }
@@ -40,9 +42,11 @@ export function buildTextbook(
 ): TextbookStructure {
   const taskNumber = new Map<string, number>();
   const figureNumber = new Map<string, number>();
+  const formulaNumber = new Map<string, number>();
   for (const b of blocks) {
     if (b.type === "question") taskNumber.set(b.id, taskNumber.size + 1);
     else if (b.type === "image") figureNumber.set(b.id, figureNumber.size + 1);
+    else if (b.type === "formula") formulaNumber.set(b.id, formulaNumber.size + 1);
   }
 
   const byId = new Map(blocks.map((b) => [b.id, b]));
@@ -67,7 +71,7 @@ export function buildTextbook(
       };
     });
 
-  return { pages, taskNumber, figureNumber, pageOfBlock };
+  return { pages, taskNumber, figureNumber, formulaNumber, pageOfBlock };
 }
 
 /**

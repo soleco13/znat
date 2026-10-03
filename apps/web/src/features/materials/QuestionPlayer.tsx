@@ -4,7 +4,6 @@ import type {
 } from "@school/shared";
 
 import { sanitizeHtml } from "@/shared/sanitize-html";
-import { Input } from "@/shared/ui/input";
 import {
   CategorizePlayer,
   ClozeDropdownPlayer,
@@ -23,11 +22,8 @@ import {
  * Формулировку, баллы и подсказку рисует учебник (`textbook/TextbookTask`).
  */
 
-/** Общий класс для строки-варианта с нативным input внутри. Высота строки —
- *  под тач-таргет (телефон/планшет), не только под 16px нативный контрол. */
-const OPTION_ROW =
-  "flex cursor-pointer items-center gap-2.5 rounded-md border border-transparent px-2 py-2.5 text-sm transition-colors hover:bg-secondary active:bg-secondary has-[:checked]:border-primary/40 has-[:checked]:bg-accent has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60";
-const NATIVE_CONTROL = "size-4 shrink-0 accent-[hsl(var(--primary))]";
+/** Оформление полей — в textbook/textbook.css (.tb-opt, .tb-seg, .tb-input …).
+ *  Контролы нативные, оформлены стилями: клавиатура и скринридеры работают сами. */
 
 export function InteractionPlayer({
   questionId,
@@ -194,19 +190,17 @@ function HighlightTextPlayer({
   }
 
   return (
-    <fieldset className="flex flex-wrap gap-x-1 gap-y-1.5 text-sm leading-8">
+    <fieldset className="tb-tokens">
       <legend className="sr-only">Выделите нужные слова</legend>
       {tokens.map((t) => (
-        <label key={t.id} className="cursor-pointer">
+        <label key={t.id} className="tb-token">
           <input
             type="checkbox"
-            className="peer sr-only"
             checked={selected.has(t.id)}
             disabled={disabled}
             onChange={(e) => toggle(t.id, e.target.checked)}
           />
           <span
-            className="rounded px-2 py-1 transition-colors hover:bg-secondary peer-checked:bg-primary/20 peer-checked:text-primary peer-checked:underline peer-checked:decoration-2 peer-checked:underline-offset-2 peer-disabled:cursor-not-allowed peer-disabled:opacity-60"
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(t.text) }}
           />
         </label>
@@ -236,25 +230,25 @@ function TableFillPlayer({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="border-collapse text-sm">
+    <div className="tb-table-wrap">
+      <table className="tb-fill">
         <tbody>
           {rows.map((row, ri) => (
             <tr key={ri}>
               {row.map((cell, ci) =>
                 cell.kind === "static" ? (
-                  <td key={ci} className="border border-border px-2 py-1">
+                  <td key={ci}>
                     <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(cell.text) }} />
                   </td>
                 ) : (
-                  <td key={ci} className="border border-border px-2 py-1">
+                  <td key={ci} className="tb-fill-cell">
                     <label htmlFor={`tf-${cell.id}`} className="sr-only">
                       Ячейка {ri + 1}-{ci + 1}
                     </label>
-                    <Input
+                    <input
                       id={`tf-${cell.id}`}
                       type="text"
-                      className="h-9 w-32"
+                      className="tb-fill-input"
                       value={values[cell.id] ?? ""}
                       disabled={disabled}
                       onChange={(e) => setValue(cell.id, e.target.value)}
@@ -284,15 +278,14 @@ function SingleChoicePlayer({
   disabled: boolean;
 }) {
   return (
-    <fieldset className="flex flex-col gap-0.5">
+    <fieldset className="tb-options">
       <legend className="sr-only">Выберите один вариант ответа</legend>
       {options.map((option) => (
-        <label key={option.id} className={OPTION_ROW}>
+        <label key={option.id} className="tb-opt">
           <input
             type="radio"
             name={`q-${questionId}`}
             value={option.id}
-            className={NATIVE_CONTROL}
             checked={value?.selectedOptionId === option.id}
             disabled={disabled}
             onChange={() => onChange({ type: "single_choice", selectedOptionId: option.id })}
@@ -327,14 +320,13 @@ function MultipleChoicePlayer({
   }
 
   return (
-    <fieldset className="flex flex-col gap-0.5">
+    <fieldset className="tb-options">
       <legend className="sr-only">Выберите один или несколько вариантов ответа</legend>
       {options.map((option) => (
-        <label key={option.id} className={OPTION_ROW}>
+        <label key={option.id} className="tb-opt">
           <input
             type="checkbox"
             id={`q-${questionId}-${option.id}`}
-            className={`${NATIVE_CONTROL} rounded`}
             checked={selected.has(option.id)}
             disabled={disabled}
             onChange={(e) => toggle(option.id, e.target.checked)}
@@ -358,24 +350,22 @@ function TrueFalsePlayer({
   disabled: boolean;
 }) {
   return (
-    <fieldset className="flex gap-2">
+    <fieldset className="tb-seg">
       <legend className="sr-only">Верно или неверно</legend>
-      <label className={OPTION_ROW}>
+      <label>
         <input
           type="radio"
           name={`q-${questionId}`}
-          className={NATIVE_CONTROL}
           checked={value?.value === true}
           disabled={disabled}
           onChange={() => onChange({ type: "true_false", value: true })}
         />
         Верно
       </label>
-      <label className={OPTION_ROW}>
+      <label>
         <input
           type="radio"
           name={`q-${questionId}`}
-          className={NATIVE_CONTROL}
           checked={value?.value === false}
           disabled={disabled}
           onChange={() => onChange({ type: "true_false", value: false })}
@@ -403,9 +393,11 @@ function TextInputPlayer({
       <label htmlFor={inputId} className="sr-only">
         Ваш ответ
       </label>
-      <Input
+      <input
         id={inputId}
         type="text"
+        className="tb-input"
+        placeholder="Ваш ответ"
         value={value?.value ?? ""}
         disabled={disabled}
         onChange={(e) => onChange({ type: "text_input", value: e.target.value })}
@@ -446,28 +438,30 @@ function NumericInputPlayer({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="tb-input-row">
       <label htmlFor={valueInputId} className="sr-only">
         Числовой ответ
       </label>
-      <Input
+      <input
         id={valueInputId}
         type="number"
         step="any"
-        className="w-32"
+        inputMode="decimal"
+        placeholder="число"
+        className="tb-input tb-input--num"
         value={value?.value ?? ""}
         disabled={disabled}
         onChange={(e) => setValue(e.target.value)}
       />
       {unitRequired && (
         <>
-          <label htmlFor={unitInputId} className="text-xs text-muted-foreground">
+          <label htmlFor={unitInputId} className="tb-input-hint">
             Единица измерения{unit ? ` (например, ${unit})` : ""}
           </label>
-          <Input
+          <input
             id={unitInputId}
             type="text"
-            className="w-24"
+            className="tb-input tb-input--num"
             value={value?.unit ?? ""}
             disabled={disabled}
             onChange={(e) => setUnit(e.target.value)}

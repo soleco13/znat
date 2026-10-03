@@ -5,8 +5,6 @@ import {
   KeyboardSensor,
   PointerSensor,
   closestCenter,
-  useDraggable,
-  useDroppable,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
@@ -22,26 +20,14 @@ import { ChevronDown, ChevronUp, GripVertical } from "lucide-react";
 import type { QuestionResponse } from "@school/shared";
 
 import { sanitizeHtml } from "@/shared/sanitize-html";
-import { Textarea } from "@/shared/ui/textarea";
 
-const INLINE_FIELD =
-  "mx-1 rounded-md border border-border bg-card px-2 py-0.5 text-sm outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15";
 
 /**
- * Плеер заданий, типы 6–10 (Э8.5, продолжение `QuestionPlayer.tsx` —
- * `open_answer`, `cloze_dropdown`, `cloze_text`, `matching`, `ordering`) +
- * тип 11 `categorize` (Э13, доп. «внедряй всё»).
- * §16 ТЗ («клавиатурная навигация во всех типах заданий») здесь весомее,
- * чем в Э8.4: `matching`/`ordering` — единственные два типа из всех 10, где
- * ПЛАН.md прямо называет `dnd-kit` инструментом. Drag-and-drop сам по себе
- * не гарантирует клавиатурную доступность — библиотека даёт `KeyboardSensor`,
- * но для `ordering` (переставить элементы одного списка,
- * `@dnd-kit/sortable`) это устоявшийся, хорошо документированный сценарий,
- * а для `matching` (перенести элемент в один из НЕСКОЛЬКИХ отдельных слотов,
- * `@dnd-kit/core` без `sortable`) клавиатурная семантика курсора менее
- * очевидна из коробки. Поэтому `matching` получает DnD как основной способ
- * ПЛЮС `<select>` на каждый левый элемент — тот же результат, гарантированно
- * доступный с клавиатуры без каких-либо допущений о поведении сенсора.
+ * Плеер заданий, типы 6–11 (продолжение `QuestionPlayer.tsx`): open_answer,
+ * cloze_dropdown, cloze_text, matching, ordering, categorize. Оформление —
+ * textbook/textbook.css. Все типы управляются с клавиатуры (§16 ТЗ): выбор
+ * в matching/categorize — обычные кнопки, порядок в ordering — кнопки
+ * «выше/ниже» плюс перетаскивание (`dnd-kit`, клавиатурный сенсор).
  */
 
 function splitTemplate(template: string): (string | { gapId: string })[] {
@@ -78,24 +64,29 @@ export function OpenAnswerPlayer({
       <label htmlFor={inputId} className="sr-only">
         Развёрнутый ответ
       </label>
-      <Textarea
-        id={inputId}
-        rows={5}
-        maxLength={maxLength}
-        value={text}
-        disabled={disabled}
-        onChange={(e) =>
-          onChange({
-            type: "open_answer",
-            text: e.target.value,
-            attachmentIds: value?.attachmentIds ?? [],
-          })
-        }
-      />
-      <p className="mt-1 text-right text-xs text-muted-foreground">
-        {text.length} / {maxLength}
-      </p>
-      <p className="text-xs text-muted-foreground">Проверяется учителем вручную.</p>
+      <div className="tb-open">
+        <textarea
+          id={inputId}
+          rows={5}
+          maxLength={maxLength}
+          placeholder="Ваш ответ"
+          value={text}
+          disabled={disabled}
+          onChange={(e) =>
+            onChange({
+              type: "open_answer",
+              text: e.target.value,
+              attachmentIds: value?.attachmentIds ?? [],
+            })
+          }
+        />
+        <div className="tb-open-foot">
+          <span>Проверяется учителем вручную</span>
+          <span>
+            {text.length} / {maxLength}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -123,7 +114,7 @@ export function ClozeDropdownPlayer({
   }
 
   return (
-    <p className="text-sm leading-8">
+    <p className="tb-cloze">
       {parts.map((part, i) =>
         typeof part === "string" ? (
           <span key={i} dangerouslySetInnerHTML={{ __html: sanitizeHtml(part) }} />
@@ -131,7 +122,7 @@ export function ClozeDropdownPlayer({
           <select
             key={i}
             aria-label={`Пропуск ${part.gapId}`}
-            className={INLINE_FIELD}
+            className="tb-gap-select"
             value={values[part.gapId] ?? ""}
             disabled={disabled}
             onChange={(e) => setGap(part.gapId, e.target.value)}
@@ -172,7 +163,7 @@ export function ClozeTextPlayer({
   }
 
   return (
-    <p className="text-sm leading-8">
+    <p className="tb-cloze">
       {parts.map((part, i) =>
         typeof part === "string" ? (
           <span key={i} dangerouslySetInnerHTML={{ __html: sanitizeHtml(part) }} />
@@ -181,7 +172,7 @@ export function ClozeTextPlayer({
             key={i}
             type="text"
             aria-label={`Пропуск ${part.gapId}`}
-            className={`${INLINE_FIELD} w-24`}
+            className="tb-gap-input"
             value={values[part.gapId] ?? ""}
             disabled={disabled}
             onChange={(e) => setGap(part.gapId, e.target.value)}
@@ -194,36 +185,12 @@ export function ClozeTextPlayer({
   );
 }
 
-function DraggableChip({ id, html, disabled }: { id: string; html: string; disabled: boolean }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id, disabled });
-  return (
-    <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      style={{ transform: CSS.Translate.toString(transform) }}
-      // `touch-none` — иначе на телефоне/планшете начатый драг конфликтует с
-      // нативным скроллом страницы (dnd-kit сам не выставляет touch-action).
-      className={`touch-none cursor-grab rounded-md border border-border bg-card px-2.5 py-2 text-sm shadow-xs ${isDragging ? "opacity-50" : ""}`}
-      dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }}
-    />
-  );
-}
-
-function DroppableSlot({ id, children }: { id: string; children: React.ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id });
-  return (
-    <div
-      ref={setNodeRef}
-      className={`min-h-[2.25rem] min-w-[8rem] rounded-md border border-dashed px-2 py-1 ${isOver ? "border-primary bg-accent" : "border-border"}`}
-    >
-      {children}
-    </div>
-  );
-}
-
-const POOL_ID = "__pool__";
-
+/**
+ * Сопоставление: у каждой строки — ряд плашек со вторыми половинами пар.
+ * Нажатие выбирает пару, повторное снимает; вторая половина занята одной
+ * строкой, поэтому выбор её в другой строке переносит пару. Перетаскивания
+ * нет: на телефоне оно спорит со скроллом, а кнопки доступны с клавиатуры (§16 ТЗ).
+ */
 export function MatchingPlayer({
   left,
   right,
@@ -237,98 +204,55 @@ export function MatchingPlayer({
   onChange: (response: QuestionResponse) => void;
   disabled: boolean;
 }) {
-  // `activationConstraint` — короткое смещение перед стартом драга, иначе
-  // на тач-устройстве обычный скролл-жест сам запускает перетаскивание.
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
   const pairs = value?.pairs ?? [];
   const assignmentByLeft = new Map(pairs);
-  const assignedRightIds = new Set(pairs.map(([, r]) => r));
-  const pool = right.filter((r) => !assignedRightIds.has(r.id));
 
-  /** Снимает текущую пару `rightId` (откуда бы она ни была) и, если указан `leftId`, ставит новую — один и тот же путь для drag-and-drop и `<select>`-альтернативы ниже. */
-  function assign(leftId: string | null, rightId: string) {
-    const withoutRight = pairs.filter(([, r]) => r !== rightId);
-    const next = leftId ? [...withoutRight.filter(([l]) => l !== leftId), [leftId, rightId] as [string, string]] : withoutRight;
-    onChange({ type: "matching", pairs: next });
+  /** Снимает текущую пару `rightId` (откуда бы она ни была) и ставит новую для `leftId`. */
+  function assign(leftId: string, rightId: string) {
+    const rest = pairs.filter(([l, r]) => r !== rightId && l !== leftId);
+    onChange({ type: "matching", pairs: [...rest, [leftId, rightId] as [string, string]] });
   }
 
   function unassignLeft(leftId: string) {
     onChange({ type: "matching", pairs: pairs.filter(([l]) => l !== leftId) });
   }
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over) return;
-    const rightId = String(active.id);
-    const targetId = String(over.id);
-    assign(targetId === POOL_ID ? null : targetId, rightId);
-  }
-
   return (
-    <div>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div className="flex flex-col gap-2">
-          {left.map((l) => {
-            const assignedId = assignmentByLeft.get(l.id);
-            const assignedItem = right.find((r) => r.id === assignedId);
-            return (
-              <div key={l.id} className="flex items-center gap-2">
-                <span
-                  className="w-24 shrink-0 text-sm sm:w-32"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(l.html) }}
-                />
-                <DroppableSlot id={l.id}>
-                  {assignedItem && <DraggableChip id={assignedItem.id} html={assignedItem.html} disabled={disabled} />}
-                </DroppableSlot>
-              </div>
-            );
-          })}
-        </div>
-        <p className="mb-1 mt-4 text-xs text-muted-foreground">Перетащите варианты к нужной паре:</p>
-        <DroppableSlot id={POOL_ID}>
-          <div className="flex flex-wrap gap-2">
-            {pool.map((r) => (
-              <DraggableChip key={r.id} id={r.id} html={r.html} disabled={disabled} />
-            ))}
+    <div className="tb-pairs" role="group" aria-label="Сопоставьте пары">
+      {left.map((l) => {
+        const assignedId = assignmentByLeft.get(l.id);
+        return (
+          <div key={l.id} className="tb-pair">
+            <span
+              className="tb-pair-label"
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(l.html) }}
+            />
+            <div className="tb-chips">
+              {right.map((r) => {
+                const on = assignedId === r.id;
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    className="tb-chip"
+                    aria-pressed={on}
+                    disabled={disabled}
+                    onClick={() => (on ? unassignLeft(l.id) : assign(l.id, r.id))}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(r.html) }}
+                  />
+                );
+              })}
+            </div>
           </div>
-        </DroppableSlot>
-      </DndContext>
-
-      {/* Клавиатурная альтернатива drag-and-drop (§16 ТЗ) — тот же результат, гарантированно доступна с Tab/стрелками без допущений о курсоре перетаскивания. */}
-      <fieldset className="mt-4 flex flex-col gap-1.5">
-        <legend className="text-xs text-muted-foreground">Или выберите пару списком:</legend>
-        {left.map((l) => (
-          <label key={l.id} className="flex items-center gap-2 text-sm">
-            <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(l.html) }} />
-            <select
-              aria-label={`Пара для варианта ${l.id}`}
-              className={INLINE_FIELD}
-              value={assignmentByLeft.get(l.id) ?? ""}
-              disabled={disabled}
-              onChange={(e) => (e.target.value ? assign(l.id, e.target.value) : unassignLeft(l.id))}
-            >
-              <option value="">—</option>
-              {right.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.html.replace(/<[^>]+>/g, "")}
-                </option>
-              ))}
-            </select>
-          </label>
-        ))}
-      </fieldset>
+        );
+      })}
     </div>
   );
 }
 
 /**
- * Категоризация (тип 11, §6.3/§6.4 ТЗ, Э13 — достройка сверх стоп-листа
- * Э8 по прямому запросу пользователя). Тот же приём, что `MatchingPlayer`
- * выше: DnD-корзины ПЛЮС `<select>` на каждый элемент как гарантированно
- * доступная с клавиатуры альтернатива (§16 ТЗ).
+ * Распределение (тип 11): нажмите на слово, затем на столбец. Слово в столбце
+ * возвращается обратно по нажатию. Как и сопоставление, без перетаскивания.
  */
 export function CategorizePlayer({
   categories,
@@ -343,12 +267,7 @@ export function CategorizePlayer({
   onChange: (response: QuestionResponse) => void;
   disabled: boolean;
 }) {
-  // `activationConstraint` — короткое смещение перед стартом драга, иначе
-  // на тач-устройстве обычный скролл-жест сам запускает перетаскивание.
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
+  const [selected, setSelected] = useState<string | null>(null);
   const values = value?.values ?? {};
   const pool = items.filter((i) => values[i.id] == null);
 
@@ -356,66 +275,76 @@ export function CategorizePlayer({
     onChange({ type: "categorize", values: { ...values, [itemId]: categoryId } });
   }
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over) return;
-    const itemId = String(active.id);
-    const targetId = String(over.id);
-    place(itemId, targetId === POOL_ID ? null : targetId);
+  function drop(categoryId: string) {
+    if (!selected || disabled) return;
+    place(selected, categoryId);
+    setSelected(null);
   }
 
   return (
-    <div>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div className="flex flex-wrap gap-3">
-          {categories.map((cat) => (
-            <div key={cat.id} className="min-w-[10rem] flex-1">
-              <p className="mb-1 text-xs font-medium text-muted-foreground">{cat.label}</p>
-              <DroppableSlot id={cat.id}>
-                <div className="flex flex-wrap gap-1.5">
-                  {items
-                    .filter((i) => values[i.id] === cat.id)
-                    .map((i) => (
-                      <DraggableChip key={i.id} id={i.id} html={i.html} disabled={disabled} />
-                    ))}
-                </div>
-              </DroppableSlot>
-            </div>
-          ))}
-        </div>
-        <p className="mb-1 mt-4 text-xs text-muted-foreground">Не распределено:</p>
-        <DroppableSlot id={POOL_ID}>
-          <div className="flex flex-wrap gap-2">
-            {pool.map((i) => (
-              <DraggableChip key={i.id} id={i.id} html={i.html} disabled={disabled} />
-            ))}
-          </div>
-        </DroppableSlot>
-      </DndContext>
-
-      {/* Клавиатурная альтернатива drag-and-drop (§16 ТЗ) — тот же результат, гарантированно доступна с Tab/стрелками без допущений о курсоре перетаскивания. */}
-      <fieldset className="mt-4 flex flex-col gap-1.5">
-        <legend className="text-xs text-muted-foreground">Или выберите категорию списком:</legend>
-        {items.map((i) => (
-          <label key={i.id} className="flex items-center gap-2 text-sm">
-            <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(i.html) }} />
-            <select
-              aria-label={`Категория для ${i.id}`}
-              className={INLINE_FIELD}
-              value={values[i.id] ?? ""}
-              disabled={disabled}
-              onChange={(e) => place(i.id, e.target.value || null)}
-            >
-              <option value="">—</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </label>
+    <div className="tb-cat">
+      <div className="tb-cat-pool" role="group" aria-label="Не распределено">
+        {pool.map((i) => (
+          <button
+            key={i.id}
+            type="button"
+            className="tb-word"
+            aria-pressed={selected === i.id}
+            disabled={disabled}
+            onClick={() => setSelected(selected === i.id ? null : i.id)}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(i.html) }}
+          />
         ))}
-      </fieldset>
+        {pool.length === 0 ? <span className="tb-cat-note self-center">Всё распределено</span> : null}
+      </div>
+      <div className="tb-bins">
+        {categories.map((cat) => {
+          const armed = selected !== null && !disabled;
+          return (
+            <div
+              key={cat.id}
+              className="tb-bin"
+              data-armed={armed}
+              onClick={armed ? () => drop(cat.id) : undefined}
+            >
+              <span className="tb-bin-label">{cat.label}</span>
+              <div className="tb-chips">
+                {items
+                  .filter((i) => values[i.id] === cat.id)
+                  .map((i) => (
+                    <button
+                      key={i.id}
+                      type="button"
+                      className="tb-word"
+                      aria-label={`Вернуть «${i.html.replace(/<[^>]+>/g, "")}»`}
+                      disabled={disabled}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        place(i.id, null);
+                      }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(i.html) }}
+                    />
+                  ))}
+              </div>
+              {armed ? (
+                <button
+                  type="button"
+                  className="tb-textbtn mt-auto self-start"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    drop(cat.id);
+                  }}
+                >
+                  Положить сюда
+                </button>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+      <span className="tb-cat-note">
+        Нажмите на слово, затем на столбец. Нажатие на слово в столбце вернёт его обратно.
+      </span>
     </div>
   );
 }
@@ -427,9 +356,11 @@ function SortableOrderingItem({
   disabled,
   isFirst,
   isLast,
+  position,
 }: {
   id: string;
   html: string;
+  position: number;
   onMove: (direction: -1 | 1) => void;
   disabled: boolean;
   isFirst: boolean;
@@ -440,37 +371,38 @@ function SortableOrderingItem({
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1.5 text-sm ${isDragging ? "opacity-50 shadow-md" : ""}`}
+      className="tb-order-item"
+      data-dragging={isDragging}
     >
       <span
         {...attributes}
         {...listeners}
-        // `touch-none` — та же причина, что у `DraggableChip`: без него
-        // тач-драг ручки конфликтует со скроллом списка.
-        className="touch-none cursor-grab select-none p-2 text-muted-foreground"
+        // `touch-action: none` (в CSS) — иначе тач-драг ручки конфликтует со скроллом.
+        className="tb-order-grip"
         aria-hidden="true"
       >
-        <GripVertical className="size-4" />
+        <GripVertical />
       </span>
-      <span className="flex-1" dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} />
+      <span className="tb-order-n">{position}</span>
+      <span className="tb-order-text" dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} />
       {/* Кнопки — та же клавиатурная гарантия, что select у matching. */}
       <button
         type="button"
         disabled={disabled || isFirst}
         onClick={() => onMove(-1)}
         aria-label="Переместить выше"
-        className="rounded-md border border-border p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30"
+        className="tb-iconbtn tb-iconbtn--muted"
       >
-        <ChevronUp className="size-3.5" />
+        <ChevronUp />
       </button>
       <button
         type="button"
         disabled={disabled || isLast}
         onClick={() => onMove(1)}
         aria-label="Переместить ниже"
-        className="rounded-md border border-border p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30"
+        className="tb-iconbtn tb-iconbtn--muted"
       >
-        <ChevronDown className="size-3.5" />
+        <ChevronDown />
       </button>
     </li>
   );
@@ -523,7 +455,7 @@ export function OrderingPlayer({
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={order} strategy={verticalListSortingStrategy}>
-        <ul className="flex flex-col gap-1">
+        <ul className="tb-order">
           {order.map((id, index) => {
             const item = byId.get(id);
             if (!item) return null;
@@ -533,6 +465,7 @@ export function OrderingPlayer({
                 id={id}
                 html={item.html}
                 disabled={disabled}
+                position={index + 1}
                 isFirst={index === 0}
                 isLast={index === order.length - 1}
                 onMove={(direction) => move(index, direction)}

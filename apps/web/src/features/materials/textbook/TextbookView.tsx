@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, List, Minus, Plus } from "lucide-react";
 import type {
   MaterialLayout,
   PublicMaterial,
@@ -12,12 +12,15 @@ import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/shared/ui/alert";
 import { Button } from "@/shared/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
-import { TextbookContentBlock, marginFor, rowKind } from "./TextbookBlocks.js";
-import { TaskMargin, TextbookTask } from "./TextbookTask.js";
+import { TextbookContentBlock, rowKind } from "./TextbookBlocks.js";
+import { TaskMark, TextbookTask, taskState } from "./TextbookTask.js";
 import { buildTextbook, hasAnswer, type TextbookStructure } from "./structure.js";
 import "./textbook.css";
 
 type Block = PublicMaterial["blocks"][number];
+
+/** Больше стольких заданий точки не помещаются в панель — остаётся счётчик. */
+const MAX_DOTS = 8;
 
 /** Сдача работы — есть только у ученика с настоящей попыткой. */
 export interface TextbookSubmit {
@@ -81,6 +84,7 @@ export function TextbookView({
   );
   const byId = useMemo(() => new Map(material.blocks.map((b) => [b.id, b])), [material.blocks]);
 
+  const [zoom, setZoom] = useState(1);
   const [pageIndex, setPageIndex] = useState(() =>
     initialBlockId ? (book.pageOfBlock.get(initialBlockId) ?? 0) : 0,
   );
@@ -134,8 +138,10 @@ export function TextbookView({
   if (!page) {
     return (
       <div className="tb">
-        {showHead ? <Head title={material.title} subject={material.subject} meta={meta} /> : null}
-        <p className="text-sm text-text-2">В материале пока ничего нет.</p>
+        <div className="tb-stage">
+          {showHead ? <Head title={material.title} subject={material.subject} meta={meta} /> : null}
+          <p className="py-4 text-sm text-text-2">В материале пока ничего нет.</p>
+        </div>
       </div>
     );
   }
@@ -143,91 +149,187 @@ export function TextbookView({
   const prev = book.pages[page.index - 1];
   const next = book.pages[page.index + 1];
   const multiPage = book.pages.length > 1;
+  const firstBlock = byId.get(page.blockIds[0] ?? "");
+  const startsSection =
+    multiPage &&
+    firstBlock?.type === "rich_text" &&
+    /^\s*<h[12][\s/>]/i.test(firstBlock.html ?? "");
+
+  // Стрелки листают страницы, пока фокус не в поле ввода и не на виджете,
+  // которому стрелки нужны самому (перемотка, перестановка, ползунок).
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!multiPage || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    const t = e.target as HTMLElement;
+    if (
+      t.closest(
+        "input, select, textarea, [contenteditable], [role=slider], [aria-roledescription=sortable]",
+      )
+    ) {
+      return;
+    }
+    const to = e.key === "ArrowRight" ? next : prev;
+    if (to) goTo(to.index);
+  };
+
+  const stateOf = (id: string) => taskState(hasAnswer(responses[id]), results?.get(id));
 
   return (
-    <div className="tb">
-      {showHead ? <Head title={material.title} subject={material.subject} meta={meta} /> : null}
+    <div className="tb" onKeyDown={onKeyDown}>
+      <div className="tb-stage">
+        {showHead ? <Head title={material.title} subject={material.subject} meta={meta} /> : null}
 
-      {multiPage || totalTasks > 0 ? (
         <div className="tb-bar">
           {multiPage ? (
             <>
               <Contents book={book} current={page.index} responses={responses} onPick={goTo} />
-              <span className="tb-bar-count">
-                стр. {page.index + 1} из {book.pages.length}
-              </span>
+              <div className="tb-pagenav">
+                <button
+                  type="button"
+                  className="tb-iconbtn"
+                  disabled={!prev}
+                  aria-label="Предыдущая страница"
+                  onClick={() => prev && goTo(prev.index)}
+                >
+                  <ChevronLeft aria-hidden />
+                </button>
+                <span className="tb-pagenav-count">
+                  {page.index + 1} <span>из {book.pages.length}</span>
+                </span>
+                <button
+                  type="button"
+                  className="tb-iconbtn"
+                  disabled={!next}
+                  aria-label="Следующая страница"
+                  onClick={() => next && goTo(next.index)}
+                >
+                  <ChevronRight aria-hidden />
+                </button>
+              </div>
+              <span className="tb-bar-title">{page.title}</span>
             </>
           ) : null}
+          <span className="tb-bar-grow" />
           {totalTasks > 0 ? (
-            <span className="tb-bar-tasks">
-              Отвечено <b>{answered}</b> из {totalTasks}
+            <span
+              className={cn("tb-dots", totalTasks > MAX_DOTS && "tb-dots--count")}
+              role="img"
+              aria-label={`Отвечено ${answered} из ${totalTasks}`}
+            >
+              {(totalTasks > MAX_DOTS ? [] : [...book.taskNumber.keys()]).map((id) => {
+                const st = stateOf(id);
+                return <span key={id} className={cn("tb-dot", st !== "empty" && `tb-dot--${st}`)} />;
+              })}
+              <span className="tb-dots-text">
+                {answered} из {totalTasks}
+              </span>
             </span>
           ) : null}
-        </div>
-      ) : null}
-
-      <div ref={pageRef} className="tb-page" tabIndex={-1} aria-label={page.title}>
-        {page.blockIds.map((id) => {
-          const block = byId.get(id);
-          if (!block || block.type === "page_break") return null;
-          const isTask = block.type === "question";
-          return (
-            <div
-              key={id}
-              data-annot-block={id}
-              className={cn("tb-row", rowKind(block))}
-              tabIndex={isTask ? -1 : undefined}
+          <span className="tb-bar-sep tb-bar-sep--zoom" aria-hidden />
+          <div className="tb-zoom-ctl" role="group" aria-label="Размер текста">
+            <button
+              type="button"
+              className="tb-iconbtn tb-iconbtn--muted"
+              aria-label="Мельче"
+              disabled={zoom <= 0.8}
+              onClick={() => setZoom((z) => Math.max(0.8, +(z - 0.1).toFixed(1)))}
             >
-              <div className="tb-margin">
-                {isTask ? (
-                  <TaskMargin number={book.taskNumber.get(id) ?? 0} points={block.points} />
-                ) : (
-                  marginFor(block)
-                )}
-              </div>
-              <div className="tb-main">
-                {isTask ? (
-                  <>
-                    <TextbookTask
-                      block={block}
-                      number={book.taskNumber.get(id) ?? 0}
-                      value={responses[id]}
-                      onChange={(r) => onResponseChange?.(id, r)}
-                      disabled={disabled}
-                      result={results?.get(id)}
-                    />
-                    {renderAfterTask?.(id)}
-                  </>
-                ) : (
-                  <TextbookContentBlock block={block} figureNumber={book.figureNumber.get(id)} />
-                )}
-              </div>
-            </div>
-          );
-        })}
-        {overlay}
+              <Minus aria-hidden />
+            </button>
+            <span className="tb-zoom-val">{Math.round(zoom * 100)}%</span>
+            <button
+              type="button"
+              className="tb-iconbtn tb-iconbtn--muted"
+              aria-label="Крупнее"
+              disabled={zoom >= 1.3}
+              onClick={() => setZoom((z) => Math.min(1.3, +(z + 0.1).toFixed(1)))}
+            >
+              <Plus aria-hidden />
+            </button>
+          </div>
+        </div>
+
+        <article className="tb-sheet" style={zoom === 1 ? undefined : { zoom }}>
+          <div className="tb-run" aria-hidden>
+            <span>{material.subject}</span>
+            <span>{multiPage ? page.title : ""}</span>
+          </div>
+
+          <div ref={pageRef} className="tb-page" tabIndex={-1} aria-label={page.title}>
+            {startsSection ? <span className="tb-section">§ {page.index + 1}</span> : null}
+            {page.blockIds.map((id) => {
+              const block = byId.get(id);
+              if (!block || block.type === "page_break") return null;
+              const isTask = block.type === "question";
+              const n = book.taskNumber.get(id) ?? 0;
+              return (
+                <div
+                  key={id}
+                  data-annot-block={id}
+                  className={cn("tb-row", rowKind(block))}
+                  tabIndex={isTask ? -1 : undefined}
+                >
+                  {isTask ? <TaskMark number={n} points={block.points} state={stateOf(id)} /> : null}
+                  <div className="tb-main">
+                    {isTask ? (
+                      <>
+                        <TextbookTask
+                          block={block}
+                          number={n}
+                          value={responses[id]}
+                          onChange={(r) => onResponseChange?.(id, r)}
+                          disabled={disabled}
+                          result={results?.get(id)}
+                        />
+                        {renderAfterTask?.(id)}
+                      </>
+                    ) : (
+                      <TextbookContentBlock
+                        block={block}
+                        figureNumber={book.figureNumber.get(id)}
+                        formulaNumber={book.formulaNumber.get(id)}
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            {overlay}
+          </div>
+
+          {multiPage ? (
+            <nav className="tb-pager" aria-label="Страницы материала">
+              {prev ? (
+                <button type="button" onClick={() => goTo(prev.index)}>
+                  <span className="tb-pager-dir">Назад · стр. {prev.index + 1}</span>
+                  <span className="tb-pager-title">{prev.title}</span>
+                </button>
+              ) : null}
+              {next ? (
+                <button type="button" className="tb-pager-next" onClick={() => goTo(next.index)}>
+                  <span className="tb-pager-dir">Дальше · стр. {next.index + 1}</span>
+                  <span className="tb-pager-title">
+                    {next.title}
+                    <ArrowRight aria-hidden />
+                  </span>
+                </button>
+              ) : null}
+            </nav>
+          ) : null}
+
+          {submit && !next ? (
+            <Finish
+              book={book}
+              responses={responses}
+              submit={submit}
+              answered={answered}
+              onJump={goTo}
+            />
+          ) : null}
+
+          {multiPage ? <div className="tb-folio">{page.index + 1}</div> : null}
+        </article>
       </div>
-
-      {multiPage ? (
-        <nav className="tb-pager" aria-label="Страницы материала">
-          {prev ? (
-            <button type="button" onClick={() => goTo(prev.index)}>
-              <span className="tb-pager-dir">Назад</span>
-              <span className="tb-pager-title">{prev.title}</span>
-            </button>
-          ) : null}
-          {next ? (
-            <button type="button" className="tb-pager-next" onClick={() => goTo(next.index)}>
-              <span className="tb-pager-dir">Дальше</span>
-              <span className="tb-pager-title">{next.title}</span>
-            </button>
-          ) : null}
-        </nav>
-      ) : null}
-
-      {submit && !next ? (
-        <Finish book={book} responses={responses} submit={submit} answered={answered} onJump={goTo} />
-      ) : null}
     </div>
   );
 }
@@ -243,11 +345,9 @@ function Head({
 }) {
   return (
     <header className="tb-head">
+      <p className="tb-kicker">{subject}</p>
       <h2 className="tb-title">{title}</h2>
-      <p className="tb-meta">
-        {subject}
-        {meta ? <> · {meta}</> : null}
-      </p>
+      {meta ? <p className="tb-meta">{meta}</p> : null}
     </header>
   );
 }
@@ -267,12 +367,13 @@ function Contents({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button type="button" className="tb-toc-trigger">
-          Содержание
-          <ChevronDown className="size-4" aria-hidden />
+        <button type="button" className="tb-toc-trigger" aria-label="Содержание">
+          <List aria-hidden />
+          <span className="tb-toc-trigger-label">Содержание</span>
+          <ChevronDown className="tb-chev" aria-hidden />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="max-h-[60vh] w-[min(22rem,90vw)] overflow-y-auto p-1.5">
+      <PopoverContent align="start" className="max-h-[60vh] w-[min(20rem,calc(100vw-1.75rem))] overflow-y-auto rounded-2xl p-1.5">
         <nav aria-label="Содержание материала">
           <ol className="tb-toc">
             {book.pages.map((p) => {
@@ -357,25 +458,29 @@ function Finish({
         </p>
       ) : null}
       {missing.length > 0 ? (
-        <div className="mt-1">
-          <p className="text-[14px] text-text-2">Без ответа:</p>
-          <div className="tb-finish-missing">
-            {missing.map(([id, n]) => (
-              <button key={id} type="button" onClick={() => onJump(book.pageOfBlock.get(id) ?? 0, id)}>
-                задание {n}
-              </button>
-            ))}
-          </div>
+        <div className="tb-finish-missing">
+          <span>Без ответа:</span>
+          {missing.map(([id, n]) => (
+            <button
+              key={id}
+              type="button"
+              data-n={n}
+              aria-label={`К заданию ${n}`}
+              onClick={() => onJump(book.pageOfBlock.get(id) ?? 0, id)}
+            />
+          ))}
         </div>
       ) : null}
       {submit.error ? (
-        <Alert variant="destructive" className="mt-3">
+        <Alert variant="destructive">
           <AlertDescription>{submit.error}</AlertDescription>
         </Alert>
       ) : null}
-      <Button size="lg" className="mt-4" onClick={submit.onSubmit} loading={submit.submitting}>
-        {submit.submitting ? "Отправляем…" : "Сдать работу"}
-      </Button>
+      <div className="mt-1">
+        <Button size="lg" onClick={submit.onSubmit} loading={submit.submitting}>
+          {submit.submitting ? "Отправляем…" : "Сдать работу"}
+        </Button>
+      </div>
     </section>
   );
 }

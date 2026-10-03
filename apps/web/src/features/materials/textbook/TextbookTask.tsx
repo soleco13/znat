@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { Check, CircleDot, Clock, Lightbulb, X } from "lucide-react";
 import type { PublicQuestionBlock, QuestionResponse, SubmitFeedbackItem } from "@school/shared";
 
 import { cn } from "@/lib/utils";
@@ -7,20 +7,42 @@ import { sanitizeHtml } from "@/shared/sanitize-html";
 import { InteractionPlayer } from "../QuestionPlayer.js";
 import { pointsLabel } from "./structure.js";
 
+/** Состояние метки задания: нет ответа → есть ответ → итог проверки. */
+export type TaskState = "empty" | "answered" | "right" | "part" | "wrong" | "manual";
+
+export function taskState(answered: boolean, result: SubmitFeedbackItem | undefined): TaskState {
+  if (result) {
+    if (!result.autoGraded || result.correct === null) return "manual";
+    if (result.correct) return "right";
+    return result.score > 0 ? "part" : "wrong";
+  }
+  return answered ? "answered" : "empty";
+}
+
 /**
- * Задание внутри страницы учебника: номер и баллы на полях, формулировка,
- * поле ответа (те же плееры взаимодействий, что и раньше), подсказка по
+ * Задание внутри страницы учебника: слева метка-кружок с номером и баллами,
+ * справа формулировка, поле ответа (те же плееры взаимодействий), подсказка по
  * запросу и итог проверки после сдачи. Рамки-карточки нет: задание отбито
  * линией и номером, как упражнение в учебнике.
  */
-export function TaskMargin({ number, points }: { number: number; points: number }) {
+export function TaskMark({
+  number,
+  points,
+  state,
+}: {
+  number: number;
+  points: number;
+  state: TaskState;
+}) {
   return (
-    <>
-      <span className="tb-task-num">{number}</span>
+    <div className="tb-task-mark">
+      <span className={cn("tb-task-num", state !== "empty" && `tb-task-num--${state}`)}>
+        {number}
+      </span>
       <span className="tb-task-pts">
         {formatPoints(points)} {pointsLabel(points)}
       </span>
-    </>
+    </div>
   );
 }
 
@@ -50,26 +72,7 @@ export function TextbookTask({
         className="prose tb-prompt"
         dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.prompt.html) }}
       />
-      {block.hint ? (
-        <div className="mt-1">
-          <button
-            type="button"
-            className="tb-textbtn"
-            aria-expanded={hintOpen}
-            onClick={() => setHintOpen((v) => !v)}
-          >
-            <ChevronRight aria-hidden />
-            Подсказка
-          </button>
-          {hintOpen ? (
-            <div
-              className="prose tb-hint"
-              dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.hint.html) }}
-            />
-          ) : null}
-        </div>
-      ) : null}
-      <div className={cn("tb-answer", block.hint && "mt-1")}>
+      <div className="tb-answer">
         <InteractionPlayer
           questionId={block.id}
           interaction={block.interaction}
@@ -78,6 +81,25 @@ export function TextbookTask({
           disabled={disabled}
         />
       </div>
+      {block.hint ? (
+        <div className="tb-task-tools">
+          <button
+            type="button"
+            className="tb-textbtn"
+            aria-expanded={hintOpen}
+            onClick={() => setHintOpen((v) => !v)}
+          >
+            <Lightbulb aria-hidden />
+            Подсказка
+          </button>
+        </div>
+      ) : null}
+      {block.hint && hintOpen ? (
+        <div
+          className="prose tb-hint"
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.hint.html) }}
+        />
+      ) : null}
       {result ? <TaskResult result={result} /> : null}
     </section>
   );
@@ -85,16 +107,32 @@ export function TextbookTask({
 
 function TaskResult({ result }: { result: SubmitFeedbackItem }) {
   const score = `${formatPoints(result.score)} из ${formatPoints(result.maxScore)}`;
-  if (!result.autoGraded || result.correct === null) {
-    return <p className="tb-result tb-result--manual">Проверит учитель</p>;
-  }
-  if (result.correct) {
-    return <p className="tb-result tb-result--right">Верно, {score}</p>;
-  }
-  if (result.score > 0) {
-    return <p className="tb-result tb-result--part">Частично верно, {score}</p>;
-  }
-  return <p className="tb-result tb-result--wrong">Неверно, {score}</p>;
+  const state = taskState(true, result);
+  return (
+    <p className={cn("tb-result", `tb-result--${state}`)}>
+      {state === "manual" ? (
+        <>
+          <Clock aria-hidden />
+          Проверит учитель
+        </>
+      ) : state === "right" ? (
+        <>
+          <Check aria-hidden />
+          Верно · {score}
+        </>
+      ) : state === "part" ? (
+        <>
+          <CircleDot aria-hidden />
+          Частично · {score}
+        </>
+      ) : (
+        <>
+          <X aria-hidden />
+          Неверно · {score}
+        </>
+      )}
+    </p>
+  );
 }
 
 function formatPoints(n: number): string {
