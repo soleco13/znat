@@ -77,9 +77,10 @@ function StudentActivityStage({
         }
       />
       <ScrollArea className="min-h-0 flex-1">
-        <div className="mx-auto max-w-[720px] p-4">
-          {/* Слой пометок учителя уходит внутрь плеера (поверх текущего
-              слайда / всей колонки — см. `MaterialPlayer`/`SlideDeck`). */}
+        <div className="mx-auto max-w-[1440px] p-4">
+          {/* Ширину не зажимаем: на широкой панели учебник раскрывается
+              разворотом. Слой пометок учителя уходит внутрь учебника — на
+              каждую страницу свой (см. `TextbookView`). */}
           <ActivityPlayer
             activityId={activityId}
             annotationOverlay={<MaterialAnnotationLayer strokes={strokes} editable={false} />}

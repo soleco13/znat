@@ -19,6 +19,7 @@ import type {
   ShowFeedback,
 } from "@school/shared";
 import { paginateMaterial, stripMaterialAnswerKeys } from "@school/shared";
+import { cn } from "@/lib/utils";
 
 import { useAuthStore } from "@/shared/auth-store";
 import { Badge } from "@/shared/ui/badge";
@@ -170,7 +171,13 @@ export function MaterialEditorPage() {
   const readOnly = !canEdit;
 
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-8rem)] max-w-[900px] flex-col">
+    <div
+      className={cn(
+        "mx-auto flex min-h-[calc(100dvh-8rem)] flex-col",
+        // В просмотре учебник раскрывается разворотом — ему нужна ширина.
+        mode === "preview" ? "max-w-[1440px]" : "max-w-[900px]",
+      )}
+    >
       <EditorTopBar
         material={material}
         status={status}
@@ -586,8 +593,8 @@ function PreviewSheet({ material, readOnly }: { material: Material; readOnly: bo
   const publicMaterial = stripMaterialAnswerKeys(material, "editor-preview");
 
   return (
-    <div className="mx-auto w-full max-w-[720px] pb-24">
-      <div className="mb-6 rounded-lg border border-border bg-secondary/50 px-3 py-2 text-xs text-muted-foreground">
+    <div className="mx-auto w-full max-w-[1440px] pb-24">
+      <div className="mx-auto mb-6 max-w-[720px] rounded-lg border border-border bg-secondary/50 px-3 py-2 text-xs text-muted-foreground">
         {readOnly
           ? "Просмотр материала. Редактируют методист и администратор."
           : "Так материал видит ученик. Ответы можно потыкать, они не сохраняются."}

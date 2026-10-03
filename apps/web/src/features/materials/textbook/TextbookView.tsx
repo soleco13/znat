@@ -14,13 +14,17 @@ import { Button } from "@/shared/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { TextbookContentBlock, rowKind } from "./TextbookBlocks.js";
 import { TaskMark, TextbookTask, taskState } from "./TextbookTask.js";
-import { buildTextbook, hasAnswer, type TextbookStructure } from "./structure.js";
+import { buildTextbook, hasAnswer, type TextbookPage, type TextbookStructure } from "./structure.js";
 import "./textbook.css";
 
 type Block = PublicMaterial["blocks"][number];
 
 /** Больше стольких заданий точки не помещаются в панель — остаётся счётчик. */
 const MAX_DOTS = 8;
+/** С этой ширины панели страницы идут разворотом (две по ~520–600px). */
+const SPREAD_MIN_WIDTH = 1100;
+/** С этой ширины — круглые стрелки по бокам листа; уже — листают снизу. */
+const SIDE_ARROWS_MIN_WIDTH = 700;
 
 /** Сдача работы — есть только у ученика с настоящей попыткой. */
 export interface TextbookSubmit {
@@ -84,6 +88,7 @@ export function TextbookView({
   );
   const byId = useMemo(() => new Map(material.blocks.map((b) => [b.id, b])), [material.blocks]);
 
+  const [rootRef, width] = useWidth();
   const [zoom, setZoom] = useState(1);
   const [pageIndex, setPageIndex] = useState(() =>
     initialBlockId ? (book.pageOfBlock.get(initialBlockId) ?? 0) : 0,
@@ -95,8 +100,21 @@ export function TextbookView({
     setPageIndex((i) => Math.min(Math.max(i, 0), Math.max(book.pages.length - 1, 0)));
   }, [book.pages.length]);
 
-  // Куда прокрутить после смены страницы: к блоку или к началу страницы.
-  const pageRef = useRef<HTMLDivElement>(null);
+  const multiPage = book.pages.length > 1;
+  // Широкая панель — разворот из двух страниц, как в книге; уже — одна
+  // страница со стрелками по бокам; на телефоне стрелок нет, листают снизу.
+  const spread = multiPage && width >= SPREAD_MIN_WIDTH;
+  const sideArrows = multiPage && width >= SIDE_ARROWS_MIN_WIDTH;
+  const step = spread ? 2 : 1;
+  const start = page ? (spread ? page.index - (page.index % 2) : page.index) : 0;
+  const shown = book.pages.slice(start, start + step);
+  const shownIds = useMemo(
+    () => book.pages.slice(start, start + step).flatMap((p) => p.blockIds),
+    [book, start, step],
+  );
+
+  // Куда прокрутить после смены страницы: к блоку или к началу разворота.
+  const bookRef = useRef<HTMLDivElement>(null);
   const [scrollTarget, setScrollTarget] = useState<{ blockId: string | null; n: number } | null>(
     () => {
       // При открытии прокручиваем, только если ученик остановился не в начале страницы.
@@ -108,7 +126,7 @@ export function TextbookView({
 
   useEffect(() => {
     if (!scrollTarget) return;
-    const root = pageRef.current;
+    const root = bookRef.current;
     if (!root) return;
     const target = scrollTarget.blockId
       ? root.querySelector<HTMLElement>(`[data-annot-block="${CSS.escape(scrollTarget.blockId)}"]`)
@@ -124,7 +142,7 @@ export function TextbookView({
     setScrollTarget((prev) => ({ blockId, n: (prev?.n ?? 0) + 1 }));
   }, []);
 
-  usePositionReport(pageRef, page?.blockIds, page?.index ?? 0, onPositionChange);
+  usePositionReport(bookRef, shownIds, book.pageOfBlock, onPositionChange);
 
   const results = useMemo(() => {
     const r = submit?.result;
@@ -137,7 +155,7 @@ export function TextbookView({
 
   if (!page) {
     return (
-      <div className="tb">
+      <div ref={rootRef} className="tb">
         <div className="tb-stage">
           {showHead ? <Head title={material.title} subject={material.subject} meta={meta} /> : null}
           <p className="py-4 text-sm text-text-2">В материале пока ничего нет.</p>
@@ -146,14 +164,10 @@ export function TextbookView({
     );
   }
 
-  const prev = book.pages[page.index - 1];
-  const next = book.pages[page.index + 1];
-  const multiPage = book.pages.length > 1;
-  const firstBlock = byId.get(page.blockIds[0] ?? "");
-  const startsSection =
-    multiPage &&
-    firstBlock?.type === "rich_text" &&
-    /^\s*<h[12][\s/>]/i.test(firstBlock.html ?? "");
+  const prev = start > 0 ? book.pages[start - 1] : undefined;
+  const next = book.pages[start + step];
+  const last = shown[shown.length - 1]!;
+  const pageLabel = shown.length > 1 ? `${start + 1}–${start + shown.length}` : `${start + 1}`;
 
   // Стрелки листают страницы, пока фокус не в поле ввода и не на виджете,
   // которому стрелки нужны самому (перемотка, перестановка, ползунок).
@@ -174,39 +188,138 @@ export function TextbookView({
 
   const stateOf = (id: string) => taskState(hasAnswer(responses[id]), results?.get(id));
 
+  const renderPage = (p: TextbookPage, side: "left" | "right" | null) => {
+    const firstBlock = byId.get(p.blockIds[0] ?? "");
+    const startsSection =
+      multiPage && firstBlock?.type === "rich_text" && /^\s*<h[12][\s/>]/i.test(firstBlock.html ?? "");
+    const isLast = p.index === book.pages.length - 1;
+    return (
+      <article key={p.id} className={cn("tb-sheet", side && `tb-sheet--${side}`)}>
+        <div className="tb-run" aria-hidden>
+          <span>{material.subject}</span>
+          <span>{multiPage ? p.title : ""}</span>
+        </div>
+
+        <div className="tb-page" aria-label={p.title}>
+          {startsSection ? <span className="tb-section">§ {p.index + 1}</span> : null}
+          {p.blockIds.map((id) => {
+            const block = byId.get(id);
+            if (!block || block.type === "page_break") return null;
+            const isTask = block.type === "question";
+            const n = book.taskNumber.get(id) ?? 0;
+            return (
+              <div
+                key={id}
+                data-annot-block={id}
+                className={cn("tb-row", rowKind(block))}
+                tabIndex={isTask ? -1 : undefined}
+              >
+                {isTask ? <TaskMark number={n} points={block.points} state={stateOf(id)} /> : null}
+                <div className="tb-main">
+                  {isTask ? (
+                    <>
+                      <TextbookTask
+                        block={block}
+                        number={n}
+                        value={responses[id]}
+                        onChange={(r) => onResponseChange?.(id, r)}
+                        disabled={disabled}
+                        result={results?.get(id)}
+                      />
+                      {renderAfterTask?.(id)}
+                    </>
+                  ) : (
+                    <TextbookContentBlock
+                      block={block}
+                      figureNumber={book.figureNumber.get(id)}
+                      formulaNumber={book.formulaNumber.get(id)}
+                    />
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {/* Слой пометок — на каждой странице свой: штрихи, чьих блоков
+              на странице нет, слой не рисует. */}
+          {overlay}
+        </div>
+
+        {multiPage && !sideArrows && p === last ? (
+          <nav className="tb-pager" aria-label="Страницы материала">
+            {prev ? (
+              <button type="button" onClick={() => goTo(prev.index)}>
+                <span className="tb-pager-dir">Назад · стр. {prev.index + 1}</span>
+                <span className="tb-pager-title">{prev.title}</span>
+              </button>
+            ) : null}
+            {next ? (
+              <button type="button" className="tb-pager-next" onClick={() => goTo(next.index)}>
+                <span className="tb-pager-dir">Дальше · стр. {next.index + 1}</span>
+                <span className="tb-pager-title">
+                  {next.title}
+                  <ArrowRight aria-hidden />
+                </span>
+              </button>
+            ) : null}
+          </nav>
+        ) : null}
+
+        {submit && isLast ? (
+          <Finish book={book} responses={responses} submit={submit} answered={answered} onJump={goTo} />
+        ) : null}
+
+        {multiPage ? <div className="tb-folio">{p.index + 1}</div> : null}
+      </article>
+    );
+  };
+
   return (
-    <div className="tb" onKeyDown={onKeyDown}>
+    <div ref={rootRef} className={cn("tb", spread && "tb--spread")} onKeyDown={onKeyDown}>
       <div className="tb-stage">
         {showHead ? <Head title={material.title} subject={material.subject} meta={meta} /> : null}
 
         <div className="tb-bar">
           {multiPage ? (
             <>
-              <Contents book={book} current={page.index} responses={responses} onPick={goTo} />
-              <div className="tb-pagenav">
-                <button
-                  type="button"
-                  className="tb-iconbtn"
-                  disabled={!prev}
-                  aria-label="Предыдущая страница"
-                  onClick={() => prev && goTo(prev.index)}
-                >
-                  <ChevronLeft aria-hidden />
-                </button>
-                <span className="tb-pagenav-count">
-                  {page.index + 1} <span>из {book.pages.length}</span>
-                </span>
-                <button
-                  type="button"
-                  className="tb-iconbtn"
-                  disabled={!next}
-                  aria-label="Следующая страница"
-                  onClick={() => next && goTo(next.index)}
-                >
-                  <ChevronRight aria-hidden />
-                </button>
-              </div>
-              <span className="tb-bar-title">{page.title}</span>
+              <Contents
+                book={book}
+                current={shown.map((p) => p.index)}
+                responses={responses}
+                onPick={goTo}
+              />
+              {spread ? null : (
+                <div className="tb-pagenav">
+                  <button
+                    type="button"
+                    className="tb-iconbtn"
+                    disabled={!prev}
+                    aria-label="Предыдущая страница"
+                    onClick={() => prev && goTo(prev.index)}
+                  >
+                    <ChevronLeft aria-hidden />
+                  </button>
+                  <span className="tb-pagenav-count">
+                    {pageLabel} <span>из {book.pages.length}</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="tb-iconbtn"
+                    disabled={!next}
+                    aria-label="Следующая страница"
+                    onClick={() => next && goTo(next.index)}
+                  >
+                    <ChevronRight aria-hidden />
+                  </button>
+                </div>
+              )}
+              <span className="tb-bar-title">
+                {spread ? (
+                  <span className="tb-bar-pages">
+                    {pageLabel} <span>из {book.pages.length}</span>
+                  </span>
+                ) : null}
+                {page.title}
+              </span>
             </>
           ) : null}
           <span className="tb-bar-grow" />
@@ -249,86 +362,57 @@ export function TextbookView({
           </div>
         </div>
 
-        <article className="tb-sheet" style={zoom === 1 ? undefined : { zoom }}>
-          <div className="tb-run" aria-hidden>
-            <span>{material.subject}</span>
-            <span>{multiPage ? page.title : ""}</span>
-          </div>
-
-          <div ref={pageRef} className="tb-page" tabIndex={-1} aria-label={page.title}>
-            {startsSection ? <span className="tb-section">§ {page.index + 1}</span> : null}
-            {page.blockIds.map((id) => {
-              const block = byId.get(id);
-              if (!block || block.type === "page_break") return null;
-              const isTask = block.type === "question";
-              const n = book.taskNumber.get(id) ?? 0;
-              return (
-                <div
-                  key={id}
-                  data-annot-block={id}
-                  className={cn("tb-row", rowKind(block))}
-                  tabIndex={isTask ? -1 : undefined}
-                >
-                  {isTask ? <TaskMark number={n} points={block.points} state={stateOf(id)} /> : null}
-                  <div className="tb-main">
-                    {isTask ? (
-                      <>
-                        <TextbookTask
-                          block={block}
-                          number={n}
-                          value={responses[id]}
-                          onChange={(r) => onResponseChange?.(id, r)}
-                          disabled={disabled}
-                          result={results?.get(id)}
-                        />
-                        {renderAfterTask?.(id)}
-                      </>
-                    ) : (
-                      <TextbookContentBlock
-                        block={block}
-                        figureNumber={book.figureNumber.get(id)}
-                        formulaNumber={book.formulaNumber.get(id)}
-                      />
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-            {overlay}
-          </div>
-
-          {multiPage ? (
-            <nav className="tb-pager" aria-label="Страницы материала">
-              {prev ? (
-                <button type="button" onClick={() => goTo(prev.index)}>
-                  <span className="tb-pager-dir">Назад · стр. {prev.index + 1}</span>
-                  <span className="tb-pager-title">{prev.title}</span>
-                </button>
-              ) : null}
-              {next ? (
-                <button type="button" className="tb-pager-next" onClick={() => goTo(next.index)}>
-                  <span className="tb-pager-dir">Дальше · стр. {next.index + 1}</span>
-                  <span className="tb-pager-title">
-                    {next.title}
-                    <ArrowRight aria-hidden />
-                  </span>
-                </button>
-              ) : null}
-            </nav>
+        <div className={cn("tb-desk", sideArrows && "tb-desk--arrows")}>
+          {sideArrows ? (
+            <div className="tb-side tb-side--prev">
+              <button
+                type="button"
+                className="tb-turn"
+                disabled={!prev}
+                aria-label="Предыдущая страница"
+                onClick={() => prev && goTo(prev.index)}
+              >
+                <ChevronLeft aria-hidden />
+              </button>
+            </div>
           ) : null}
 
-          {submit && !next ? (
-            <Finish
-              book={book}
-              responses={responses}
-              submit={submit}
-              answered={answered}
-              onJump={goTo}
-            />
-          ) : null}
+          <div
+            ref={bookRef}
+            className="tb-book"
+            tabIndex={-1}
+            aria-label={shown.map((p) => p.title).join(" · ")}
+            style={zoom === 1 ? undefined : { zoom }}
+          >
+            {spread ? (
+              <>
+                {renderPage(shown[0]!, "left")}
+                {shown[1] ? (
+                  renderPage(shown[1], "right")
+                ) : (
+                  // Последняя страница нечётная — справа пустой лист, разворот не рассыпается.
+                  <div className="tb-sheet tb-sheet--right tb-sheet--blank" aria-hidden />
+                )}
+              </>
+            ) : (
+              renderPage(shown[0]!, null)
+            )}
+          </div>
 
-          {multiPage ? <div className="tb-folio">{page.index + 1}</div> : null}
-        </article>
+          {sideArrows ? (
+            <div className="tb-side tb-side--next">
+              <button
+                type="button"
+                className="tb-turn"
+                disabled={!next}
+                aria-label="Следующая страница"
+                onClick={() => next && goTo(next.index)}
+              >
+                <ChevronRight aria-hidden />
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -359,7 +443,8 @@ function Contents({
   onPick,
 }: {
   book: TextbookStructure;
-  current: number;
+  /** Страницы на экране (в развороте — две). */
+  current: readonly number[];
   responses: Record<string, QuestionResponse | undefined>;
   onPick: (index: number) => void;
 }) {
@@ -382,7 +467,7 @@ function Contents({
                 <li key={p.id}>
                   <button
                     type="button"
-                    aria-current={p.index === current ? "page" : undefined}
+                    aria-current={current.includes(p.index) ? "page" : undefined}
                     onClick={() => {
                       setOpen(false);
                       onPick(p.index);
@@ -500,8 +585,8 @@ function formatDateTime(iso: string): string {
  */
 function usePositionReport(
   pageRef: React.RefObject<HTMLDivElement | null>,
-  blockIds: readonly string[] | undefined,
-  pageIndex: number,
+  blockIds: readonly string[],
+  pageOfBlock: ReadonlyMap<string, number>,
   onPositionChange: ((blockId: string, pageIndex: number) => void) | undefined,
 ) {
   const cb = useRef(onPositionChange);
@@ -510,7 +595,7 @@ function usePositionReport(
 
   useEffect(() => {
     const root = pageRef.current;
-    if (!enabled || !root || !blockIds || typeof IntersectionObserver === "undefined") return;
+    if (!enabled || !root || blockIds.length === 0 || typeof IntersectionObserver === "undefined") return;
     const order = new Map(blockIds.map((id, i) => [id, i]));
     const visible = new Set<string>();
     let last: string | null = null;
@@ -528,12 +613,30 @@ function usePositionReport(
         }
         if (top && top !== last) {
           last = top;
-          cb.current?.(top, pageIndex);
+          cb.current?.(top, pageOfBlock.get(top) ?? 0);
         }
       },
       { rootMargin: "-48px 0px -50% 0px" },
     );
     for (const el of root.querySelectorAll<HTMLElement>("[data-annot-block]")) io.observe(el);
     return () => io.disconnect();
-  }, [pageRef, blockIds, pageIndex, enabled]);
+  }, [pageRef, blockIds, pageOfBlock, enabled]);
+}
+
+/**
+ * Ширина элемента: раскладка учебника зависит от панели урока, не от окна.
+ * Callback-ref — корневой div у пустого и обычного учебника разный.
+ */
+function useWidth(): [(el: HTMLDivElement | null) => void, number] {
+  const [width, setWidth] = useState(0);
+  const ro = useRef<ResizeObserver | null>(null);
+  const ref = useCallback((el: HTMLDivElement | null) => {
+    ro.current?.disconnect();
+    ro.current = null;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    setWidth(el.clientWidth);
+    ro.current = new ResizeObserver(() => setWidth(el.clientWidth));
+    ro.current.observe(el);
+  }, []);
+  return [ref, width];
 }
