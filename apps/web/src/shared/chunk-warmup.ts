@@ -14,6 +14,27 @@
 
 const ATTEMPTS = 5;
 const BASE_DELAY_MS = 1000;
+/**
+ * Сколько файлов качаем одновременно. Без предела страница входа запускала
+ * ~40 параллельных запросов: на 64 кбит/с запрос входа ученика стоял в общей
+ * очереди и обрывался по таймауту 30 с — «не удалось войти» при живой сети
+ * (E2E 2026-10-04). Фоновая докачка не должна вытеснять действия человека.
+ */
+const MAX_PARALLEL = 6;
+
+let active = 0;
+const queue: (() => void)[] = [];
+
+async function withSlot<T>(run: () => Promise<T>): Promise<T> {
+  if (active >= MAX_PARALLEL) await new Promise<void>((resolve) => queue.push(resolve));
+  active += 1;
+  try {
+    return await run();
+  } finally {
+    active -= 1;
+    queue.shift()?.();
+  }
+}
 
 type Manifest = Record<string, string[]>;
 
@@ -28,11 +49,13 @@ function wait(ms: number): Promise<void> {
 async function download(url: string): Promise<boolean> {
   for (let i = 1; i <= ATTEMPTS; i++) {
     try {
-      const response = await fetch(url, { credentials: "same-origin" });
-      if (response.ok) {
-        await response.arrayBuffer();
-        return true;
-      }
+      // Низкий приоритет: запросы, которые ждёт человек (вход, данные урока), — вперёд.
+      const response = await withSlot(async () => {
+        const res = await fetch(url, { credentials: "same-origin", priority: "low" });
+        if (res.ok) await res.arrayBuffer();
+        return res;
+      });
+      if (response.ok) return true;
       // Файла нет (сборка сменилась) — повтор не поможет.
       if (response.status === 404) return false;
     } catch {
