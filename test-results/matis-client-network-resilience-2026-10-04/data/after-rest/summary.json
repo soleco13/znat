@@ -1,0 +1,672 @@
+{
+  "T0": 1791130282367,
+  "checks": [
+    {
+      "name": "rest: login 503: error shown, manual retry logs in",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "msg": "injected 503",
+        "stuckButton": false,
+        "retryMs": 504
+      },
+      "rel": "00:05",
+      "t": 1791130286939
+    },
+    {
+      "name": "rest: login 429: error shown, manual retry logs in",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "msg": "injected 429",
+        "stuckButton": false,
+        "retryMs": 503
+      },
+      "rel": "00:08",
+      "t": 1791130290647
+    },
+    {
+      "name": "rest: login reset: error shown, manual retry logs in",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "msg": "Не удалось войти",
+        "stuckButton": false,
+        "retryMs": 503
+      },
+      "rel": "00:12",
+      "t": 1791130294420
+    },
+    {
+      "name": "rest: join 503: retry banner + recovery by click",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "state": "retry",
+        "firstMs": 1055,
+        "retried": {
+          "ok": true,
+          "ms": 609,
+          "banner": "E2E: сетевая устойчивость (автотест) 0 участников Подключение… Пригласить Не удалось войти в урок — проверьте соединение. Повторить 0 Доска 0:00 Режим: лекция Выйти"
+        },
+        "lkParticipants": [
+          "",
+          "E2E Учитель"
+        ],
+        "mediaConnected": true
+      },
+      "rel": "00:15",
+      "t": 1791130296901
+    },
+    {
+      "name": "rest: join connection reset: retry banner + recovery by click",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "state": "retry",
+        "firstMs": 752,
+        "retried": {
+          "ok": true,
+          "ms": 608,
+          "banner": "E2E: сетевая устойчивость (автотест) 0 участников Подключение… Пригласить Не удалось войти в урок — проверьте соединение. Повторить 0 Доска 0:00 Режим: лекция Выйти"
+        },
+        "lkParticipants": [
+          "",
+          "E2E Учитель"
+        ],
+        "mediaConnected": true
+      },
+      "rel": "00:17",
+      "t": 1791130299121
+    },
+    {
+      "name": "rest: join response lost (server processed): retry → single participant",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "dupT": 1,
+        "state": "retry",
+        "firstMs": 1047,
+        "retried": {
+          "ok": true,
+          "ms": 609,
+          "banner": "E2E: сетевая устойчивость (автотест) 0 участников Подключение… Пригласить Не удалось войти в урок — проверьте соединение. Повторить 0 Доска 0:00 Режим: лекция Выйти"
+        },
+        "lkParticipants": [
+          "E2E Учитель"
+        ],
+        "mediaConnected": true
+      },
+      "rel": "00:20",
+      "t": 1791130302093
+    },
+    {
+      "name": "rest: join delayed 35 s (> client timeout 30 s): timeout shown, retry works",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "state": "retry",
+        "firstMs": 30843,
+        "retried": {
+          "ok": true,
+          "ms": 669,
+          "banner": "E2E: сетевая устойчивость (автотест) 0 участников Подключение… Пригласить Не удалось войти в урок — проверьте соединение. Повторить 0 Доска 0:00 Режим: лекция Выйти"
+        },
+        "lkParticipants": [
+          "E2E Учитель"
+        ],
+        "mediaConnected": true
+      },
+      "rel": "00:53",
+      "t": 1791130334901
+    },
+    {
+      "name": "rest: teacher back in room (media connected)",
+      "ok": true,
+      "rel": "00:56",
+      "t": 1791130337964
+    },
+    {
+      "name": "rest: student in room",
+      "ok": true,
+      "rel": "00:58",
+      "t": 1791130340390
+    },
+    {
+      "name": "rest: chat 503: error shown, draft restored, nothing delivered",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "err": true,
+        "draftRestored": true,
+        "atTeacher": 0
+      },
+      "rel": "01:05",
+      "t": 1791130347192
+    },
+    {
+      "name": "rest: chat 503 → user resend: delivered once",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "copies": 1
+      },
+      "rel": "01:07",
+      "t": 1791130349023
+    },
+    {
+      "name": "rest: chat response lost (server saved): user sees state consistent, no duplicate after resend",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "errShown": true,
+        "draftRestored": true,
+        "atTeacherBeforeResend": 1,
+        "atTeacherAfterResend": 1,
+        "atStudent": 1,
+        "dbRows": 1
+      },
+      "rel": "01:13",
+      "t": 1791130355480
+    },
+    {
+      "name": "rest: material load 503 once: recovers without page reload",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "firstState": "ok",
+        "selfHealWithin20s": null,
+        "recoversByReopen": null
+      },
+      "rel": "01:16",
+      "t": 1791130358813
+    },
+    {
+      "name": "rest: answer save 503 ×2: autosave retries, answer persisted once",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "saveMs": 25066,
+        "rows": 1,
+        "ui": [
+          "ответы сохранены"
+        ],
+        "target": {
+          "name": "q-6275eae2-e700-4052-a4fc-405dd6edeee8",
+          "value": "6b60fb6d-08f8-4d54-a5c8-72f423d3f6b0"
+        }
+      },
+      "rel": "01:55",
+      "t": 1791130397840
+    },
+    {
+      "name": "rest: answer save connection reset: retried and persisted",
+      "ok": false,
+      "detail": {
+        "ok": false,
+        "why": "harness: radio click not applied",
+        "target": {
+          "name": "q-2e261716-3517-4d42-8f78-762517172f1c",
+          "value": "on"
+        }
+      },
+      "rel": "02:00",
+      "t": 1791130402242
+    },
+    {
+      "name": "rest: answer save response lost (server saved): retry idempotent, 1 row",
+      "ok": false,
+      "detail": {
+        "ok": false,
+        "why": "harness: radio click not applied",
+        "target": {
+          "name": "q-2e261716-3517-4d42-8f78-762517172f1c",
+          "value": "on"
+        }
+      },
+      "rel": "02:04",
+      "t": 1791130406662
+    },
+    {
+      "name": "rest: material load connection reset: recovers by itself, no F5",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "ms": 3311,
+        "sawError": null,
+        "f5": false
+      },
+      "rel": "02:08",
+      "t": 1791130410719
+    },
+    {
+      "name": "rest: material load delayed 35 s (> client timeout): recovers by itself",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "ms": 32951,
+        "sawError": null,
+        "f5": false
+      },
+      "rel": "02:42",
+      "t": 1791130444416
+    },
+    {
+      "name": "rest: material load during 12 s network outage: recovers after network returns",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "ms": 14944,
+        "sawError": null,
+        "f5": false
+      },
+      "rel": "02:58",
+      "t": 1791130460160
+    },
+    {
+      "name": "rest: material: retries exhausted → error with Retry + Collapse, Retry loads",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "errorAfterMs": 36712,
+        "hasRetry": true,
+        "hasCollapse": true,
+        "errText": "Не удалось загрузить задание — проверьте интернет",
+        "loadedAfterClickMs": 545
+      },
+      "rel": "03:37",
+      "t": 1791130499518
+    },
+    {
+      "name": "rest: material: 'online' event retries automatically (no click, no F5)",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "errorShown": true,
+        "loadedAfterOnlineMs": 549
+      },
+      "rel": "04:18",
+      "t": 1791130540330
+    },
+    {
+      "name": "rest: material: previously entered answer preserved after reloads",
+      "ok": false,
+      "detail": {
+        "ok": false,
+        "radioChecked": null,
+        "dbRows": 0
+      },
+      "rel": "04:39",
+      "t": 1791130561493
+    },
+    {
+      "name": "rest: 401 on API → silent refresh, user stays in lesson",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "onLogin": false
+      },
+      "rel": "04:41",
+      "t": 1791130563822
+    },
+    {
+      "name": "rest: refresh 503 (server down): user NOT logged out",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "onLogin": false,
+        "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+      },
+      "rel": "04:48",
+      "t": 1791130569873
+    }
+  ],
+  "suite": "rest",
+  "rounds": {
+    "login 503: error shown, manual retry logs in": {
+      "ok": true,
+      "msg": "injected 503",
+      "stuckButton": false,
+      "retryMs": 504
+    },
+    "login 429: error shown, manual retry logs in": {
+      "ok": true,
+      "msg": "injected 429",
+      "stuckButton": false,
+      "retryMs": 503
+    },
+    "login reset: error shown, manual retry logs in": {
+      "ok": true,
+      "msg": "Не удалось войти",
+      "stuckButton": false,
+      "retryMs": 503
+    },
+    "join 503: retry banner + recovery by click": {
+      "ok": true,
+      "state": "retry",
+      "firstMs": 1055,
+      "retried": {
+        "ok": true,
+        "ms": 609,
+        "banner": "E2E: сетевая устойчивость (автотест) 0 участников Подключение… Пригласить Не удалось войти в урок — проверьте соединение. Повторить 0 Доска 0:00 Режим: лекция Выйти"
+      },
+      "lkParticipants": [
+        "",
+        "E2E Учитель"
+      ],
+      "mediaConnected": true
+    },
+    "join connection reset: retry banner + recovery by click": {
+      "ok": true,
+      "state": "retry",
+      "firstMs": 752,
+      "retried": {
+        "ok": true,
+        "ms": 608,
+        "banner": "E2E: сетевая устойчивость (автотест) 0 участников Подключение… Пригласить Не удалось войти в урок — проверьте соединение. Повторить 0 Доска 0:00 Режим: лекция Выйти"
+      },
+      "lkParticipants": [
+        "",
+        "E2E Учитель"
+      ],
+      "mediaConnected": true
+    },
+    "join response lost (server processed): retry → single participant": {
+      "ok": true,
+      "dupT": 1,
+      "state": "retry",
+      "firstMs": 1047,
+      "retried": {
+        "ok": true,
+        "ms": 609,
+        "banner": "E2E: сетевая устойчивость (автотест) 0 участников Подключение… Пригласить Не удалось войти в урок — проверьте соединение. Повторить 0 Доска 0:00 Режим: лекция Выйти"
+      },
+      "lkParticipants": [
+        "E2E Учитель"
+      ],
+      "mediaConnected": true
+    },
+    "join delayed 35 s (> client timeout 30 s): timeout shown, retry works": {
+      "ok": true,
+      "state": "retry",
+      "firstMs": 30843,
+      "retried": {
+        "ok": true,
+        "ms": 669,
+        "banner": "E2E: сетевая устойчивость (автотест) 0 участников Подключение… Пригласить Не удалось войти в урок — проверьте соединение. Повторить 0 Доска 0:00 Режим: лекция Выйти"
+      },
+      "lkParticipants": [
+        "E2E Учитель"
+      ],
+      "mediaConnected": true
+    },
+    "chat 503: error shown, draft restored, nothing delivered": {
+      "ok": true,
+      "err": true,
+      "draftRestored": true,
+      "atTeacher": 0
+    },
+    "chat 503 → user resend: delivered once": {
+      "ok": true,
+      "copies": 1
+    },
+    "chat response lost (server saved): user sees state consistent, no duplicate after resend": {
+      "ok": true,
+      "errShown": true,
+      "draftRestored": true,
+      "atTeacherBeforeResend": 1,
+      "atTeacherAfterResend": 1,
+      "atStudent": 1,
+      "dbRows": 1
+    },
+    "material load 503 once: recovers without page reload": {
+      "ok": true,
+      "firstState": "ok",
+      "selfHealWithin20s": null,
+      "recoversByReopen": null
+    },
+    "answer save 503 ×2: autosave retries, answer persisted once": {
+      "ok": true,
+      "saveMs": 25066,
+      "rows": 1,
+      "ui": [
+        "ответы сохранены"
+      ],
+      "target": {
+        "name": "q-6275eae2-e700-4052-a4fc-405dd6edeee8",
+        "value": "6b60fb6d-08f8-4d54-a5c8-72f423d3f6b0"
+      }
+    },
+    "answer save connection reset: retried and persisted": {
+      "ok": false,
+      "why": "harness: radio click not applied",
+      "target": {
+        "name": "q-2e261716-3517-4d42-8f78-762517172f1c",
+        "value": "on"
+      }
+    },
+    "answer save response lost (server saved): retry idempotent, 1 row": {
+      "ok": false,
+      "why": "harness: radio click not applied",
+      "target": {
+        "name": "q-2e261716-3517-4d42-8f78-762517172f1c",
+        "value": "on"
+      }
+    },
+    "material load connection reset: recovers by itself, no F5": {
+      "ok": true,
+      "ms": 3311,
+      "sawError": null,
+      "f5": false
+    },
+    "material load delayed 35 s (> client timeout): recovers by itself": {
+      "ok": true,
+      "ms": 32951,
+      "sawError": null,
+      "f5": false
+    },
+    "material load during 12 s network outage: recovers after network returns": {
+      "ok": true,
+      "ms": 14944,
+      "sawError": null,
+      "f5": false
+    },
+    "material: retries exhausted → error with Retry + Collapse, Retry loads": {
+      "ok": true,
+      "errorAfterMs": 36712,
+      "hasRetry": true,
+      "hasCollapse": true,
+      "errText": "Не удалось загрузить задание — проверьте интернет",
+      "loadedAfterClickMs": 545
+    },
+    "material: 'online' event retries automatically (no click, no F5)": {
+      "ok": true,
+      "errorShown": true,
+      "loadedAfterOnlineMs": 549
+    },
+    "material: previously entered answer preserved after reloads": {
+      "ok": false,
+      "radioChecked": null,
+      "dbRows": 0
+    },
+    "401 on API → silent refresh, user stays in lesson": {
+      "ok": true,
+      "onLogin": false
+    },
+    "refresh 503 (server down): user NOT logged out": {
+      "ok": true,
+      "onLogin": false,
+      "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+    }
+  },
+  "injections": {
+    "teacher": [
+      {
+        "t": 1791130283809,
+        "action": "status",
+        "url": "/api/v1/auth/login",
+        "method": "POST"
+      },
+      {
+        "t": 1791130287565,
+        "action": "status",
+        "url": "/api/v1/auth/login",
+        "method": "POST"
+      },
+      {
+        "t": 1791130291301,
+        "action": "fail",
+        "url": "/api/v1/auth/login",
+        "method": "POST"
+      },
+      {
+        "t": 1791130295904,
+        "action": "status",
+        "url": "/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join",
+        "method": "POST"
+      },
+      {
+        "t": 1791130298393,
+        "action": "fail",
+        "url": "/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join",
+        "method": "POST"
+      },
+      {
+        "t": 1791130301160,
+        "action": "lostResp",
+        "url": "/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join",
+        "method": "POST",
+        "status": 200
+      },
+      {
+        "t": 1791130304124,
+        "action": "delay",
+        "url": "/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join",
+        "method": "POST"
+      },
+      {
+        "t": 1791130563305,
+        "action": "status",
+        "url": "/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/chat",
+        "method": "GET"
+      },
+      {
+        "t": 1791130564169,
+        "action": "status",
+        "url": "/api/v1/auth/refresh",
+        "method": "POST"
+      },
+      {
+        "t": 1791130567173,
+        "action": "status",
+        "url": "/api/v1/auth/refresh",
+        "method": "POST"
+      }
+    ],
+    "student": [
+      {
+        "t": 1791130344642,
+        "action": "status",
+        "url": "/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/chat",
+        "method": "POST"
+      },
+      {
+        "t": 1791130349223,
+        "action": "lostResp",
+        "url": "/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/chat",
+        "method": "POST",
+        "status": 201
+      },
+      {
+        "t": 1791130356412,
+        "action": "status",
+        "url": "/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my",
+        "method": "GET"
+      },
+      {
+        "t": 1791130376730,
+        "action": "status",
+        "url": "/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/responses",
+        "method": "POST"
+      },
+      {
+        "t": 1791130386751,
+        "action": "status",
+        "url": "/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/responses",
+        "method": "POST"
+      },
+      {
+        "t": 1791130408166,
+        "action": "fail",
+        "url": "/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my",
+        "method": "GET"
+      },
+      {
+        "t": 1791130412201,
+        "action": "delay",
+        "url": "/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my",
+        "method": "GET"
+      },
+      {
+        "t": 1791130461732,
+        "action": "status",
+        "url": "/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my",
+        "method": "GET"
+      },
+      {
+        "t": 1791130463751,
+        "action": "status",
+        "url": "/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my",
+        "method": "GET"
+      },
+      {
+        "t": 1791130468755,
+        "action": "status",
+        "url": "/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my",
+        "method": "GET"
+      },
+      {
+        "t": 1791130478761,
+        "action": "status",
+        "url": "/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my",
+        "method": "GET"
+      },
+      {
+        "t": 1791130498768,
+        "action": "status",
+        "url": "/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my",
+        "method": "GET"
+      },
+      {
+        "t": 1791130501001,
+        "action": "status",
+        "url": "/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my",
+        "method": "GET"
+      },
+      {
+        "t": 1791130503024,
+        "action": "status",
+        "url": "/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my",
+        "method": "GET"
+      },
+      {
+        "t": 1791130508040,
+        "action": "status",
+        "url": "/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my",
+        "method": "GET"
+      },
+      {
+        "t": 1791130518057,
+        "action": "status",
+        "url": "/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my",
+        "method": "GET"
+      },
+      {
+        "t": 1791130538066,
+        "action": "status",
+        "url": "/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my",
+        "method": "GET"
+      }
+    ]
+  }
+}

@@ -1,0 +1,2089 @@
+{
+  "T0": 1791127014582,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "setup: teacher login",
+      "ok": true,
+      "detail": {
+        "ms": 513
+      },
+      "rel": "00:02",
+      "t": 1791127016969
+    },
+    {
+      "name": "setup: teacher join",
+      "ok": true,
+      "rel": "00:06",
+      "t": 1791127020206
+    },
+    {
+      "name": "setup: guest enter",
+      "ok": true,
+      "rel": "00:07",
+      "t": 1791127021698
+    },
+    {
+      "name": "setup: student join",
+      "ok": true,
+      "rel": "00:10",
+      "t": 1791127024357
+    },
+    {
+      "name": "setup: two-way audio+video",
+      "ok": true,
+      "rel": "00:16",
+      "t": 1791127030396
+    },
+    {
+      "name": "BAD_4G: recovered on NORMAL",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "mediaMs": 3114,
+        "pubs": [
+          "E2E Ученик:CAMERA+MICROPHONE",
+          "E2E Учитель:CAMERA+MICROPHONE"
+        ],
+        "participants": 2,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": true
+        },
+        "micUi": {
+          "teacher": true,
+          "student": true
+        }
+      },
+      "rel": "03:08",
+      "t": 1791127202543
+    },
+    {
+      "name": "3G: recovered on NORMAL",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "mediaMs": 3208,
+        "pubs": [
+          "E2E Ученик:CAMERA+MICROPHONE",
+          "E2E Учитель:CAMERA+MICROPHONE"
+        ],
+        "participants": 2,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": true
+        },
+        "micUi": {
+          "teacher": true,
+          "student": true
+        }
+      },
+      "rel": "04:35",
+      "t": 1791127289237
+    },
+    {
+      "name": "BAD_3G: recovered on NORMAL",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "mediaMs": 7135,
+        "pubs": [
+          "E2E Ученик:CAMERA+MICROPHONE",
+          "E2E Учитель:CAMERA+MICROPHONE"
+        ],
+        "participants": 2,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": true
+        },
+        "micUi": {
+          "teacher": true,
+          "student": true
+        }
+      },
+      "rel": "07:07",
+      "t": 1791127441306
+    },
+    {
+      "name": "EXTREME: recovered on NORMAL",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "mediaMs": 7130,
+        "pubs": [
+          "E2E Учитель:CAMERA+MICROPHONE",
+          "E2E Ученик:CAMERA+MICROPHONE"
+        ],
+        "participants": 2,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": true
+        },
+        "micUi": {
+          "teacher": true,
+          "student": true
+        }
+      },
+      "rel": "11:21",
+      "t": 1791127695470
+    },
+    {
+      "name": "HORRIBLE: recovered on NORMAL",
+      "ok": false,
+      "detail": {
+        "ok": false,
+        "mediaMs": null,
+        "pubs": [
+          "E2E Учитель:CAMERA+MICROPHONE+SCREEN_SHARE"
+        ],
+        "participants": 1,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [
+              "Восстанавливаем"
+            ],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": false
+        },
+        "micUi": {
+          "teacher": true,
+          "student": false
+        },
+        "media": {
+          "t": {
+            "inAudioBytes": 0,
+            "inAudioEnergy": 0,
+            "outAudioBytes": 30029,
+            "outVideoBytes": 0,
+            "inVideoFrames": 0,
+            "remoteCam": [],
+            "remoteScreen": []
+          },
+          "s": {
+            "inAudioBytes": 0,
+            "inAudioEnergy": 0,
+            "outAudioBytes": 0,
+            "outVideoBytes": 0,
+            "inVideoFrames": 0,
+            "remoteCam": [],
+            "remoteScreen": []
+          },
+          "teacherHearsStudent": false,
+          "studentHearsTeacher": false,
+          "studentSeesTeacher": false,
+          "teacherSeesStudent": false
+        }
+      },
+      "rel": "18:59",
+      "t": 1791128153402
+    },
+    {
+      "name": "LOSS5: recovered on NORMAL",
+      "ok": false,
+      "detail": {
+        "ok": false,
+        "mediaMs": null,
+        "pubs": [
+          "E2E Учитель:CAMERA+MICROPHONE"
+        ],
+        "participants": 1,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [
+              "Восстанавливаем"
+            ],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": false
+        },
+        "micUi": {
+          "teacher": true,
+          "student": false
+        },
+        "media": {
+          "t": {
+            "inAudioBytes": 0,
+            "inAudioEnergy": 0,
+            "outAudioBytes": 35186,
+            "outVideoBytes": 457472,
+            "inVideoFrames": 0,
+            "remoteCam": [],
+            "remoteScreen": []
+          },
+          "s": {
+            "inAudioBytes": 0,
+            "inAudioEnergy": 0,
+            "outAudioBytes": 0,
+            "outVideoBytes": 0,
+            "inVideoFrames": 0,
+            "remoteCam": [],
+            "remoteScreen": []
+          },
+          "teacherHearsStudent": false,
+          "studentHearsTeacher": false,
+          "studentSeesTeacher": false,
+          "teacherSeesStudent": false
+        }
+      },
+      "rel": "25:37",
+      "t": 1791128551881
+    },
+    {
+      "name": "LOSS10: recovered on NORMAL",
+      "ok": false,
+      "detail": {
+        "ok": false,
+        "mediaMs": null,
+        "pubs": [
+          "E2E Учитель:CAMERA+MICROPHONE"
+        ],
+        "participants": 1,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [
+              "Восстанавливаем"
+            ],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": false
+        },
+        "micUi": {
+          "teacher": true,
+          "student": false
+        },
+        "media": {
+          "t": {
+            "inAudioBytes": 0,
+            "inAudioEnergy": 0,
+            "outAudioBytes": 28984,
+            "outVideoBytes": 503593,
+            "inVideoFrames": 0,
+            "remoteCam": [],
+            "remoteScreen": []
+          },
+          "s": {
+            "inAudioBytes": 0,
+            "inAudioEnergy": 0,
+            "outAudioBytes": 0,
+            "outVideoBytes": 0,
+            "inVideoFrames": 0,
+            "remoteCam": [],
+            "remoteScreen": []
+          },
+          "teacherHearsStudent": false,
+          "studentHearsTeacher": false,
+          "studentSeesTeacher": false,
+          "teacherSeesStudent": false
+        }
+      },
+      "rel": "33:01",
+      "t": 1791128995606
+    }
+  ],
+  "suite": "matrix",
+  "rounds": {
+    "NORMAL": {
+      "name": "NORMAL",
+      "net": {
+        "teacher": "NORMAL",
+        "student": "NORMAL"
+      },
+      "steps": {
+        "media": {
+          "ok": true,
+          "ms": 3013,
+          "audioT2S": true,
+          "audioS2T": true,
+          "videoT2S": true,
+          "videoS2T": true,
+          "inKbps": {
+            "student": "audio:85 video:351",
+            "teacher": "audio:87 video:241"
+          },
+          "wallMs": 3013
+        },
+        "chatT2S": {
+          "ok": true,
+          "ms": 281,
+          "text": "e2e-NORMAL-t2s-53667",
+          "copiesAtReceiver": 1,
+          "copiesAtSender": 1,
+          "errShown": false,
+          "wallMs": 3149
+        },
+        "chatS2T": {
+          "ok": true,
+          "ms": 278,
+          "text": "e2e-NORMAL-s2t-56816",
+          "copiesAtReceiver": 1,
+          "copiesAtSender": 1,
+          "errShown": false,
+          "wallMs": 3016
+        },
+        "teacherMic": {
+          "ok": true,
+          "ms": 2016,
+          "uiOn": true,
+          "wallMs": 4542
+        },
+        "studentMic": {
+          "ok": true,
+          "ms": 2025,
+          "uiOn": true,
+          "wallMs": 4542
+        },
+        "teacherCam": {
+          "ok": true,
+          "ms": 2022,
+          "uiOn": true,
+          "wallMs": 4542
+        },
+        "studentCam": {
+          "ok": true,
+          "ms": 2024,
+          "uiOn": true,
+          "wallMs": 4577
+        },
+        "screenShare": {
+          "ok": true,
+          "startMs": 6074,
+          "stopMs": 1550,
+          "res": [
+            "960x540"
+          ],
+          "wallMs": 10625
+        },
+        "board": {
+          "ok": true,
+          "localDrawn": true,
+          "openMs": 1275,
+          "t2sMs": 1387,
+          "s2tOk": true,
+          "s2tMs": 577,
+          "wallMs": 7129
+        },
+        "answer": {
+          "ok": true,
+          "openMs": 1232,
+          "saveMs": 5772,
+          "qid": "6275eae2-e700-4052-a4fc-405dd6edeee8",
+          "uiStatus": [
+            "Сохраняем"
+          ],
+          "wallMs": 9333
+        },
+        "mediaEnd": {
+          "ok": true,
+          "ms": 3015,
+          "audioT2S": true,
+          "audioS2T": true,
+          "videoT2S": true,
+          "videoS2T": true,
+          "inKbps": {
+            "student": "audio:85 video:108",
+            "teacher": "audio:90 video:247"
+          },
+          "wallMs": 3015
+        }
+      },
+      "t0": 1791127050653,
+      "ui": {
+        "teacher": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        },
+        "student": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        }
+      },
+      "lk": {
+        "list": [
+          {
+            "identity": "4e42b0ea-572f-44b8-b5c3-4ff6365d6eee",
+            "name": "E2E Ученик",
+            "state": "ACTIVE",
+            "tracks": [
+              "MICROPHONE",
+              "CAMERA"
+            ]
+          },
+          {
+            "identity": "f4cae8de-8354-4d36-9255-091113a18043",
+            "name": "E2E Учитель",
+            "state": "ACTIVE",
+            "tracks": [
+              "MICROPHONE",
+              "CAMERA"
+            ]
+          }
+        ]
+      },
+      "ms": 57492
+    },
+    "BAD_4G": {
+      "name": "BAD_4G",
+      "net": {
+        "teacher": "BAD_4G",
+        "student": "BAD_4G"
+      },
+      "steps": {
+        "media": {
+          "ok": true,
+          "ms": 3017,
+          "audioT2S": true,
+          "audioS2T": true,
+          "videoT2S": true,
+          "videoS2T": true,
+          "inKbps": {
+            "student": "audio:84 video:329",
+            "teacher": "audio:87 video:234"
+          },
+          "wallMs": 3017
+        },
+        "chatT2S": {
+          "ok": true,
+          "ms": 265,
+          "text": "e2e-BAD_4G-t2s-131387",
+          "copiesAtReceiver": 1,
+          "copiesAtSender": 1,
+          "errShown": false,
+          "wallMs": 3082
+        },
+        "chatS2T": {
+          "ok": true,
+          "ms": 274,
+          "text": "e2e-BAD_4G-s2t-134469",
+          "copiesAtReceiver": 1,
+          "copiesAtSender": 1,
+          "errShown": false,
+          "wallMs": 3037
+        },
+        "teacherMic": {
+          "ok": true,
+          "ms": 2028,
+          "uiOn": true,
+          "wallMs": 4543
+        },
+        "studentMic": {
+          "ok": true,
+          "ms": 2032,
+          "uiOn": true,
+          "wallMs": 4563
+        },
+        "teacherCam": {
+          "ok": true,
+          "ms": 2023,
+          "uiOn": true,
+          "wallMs": 4547
+        },
+        "studentCam": {
+          "ok": true,
+          "ms": 2027,
+          "uiOn": true,
+          "wallMs": 4606
+        },
+        "screenShare": {
+          "ok": true,
+          "startMs": 6082,
+          "stopMs": 1559,
+          "res": [
+            "640x360"
+          ],
+          "wallMs": 10641
+        },
+        "board": {
+          "ok": true,
+          "localDrawn": true,
+          "openMs": 534,
+          "t2sMs": 1825,
+          "s2tOk": true,
+          "s2tMs": 571,
+          "wallMs": 6843
+        },
+        "answer": {
+          "ok": false,
+          "why": "radio vanished (re-render)",
+          "openMs": 1215,
+          "wallMs": 16779
+        },
+        "mediaEnd": {
+          "ok": true,
+          "ms": 3009,
+          "audioT2S": true,
+          "audioS2T": true,
+          "videoT2S": true,
+          "videoS2T": true,
+          "inKbps": {
+            "student": "audio:85 video:151",
+            "teacher": "audio:91 video:233"
+          },
+          "wallMs": 3009
+        }
+      },
+      "t0": 1791127128370,
+      "ui": {
+        "teacher": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        },
+        "student": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        }
+      },
+      "lk": {
+        "list": [
+          {
+            "identity": "4e42b0ea-572f-44b8-b5c3-4ff6365d6eee",
+            "name": "E2E Ученик",
+            "state": "ACTIVE",
+            "tracks": [
+              "MICROPHONE",
+              "CAMERA"
+            ]
+          },
+          {
+            "identity": "f4cae8de-8354-4d36-9255-091113a18043",
+            "name": "E2E Учитель",
+            "state": "ACTIVE",
+            "tracks": [
+              "MICROPHONE",
+              "CAMERA"
+            ]
+          }
+        ]
+      },
+      "ms": 64677,
+      "recovery": {
+        "ok": true,
+        "mediaMs": 3114,
+        "pubs": [
+          "E2E Ученик:CAMERA+MICROPHONE",
+          "E2E Учитель:CAMERA+MICROPHONE"
+        ],
+        "participants": 2,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": true
+        },
+        "micUi": {
+          "teacher": true,
+          "student": true
+        }
+      }
+    },
+    "3G": {
+      "name": "3G",
+      "net": {
+        "teacher": "3G",
+        "student": "3G"
+      },
+      "steps": {
+        "media": {
+          "ok": true,
+          "ms": 3013,
+          "audioT2S": true,
+          "audioS2T": true,
+          "videoT2S": true,
+          "videoS2T": true,
+          "inKbps": {
+            "student": "audio:81 video:98",
+            "teacher": "audio:86 video:164"
+          },
+          "wallMs": 3013
+        },
+        "chatT2S": {
+          "ok": true,
+          "ms": 477,
+          "text": "e2e-3G-t2s-225709",
+          "copiesAtReceiver": 1,
+          "copiesAtSender": 1,
+          "errShown": false,
+          "wallMs": 3217
+        },
+        "chatS2T": {
+          "ok": true,
+          "ms": 299,
+          "text": "e2e-3G-s2t-228927",
+          "copiesAtReceiver": 1,
+          "copiesAtSender": 1,
+          "errShown": false,
+          "wallMs": 3058
+        },
+        "teacherMic": {
+          "ok": true,
+          "ms": 2023,
+          "uiOn": true,
+          "wallMs": 4535
+        },
+        "studentMic": {
+          "ok": true,
+          "ms": 2042,
+          "uiOn": true,
+          "wallMs": 4575
+        },
+        "teacherCam": {
+          "ok": true,
+          "ms": 2056,
+          "uiOn": true,
+          "wallMs": 4589
+        },
+        "studentCam": {
+          "ok": true,
+          "ms": 2028,
+          "uiOn": true,
+          "wallMs": 4559
+        },
+        "screenShare": {
+          "ok": true,
+          "startMs": 6039,
+          "stopMs": 1570,
+          "res": [
+            "640x360"
+          ],
+          "wallMs": 10610
+        },
+        "board": {
+          "ok": true,
+          "localDrawn": true,
+          "openMs": 517,
+          "t2sMs": 1288,
+          "s2tOk": true,
+          "s2tMs": 551,
+          "wallMs": 6219
+        },
+        "answer": {
+          "ok": true,
+          "openMs": 1681,
+          "saveMs": 5758,
+          "qid": "a8baead3-4686-45ac-8c5d-eaa6c7b30fe5",
+          "uiStatus": [
+            "Сохраняем"
+          ],
+          "wallMs": 9565
+        },
+        "mediaEnd": {
+          "ok": true,
+          "ms": 3014,
+          "audioT2S": true,
+          "audioS2T": true,
+          "videoT2S": true,
+          "videoS2T": true,
+          "inKbps": {
+            "student": "audio:81 video:49",
+            "teacher": "audio:84 video:98"
+          },
+          "wallMs": 3014
+        }
+      },
+      "t0": 1791127222695,
+      "ui": {
+        "teacher": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        },
+        "student": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        }
+      },
+      "lk": {
+        "list": [
+          {
+            "identity": "4e42b0ea-572f-44b8-b5c3-4ff6365d6eee",
+            "name": "E2E Ученик",
+            "state": "ACTIVE",
+            "tracks": [
+              "MICROPHONE",
+              "CAMERA"
+            ]
+          },
+          {
+            "identity": "f4cae8de-8354-4d36-9255-091113a18043",
+            "name": "E2E Учитель",
+            "state": "ACTIVE",
+            "tracks": [
+              "MICROPHONE",
+              "CAMERA"
+            ]
+          }
+        ]
+      },
+      "ms": 56967,
+      "recovery": {
+        "ok": true,
+        "mediaMs": 3208,
+        "pubs": [
+          "E2E Ученик:CAMERA+MICROPHONE",
+          "E2E Учитель:CAMERA+MICROPHONE"
+        ],
+        "participants": 2,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": true
+        },
+        "micUi": {
+          "teacher": true,
+          "student": true
+        }
+      }
+    },
+    "BAD_3G": {
+      "name": "BAD_3G",
+      "net": {
+        "teacher": "BAD_3G",
+        "student": "BAD_3G"
+      },
+      "steps": {
+        "media": {
+          "ok": true,
+          "ms": 3008,
+          "audioT2S": true,
+          "audioS2T": true,
+          "videoT2S": false,
+          "videoS2T": true,
+          "inKbps": {
+            "student": "audio:54 video:33",
+            "teacher": "audio:63 video:70"
+          },
+          "wallMs": 3008
+        },
+        "chatT2S": {
+          "ok": true,
+          "ms": 483,
+          "text": "e2e-BAD_3G-t2s-312398",
+          "copiesAtReceiver": 1,
+          "copiesAtSender": 1,
+          "errShown": false,
+          "wallMs": 3238
+        },
+        "chatS2T": {
+          "ok": true,
+          "ms": 2515,
+          "text": "e2e-BAD_3G-s2t-315637",
+          "copiesAtReceiver": 1,
+          "copiesAtSender": 1,
+          "errShown": false,
+          "wallMs": 5259
+        },
+        "teacherMic": {
+          "ok": true,
+          "ms": 2025,
+          "uiOn": true,
+          "wallMs": 4538
+        },
+        "studentMic": {
+          "ok": true,
+          "ms": 2042,
+          "uiOn": true,
+          "wallMs": 4581
+        },
+        "teacherCam": {
+          "ok": true,
+          "ms": 2019,
+          "uiOn": true,
+          "wallMs": 4545
+        },
+        "studentCam": {
+          "ok": true,
+          "ms": 2037,
+          "uiOn": true,
+          "wallMs": 4565
+        },
+        "screenShare": {
+          "ok": true,
+          "startMs": 46198,
+          "stopMs": 3603,
+          "res": [],
+          "wallMs": 52802
+        },
+        "board": {
+          "ok": true,
+          "localDrawn": false,
+          "openMs": 1091,
+          "t2sMs": 11446,
+          "s2tOk": true,
+          "s2tMs": 1600,
+          "wallMs": 16796
+        },
+        "answer": {
+          "ok": true,
+          "openMs": 8758,
+          "saveMs": 6767,
+          "qid": "837eb520-6c50-4417-b841-64682451987d",
+          "uiStatus": [],
+          "wallMs": 16121
+        },
+        "mediaEnd": {
+          "ok": true,
+          "ms": 3013,
+          "audioT2S": true,
+          "audioS2T": true,
+          "videoT2S": false,
+          "videoS2T": false,
+          "inKbps": {
+            "student": "audio:57 video:26",
+            "teacher": "audio:60 video:25"
+          },
+          "wallMs": 3013
+        }
+      },
+      "t0": 1791127309390,
+      "ui": {
+        "teacher": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [
+            "Плохая связь",
+            "Плохая связь"
+          ],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        },
+        "student": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [
+            "Плохая связь",
+            "Плохая связь"
+          ],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        }
+      },
+      "lk": {
+        "list": [
+          {
+            "identity": "4e42b0ea-572f-44b8-b5c3-4ff6365d6eee",
+            "name": "E2E Ученик",
+            "state": "ACTIVE",
+            "tracks": [
+              "MICROPHONE",
+              "CAMERA"
+            ]
+          },
+          {
+            "identity": "f4cae8de-8354-4d36-9255-091113a18043",
+            "name": "E2E Учитель",
+            "state": "ACTIVE",
+            "tracks": [
+              "CAMERA",
+              "MICROPHONE"
+            ]
+          }
+        ]
+      },
+      "ms": 118475,
+      "recovery": {
+        "ok": true,
+        "mediaMs": 7135,
+        "pubs": [
+          "E2E Ученик:CAMERA+MICROPHONE",
+          "E2E Учитель:CAMERA+MICROPHONE"
+        ],
+        "participants": 2,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": true
+        },
+        "micUi": {
+          "teacher": true,
+          "student": true
+        }
+      }
+    },
+    "EXTREME": {
+      "name": "EXTREME",
+      "net": {
+        "teacher": "EXTREME",
+        "student": "EXTREME"
+      },
+      "steps": {
+        "media": {
+          "ok": true,
+          "ms": 3011,
+          "audioT2S": true,
+          "audioS2T": true,
+          "videoT2S": false,
+          "videoS2T": false,
+          "inKbps": {
+            "student": "audio:28 video:12",
+            "teacher": "audio:33 video:9"
+          },
+          "wallMs": 3011
+        },
+        "chatT2S": {
+          "ok": true,
+          "ms": 11823,
+          "text": "e2e-EXTREME-t2s-464420",
+          "copiesAtReceiver": 1,
+          "copiesAtSender": 0,
+          "errShown": false,
+          "wallMs": 14587
+        },
+        "chatS2T": {
+          "ok": true,
+          "ms": 6956,
+          "text": "e2e-EXTREME-s2t-479007",
+          "copiesAtReceiver": 1,
+          "copiesAtSender": 0,
+          "errShown": false,
+          "wallMs": 9692
+        },
+        "teacherMic": {
+          "ok": true,
+          "ms": 17064,
+          "uiOn": true,
+          "wallMs": 19583
+        },
+        "studentMic": {
+          "ok": true,
+          "ms": 14596,
+          "uiOn": true,
+          "wallMs": 17149
+        },
+        "teacherCam": {
+          "ok": true,
+          "ms": 7034,
+          "uiOn": true,
+          "wallMs": 9560
+        },
+        "studentCam": {
+          "ok": true,
+          "ms": 9556,
+          "uiOn": true,
+          "wallMs": 12092
+        },
+        "screenShare": {
+          "ok": false,
+          "startMs": null,
+          "stopMs": 1513,
+          "res": [],
+          "wallMs": 51250
+        },
+        "board": {
+          "ok": false,
+          "localDrawn": false,
+          "openMs": 2526,
+          "t2sMs": null,
+          "s2tOk": true,
+          "s2tMs": 12606,
+          "wallMs": 50109
+        },
+        "answer": {
+          "ok": true,
+          "openMs": 21471,
+          "saveMs": 8413,
+          "qid": "2f94c6f9-07ca-49d3-8cdb-cb5306e599d9",
+          "uiStatus": [
+            "Сохраняем"
+          ],
+          "wallMs": 30558
+        },
+        "mediaEnd": {
+          "ok": true,
+          "ms": 3013,
+          "audioT2S": true,
+          "audioS2T": true,
+          "videoT2S": false,
+          "videoS2T": false,
+          "inKbps": {
+            "student": "audio:20 video:11",
+            "teacher": "audio:29 video:12"
+          },
+          "wallMs": 3013
+        }
+      },
+      "t0": 1791127461408,
+      "ui": {
+        "teacher": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [
+            "Восстанавливаем"
+          ],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [
+            "Плохая связь"
+          ],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        },
+        "student": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [
+            "Плохая связь",
+            "Плохая связь"
+          ],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        }
+      },
+      "lk": {
+        "list": [
+          {
+            "identity": "f4cae8de-8354-4d36-9255-091113a18043",
+            "name": "E2E Учитель",
+            "state": "ACTIVE",
+            "tracks": [
+              "CAMERA",
+              "MICROPHONE"
+            ]
+          },
+          {
+            "identity": "4e42b0ea-572f-44b8-b5c3-4ff6365d6eee",
+            "name": "E2E Ученик",
+            "state": "ACTIVE",
+            "tracks": [
+              "MICROPHONE",
+              "CAMERA"
+            ]
+          }
+        ]
+      },
+      "ms": 220614,
+      "recovery": {
+        "ok": true,
+        "mediaMs": 7130,
+        "pubs": [
+          "E2E Учитель:CAMERA+MICROPHONE",
+          "E2E Ученик:CAMERA+MICROPHONE"
+        ],
+        "participants": 2,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": true
+        },
+        "micUi": {
+          "teacher": true,
+          "student": true
+        }
+      }
+    },
+    "HORRIBLE": {
+      "name": "HORRIBLE",
+      "net": {
+        "teacher": "HORRIBLE",
+        "student": "HORRIBLE"
+      },
+      "steps": {
+        "media": {
+          "ok": true,
+          "ms": 3013,
+          "audioT2S": true,
+          "audioS2T": true,
+          "videoT2S": false,
+          "videoS2T": false,
+          "inKbps": {
+            "student": "audio:16 video:5",
+            "teacher": "audio:15 video:5"
+          },
+          "wallMs": 3013
+        },
+        "chatT2S": {
+          "ok": false,
+          "ms": null,
+          "text": "e2e-HORRIBLE-t2s-718636",
+          "copiesAtReceiver": 0,
+          "copiesAtSender": 0,
+          "errShown": false,
+          "wallMs": 32939
+        },
+        "chatS2T": {
+          "ok": false,
+          "ms": null,
+          "text": "e2e-HORRIBLE-s2t-751575",
+          "copiesAtReceiver": 0,
+          "copiesAtSender": 1,
+          "errShown": true,
+          "wallMs": 32921
+        },
+        "teacherMic": {
+          "ok": true,
+          "ms": 2023,
+          "uiOn": true,
+          "wallMs": 4563
+        },
+        "studentMic": {
+          "ok": true,
+          "ms": 2024,
+          "uiOn": true,
+          "wallMs": 4560
+        },
+        "teacherCam": {
+          "ok": false,
+          "ms": null,
+          "uiOn": true,
+          "wallMs": 42713
+        },
+        "studentCam": {
+          "ok": false,
+          "ms": null,
+          "uiOn": true,
+          "wallMs": 42716
+        },
+        "screenShare": {
+          "ok": false,
+          "startMs": null,
+          "stopMs": 1509,
+          "res": [],
+          "wallMs": 51220
+        },
+        "board": {
+          "ok": false,
+          "localDrawn": false,
+          "openMs": null,
+          "t2sMs": null,
+          "s2tOk": false,
+          "s2tMs": null,
+          "wallMs": 109164
+        },
+        "answer": {
+          "ok": true,
+          "openMs": 14269,
+          "saveMs": 6614,
+          "qid": "fe90e2b0-0667-44e4-a7c6-ae5056715cd6",
+          "uiStatus": [],
+          "wallMs": 21453
+        },
+        "mediaEnd": {
+          "ok": false,
+          "ms": null,
+          "audioT2S": false,
+          "audioS2T": false,
+          "videoT2S": false,
+          "videoS2T": false,
+          "inKbps": {
+            "student": "",
+            "teacher": "audio:0 video:0"
+          },
+          "wallMs": 23050
+        }
+      },
+      "t0": 1791127715623,
+      "ui": {
+        "teacher": {
+          "inRoom": true,
+          "overlayReconnect": true,
+          "pill": [
+            "Переподключение…"
+          ],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [
+            "Плохая связь",
+            "Плохая связь"
+          ],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        },
+        "student": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [
+            "Восстанавливаем"
+          ],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        }
+      },
+      "lk": {
+        "list": [
+          {
+            "identity": "f4cae8de-8354-4d36-9255-091113a18043",
+            "name": "E2E Учитель",
+            "state": "ACTIVE",
+            "tracks": [
+              "CAMERA",
+              "MICROPHONE"
+            ]
+          }
+        ]
+      },
+      "ms": 368321,
+      "recovery": {
+        "ok": false,
+        "mediaMs": null,
+        "pubs": [
+          "E2E Учитель:CAMERA+MICROPHONE+SCREEN_SHARE"
+        ],
+        "participants": 1,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [
+              "Восстанавливаем"
+            ],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": false
+        },
+        "micUi": {
+          "teacher": true,
+          "student": false
+        },
+        "media": {
+          "t": {
+            "inAudioBytes": 0,
+            "inAudioEnergy": 0,
+            "outAudioBytes": 30029,
+            "outVideoBytes": 0,
+            "inVideoFrames": 0,
+            "remoteCam": [],
+            "remoteScreen": []
+          },
+          "s": {
+            "inAudioBytes": 0,
+            "inAudioEnergy": 0,
+            "outAudioBytes": 0,
+            "outVideoBytes": 0,
+            "inVideoFrames": 0,
+            "remoteCam": [],
+            "remoteScreen": []
+          },
+          "teacherHearsStudent": false,
+          "studentHearsTeacher": false,
+          "studentSeesTeacher": false,
+          "teacherSeesStudent": false
+        }
+      }
+    },
+    "LOSS5": {
+      "name": "LOSS5",
+      "net": {
+        "teacher": "LOSS5",
+        "student": "LOSS5"
+      },
+      "steps": {
+        "media": {
+          "ok": false,
+          "ms": null,
+          "audioT2S": false,
+          "audioS2T": false,
+          "videoT2S": false,
+          "videoS2T": false,
+          "inKbps": {
+            "student": "",
+            "teacher": ""
+          },
+          "wallMs": 35070
+        },
+        "chatT2S": {
+          "ok": true,
+          "ms": 271,
+          "text": "e2e-LOSS5-t2s-208626",
+          "copiesAtReceiver": 1,
+          "copiesAtSender": 1,
+          "errShown": false,
+          "wallMs": 3007
+        },
+        "chatS2T": {
+          "ok": true,
+          "ms": 487,
+          "text": "e2e-LOSS5-s2t-211634",
+          "copiesAtReceiver": 1,
+          "copiesAtSender": 1,
+          "errShown": false,
+          "wallMs": 3229
+        },
+        "teacherMic": {
+          "ok": false,
+          "ms": null,
+          "uiOn": true,
+          "wallMs": 42585
+        },
+        "studentMic": {
+          "ok": false,
+          "ms": null,
+          "uiOn": false,
+          "wallMs": 42637
+        },
+        "teacherCam": {
+          "ok": false,
+          "ms": null,
+          "uiOn": true,
+          "wallMs": 42594
+        },
+        "studentCam": {
+          "ok": false,
+          "ms": null,
+          "uiOn": false,
+          "wallMs": 42678
+        },
+        "screenShare": {
+          "ok": false,
+          "startMs": null,
+          "stopMs": 1558,
+          "res": [],
+          "wallMs": 51145
+        },
+        "board": {
+          "ok": true,
+          "localDrawn": true,
+          "openMs": 560,
+          "t2sMs": 1275,
+          "s2tOk": true,
+          "s2tMs": 580,
+          "wallMs": 6264
+        },
+        "answer": {
+          "ok": false,
+          "why": "radio vanished (re-render)",
+          "openMs": 1190,
+          "wallMs": 16732
+        },
+        "mediaEnd": {
+          "ok": false,
+          "ms": null,
+          "audioT2S": false,
+          "audioS2T": false,
+          "videoT2S": false,
+          "videoS2T": false,
+          "inKbps": {
+            "student": "",
+            "teacher": ""
+          },
+          "wallMs": 23051
+        }
+      },
+      "t0": 1791128173556,
+      "ui": {
+        "teacher": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        },
+        "student": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [
+            "Восстанавливаем"
+          ],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        }
+      },
+      "lk": {
+        "list": [
+          {
+            "identity": "f4cae8de-8354-4d36-9255-091113a18043",
+            "name": "E2E Учитель",
+            "state": "ACTIVE",
+            "tracks": [
+              "MICROPHONE",
+              "CAMERA"
+            ]
+          }
+        ]
+      },
+      "ms": 308996,
+      "recovery": {
+        "ok": false,
+        "mediaMs": null,
+        "pubs": [
+          "E2E Учитель:CAMERA+MICROPHONE"
+        ],
+        "participants": 1,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [
+              "Восстанавливаем"
+            ],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": false
+        },
+        "micUi": {
+          "teacher": true,
+          "student": false
+        },
+        "media": {
+          "t": {
+            "inAudioBytes": 0,
+            "inAudioEnergy": 0,
+            "outAudioBytes": 35186,
+            "outVideoBytes": 457472,
+            "inVideoFrames": 0,
+            "remoteCam": [],
+            "remoteScreen": []
+          },
+          "s": {
+            "inAudioBytes": 0,
+            "inAudioEnergy": 0,
+            "outAudioBytes": 0,
+            "outVideoBytes": 0,
+            "inVideoFrames": 0,
+            "remoteCam": [],
+            "remoteScreen": []
+          },
+          "teacherHearsStudent": false,
+          "studentHearsTeacher": false,
+          "studentSeesTeacher": false,
+          "teacherSeesStudent": false
+        }
+      }
+    },
+    "LOSS10": {
+      "name": "LOSS10",
+      "net": {
+        "teacher": "LOSS10",
+        "student": "LOSS10"
+      },
+      "steps": {
+        "media": {
+          "ok": false,
+          "ms": null,
+          "audioT2S": false,
+          "audioS2T": false,
+          "videoT2S": false,
+          "videoS2T": false,
+          "inKbps": {
+            "student": "",
+            "teacher": ""
+          },
+          "wallMs": 35092
+        },
+        "chatT2S": {
+          "ok": true,
+          "ms": 256,
+          "text": "e2e-LOSS10-t2s-607075",
+          "copiesAtReceiver": 1,
+          "copiesAtSender": 1,
+          "errShown": false,
+          "wallMs": 2994
+        },
+        "chatS2T": {
+          "ok": true,
+          "ms": 275,
+          "text": "e2e-LOSS10-s2t-610069",
+          "copiesAtReceiver": 1,
+          "copiesAtSender": 1,
+          "errShown": false,
+          "wallMs": 3015
+        },
+        "teacherMic": {
+          "ok": false,
+          "ms": null,
+          "uiOn": true,
+          "wallMs": 42589
+        },
+        "studentMic": {
+          "ok": false,
+          "ms": null,
+          "uiOn": false,
+          "wallMs": 42653
+        },
+        "teacherCam": {
+          "ok": false,
+          "ms": null,
+          "uiOn": true,
+          "wallMs": 42590
+        },
+        "studentCam": {
+          "ok": false,
+          "ms": null,
+          "uiOn": false,
+          "wallMs": 42655
+        },
+        "screenShare": {
+          "ok": false,
+          "startMs": null,
+          "stopMs": 1553,
+          "res": [],
+          "wallMs": 51133
+        },
+        "board": {
+          "ok": true,
+          "localDrawn": true,
+          "openMs": 509,
+          "t2sMs": 1394,
+          "s2tOk": true,
+          "s2tMs": 635,
+          "wallMs": 6264
+        },
+        "answer": {
+          "ok": false,
+          "openMs": 1253,
+          "saveMs": null,
+          "qid": "8b4d0973-ae56-4e7d-8c86-c60f30e94732",
+          "uiStatus": [],
+          "wallMs": 62170
+        },
+        "mediaEnd": {
+          "ok": false,
+          "ms": null,
+          "audioT2S": false,
+          "audioS2T": false,
+          "videoT2S": false,
+          "videoS2T": false,
+          "inKbps": {
+            "student": "",
+            "teacher": ""
+          },
+          "wallMs": 23056
+        }
+      },
+      "t0": 1791128571983,
+      "ui": {
+        "teacher": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        },
+        "student": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [
+            "Восстанавливаем"
+          ],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        }
+      },
+      "lk": {
+        "list": [
+          {
+            "identity": "f4cae8de-8354-4d36-9255-091113a18043",
+            "name": "E2E Учитель",
+            "state": "ACTIVE",
+            "tracks": [
+              "CAMERA",
+              "MICROPHONE"
+            ]
+          }
+        ]
+      },
+      "ms": 354217,
+      "recovery": {
+        "ok": false,
+        "mediaMs": null,
+        "pubs": [
+          "E2E Учитель:CAMERA+MICROPHONE"
+        ],
+        "participants": 1,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [
+              "Восстанавливаем"
+            ],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": false
+        },
+        "micUi": {
+          "teacher": true,
+          "student": false
+        },
+        "media": {
+          "t": {
+            "inAudioBytes": 0,
+            "inAudioEnergy": 0,
+            "outAudioBytes": 28984,
+            "outVideoBytes": 503593,
+            "inVideoFrames": 0,
+            "remoteCam": [],
+            "remoteScreen": []
+          },
+          "s": {
+            "inAudioBytes": 0,
+            "inAudioEnergy": 0,
+            "outAudioBytes": 0,
+            "outVideoBytes": 0,
+            "inVideoFrames": 0,
+            "remoteCam": [],
+            "remoteScreen": []
+          },
+          "teacherHearsStudent": false,
+          "studentHearsTeacher": false,
+          "studentSeesTeacher": false,
+          "teacherSeesStudent": false
+        }
+      }
+    }
+  }
+}

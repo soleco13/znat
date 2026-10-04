@@ -1,0 +1,750 @@
+{
+  "T0": 1791129893440,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "setup: teacher login",
+      "ok": true,
+      "detail": {
+        "ms": 504
+      },
+      "rel": "00:02",
+      "t": 1791129895380
+    },
+    {
+      "name": "setup: teacher join",
+      "ok": true,
+      "rel": "00:05",
+      "t": 1791129898146
+    },
+    {
+      "name": "setup: guest enter",
+      "ok": true,
+      "rel": "00:06",
+      "t": 1791129899415
+    },
+    {
+      "name": "setup: student join",
+      "ok": true,
+      "rel": "00:09",
+      "t": 1791129902139
+    },
+    {
+      "name": "setup: two-way audio+video",
+      "ok": true,
+      "rel": "00:15",
+      "t": 1791129907982
+    },
+    {
+      "name": "turn-udp: outage 15s recovered (media, WS, missed chat, stage, no dup)",
+      "ok": true,
+      "detail": {
+        "mediaPill": {
+          "shownAfterS": null,
+          "goneAfterRestoreMs": 13815
+        },
+        "sec": 15,
+        "base": "NORMAL",
+        "pcReconnectMs": 1027,
+        "mediaMs": 4046,
+        "roomWs": true,
+        "roomWsMs": 0,
+        "missedChat": {
+          "delivered": true,
+          "copies": 1
+        },
+        "stageSynced": true,
+        "offlineMsg": {
+          "atTeacher": 1,
+          "atStudent": 1,
+          "errShown": false,
+          "draftKept": "",
+          "dbRows": 1
+        },
+        "chatAfter": true,
+        "chatAfterDup": [
+          1,
+          1
+        ],
+        "participants": 2,
+        "dup": false,
+        "newPCs": 0,
+        "uiDuring": [
+          {
+            "s": 9,
+            "overlay": false,
+            "pill": [],
+            "lkWarn": [],
+            "q": [],
+            "mic": null
+          },
+          {
+            "s": 14,
+            "overlay": false,
+            "pill": [],
+            "lkWarn": [],
+            "q": [],
+            "mic": null
+          }
+        ],
+        "uiAfter": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        },
+        "ok": true
+      },
+      "rel": "00:56",
+      "t": 1791129949543
+    },
+    {
+      "name": "turn udp: media works, path=prflx/tcp -> host/tcp:7881",
+      "ok": true,
+      "detail": {
+        "mode": "udp",
+        "mediaOk": true,
+        "joinToAudioMs": 5072,
+        "path": "prflx/tcp -> host/tcp:7881",
+        "outage15": {
+          "mediaPill": {
+            "shownAfterS": null,
+            "goneAfterRestoreMs": 13815
+          },
+          "sec": 15,
+          "base": "NORMAL",
+          "pcReconnectMs": 1027,
+          "mediaMs": 4046,
+          "roomWs": true,
+          "roomWsMs": 0,
+          "missedChat": {
+            "delivered": true,
+            "copies": 1
+          },
+          "stageSynced": true,
+          "offlineMsg": {
+            "atTeacher": 1,
+            "atStudent": 1,
+            "errShown": false,
+            "draftKept": "",
+            "dbRows": 1
+          },
+          "chatAfter": true,
+          "chatAfterDup": [
+            1,
+            1
+          ],
+          "participants": 2,
+          "dup": false,
+          "newPCs": 0,
+          "uiDuring": [
+            {
+              "s": 9,
+              "overlay": false,
+              "pill": [],
+              "lkWarn": [],
+              "q": [],
+              "mic": null
+            },
+            {
+              "s": 14,
+              "overlay": false,
+              "pill": [],
+              "lkWarn": [],
+              "q": [],
+              "mic": null
+            }
+          ],
+          "uiAfter": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "ok": true
+        },
+        "pathAfter": "prflx/tcp -> host/tcp:7881",
+        "mediaAfter": {
+          "ok": true,
+          "ms": 3031,
+          "audioT2S": true,
+          "audioS2T": true,
+          "videoT2S": true,
+          "videoS2T": true,
+          "inKbps": {
+            "student": "audio:86 video:145",
+            "teacher": "audio:81 video:138"
+          }
+        }
+      },
+      "rel": "00:59",
+      "t": 1791129952864
+    },
+    {
+      "name": "turn-udp_tcp7881: outage 15s recovered (media, WS, missed chat, stage, no dup)",
+      "ok": true,
+      "detail": {
+        "mediaPill": {
+          "shownAfterS": null,
+          "goneAfterRestoreMs": 13860
+        },
+        "sec": 15,
+        "base": "NORMAL",
+        "pcReconnectMs": 1007,
+        "mediaMs": 4017,
+        "roomWs": true,
+        "roomWsMs": 0,
+        "missedChat": {
+          "delivered": true,
+          "copies": 1
+        },
+        "stageSynced": true,
+        "offlineMsg": {
+          "atTeacher": 1,
+          "atStudent": 1,
+          "errShown": false,
+          "draftKept": "",
+          "dbRows": 1
+        },
+        "chatAfter": true,
+        "chatAfterDup": [
+          1,
+          1
+        ],
+        "participants": 2,
+        "dup": false,
+        "newPCs": 0,
+        "uiDuring": [
+          {
+            "s": 9,
+            "overlay": false,
+            "pill": [],
+            "lkWarn": [],
+            "q": [],
+            "mic": null
+          },
+          {
+            "s": 14,
+            "overlay": false,
+            "pill": [],
+            "lkWarn": [],
+            "q": [],
+            "mic": null
+          }
+        ],
+        "uiAfter": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        },
+        "ok": true
+      },
+      "rel": "01:51",
+      "t": 1791130004241
+    },
+    {
+      "name": "turn udp_tcp7881: media works, path=relay/udp/tls -> host/udp:56492",
+      "ok": true,
+      "detail": {
+        "mode": "udp_tcp7881",
+        "mediaOk": true,
+        "joinToAudioMs": 5125,
+        "path": "relay/udp/tls -> host/udp:56492",
+        "outage15": {
+          "mediaPill": {
+            "shownAfterS": null,
+            "goneAfterRestoreMs": 13860
+          },
+          "sec": 15,
+          "base": "NORMAL",
+          "pcReconnectMs": 1007,
+          "mediaMs": 4017,
+          "roomWs": true,
+          "roomWsMs": 0,
+          "missedChat": {
+            "delivered": true,
+            "copies": 1
+          },
+          "stageSynced": true,
+          "offlineMsg": {
+            "atTeacher": 1,
+            "atStudent": 1,
+            "errShown": false,
+            "draftKept": "",
+            "dbRows": 1
+          },
+          "chatAfter": true,
+          "chatAfterDup": [
+            1,
+            1
+          ],
+          "participants": 2,
+          "dup": false,
+          "newPCs": 0,
+          "uiDuring": [
+            {
+              "s": 9,
+              "overlay": false,
+              "pill": [],
+              "lkWarn": [],
+              "q": [],
+              "mic": null
+            },
+            {
+              "s": 14,
+              "overlay": false,
+              "pill": [],
+              "lkWarn": [],
+              "q": [],
+              "mic": null
+            }
+          ],
+          "uiAfter": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "ok": true
+        },
+        "pathAfter": "relay/udp/tls -> host/udp:59339",
+        "mediaAfter": {
+          "ok": true,
+          "ms": 3044,
+          "audioT2S": true,
+          "audioS2T": true,
+          "videoT2S": true,
+          "videoS2T": true,
+          "inKbps": {
+            "student": "audio:87 video:125",
+            "teacher": "audio:93 video:152"
+          }
+        }
+      },
+      "rel": "01:54",
+      "t": 1791130007531
+    },
+    {
+      "name": "turn-direct_udp: outage 15s recovered (media, WS, missed chat, stage, no dup)",
+      "ok": true,
+      "detail": {
+        "mediaPill": {
+          "shownAfterS": null,
+          "goneAfterRestoreMs": 13790
+        },
+        "sec": 15,
+        "base": "NORMAL",
+        "pcReconnectMs": 253,
+        "mediaMs": 3265,
+        "roomWs": true,
+        "roomWsMs": 0,
+        "missedChat": {
+          "delivered": true,
+          "copies": 1
+        },
+        "stageSynced": true,
+        "offlineMsg": {
+          "atTeacher": 1,
+          "atStudent": 1,
+          "errShown": false,
+          "draftKept": "",
+          "dbRows": 1
+        },
+        "chatAfter": true,
+        "chatAfterDup": [
+          1,
+          1
+        ],
+        "participants": 2,
+        "dup": false,
+        "newPCs": 0,
+        "uiDuring": [
+          {
+            "s": 9,
+            "overlay": false,
+            "pill": [],
+            "lkWarn": [],
+            "q": [],
+            "mic": null
+          },
+          {
+            "s": 14,
+            "overlay": false,
+            "pill": [],
+            "lkWarn": [],
+            "q": [],
+            "mic": null
+          }
+        ],
+        "uiAfter": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        },
+        "ok": true
+      },
+      "rel": "02:45",
+      "t": 1791130058799
+    },
+    {
+      "name": "turn direct_udp: media works, path=relay/udp/udp -> host/udp:57956",
+      "ok": true,
+      "detail": {
+        "mode": "direct_udp",
+        "mediaOk": true,
+        "joinToAudioMs": 5100,
+        "path": "relay/udp/udp -> host/udp:57956",
+        "outage15": {
+          "mediaPill": {
+            "shownAfterS": null,
+            "goneAfterRestoreMs": 13790
+          },
+          "sec": 15,
+          "base": "NORMAL",
+          "pcReconnectMs": 253,
+          "mediaMs": 3265,
+          "roomWs": true,
+          "roomWsMs": 0,
+          "missedChat": {
+            "delivered": true,
+            "copies": 1
+          },
+          "stageSynced": true,
+          "offlineMsg": {
+            "atTeacher": 1,
+            "atStudent": 1,
+            "errShown": false,
+            "draftKept": "",
+            "dbRows": 1
+          },
+          "chatAfter": true,
+          "chatAfterDup": [
+            1,
+            1
+          ],
+          "participants": 2,
+          "dup": false,
+          "newPCs": 0,
+          "uiDuring": [
+            {
+              "s": 9,
+              "overlay": false,
+              "pill": [],
+              "lkWarn": [],
+              "q": [],
+              "mic": null
+            },
+            {
+              "s": 14,
+              "overlay": false,
+              "pill": [],
+              "lkWarn": [],
+              "q": [],
+              "mic": null
+            }
+          ],
+          "uiAfter": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "ok": true
+        },
+        "pathAfter": "relay/udp/udp -> host/udp:54962",
+        "mediaAfter": {
+          "ok": true,
+          "ms": 3013,
+          "audioT2S": true,
+          "audioS2T": true,
+          "videoT2S": true,
+          "videoS2T": true,
+          "inKbps": {
+            "student": "audio:87 video:126",
+            "teacher": "audio:94 video:48"
+          }
+        }
+      },
+      "rel": "02:49",
+      "t": 1791130062104
+    }
+  ],
+  "suite": "turn",
+  "rounds": {
+    "turn-udp": {
+      "mode": "udp",
+      "mediaOk": true,
+      "joinToAudioMs": 5072,
+      "path": "prflx/tcp -> host/tcp:7881",
+      "outage15": {
+        "mediaPill": {
+          "shownAfterS": null,
+          "goneAfterRestoreMs": 13815
+        },
+        "sec": 15,
+        "base": "NORMAL",
+        "pcReconnectMs": 1027,
+        "mediaMs": 4046,
+        "roomWs": true,
+        "roomWsMs": 0,
+        "missedChat": {
+          "delivered": true,
+          "copies": 1
+        },
+        "stageSynced": true,
+        "offlineMsg": {
+          "atTeacher": 1,
+          "atStudent": 1,
+          "errShown": false,
+          "draftKept": "",
+          "dbRows": 1
+        },
+        "chatAfter": true,
+        "chatAfterDup": [
+          1,
+          1
+        ],
+        "participants": 2,
+        "dup": false,
+        "newPCs": 0,
+        "uiDuring": [
+          {
+            "s": 9,
+            "overlay": false,
+            "pill": [],
+            "lkWarn": [],
+            "q": [],
+            "mic": null
+          },
+          {
+            "s": 14,
+            "overlay": false,
+            "pill": [],
+            "lkWarn": [],
+            "q": [],
+            "mic": null
+          }
+        ],
+        "uiAfter": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        },
+        "ok": true
+      },
+      "pathAfter": "prflx/tcp -> host/tcp:7881",
+      "mediaAfter": {
+        "ok": true,
+        "ms": 3031,
+        "audioT2S": true,
+        "audioS2T": true,
+        "videoT2S": true,
+        "videoS2T": true,
+        "inKbps": {
+          "student": "audio:86 video:145",
+          "teacher": "audio:81 video:138"
+        }
+      }
+    },
+    "turn-udp_tcp7881": {
+      "mode": "udp_tcp7881",
+      "mediaOk": true,
+      "joinToAudioMs": 5125,
+      "path": "relay/udp/tls -> host/udp:56492",
+      "outage15": {
+        "mediaPill": {
+          "shownAfterS": null,
+          "goneAfterRestoreMs": 13860
+        },
+        "sec": 15,
+        "base": "NORMAL",
+        "pcReconnectMs": 1007,
+        "mediaMs": 4017,
+        "roomWs": true,
+        "roomWsMs": 0,
+        "missedChat": {
+          "delivered": true,
+          "copies": 1
+        },
+        "stageSynced": true,
+        "offlineMsg": {
+          "atTeacher": 1,
+          "atStudent": 1,
+          "errShown": false,
+          "draftKept": "",
+          "dbRows": 1
+        },
+        "chatAfter": true,
+        "chatAfterDup": [
+          1,
+          1
+        ],
+        "participants": 2,
+        "dup": false,
+        "newPCs": 0,
+        "uiDuring": [
+          {
+            "s": 9,
+            "overlay": false,
+            "pill": [],
+            "lkWarn": [],
+            "q": [],
+            "mic": null
+          },
+          {
+            "s": 14,
+            "overlay": false,
+            "pill": [],
+            "lkWarn": [],
+            "q": [],
+            "mic": null
+          }
+        ],
+        "uiAfter": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        },
+        "ok": true
+      },
+      "pathAfter": "relay/udp/tls -> host/udp:59339",
+      "mediaAfter": {
+        "ok": true,
+        "ms": 3044,
+        "audioT2S": true,
+        "audioS2T": true,
+        "videoT2S": true,
+        "videoS2T": true,
+        "inKbps": {
+          "student": "audio:87 video:125",
+          "teacher": "audio:93 video:152"
+        }
+      }
+    },
+    "turn-direct_udp": {
+      "mode": "direct_udp",
+      "mediaOk": true,
+      "joinToAudioMs": 5100,
+      "path": "relay/udp/udp -> host/udp:57956",
+      "outage15": {
+        "mediaPill": {
+          "shownAfterS": null,
+          "goneAfterRestoreMs": 13790
+        },
+        "sec": 15,
+        "base": "NORMAL",
+        "pcReconnectMs": 253,
+        "mediaMs": 3265,
+        "roomWs": true,
+        "roomWsMs": 0,
+        "missedChat": {
+          "delivered": true,
+          "copies": 1
+        },
+        "stageSynced": true,
+        "offlineMsg": {
+          "atTeacher": 1,
+          "atStudent": 1,
+          "errShown": false,
+          "draftKept": "",
+          "dbRows": 1
+        },
+        "chatAfter": true,
+        "chatAfterDup": [
+          1,
+          1
+        ],
+        "participants": 2,
+        "dup": false,
+        "newPCs": 0,
+        "uiDuring": [
+          {
+            "s": 9,
+            "overlay": false,
+            "pill": [],
+            "lkWarn": [],
+            "q": [],
+            "mic": null
+          },
+          {
+            "s": 14,
+            "overlay": false,
+            "pill": [],
+            "lkWarn": [],
+            "q": [],
+            "mic": null
+          }
+        ],
+        "uiAfter": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        },
+        "ok": true
+      },
+      "pathAfter": "relay/udp/udp -> host/udp:54962",
+      "mediaAfter": {
+        "ok": true,
+        "ms": 3013,
+        "audioT2S": true,
+        "audioS2T": true,
+        "videoT2S": true,
+        "videoS2T": true,
+        "inKbps": {
+          "student": "audio:87 video:126",
+          "teacher": "audio:94 video:48"
+        }
+      }
+    }
+  }
+}

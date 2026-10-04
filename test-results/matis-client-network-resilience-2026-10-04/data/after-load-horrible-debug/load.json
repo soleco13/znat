@@ -1,0 +1,147 @@
+{
+  "HORRIBLE": {
+    "formMs": 34656,
+    "devCheckMs": 120222,
+    "inRoomMs": 121089,
+    "audioMs": null,
+    "fcp": 31992,
+    "lcp": 34664,
+    "longTasks": 1,
+    "nav": {
+      "ttfb": 5301,
+      "dcl": 31914,
+      "load": 31915,
+      "kb": 0.8
+    },
+    "requests": 100,
+    "totalKb": 146,
+    "byType": {
+      "script": {
+        "n": 36,
+        "kb": 127.3
+      },
+      "link": {
+        "n": 1,
+        "kb": 12.9
+      },
+      "fetch": {
+        "n": 59,
+        "kb": 2.6
+      },
+      "other": {
+        "n": 3,
+        "kb": 2.1
+      }
+    },
+    "beforeForm": {
+      "n": 7,
+      "kb": 143
+    },
+    "heavy": [
+      {
+        "n": "/assets/index-CKVtpw34.js",
+        "t": "script",
+        "start": 8938,
+        "end": 31872,
+        "kb": 126.3,
+        "decKb": 467
+      },
+      {
+        "n": "/assets/index-CRDIIC9a.css",
+        "t": "link",
+        "start": 8938,
+        "end": 12833,
+        "kb": 12.9,
+        "decKb": 78
+      },
+      {
+        "n": "/sw-assets.json",
+        "t": "fetch",
+        "start": 31974,
+        "end": 34488,
+        "kb": 1.2,
+        "decKb": 5
+      },
+      {
+        "n": "/excalidraw-asset-path.js",
+        "t": "script",
+        "start": 8937,
+        "end": 12831,
+        "kb": 1,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 31977,
+        "end": 34571,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 42407,
+        "end": 44283,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 121082,
+        "end": 201140,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc",
+        "t": "fetch",
+        "start": 31973,
+        "end": 34344,
+        "kb": 0.5,
+        "decKb": 0
+      },
+      {
+        "n": "/api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc/enter",
+        "t": "fetch",
+        "start": 34951,
+        "end": 42383,
+        "kb": 0.5,
+        "decKb": 0
+      },
+      {
+        "n": "/api/v1/auth/refresh",
+        "t": "fetch",
+        "start": 31990,
+        "end": 34572,
+        "kb": 0.4,
+        "decKb": 0
+      },
+      {
+        "n": "/assets/RoomPage-DAH6--lm.js",
+        "t": "fetch",
+        "start": 34490,
+        "end": 40333,
+        "kb": 0,
+        "decKb": 102
+      },
+      {
+        "n": "/assets/activity-api-B2wE5_Ts.js",
+        "t": "fetch",
+        "start": 34491,
+        "end": 40338,
+        "kb": 0,
+        "decKb": 1
+      }
+    ],
+    "fails": [
+      {
+        "k": "http4xx",
+        "u": "/api/v1/auth/refresh",
+        "s": 401
+      }
+    ],
+    "sw": true
+  }
+}

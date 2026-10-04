@@ -8,3 +8,8 @@ smoke/
 chain-*.done
 # покадровые скриншоты отладки загрузки — оставляем каждый шестой
 before-load-horrible-debug/shots/load-HORRIBLE-0[0-9][1-5].png
+# вывод драйвера дублирует events.jsonl/summary.json
+*/driver.log
+*/netctl.log
+*.out
+*.done

@@ -441,7 +441,7 @@
    "who": "student",
    "kind": "net.fail",
    "text": "net::ERR_CONNECTION_REFUSED",
-   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiI4Y2M0OTYxYS0yMGY1LTRiNmEtYTdjYi1hYWZjMjQ1ZGVhNzgiLCJleHAiOjE3OTExNDQ0NDIs",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=<JWT-REDACTED>",
    "method": "GET",
    "ms": 3,
    "status": null
@@ -451,7 +451,7 @@
    "who": "student",
    "kind": "net.fail",
    "text": "net::ERR_CONNECTION_REFUSED",
-   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiI4Y2M0OTYxYS0yMGY1LTRiNmEtYTdjYi1hYWZjMjQ1ZGVhNzgiLCJleHAiOjE3OTExNDQ0NDIs",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=<JWT-REDACTED>",
    "method": "GET",
    "ms": 17,
    "status": null
@@ -531,7 +531,7 @@
    "who": "student",
    "kind": "net.fail",
    "text": "net::ERR_CONNECTION_REFUSED",
-   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiI4Y2M0OTYxYS0yMGY1LTRiNmEtYTdjYi1hYWZjMjQ1ZGVhNzgiLCJleHAiOjE3OTExNDQ0NDIs",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=<JWT-REDACTED>",
    "method": "GET",
    "ms": 10,
    "status": null
@@ -551,7 +551,7 @@
    "who": "student",
    "kind": "net.fail",
    "text": "net::ERR_CONNECTION_REFUSED",
-   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiI4Y2M0OTYxYS0yMGY1LTRiNmEtYTdjYi1hYWZjMjQ1ZGVhNzgiLCJleHAiOjE3OTExNDQ0NDIs",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=<JWT-REDACTED>",
    "method": "GET",
    "ms": 4,
    "status": null

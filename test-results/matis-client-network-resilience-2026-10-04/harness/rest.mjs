@@ -177,17 +177,22 @@ const activityState = () => SP.eval("document.body.innerText.includes('Не уд
     await waitFor(() => SP.eval(`!!${byLabel("Чат")}`), 40000); await sleep(3000);
   }
 }
+// Вариант ищем по индексу в группе, а не по [value=…]: у «Верно/Неверно» атрибута value нет
+// (свойство .value = "on"), селектор по атрибуту ничего не находил.
+const radioSel = (t) => `[...document.querySelectorAll('input[type=radio][name=${JSON.stringify(t.name)}]')].filter((x, i) => i === ${t.idx})`;
+// single_choice хранит id варианта, true_false — {"value": true|false}
+const savedFragment = (t) => t.attr ?? (t.text === "Верно" ? '"value": true' : '"value": false');
 async function answerOne(label, inject) {
   await openActivity();
   await waitFor(async () => (await activityState()) === "ok", 40000, 500);
   let target = null;
   for (let i = 0; i < 20 && !target; i++) {
-    target = await SP.eval(`(() => { const r = [...document.querySelectorAll('input[type=radio][name^="q-"]')].filter(x => !x.checked && x.closest('label')?.getBoundingClientRect().width > 0); const used = new Set([...document.querySelectorAll('input[type=radio][name^="q-"]:checked')].map(x => x.name)); const n = r.map(x => x.name).find(n => !used.has(n)); if (!n) return null; const o = r.find(x => x.name === n); return { name: n, value: o.value }; })()`);
+    target = await SP.eval(`(() => { const r = [...document.querySelectorAll('input[type=radio][name^="q-"]')].filter(x => !x.checked && x.closest('label')?.getBoundingClientRect().width > 0); const used = new Set([...document.querySelectorAll('input[type=radio][name^="q-"]:checked')].map(x => x.name)); const n = r.map(x => x.name).find(n => !used.has(n)); if (!n) return null; const all = [...document.querySelectorAll('input[type=radio][name="' + n + '"]')]; const o = r.find(x => x.name === n); return { name: n, idx: all.indexOf(o), attr: o.getAttribute('value'), text: (o.closest('label')?.textContent || '').trim() }; })()`);
     if (!target) { await SP.click(byLabel("Следующая страница")); await sleep(1200); }
   }
   if (!target) { await SP.click(byLabel("Свернуть задание")).catch(() => {}); return { ok: false, why: "no question visible (activity not loaded)" }; }
   if (inject) await inject();
-  const sel = `[...document.querySelectorAll('input[name=${JSON.stringify(target.name)}][value=${JSON.stringify(target.value)}]')]`;
+  const sel = radioSel(target);
   let checked = false;
   for (let i = 0; i < 5 && !checked; i++) {
     await SP.click(`(${sel}.map(x => x.closest('label')).find(l => l && l.getBoundingClientRect().width > 0) || null)`);
@@ -196,15 +201,72 @@ async function answerOne(label, inject) {
   }
   if (!checked) { await SP.click(byLabel("Свернуть задание")).catch(() => {}); return { ok: false, why: "harness: radio click not applied", target }; }
   const qid = target.name.slice(2);
-  const saved = await waitFor(async () => (await count(`select count(*) from responses where question_id='${qid}' and participant_id in (select id from lesson_participants where guest_id::text='${sid}' or user_id::text='${sid}') and response::text like '%${target.value}%'`)) > 0, 45000, 1000);
+  const saved = await waitFor(async () => (await count(`select count(*) from responses where question_id='${qid}' and participant_id in (select id from lesson_participants where guest_id::text='${sid}' or user_id::text='${sid}') and response::text like '%${savedFragment(target)}%'`)) > 0, 45000, 1000);
   const rows = await count(`select count(*) from responses where question_id='${qid}' and participant_id in (select id from lesson_participants where guest_id::text='${sid}' or user_id::text='${sid}')`);
   const ui = await SP.eval("document.body.innerText.match(/ответы[^\\n]{0,40}|не сохран[^\\n]{0,40}|сохран[^\\n]{0,30}/gi)").catch(() => null);
   await SP.click(byLabel("Свернуть задание")).catch(() => {});
-  return { ok: saved.ok && rows === 1, saveMs: saved.ok ? saved.ms : null, rows, ui };
+  return { ok: saved.ok && rows === 1, saveMs: saved.ok ? saved.ms : null, rows, ui, target };
 }
 rec("answer save 503 ×2: autosave retries, answer persisted once", await answerOne("503", () => SI.add("POST", /\/responses$/, "status", { status: 503, times: 2 })));
 rec("answer save connection reset: retried and persisted", await answerOne("reset", () => SI.add("POST", /\/responses$/, "fail")));
-rec("answer save response lost (server saved): retry idempotent, 1 row", await answerOne("lost", () => SI.add("POST", /\/responses$/, "lostResp")));
+const lastAnswer = await answerOne("lost", () => SI.add("POST", /\/responses$/, "lostResp"));
+rec("answer save response lost (server saved): retry idempotent, 1 row", lastAnswer);
+
+// ── задание: загрузка при отказах (AFTER: c3cc51f) ──
+const collapse = async () => { await SP.click(byLabel("Свернуть задание")).catch(() => {}); await sleep(700); };
+const retryBtn = () => SP.eval(`!!${byText("button", "Повторить")}`).catch(() => false);
+const collapseInError = () => SP.eval(`!!${byLabel("Свернуть задание")}`).catch(() => false);
+async function matCase(label, { inject, cutSec = 0, waitMs = 60000 } = {}) {
+  await SI.clear(); await collapse();
+  if (inject) await inject();
+  const t0 = Date.now();
+  if (cutSec) { await L.cut("student", true); }
+  await openActivity();
+  if (cutSec) { await sleep(cutSec * 1000); await L.cut("student", false); }
+  const r = await waitFor(async () => (await activityState()) === "ok", waitMs, 500);
+  const res = { ok: r.ok, ms: r.ok ? Date.now() - t0 : null, sawError: null, f5: false };
+  return res;
+}
+{
+  const r1 = await matCase("reset", { inject: () => SI.add("GET", /\/activities\/[^/]+\/my$/, "fail") });
+  rec("material load connection reset: recovers by itself, no F5", r1);
+  const r2 = await matCase("delay", { inject: () => SI.add("GET", /\/activities\/[^/]+\/my$/, "delay", { ms: 35000 }), waitMs: 75000 });
+  rec("material load delayed 35 s (> client timeout): recovers by itself", r2);
+  const r3 = await matCase("outage", { cutSec: 12, waitMs: 60000 });
+  rec("material load during 12 s network outage: recovers after network returns", r3);
+  // повторы исчерпаны → честная ошибка с «Повторить» и «Свернуть»; клик загружает
+  await SI.clear(); await collapse();
+  await SI.add("GET", /\/activities\/[^/]+\/my$/, "status", { status: 503, times: 5 });
+  await openActivity();
+  const err = await waitFor(async () => (await activityState()) === "error", 60000, 500);
+  const hasRetry = await retryBtn(), hasCollapse = await collapseInError();
+  const errText = await SP.eval("(document.body.innerText.match(/Не удалось загрузить задание[^\\n]*/)||[''])[0]").catch(() => "");
+  await SP.click(byText("button", "Повторить"));
+  const afterClick = await waitFor(async () => (await activityState()) === "ok", 30000, 500);
+  rec("material: retries exhausted → error with Retry + Collapse, Retry loads", { ok: err.ok && hasRetry && hasCollapse && afterClick.ok, errorAfterMs: err.ok ? err.ms : null, hasRetry, hasCollapse, errText, loadedAfterClickMs: afterClick.ok ? afterClick.ms : null });
+  // событие online запускает повтор без клика
+  await SI.clear(); await collapse();
+  await SI.add("GET", /\/activities\/[^/]+\/my$/, "status", { status: 503, times: 5 });
+  await openActivity();
+  const err2 = await waitFor(async () => (await activityState()) === "error", 60000, 500);
+  await SP.send("Network.emulateNetworkConditions", { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  await sleep(1500);
+  await SP.send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  const viaOnline = await waitFor(async () => (await activityState()) === "ok", 20000, 500);
+  rec("material: 'online' event retries automatically (no click, no F5)", { ok: err2.ok && viaOnline.ok, errorShown: err2.ok, loadedAfterOnlineMs: viaOnline.ok ? viaOnline.ms : null });
+  // уже введённый ответ на месте после всех перезагрузок задания
+  const t = lastAnswer.target;
+  let kept = null;
+  if (t) {
+    for (let i = 0; i < 20 && kept === null; i++) {
+      kept = await SP.eval(`(() => { const r = ${radioSel(t)}.filter(x => x.closest('label')?.getBoundingClientRect().width > 0); return r.length ? r.some(x => x.checked) : null; })()`).catch(() => null);
+      if (kept === null) { await SP.click(byLabel("Следующая страница")); await sleep(1000); }
+    }
+  }
+  const dbKept = t ? await count(`select count(*) from responses where question_id='${t.name.slice(2)}' and participant_id in (select id from lesson_participants where guest_id::text='${sid}' or user_id::text='${sid}') and response::text like '%${savedFragment(t)}%'`) : 0;
+  rec("material: previously entered answer preserved after reloads", { ok: kept === true && dbKept === 1, radioChecked: kept, dbRows: dbKept });
+  await SI.clear(); await collapse();
+}
 
 // 5. refresh: 401 на запрос → обновление токена и повтор; refresh 503 → вход НЕ сбрасывается
 {

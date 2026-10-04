@@ -1,0 +1,1148 @@
+{
+  "T0": 1791131203362,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "setup: teacher login",
+      "ok": true,
+      "detail": {
+        "ms": 509
+      },
+      "rel": "00:02",
+      "t": 1791131205182
+    },
+    {
+      "name": "setup: teacher join",
+      "ok": true,
+      "rel": "00:05",
+      "t": 1791131207958
+    },
+    {
+      "name": "setup: guest enter",
+      "ok": true,
+      "rel": "00:06",
+      "t": 1791131209251
+    },
+    {
+      "name": "setup: student join",
+      "ok": true,
+      "rel": "00:09",
+      "t": 1791131211966
+    },
+    {
+      "name": "setup: two-way audio+video",
+      "ok": true,
+      "rel": "00:15",
+      "t": 1791131217905
+    },
+    {
+      "name": "long-final: recovered on NORMAL",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "mediaMs": 3111,
+        "pubs": [
+          "E2E Ученик:CAMERA+MICROPHONE",
+          "E2E Учитель:CAMERA+MICROPHONE"
+        ],
+        "participants": 2,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": true
+        },
+        "micUi": {
+          "teacher": true,
+          "student": true
+        }
+      },
+      "rel": "31:54",
+      "t": 1791133117824
+    }
+  ],
+  "suite": "long",
+  "rounds": {
+    "long": {
+      "phases": [
+        {
+          "cycle": 1,
+          "prof": "NORMAL",
+          "minutes": [
+            {
+              "k": 1,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 278,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 10,
+                "s": 8
+              },
+              "listeners": {
+                "t": 657,
+                "s": 494
+              },
+              "nodes": {
+                "t": 1321,
+                "s": 1120
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 2,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 288,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 10,
+                "s": 9
+              },
+              "listeners": {
+                "t": 1005,
+                "s": 787
+              },
+              "nodes": {
+                "t": 1350,
+                "s": 1144
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 3,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 267,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 12,
+                "s": 9
+              },
+              "listeners": {
+                "t": 1310,
+                "s": 991
+              },
+              "nodes": {
+                "t": 1380,
+                "s": 1170
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 4,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 309,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 12,
+                "s": 10
+              },
+              "listeners": {
+                "t": 1549,
+                "s": 1175
+              },
+              "nodes": {
+                "t": 1403,
+                "s": 1185
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 5,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 108,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 11,
+                "s": 8
+              },
+              "listeners": {
+                "t": 1040,
+                "s": 578
+              },
+              "nodes": {
+                "t": 1379,
+                "s": 1160
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2,
+              "board": true
+            }
+          ]
+        },
+        {
+          "cycle": 1,
+          "prof": "BAD_4G",
+          "minutes": [
+            {
+              "k": 6,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 282,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 16,
+                "s": 15
+              },
+              "listeners": {
+                "t": 1811,
+                "s": 1871
+              },
+              "nodes": {
+                "t": 1544,
+                "s": 1357
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 7,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 277,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 14,
+                "s": 16
+              },
+              "listeners": {
+                "t": 643,
+                "s": 2108
+              },
+              "nodes": {
+                "t": 1401,
+                "s": 1312
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 8,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 276,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 14,
+                "s": 12
+              },
+              "listeners": {
+                "t": 811,
+                "s": 605
+              },
+              "nodes": {
+                "t": 1418,
+                "s": 1213
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 9,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 288,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 16,
+                "s": 14
+              },
+              "listeners": {
+                "t": 1110,
+                "s": 894
+              },
+              "nodes": {
+                "t": 1448,
+                "s": 1248
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 10,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 309,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 12,
+                "s": 16
+              },
+              "listeners": {
+                "t": 448,
+                "s": 2168
+              },
+              "nodes": {
+                "t": 1183,
+                "s": 1341
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2,
+              "board": true
+            }
+          ]
+        },
+        {
+          "cycle": 1,
+          "prof": "3G",
+          "minutes": [
+            {
+              "k": 11,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 285,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 14,
+                "s": 12
+              },
+              "listeners": {
+                "t": 526,
+                "s": 449
+              },
+              "nodes": {
+                "t": 1190,
+                "s": 1232
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 12,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 549,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 14,
+                "s": 14
+              },
+              "listeners": {
+                "t": 722,
+                "s": 652
+              },
+              "nodes": {
+                "t": 1213,
+                "s": 1250
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 13,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 480,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 15,
+                "s": 14
+              },
+              "listeners": {
+                "t": 1102,
+                "s": 835
+              },
+              "nodes": {
+                "t": 1240,
+                "s": 1264
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 14,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 496,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 16,
+                "s": 14
+              },
+              "listeners": {
+                "t": 1185,
+                "s": 972
+              },
+              "nodes": {
+                "t": 1260,
+                "s": 1285
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 15,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 890,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 14,
+                "s": 16
+              },
+              "listeners": {
+                "t": 661,
+                "s": 2203
+              },
+              "nodes": {
+                "t": 1230,
+                "s": 1368
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2,
+              "board": true
+            }
+          ]
+        },
+        {
+          "cycle": 1,
+          "prof": "BAD_3G",
+          "minutes": [
+            {
+              "k": 16,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                false,
+                true
+              ],
+              "chat": true,
+              "chatMs": 878,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 14,
+                "s": 15
+              },
+              "listeners": {
+                "t": 501,
+                "s": 1735
+              },
+              "nodes": {
+                "t": 1238,
+                "s": 1430
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 17,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                false
+              ],
+              "chat": true,
+              "chatMs": 1282,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 15,
+                "s": 18
+              },
+              "listeners": {
+                "t": 933,
+                "s": 2047
+              },
+              "nodes": {
+                "t": 1277,
+                "s": 1389
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 18,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                false
+              ],
+              "chat": true,
+              "chatMs": 3297,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 15,
+                "s": 18
+              },
+              "listeners": {
+                "t": 1089,
+                "s": 2223
+              },
+              "nodes": {
+                "t": 1296,
+                "s": 1389
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 19,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                false
+              ],
+              "chat": true,
+              "chatMs": 1279,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 15,
+                "s": 14
+              },
+              "listeners": {
+                "t": 1283,
+                "s": 499
+              },
+              "nodes": {
+                "t": 1315,
+                "s": 1304
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 20,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                false,
+                false
+              ],
+              "chat": true,
+              "chatMs": 885,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 13,
+                "s": 15
+              },
+              "listeners": {
+                "t": 492,
+                "s": 1551
+              },
+              "nodes": {
+                "t": 1269,
+                "s": 1356
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2,
+              "board": true
+            }
+          ]
+        },
+        {
+          "cycle": 1,
+          "prof": "NORMAL",
+          "minutes": [
+            {
+              "k": 21,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 279,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 14,
+                "s": 16
+              },
+              "listeners": {
+                "t": 617,
+                "s": 1983
+              },
+              "nodes": {
+                "t": 1279,
+                "s": 1496
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 22,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 272,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 14,
+                "s": 13
+              },
+              "listeners": {
+                "t": 837,
+                "s": 446
+              },
+              "nodes": {
+                "t": 1299,
+                "s": 1321
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 23,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 266,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 15,
+                "s": 13
+              },
+              "listeners": {
+                "t": 1027,
+                "s": 549
+              },
+              "nodes": {
+                "t": 1323,
+                "s": 1332
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 24,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 276,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 16,
+                "s": 14
+              },
+              "listeners": {
+                "t": 1256,
+                "s": 792
+              },
+              "nodes": {
+                "t": 1346,
+                "s": 1353
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 25,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 289,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 15,
+                "s": 17
+              },
+              "listeners": {
+                "t": 735,
+                "s": 2010
+              },
+              "nodes": {
+                "t": 1321,
+                "s": 1445
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2,
+              "board": true
+            }
+          ]
+        },
+        {
+          "cycle": 2,
+          "prof": "NORMAL",
+          "minutes": [
+            {
+              "k": 26,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 284,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 16,
+                "s": 15
+              },
+              "listeners": {
+                "t": 1764,
+                "s": 1890
+              },
+              "nodes": {
+                "t": 1481,
+                "s": 1531
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 27,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 270,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 14,
+                "s": 13
+              },
+              "listeners": {
+                "t": 473,
+                "s": 562
+              },
+              "nodes": {
+                "t": 1318,
+                "s": 1370
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 28,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 269,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 14,
+                "s": 15
+              },
+              "listeners": {
+                "t": 623,
+                "s": 770
+              },
+              "nodes": {
+                "t": 1332,
+                "s": 1386
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 29,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 294,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 15,
+                "s": 15
+              },
+              "listeners": {
+                "t": 909,
+                "s": 931
+              },
+              "nodes": {
+                "t": 1359,
+                "s": 1405
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2
+            },
+            {
+              "k": 30,
+              "media": true,
+              "audio": [
+                true,
+                true
+              ],
+              "video": [
+                true,
+                true
+              ],
+              "chat": true,
+              "chatMs": 302,
+              "chatDup": 1,
+              "heapMB": {
+                "t": 17,
+                "s": 13
+              },
+              "listeners": {
+                "t": 2155,
+                "s": 480
+              },
+              "nodes": {
+                "t": 1451,
+                "s": 1387
+              },
+              "wsCount": {
+                "teacher": 2,
+                "student": 2
+              },
+              "lkParticipants": 2,
+              "board": true
+            }
+          ]
+        }
+      ],
+      "final": {
+        "ok": true,
+        "mediaMs": 3111,
+        "pubs": [
+          "E2E Ученик:CAMERA+MICROPHONE",
+          "E2E Учитель:CAMERA+MICROPHONE"
+        ],
+        "participants": 2,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": true
+        },
+        "micUi": {
+          "teacher": true,
+          "student": true
+        }
+      }
+    }
+  }
+}

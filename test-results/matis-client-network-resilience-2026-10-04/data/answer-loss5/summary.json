@@ -1,0 +1,92 @@
+{
+  "T0": 1791143755387,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "setup: teacher login",
+      "ok": true,
+      "detail": {
+        "ms": 504
+      },
+      "rel": "00:02",
+      "t": 1791143757324
+    },
+    {
+      "name": "setup: teacher join",
+      "ok": true,
+      "rel": "00:05",
+      "t": 1791143760168
+    },
+    {
+      "name": "setup: guest enter",
+      "ok": true,
+      "rel": "00:06",
+      "t": 1791143761525
+    },
+    {
+      "name": "setup: student join",
+      "ok": true,
+      "rel": "00:09",
+      "t": 1791143764250
+    },
+    {
+      "name": "setup: two-way audio+video",
+      "ok": true,
+      "rel": "00:15",
+      "t": 1791143770205
+    },
+    {
+      "name": "answer NORMAL",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "openMs": 1322,
+        "saveMs": 5977,
+        "qid": "6275eae2-e700-4052-a4fc-405dd6edeee8",
+        "kind": "choice",
+        "uiStatus": [
+          "Сохраняем"
+        ]
+      },
+      "rel": "00:25",
+      "t": 1791143780097
+    },
+    {
+      "name": "answer LOSS5",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "openMs": 1276,
+        "saveMs": 5925,
+        "qid": "2e261716-3517-4d42-8f78-762517172f1c",
+        "kind": "true_false",
+        "uiStatus": []
+      },
+      "rel": "00:53",
+      "t": 1791143808026
+    }
+  ],
+  "suite": "answer",
+  "rounds": {
+    "answer": {
+      "NORMAL": {
+        "ok": true,
+        "openMs": 1322,
+        "saveMs": 5977,
+        "qid": "6275eae2-e700-4052-a4fc-405dd6edeee8",
+        "kind": "choice",
+        "uiStatus": [
+          "Сохраняем"
+        ]
+      },
+      "LOSS5": {
+        "ok": true,
+        "openMs": 1276,
+        "saveMs": 5925,
+        "qid": "2e261716-3517-4d42-8f78-762517172f1c",
+        "kind": "true_false",
+        "uiStatus": []
+      }
+    }
+  }
+}

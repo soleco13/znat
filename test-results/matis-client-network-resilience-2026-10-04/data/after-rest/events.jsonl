@@ -1,0 +1,395 @@
+{"kind":"NET","text":"both -> NORMAL","extra":{"teacher":{"up":"delay 20ms 5ms distribution normal rate 5000kbit limit 534","down":"delay 20ms 5ms distribution normal rate 10000kbit limit 1068"},"student":{"up":"delay 20ms 5ms distribution normal rate 5000kbit limit 534","down":"delay 20ms 5ms distribution normal rate 10000kbit limit 1068"}},"t":1791130283069,"rel":"00:01"}
+{"who":"teacher","kind":"http4xx","status":401,"url":"https://213.21.241.28/api/v1/auth/refresh","method":"POST","t":1791130283596,"rel":"00:01"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 401 ()","url":"https://213.21.241.28/api/v1/auth/refresh","t":1791130283596,"rel":"00:01"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":401,"ms":147,"bytes":211,"quiet":true,"t":1791130283701,"rel":"00:01"}
+{"who":"teacher","kind":"INJECT","text":"status 503 POST /api/v1/auth/login","t":1791130283809,"rel":"00:01"}
+{"who":"teacher","kind":"http5xx","status":503,"url":"https://213.21.241.28/api/v1/auth/login","method":"POST","t":1791130283852,"rel":"00:01"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"https://213.21.241.28/api/v1/auth/login","t":1791130283853,"rel":"00:01"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/login","status":503,"ms":1,"bytes":109,"quiet":true,"t":1791130283853,"rel":"00:01"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/login","status":200,"ms":176,"bytes":814,"quiet":true,"t":1791130286611,"rel":"00:04"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons","status":200,"ms":65,"bytes":487,"quiet":true,"t":1791130286792,"rel":"00:04"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/presence-counts?ids=:id","status":200,"ms":55,"bytes":124,"quiet":true,"t":1791130286857,"rel":"00:04"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":66,"bytes":466,"quiet":true,"t":1791130286868,"rel":"00:05"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":114,"bytes":564,"quiet":true,"t":1791130286916,"rel":"00:05"}
+{"kind":"CHECK_OK","text":"rest: login 503: error shown, manual retry logs in","extra":{"ok":true,"msg":"injected 503","stuckButton":false,"retryMs":504},"t":1791130286939,"rel":"00:05"}
+{"who":"teacher","kind":"http4xx","status":401,"url":"https://213.21.241.28/api/v1/auth/refresh","method":"POST","t":1791130287440,"rel":"00:05"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 401 ()","url":"https://213.21.241.28/api/v1/auth/refresh","t":1791130287441,"rel":"00:05"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":401,"ms":108,"bytes":222,"quiet":true,"t":1791130287492,"rel":"00:05"}
+{"who":"teacher","kind":"INJECT","text":"status 429 POST /api/v1/auth/login","t":1791130287565,"rel":"00:05"}
+{"who":"teacher","kind":"http4xx","status":429,"url":"https://213.21.241.28/api/v1/auth/login","method":"POST","t":1791130287612,"rel":"00:05"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 429 (Too Many Requests)","url":"https://213.21.241.28/api/v1/auth/login","t":1791130287613,"rel":"00:05"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/login","status":429,"ms":1,"bytes":121,"quiet":true,"t":1791130287613,"rel":"00:05"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/login","status":200,"ms":169,"bytes":723,"quiet":true,"t":1791130290313,"rel":"00:08"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons","status":200,"ms":52,"bytes":478,"quiet":true,"t":1791130290408,"rel":"00:08"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/presence-counts?ids=:id","status":200,"ms":28,"bytes":117,"quiet":true,"t":1791130290485,"rel":"00:08"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":75,"bytes":464,"quiet":true,"t":1791130290532,"rel":"00:08"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":78,"bytes":550,"quiet":true,"t":1791130290535,"rel":"00:08"}
+{"kind":"CHECK_OK","text":"rest: login 429: error shown, manual retry logs in","extra":{"ok":true,"msg":"injected 429","stuckButton":false,"retryMs":503},"t":1791130290647,"rel":"00:08"}
+{"who":"teacher","kind":"http4xx","status":401,"url":"https://213.21.241.28/api/v1/auth/refresh","method":"POST","t":1791130291153,"rel":"00:09"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 401 ()","url":"https://213.21.241.28/api/v1/auth/refresh","t":1791130291154,"rel":"00:09"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":401,"ms":109,"bytes":177,"quiet":true,"t":1791130291205,"rel":"00:09"}
+{"who":"teacher","kind":"INJECT","text":"fail POST /api/v1/auth/login","t":1791130291301,"rel":"00:09"}
+{"who":"teacher","kind":"net.fail","text":"net::ERR_CONNECTION_RESET","url":"https://213.21.241.28/api/v1/auth/login","method":"POST","ms":1,"type":"Fetch","t":1791130291346,"rel":"00:09"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: net::ERR_CONNECTION_RESET","url":"https://213.21.241.28/api/v1/auth/login","t":1791130291346,"rel":"00:09"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/login","status":200,"ms":171,"bytes":720,"quiet":true,"t":1791130294088,"rel":"00:12"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons","status":200,"ms":60,"bytes":503,"quiet":true,"t":1791130294208,"rel":"00:12"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/presence-counts?ids=:id","status":200,"ms":16,"bytes":374,"quiet":true,"t":1791130294280,"rel":"00:12"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":74,"bytes":467,"quiet":true,"t":1791130294338,"rel":"00:12"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":77,"bytes":611,"quiet":true,"t":1791130294342,"rel":"00:12"}
+{"kind":"CHECK_OK","text":"rest: login reset: error shown, manual retry logs in","extra":{"ok":true,"msg":"Не удалось войти","stuckButton":false,"retryMs":503},"t":1791130294420,"rel":"00:12"}
+{"who":"teacher","kind":"http4xx","status":401,"url":"https://213.21.241.28/api/v1/guest/session","method":"GET","t":1791130294631,"rel":"00:12"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 401 ()","url":"https://213.21.241.28/api/v1/guest/session","t":1791130294632,"rel":"00:12"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/guest/session","status":401,"ms":60,"bytes":164,"quiet":true,"t":1791130294633,"rel":"00:12"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":200,"ms":62,"bytes":710,"quiet":true,"t":1791130294697,"rel":"00:12"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id","status":200,"ms":82,"bytes":492,"quiet":true,"t":1791130295097,"rel":"00:13"}
+{"who":"teacher","kind":"INJECT","text":"status 503 POST /api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join","t":1791130295904,"rel":"00:14"}
+{"who":"teacher","kind":"http5xx","status":503,"url":"https://213.21.241.28/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join","method":"POST","t":1791130295910,"rel":"00:14"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"https://213.21.241.28/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join","t":1791130295910,"rel":"00:14"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/join","status":503,"ms":6,"bytes":109,"quiet":true,"t":1791130295912,"rel":"00:14"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/join","status":200,"ms":10,"bytes":1067,"quiet":true,"t":1791130296283,"rel":"00:14"}
+{"who":"teacher","kind":"ws.created","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&token=…&cs=156a5f35-8210-4f89-acc2-7e8fbc2a1d08&attempt=0","t":1791130296343,"rel":"00:14"}
+{"who":"teacher","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESiw4fiwgAAAAAAAAD7VvLjuM2FkU1MIPAgIGkV1leYJYD2qRIPciGF_XoSgKkG8b0Y2Y5LIl2MW09INFlV_9EPig_MJ81k","t":1791130296376,"rel":"00:14"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/decks","status":200,"ms":59,"bytes":78,"quiet":true,"t":1791130296400,"rel":"00:14"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/activities","status":200,"ms":60,"bytes":361,"quiet":true,"t":1791130296401,"rel":"00:14"}
+{"who":"teacher","kind":"ws.open","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&token=…&cs=156a5f35-8210-4f89-acc2-7e8fbc2a1d08&attempt=0","status":101,"t":1791130296464,"rel":"00:14"}
+{"who":"teacher","kind":"room.msg","type":"presence","quiet":true,"t":1791130296469,"rel":"00:14"}
+{"who":"teacher","kind":"room.msg","type":"stage_changed","quiet":true,"t":1791130296512,"rel":"00:14"}
+{"who":"teacher","kind":"room.msg","type":"lesson_mode","quiet":true,"t":1791130296512,"rel":"00:14"}
+{"who":"teacher","kind":"room.msg","type":"entry_locked","quiet":true,"t":1791130296512,"rel":"00:14"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/chat","status":200,"ms":14,"bytes":2350,"quiet":true,"t":1791130296526,"rel":"00:14"}
+{"who":"teacher","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESiw4fiwgAAAAAAAAD7VvLjuM2FkU1MIPAgIGkV1leYJYD2qRIPciGF_XoSgKkG8b0Y2Y5LIl2MW09INFlV_9EPig_MJ81k","status":101,"t":1791130296646,"rel":"00:14"}
+{"kind":"CHECK_OK","text":"rest: join 503: retry banner + recovery by click","extra":{"ok":true,"state":"retry","firstMs":1055,"retried":{"ok":true,"ms":609,"banner":"E2E: сетевая устойчивость (автотест) 0 участников Подключение… Пригласить Не удалось войти в урок — проверьте соединение. Повторить 0 Доска 0:00 Режим: лекция Выйти"},"lkParticipants":["","E2E Учитель"],"mediaConnected":true},"t":1791130296901,"rel":"00:15"}
+{"who":"teacher","kind":"ws.closed","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESiw4fiwgAAAAAAAAD7VvLjuM2FkU1MIPAgIGkV1leYJYD2qRIPciGF_XoSgKkG8b0Y2Y5LIl2MW09INFlV_9EPig_MJ81k","frames":18,"t":1791130296972,"rel":"00:15"}
+{"who":"teacher","kind":"http4xx","status":401,"url":"https://213.21.241.28/api/v1/guest/session","method":"GET","t":1791130297165,"rel":"00:15"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 401 ()","url":"https://213.21.241.28/api/v1/guest/session","t":1791130297166,"rel":"00:15"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/guest/session","status":401,"ms":60,"bytes":235,"quiet":true,"t":1791130297177,"rel":"00:15"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":200,"ms":60,"bytes":695,"quiet":true,"t":1791130297239,"rel":"00:15"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id","status":200,"ms":71,"bytes":466,"quiet":true,"t":1791130297630,"rel":"00:15"}
+{"who":"teacher","kind":"INJECT","text":"fail POST /api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join","t":1791130298393,"rel":"00:16"}
+{"who":"teacher","kind":"net.fail","text":"net::ERR_CONNECTION_RESET","url":"https://213.21.241.28/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join","method":"POST","ms":0,"type":"Fetch","t":1791130298436,"rel":"00:16"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: net::ERR_CONNECTION_RESET","url":"https://213.21.241.28/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join","t":1791130298437,"rel":"00:16"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/join","status":200,"ms":19,"bytes":1071,"quiet":true,"t":1791130298523,"rel":"00:16"}
+{"who":"teacher","kind":"ws.created","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&token=…&cs=88b511c3-7163-42f5-8d9a-5e4c84a8cbae&attempt=0","t":1791130298573,"rel":"00:16"}
+{"who":"teacher","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESjw4fiwgAAAAAAAAD7VvbbiS3EYUWSGAIGMDeJz8WkMeAGlaTfeNiHnRZOQ52F4L3Ej-G6uaMmJ2-oJujGfkn_EH5gXxW0","t":1791130298588,"rel":"00:16"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/decks","status":200,"ms":46,"bytes":76,"quiet":true,"t":1791130298618,"rel":"00:16"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/activities","status":200,"ms":47,"bytes":358,"quiet":true,"t":1791130298619,"rel":"00:16"}
+{"who":"teacher","kind":"ws.open","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&token=…&cs=88b511c3-7163-42f5-8d9a-5e4c84a8cbae&attempt=0","status":101,"t":1791130298692,"rel":"00:16"}
+{"who":"teacher","kind":"room.msg","type":"presence","quiet":true,"t":1791130298693,"rel":"00:16"}
+{"who":"teacher","kind":"room.msg","type":"stage_changed","quiet":true,"t":1791130298698,"rel":"00:16"}
+{"who":"teacher","kind":"room.msg","type":"lesson_mode","quiet":true,"t":1791130298698,"rel":"00:16"}
+{"who":"teacher","kind":"room.msg","type":"entry_locked","quiet":true,"t":1791130298698,"rel":"00:16"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/chat","status":200,"ms":97,"bytes":2326,"quiet":true,"t":1791130298796,"rel":"00:16"}
+{"who":"teacher","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESjw4fiwgAAAAAAAAD7VvbbiS3EYUWSGAIGMDeJz8WkMeAGlaTfeNiHnRZOQ52F4L3Ej-G6uaMmJ2-oJujGfkn_EH5gXxW0","status":101,"t":1791130298851,"rel":"00:16"}
+{"kind":"CHECK_OK","text":"rest: join connection reset: retry banner + recovery by click","extra":{"ok":true,"state":"retry","firstMs":752,"retried":{"ok":true,"ms":608,"banner":"E2E: сетевая устойчивость (автотест) 0 участников Подключение… Пригласить Не удалось войти в урок — проверьте соединение. Повторить 0 Доска 0:00 Режим: лекция Выйти"},"lkParticipants":["","E2E Учитель"],"mediaConnected":true},"t":1791130299121,"rel":"00:17"}
+{"who":"teacher","kind":"ws.closed","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESjw4fiwgAAAAAAAAD7VvbbiS3EYUWSGAIGMDeJz8WkMeAGlaTfeNiHnRZOQ52F4L3Ej-G6uaMmJ2-oJujGfkn_EH5gXxW0","frames":17,"t":1791130299191,"rel":"00:17"}
+{"who":"teacher","kind":"http4xx","status":401,"url":"https://213.21.241.28/api/v1/guest/session","method":"GET","t":1791130299389,"rel":"00:17"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 401 ()","url":"https://213.21.241.28/api/v1/guest/session","t":1791130299389,"rel":"00:17"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/guest/session","status":401,"ms":54,"bytes":168,"quiet":true,"t":1791130299390,"rel":"00:17"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":200,"ms":49,"bytes":955,"quiet":true,"t":1791130299442,"rel":"00:17"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id","status":200,"ms":14,"bytes":549,"quiet":true,"t":1791130299806,"rel":"00:17"}
+{"who":"teacher","kind":"INJECT","text":"lostResp POST /api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join","t":1791130301160,"rel":"00:19"}
+{"who":"teacher","kind":"net.fail","text":"net::ERR_CONNECTION_RESET","url":"https://213.21.241.28/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join","method":"POST","ms":49,"type":"Fetch","t":1791130301162,"rel":"00:19"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: net::ERR_CONNECTION_RESET","url":"https://213.21.241.28/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join","t":1791130301163,"rel":"00:19"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/join","status":200,"ms":11,"bytes":1042,"quiet":true,"t":1791130301479,"rel":"00:19"}
+{"who":"teacher","kind":"ws.created","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&token=…&cs=66e864c4-2d27-4cf2-817e-46857d5ceb52&attempt=0","t":1791130301523,"rel":"00:19"}
+{"who":"teacher","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESiw4fiwgAAAAAAAAD7Vtbb-M2FkYG2GIRwMB2nvp4gH1WzCNSNw78EMeZToF2kO1cFn0rI1EOd6wLJDp2-if6g_YP9GctJ","t":1791130301552,"rel":"00:19"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/decks","status":200,"ms":56,"bytes":79,"quiet":true,"t":1791130301578,"rel":"00:19"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/activities","status":200,"ms":67,"bytes":361,"quiet":true,"t":1791130301589,"rel":"00:19"}
+{"who":"teacher","kind":"ws.open","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&token=…&cs=66e864c4-2d27-4cf2-817e-46857d5ceb52&attempt=0","status":101,"t":1791130301662,"rel":"00:19"}
+{"who":"teacher","kind":"room.msg","type":"presence","quiet":true,"t":1791130301672,"rel":"00:19"}
+{"who":"teacher","kind":"room.msg","type":"stage_changed","quiet":true,"t":1791130301684,"rel":"00:19"}
+{"who":"teacher","kind":"room.msg","type":"lesson_mode","quiet":true,"t":1791130301685,"rel":"00:19"}
+{"who":"teacher","kind":"room.msg","type":"entry_locked","quiet":true,"t":1791130301686,"rel":"00:19"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/chat","status":200,"ms":76,"bytes":2330,"quiet":true,"t":1791130301740,"rel":"00:19"}
+{"who":"teacher","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESiw4fiwgAAAAAAAAD7Vtbb-M2FkYG2GIRwMB2nvp4gH1WzCNSNw78EMeZToF2kO1cFn0rI1EOd6wLJDp2-if6g_YP9GctJ","status":101,"t":1791130301820,"rel":"00:19"}
+{"kind":"CHECK_OK","text":"rest: join response lost (server processed): retry → single participant","extra":{"ok":true,"dupT":1,"state":"retry","firstMs":1047,"retried":{"ok":true,"ms":609,"banner":"E2E: сетевая устойчивость (автотест) 0 участников Подключение… Пригласить Не удалось войти в урок — проверьте соединение. Повторить 0 Доска 0:00 Режим: лекция Выйти"},"lkParticipants":["E2E Учитель"],"mediaConnected":true},"t":1791130302093,"rel":"00:20"}
+{"who":"teacher","kind":"ws.closed","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESiw4fiwgAAAAAAAAD7Vtbb-M2FkYG2GIRwMB2nvp4gH1WzCNSNw78EMeZToF2kO1cFn0rI1EOd6wLJDp2-if6g_YP9GctJ","frames":17,"t":1791130302159,"rel":"00:20"}
+{"who":"teacher","kind":"http4xx","status":401,"url":"https://213.21.241.28/api/v1/guest/session","method":"GET","t":1791130302432,"rel":"00:20"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 401 ()","url":"https://213.21.241.28/api/v1/guest/session","t":1791130302432,"rel":"00:20"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/guest/session","status":401,"ms":74,"bytes":158,"quiet":true,"t":1791130302434,"rel":"00:20"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":200,"ms":61,"bytes":695,"quiet":true,"t":1791130302496,"rel":"00:20"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id","status":200,"ms":23,"bytes":470,"quiet":true,"t":1791130302871,"rel":"00:21"}
+{"who":"teacher","kind":"INJECT","text":"delay POST /api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join","t":1791130304124,"rel":"00:22"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/join","status":200,"ms":93,"bytes":1064,"quiet":true,"t":1791130334276,"rel":"00:52"}
+{"who":"teacher","kind":"ws.created","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&token=…&cs=93fe74dc-137b-4525-ae36-d6285d1ac1a9&attempt=0","t":1791130334306,"rel":"00:52"}
+{"who":"teacher","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESiw4fiwgAAAAAAAAD7Vtdb-M2FkUG2MXCgIF2nvp4gX2mTYrUBznwQyYfbYF2EGxm0n1cRqIdzlgflejY6Z_oD-of6M9aS","t":1791130334360,"rel":"00:52"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/decks","status":200,"ms":76,"bytes":76,"quiet":true,"t":1791130334381,"rel":"00:52"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/activities","status":200,"ms":87,"bytes":357,"quiet":true,"t":1791130334392,"rel":"00:52"}
+{"who":"teacher","kind":"ws.open","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&token=…&cs=93fe74dc-137b-4525-ae36-d6285d1ac1a9&attempt=0","status":101,"t":1791130334452,"rel":"00:52"}
+{"who":"teacher","kind":"room.msg","type":"presence","quiet":true,"t":1791130334457,"rel":"00:52"}
+{"who":"teacher","kind":"room.msg","type":"stage_changed","quiet":true,"t":1791130334463,"rel":"00:52"}
+{"who":"teacher","kind":"room.msg","type":"lesson_mode","quiet":true,"t":1791130334463,"rel":"00:52"}
+{"who":"teacher","kind":"room.msg","type":"entry_locked","quiet":true,"t":1791130334464,"rel":"00:52"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/chat","status":200,"ms":57,"bytes":2325,"quiet":true,"t":1791130334520,"rel":"00:52"}
+{"who":"teacher","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESiw4fiwgAAAAAAAAD7Vtdb-M2FkUG2MXCgIF2nvp4gX2mTYrUBznwQyYfbYF2EGxm0n1cRqIdzlgflejY6Z_oD-of6M9aS","status":101,"t":1791130334624,"rel":"00:52"}
+{"kind":"CHECK_OK","text":"rest: join delayed 35 s (> client timeout 30 s): timeout shown, retry works","extra":{"ok":true,"state":"retry","firstMs":30843,"retried":{"ok":true,"ms":669,"banner":"E2E: сетевая устойчивость (автотест) 0 участников Подключение… Пригласить Не удалось войти в урок — проверьте соединение. Повторить 0 Доска 0:00 Режим: лекция Выйти"},"lkParticipants":["E2E Учитель"],"mediaConnected":true},"t":1791130334901,"rel":"00:53"}
+{"who":"teacher","kind":"ws.closed","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESiw4fiwgAAAAAAAAD7Vtdb-M2FkUG2MXCgIF2nvp4gX2mTYrUBznwQyYfbYF2EGxm0n1cRqIdzlgflejY6Z_oD-of6M9aS","frames":15,"t":1791130334970,"rel":"00:53"}
+{"who":"teacher","kind":"http4xx","status":401,"url":"https://213.21.241.28/api/v1/guest/session","method":"GET","t":1791130335224,"rel":"00:53"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 401 ()","url":"https://213.21.241.28/api/v1/guest/session","t":1791130335224,"rel":"00:53"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/guest/session","status":401,"ms":105,"bytes":164,"quiet":true,"t":1791130335225,"rel":"00:53"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":200,"ms":64,"bytes":701,"quiet":true,"t":1791130335289,"rel":"00:53"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id","status":200,"ms":73,"bytes":468,"quiet":true,"t":1791130335697,"rel":"00:53"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/join","status":200,"ms":65,"bytes":983,"quiet":true,"t":1791130337021,"rel":"00:55"}
+{"who":"teacher","kind":"ws.created","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&token=…&cs=f04c9ab7-c056-49d6-838d-f4ee77617eb1&attempt=0","t":1791130337072,"rel":"00:55"}
+{"who":"teacher","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESjQ4fiwgAAAAAAAAD7Vtdb9w2FoUDbFEMMECbpz5eYJ85IkXqgwzmIY7ttmgbuE3iAHlaWuKMmYw-IHHscf9Ef1D_wP6sh","t":1791130337109,"rel":"00:55"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/decks","status":200,"ms":57,"bytes":372,"quiet":true,"t":1791130337128,"rel":"00:55"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/activities","status":200,"ms":80,"bytes":361,"quiet":true,"t":1791130337151,"rel":"00:55"}
+{"who":"teacher","kind":"ws.open","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&token=…&cs=f04c9ab7-c056-49d6-838d-f4ee77617eb1&attempt=0","status":101,"t":1791130337205,"rel":"00:55"}
+{"who":"teacher","kind":"room.msg","type":"presence","quiet":true,"t":1791130337210,"rel":"00:55"}
+{"who":"teacher","kind":"room.msg","type":"stage_changed","quiet":true,"t":1791130337217,"rel":"00:55"}
+{"who":"teacher","kind":"room.msg","type":"lesson_mode","quiet":true,"t":1791130337217,"rel":"00:55"}
+{"who":"teacher","kind":"room.msg","type":"entry_locked","quiet":true,"t":1791130337217,"rel":"00:55"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/chat","status":200,"ms":48,"bytes":2410,"quiet":true,"t":1791130337265,"rel":"00:55"}
+{"who":"teacher","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESjQ4fiwgAAAAAAAAD7Vtdb9w2FoUDbFEMMECbpz5eYJ85IkXqgwzmIY7ttmgbuE3iAHlaWuKMmYw-IHHscf9Ef1D_wP6sh","status":101,"t":1791130337359,"rel":"00:55"}
+{"kind":"CHECK_OK","text":"rest: teacher back in room (media connected)","t":1791130337964,"rel":"00:56"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc","status":200,"ms":97,"bytes":363,"quiet":true,"t":1791130338305,"rel":"00:56"}
+{"who":"student","kind":"http4xx","status":401,"url":"https://213.21.241.28/api/v1/auth/refresh","method":"POST","t":1791130338307,"rel":"00:56"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 401 ()","url":"https://213.21.241.28/api/v1/auth/refresh","t":1791130338308,"rel":"00:56"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":401,"ms":190,"bytes":153,"quiet":true,"t":1791130338411,"rel":"00:56"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc/enter","status":201,"ms":64,"bytes":640,"quiet":true,"t":1791130339046,"rel":"00:57"}
+{"kind":"inject.err","text":"Error: Invalid InterceptionId.","t":1791130339126,"rel":"00:57"}
+{"who":"teacher","kind":"room.msg","type":"participant_joined","quiet":true,"t":1791130340379,"rel":"00:58"}
+{"kind":"CHECK_OK","text":"rest: student in room","t":1791130340390,"rel":"00:58"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/join","status":200,"ms":19,"bytes":1061,"quiet":true,"t":1791130340397,"rel":"00:58"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&cs=ce04a581-0547-4e88-b14d-cf20a61218c5&attempt=0","t":1791130340451,"rel":"00:58"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/activities","status":200,"ms":35,"bytes":362,"quiet":true,"t":1791130340487,"rel":"00:58"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESjw4fiwgAAAAAAAAD7Vtdb-O4FUUGaFEEMNCdp328QB8L2rwi9cWBHxwn6S52ZxBsZlKgT1Uk2mHH-oBEx87-if1B-wf6s","t":1791130340508,"rel":"00:58"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&cs=ce04a581-0547-4e88-b14d-cf20a61218c5&attempt=0","status":101,"t":1791130340558,"rel":"00:58"}
+{"who":"student","kind":"room.msg","type":"presence","quiet":true,"t":1791130340559,"rel":"00:58"}
+{"who":"student","kind":"room.msg","type":"stage_changed","quiet":true,"t":1791130340562,"rel":"00:58"}
+{"who":"student","kind":"room.msg","type":"lesson_mode","quiet":true,"t":1791130340569,"rel":"00:58"}
+{"who":"student","kind":"room.msg","type":"entry_locked","quiet":true,"t":1791130340569,"rel":"00:58"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/chat","status":200,"ms":62,"bytes":2330,"quiet":true,"t":1791130340630,"rel":"00:58"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESjw4fiwgAAAAAAAAD7Vtdb-O4FUUGaFEEMNCdp328QB8L2rwi9cWBHxwn6S52ZxBsZlKgT1Uk2mHH-oBEx87-if1B-wf6s","status":101,"t":1791130340724,"rel":"00:58"}
+{"who":"teacher","kind":"tele","type":"livekit_connection_started","ts":"2026-10-04T16:12:17.047Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":null,"identity":null,"online":true,"attempt":0},"quiet":true,"t":1791130342051,"rel":"01:00"}
+{"who":"teacher","kind":"tele","type":"livekit_connected","ts":"2026-10-04T16:12:17.569Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"f4cae8de-8354-4d36-9255-091113a18043","online":true,"durationMs":522},"quiet":true,"t":1791130342051,"rel":"01:00"}
+{"who":"student","kind":"INJECT","text":"status 503 POST /api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/chat","t":1791130344642,"rel":"01:02"}
+{"who":"student","kind":"http5xx","status":503,"url":"https://213.21.241.28/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/chat","method":"POST","t":1791130344688,"rel":"01:02"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"https://213.21.241.28/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/chat","t":1791130344689,"rel":"01:02"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/chat","status":503,"ms":2,"bytes":109,"quiet":true,"t":1791130344690,"rel":"01:02"}
+{"who":"student","kind":"tele","type":"livekit_connection_started","ts":"2026-10-04T16:12:20.450Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":null,"identity":null,"online":true,"attempt":0},"quiet":true,"t":1791130345454,"rel":"01:03"}
+{"who":"student","kind":"tele","type":"livekit_connected","ts":"2026-10-04T16:12:21.001Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"c894e95f-7e10-4ddb-a858-5ddf2165e6be","online":true,"durationMs":551},"quiet":true,"t":1791130345454,"rel":"01:03"}
+{"kind":"CHECK_OK","text":"rest: chat 503: error shown, draft restored, nothing delivered","extra":{"ok":true,"err":true,"draftRestored":true,"atTeacher":0},"t":1791130347192,"rel":"01:05"}
+{"who":"student","kind":"room.msg","type":"chat_message","quiet":true,"t":1791130347256,"rel":"01:05"}
+{"who":"teacher","kind":"room.msg","type":"chat_message","quiet":true,"t":1791130347264,"rel":"01:05"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/chat","status":201,"ms":90,"bytes":395,"quiet":true,"t":1791130347301,"rel":"01:05"}
+{"kind":"CHECK_OK","text":"rest: chat 503 → user resend: delivered once","extra":{"ok":true,"copies":1},"t":1791130349023,"rel":"01:07"}
+{"who":"teacher","kind":"room.msg","type":"chat_message","quiet":true,"t":1791130349212,"rel":"01:07"}
+{"who":"student","kind":"room.msg","type":"chat_message","quiet":true,"t":1791130349217,"rel":"01:07"}
+{"who":"student","kind":"INJECT","text":"lostResp POST /api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/chat","t":1791130349223,"rel":"01:07"}
+{"who":"student","kind":"net.fail","text":"net::ERR_CONNECTION_RESET","url":"https://213.21.241.28/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/chat","method":"POST","ms":33,"type":"Fetch","t":1791130349241,"rel":"01:07"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: net::ERR_CONNECTION_RESET","url":"https://213.21.241.28/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/chat","t":1791130349242,"rel":"01:07"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/chat","status":201,"ms":78,"bytes":320,"quiet":true,"t":1791130352304,"rel":"01:10"}
+{"kind":"CHECK_OK","text":"rest: chat response lost (server saved): user sees state consistent, no duplicate after resend","extra":{"ok":true,"errShown":true,"draftRestored":true,"atTeacherBeforeResend":1,"atTeacherAfterResend":1,"atStudent":1,"dbRows":1},"t":1791130355480,"rel":"01:13"}
+{"who":"student","kind":"INJECT","text":"status 503 GET /api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130356412,"rel":"01:14"}
+{"who":"student","kind":"http5xx","status":503,"url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","method":"GET","t":1791130356456,"rel":"01:14"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130356457,"rel":"01:14"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":503,"ms":43,"bytes":109,"quiet":true,"t":1791130356457,"rel":"01:14"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my-annotations","status":200,"ms":70,"bytes":101,"quiet":true,"t":1791130356526,"rel":"01:14"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130357206,"rel":"01:15"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":200,"ms":104,"bytes":28803,"quiet":true,"t":1791130358523,"rel":"01:16"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":53,"bytes":227,"quiet":true,"t":1791130358812,"rel":"01:16"}
+{"kind":"CHECK_OK","text":"rest: material load 503 once: recovers without page reload","extra":{"ok":true,"firstState":"ok","selfHealWithin20s":null,"recoversByReopen":null},"t":1791130358813,"rel":"01:16"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":84,"bytes":223,"quiet":true,"t":1791130358845,"rel":"01:16"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":84,"bytes":223,"quiet":true,"t":1791130358845,"rel":"01:16"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":86,"bytes":223,"quiet":true,"t":1791130358847,"rel":"01:16"}
+{"who":"student","kind":"rest","method":"GET","url":"/files/:id%2F:id.png?exp=1791133958&sig=QCDmvPh1kcHX_ieH6Jk9b9sCtVDtjgOmzWwpyPVw9Ls","status":200,"ms":152,"bytes":52604,"quiet":true,"t":1791130359000,"rel":"01:17"}
+{"who":"student","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130360974,"rel":"01:19"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my-annotations","status":200,"ms":10524,"bytes":406,"quiet":true,"t":1791130370272,"rel":"01:28"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":200,"ms":10525,"bytes":28760,"quiet":true,"t":1791130370273,"rel":"01:28"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":94,"bytes":254,"quiet":true,"t":1791130370373,"rel":"01:28"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":231,"bytes":223,"quiet":true,"t":1791130370511,"rel":"01:28"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":237,"bytes":223,"quiet":true,"t":1791130370517,"rel":"01:28"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":259,"bytes":227,"quiet":true,"t":1791130370540,"rel":"01:28"}
+{"who":"student","kind":"INJECT","text":"status 503 POST /api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/responses","t":1791130376730,"rel":"01:34"}
+{"who":"student","kind":"http5xx","status":503,"url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/responses","method":"POST","t":1791130376740,"rel":"01:34"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/responses","t":1791130376741,"rel":"01:34"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/activities/:id/responses","status":503,"ms":16,"bytes":109,"quiet":true,"t":1791130376745,"rel":"01:34"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130377214,"rel":"01:35"}
+{"who":"student","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130380557,"rel":"01:38"}
+{"who":"student","kind":"INJECT","text":"status 503 POST /api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/responses","t":1791130386751,"rel":"01:44"}
+{"who":"student","kind":"http5xx","status":503,"url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/responses","method":"POST","t":1791130386763,"rel":"01:44"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/responses","t":1791130386764,"rel":"01:44"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/activities/:id/responses","status":503,"ms":20,"bytes":109,"quiet":true,"t":1791130386766,"rel":"01:44"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my-annotations","status":200,"ms":63,"bytes":164,"quiet":true,"t":1791130389803,"rel":"01:47"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/activities/:id/responses","status":200,"ms":133,"bytes":121,"quiet":true,"t":1791130396900,"rel":"01:55"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130397212,"rel":"01:55"}
+{"kind":"CHECK_OK","text":"rest: answer save 503 ×2: autosave retries, answer persisted once","extra":{"ok":true,"saveMs":25066,"rows":1,"ui":["ответы сохранены"],"target":{"name":"q-6275eae2-e700-4052-a4fc-405dd6edeee8","value":"6b60fb6d-08f8-4d54-a5c8-72f423d3f6b0"}},"t":1791130397840,"rel":"01:55"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":200,"ms":67,"bytes":28863,"quiet":true,"t":1791130398756,"rel":"01:56"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my-annotations","status":200,"ms":155,"bytes":95,"quiet":true,"t":1791130398844,"rel":"01:56"}
+{"who":"student","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130400559,"rel":"01:58"}
+{"kind":"CHECK_FAIL","text":"rest: answer save connection reset: retried and persisted","extra":{"ok":false,"why":"harness: radio click not applied","target":{"name":"q-2e261716-3517-4d42-8f78-762517172f1c","value":"on"}},"t":1791130402242,"rel":"02:00"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":200,"ms":98,"bytes":28872,"quiet":true,"t":1791130403188,"rel":"02:01"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my-annotations","status":200,"ms":99,"bytes":130,"quiet":true,"t":1791130403189,"rel":"02:01"}
+{"kind":"CHECK_FAIL","text":"rest: answer save response lost (server saved): retry idempotent, 1 row","extra":{"ok":false,"why":"harness: radio click not applied","target":{"name":"q-2e261716-3517-4d42-8f78-762517172f1c","value":"on"}},"t":1791130406662,"rel":"02:04"}
+{"who":"student","kind":"INJECT","text":"fail GET /api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130408166,"rel":"02:06"}
+{"who":"student","kind":"net.fail","text":"net::ERR_CONNECTION_RESET","url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","method":"GET","ms":0,"type":"Fetch","t":1791130408208,"rel":"02:06"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: net::ERR_CONNECTION_RESET","url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130408209,"rel":"02:06"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my-annotations","status":200,"ms":20,"bytes":122,"quiet":true,"t":1791130408228,"rel":"02:06"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":200,"ms":88,"bytes":28911,"quiet":true,"t":1791130410270,"rel":"02:08"}
+{"kind":"CHECK_OK","text":"rest: material load connection reset: recovers by itself, no F5","extra":{"ok":true,"ms":3311,"sawError":null,"f5":false},"t":1791130410719,"rel":"02:08"}
+{"who":"student","kind":"INJECT","text":"delay GET /api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130412201,"rel":"02:10"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my-annotations","status":200,"ms":14,"bytes":124,"quiet":true,"t":1791130412258,"rel":"02:10"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130417211,"rel":"02:15"}
+{"who":"student","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130420558,"rel":"02:18"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130437209,"rel":"02:35"}
+{"who":"student","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130440559,"rel":"02:38"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my-annotations","status":200,"ms":58,"bytes":122,"quiet":true,"t":1791130442259,"rel":"02:40"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":200,"ms":108,"bytes":28914,"quiet":true,"t":1791130444309,"rel":"02:42"}
+{"kind":"CHECK_OK","text":"rest: material load delayed 35 s (> client timeout): recovers by itself","extra":{"ok":true,"ms":32951,"sawError":null,"f5":false},"t":1791130444416,"rel":"02:42"}
+{"kind":"NET","text":"student CUT (network OFF)","t":1791130445268,"rel":"02:43"}
+{"kind":"inject.err","text":"Error: Fetch domain is not enabled","t":1791130447203,"rel":"02:45"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130457202,"rel":"02:55"}
+{"kind":"NET","text":"student network ON","t":1791130458604,"rel":"02:56"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my-annotations","status":200,"ms":13968,"bytes":100,"quiet":true,"t":1791130460022,"rel":"02:58"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":200,"ms":14054,"bytes":28844,"quiet":true,"t":1791130460108,"rel":"02:58"}
+{"kind":"CHECK_OK","text":"rest: material load during 12 s network outage: recovers after network returns","extra":{"ok":true,"ms":14944,"sawError":null,"f5":false},"t":1791130460160,"rel":"02:58"}
+{"who":"student","kind":"console.warn","text":"ping timeout triggered. last pong received at: Sun, 04 Oct 2026 16:14:05 GMT Object","t":1791130460213,"rel":"02:58"}
+{"who":"student","kind":"console.warn","text":"signal disconnected Object","t":1791130460461,"rel":"02:58"}
+{"who":"student","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130460552,"rel":"02:58"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESQB-LCAAAAAAAAAPjEuRgFGIz0jMy0jOQEExgymJkEmISYLRgdGD04g9wjC_Py3UuzAxwdwsOqQQAWnzd8ywAAAA%3D","t":1791130460767,"rel":"02:58"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESQB-LCAAAAAAAAAPjEuRgFGIz0jMy0jOQEExgymJkEmISYLRgdGD04g9wjC_Py3UuzAxwdwsOqQQAWnzd8ywAAAA%3D","status":101,"t":1791130460926,"rel":"02:59"}
+{"who":"student","kind":"console.warn","text":"triggering ICE restart Object","t":1791130460930,"rel":"02:59"}
+{"who":"student","kind":"INJECT","text":"status 503 GET /api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130461732,"rel":"02:59"}
+{"who":"student","kind":"http5xx","status":503,"url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","method":"GET","t":1791130461747,"rel":"02:59"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130461788,"rel":"02:59"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":503,"ms":42,"bytes":109,"quiet":true,"t":1791130461789,"rel":"02:59"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my-annotations","status":200,"ms":51,"bytes":121,"quiet":true,"t":1791130461798,"rel":"02:59"}
+{"who":"student","kind":"ws.closed","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESjw4fiwgAAAAAAAAD7Vtdb-O4FUUGaFEEMNCdp328QB8L2rwi9cWBHxwn6S52ZxBsZlKgT1Uk2mHH-oBEx87-if1B-wf6s","frames":246,"t":1791130461843,"rel":"02:59"}
+{"who":"student","kind":"INJECT","text":"status 503 GET /api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130463751,"rel":"03:01"}
+{"who":"student","kind":"http5xx","status":503,"url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","method":"GET","t":1791130463756,"rel":"03:01"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130463756,"rel":"03:01"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":503,"ms":6,"bytes":109,"quiet":true,"t":1791130463756,"rel":"03:01"}
+{"who":"student","kind":"tele","type":"livekit_reconnecting","ts":"2026-10-04T16:14:20.763Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"c894e95f-7e10-4ddb-a858-5ddf2165e6be","online":true,"kind":"signal"},"quiet":true,"t":1791130465769,"rel":"03:03"}
+{"who":"student","kind":"tele","type":"livekit_reconnected","ts":"2026-10-04T16:14:22.950Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"c894e95f-7e10-4ddb-a858-5ddf2165e6be","online":true,"durationMs":2187},"quiet":true,"t":1791130465769,"rel":"03:03"}
+{"who":"student","kind":"INJECT","text":"status 503 GET /api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130468755,"rel":"03:06"}
+{"who":"student","kind":"http5xx","status":503,"url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","method":"GET","t":1791130468757,"rel":"03:06"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130468758,"rel":"03:06"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":503,"ms":4,"bytes":109,"quiet":true,"t":1791130468759,"rel":"03:06"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130477207,"rel":"03:15"}
+{"who":"student","kind":"INJECT","text":"status 503 GET /api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130478761,"rel":"03:16"}
+{"who":"student","kind":"http5xx","status":503,"url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","method":"GET","t":1791130478804,"rel":"03:16"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130478804,"rel":"03:16"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":503,"ms":45,"bytes":109,"quiet":true,"t":1791130478805,"rel":"03:16"}
+{"who":"student","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130480558,"rel":"03:18"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my-annotations","status":200,"ms":77,"bytes":161,"quiet":true,"t":1791130491820,"rel":"03:29"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130497218,"rel":"03:35"}
+{"who":"student","kind":"INJECT","text":"status 503 GET /api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130498768,"rel":"03:36"}
+{"who":"student","kind":"http5xx","status":503,"url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","method":"GET","t":1791130498773,"rel":"03:36"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130498774,"rel":"03:36"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":503,"ms":10,"bytes":109,"quiet":true,"t":1791130498775,"rel":"03:36"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":200,"ms":57,"bytes":28888,"quiet":true,"t":1791130499073,"rel":"03:37"}
+{"kind":"CHECK_OK","text":"rest: material: retries exhausted → error with Retry + Collapse, Retry loads","extra":{"ok":true,"errorAfterMs":36712,"hasRetry":true,"hasCollapse":true,"errText":"Не удалось загрузить задание — проверьте интернет","loadedAfterClickMs":545},"t":1791130499518,"rel":"03:37"}
+{"who":"student","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130500560,"rel":"03:38"}
+{"who":"student","kind":"INJECT","text":"status 503 GET /api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130501001,"rel":"03:39"}
+{"who":"student","kind":"http5xx","status":503,"url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","method":"GET","t":1791130501045,"rel":"03:39"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130501046,"rel":"03:39"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":503,"ms":2,"bytes":109,"quiet":true,"t":1791130501047,"rel":"03:39"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my-annotations","status":200,"ms":78,"bytes":125,"quiet":true,"t":1791130501123,"rel":"03:39"}
+{"who":"student","kind":"INJECT","text":"status 503 GET /api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130503024,"rel":"03:41"}
+{"who":"student","kind":"http5xx","status":503,"url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","method":"GET","t":1791130503033,"rel":"03:41"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130503037,"rel":"03:41"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":503,"ms":15,"bytes":109,"quiet":true,"t":1791130503039,"rel":"03:41"}
+{"who":"student","kind":"INJECT","text":"status 503 GET /api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130508040,"rel":"03:46"}
+{"who":"student","kind":"http5xx","status":503,"url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","method":"GET","t":1791130508078,"rel":"03:46"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130508079,"rel":"03:46"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":503,"ms":1,"bytes":109,"quiet":true,"t":1791130508079,"rel":"03:46"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130517212,"rel":"03:55"}
+{"who":"student","kind":"INJECT","text":"status 503 GET /api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130518057,"rel":"03:56"}
+{"who":"student","kind":"http5xx","status":503,"url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","method":"GET","t":1791130518062,"rel":"03:56"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130518063,"rel":"03:56"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":503,"ms":13,"bytes":109,"quiet":true,"t":1791130518064,"rel":"03:56"}
+{"who":"student","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130520559,"rel":"03:58"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my-annotations","status":200,"ms":67,"bytes":138,"quiet":true,"t":1791130531077,"rel":"04:09"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130537210,"rel":"04:15"}
+{"who":"student","kind":"INJECT","text":"status 503 GET /api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130538066,"rel":"04:16"}
+{"who":"student","kind":"http5xx","status":503,"url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","method":"GET","t":1791130538071,"rel":"04:16"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my","t":1791130538071,"rel":"04:16"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":503,"ms":7,"bytes":109,"quiet":true,"t":1791130538072,"rel":"04:16"}
+{"who":"student","kind":"net.fail","text":"net::ERR_INTERNET_DISCONNECTED","url":"https://213.21.241.28/livekit","method":"HEAD","ms":2,"type":"Fetch","t":1791130538282,"rel":"04:16"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: net::ERR_INTERNET_DISCONNECTED","url":"https://213.21.241.28/livekit","t":1791130538282,"rel":"04:16"}
+{"who":"student","kind":"net.fail","text":"net::ERR_INTERNET_DISCONNECTED","url":"https://213.21.241.28/ping","method":"GET","ms":1,"type":"Fetch","t":1791130538443,"rel":"04:16"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: net::ERR_INTERNET_DISCONNECTED","url":"https://213.21.241.28/ping","t":1791130538444,"rel":"04:16"}
+{"who":"student","kind":"net.fail","text":"net::ERR_INTERNET_DISCONNECTED","url":"https://213.21.241.28/ping?link=poor&who=c894e95f-7e10-4ddb-a858-5ddf2165e6be","method":"GET","ms":8,"type":"Fetch","t":1791130538473,"rel":"04:16"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: net::ERR_INTERNET_DISCONNECTED","url":"https://213.21.241.28/ping?link=poor&who=c894e95f-7e10-4ddb-a858-5ddf2165e6be","t":1791130538474,"rel":"04:16"}
+{"who":"student","kind":"ws.closed","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESQB-LCAAAAAAAAAPjEuRgFGIz0jMy0jOQEExgymJkEmISYLRgdGD04g9wjC_Py3UuzAxwdwsOqQQAWnzd8ywAAAA%3D","frames":183,"t":1791130539902,"rel":"04:18"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESQB-LCAAAAAAAAAPjEuRgFGIz0jMy0jOQEExgymJkEmISYLRgdGD04g9wjC_Py3UuzAxwdwsOqQQAWnzd8ywAAAA%3D","t":1791130539903,"rel":"04:18"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":200,"ms":110,"bytes":28888,"quiet":true,"t":1791130539939,"rel":"04:18"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESQB-LCAAAAAAAAAPjEuRgFGIz0jMy0jOQEExgymJkEmISYLRgdGD04g9wjC_Py3UuzAxwdwsOqQQAWnzd8ywAAAA%3D","status":101,"t":1791130540072,"rel":"04:18"}
+{"who":"student","kind":"console.warn","text":"triggering ICE restart Object","t":1791130540079,"rel":"04:18"}
+{"kind":"CHECK_OK","text":"rest: material: 'online' event retries automatically (no click, no F5)","extra":{"ok":true,"errorShown":true,"loadedAfterOnlineMs":549},"t":1791130540330,"rel":"04:18"}
+{"who":"student","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130540555,"rel":"04:18"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":18,"bytes":227,"quiet":true,"t":1791130542618,"rel":"04:20"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":107,"bytes":485,"quiet":true,"t":1791130542708,"rel":"04:20"}
+{"who":"student","kind":"rest","method":"GET","url":"/files/:id%2F:id.png?exp=1791134142&sig=MQQLNuaBSLX0PB1wGqaTIuaB0oyYUfnN91XXdhR3LXc","status":200,"ms":493,"bytes":67971,"quiet":true,"t":1791130543201,"rel":"04:21"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":27,"bytes":244,"quiet":true,"t":1791130543712,"rel":"04:21"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":107,"bytes":239,"quiet":true,"t":1791130543792,"rel":"04:21"}
+{"who":"student","kind":"rest","method":"GET","url":"/files/:id%2F:id.png?exp=1791134143&sig=qlaBKzWOV3r9iRcaIegFRuZrFaW8_cWGtOF25LjFHF0","status":200,"ms":104,"bytes":52434,"quiet":true,"t":1791130543818,"rel":"04:21"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":144,"bytes":224,"quiet":true,"t":1791130543829,"rel":"04:21"}
+{"who":"student","kind":"rest","method":"GET","url":"/files/:id%2F:id.png?exp=1791134143&sig=wKpj3pstE1l7_wJi3n5J3Q0AgRikwRt9017u96f5s5c","status":200,"ms":56,"bytes":40130,"quiet":true,"t":1791130543848,"rel":"04:21"}
+{"who":"student","kind":"rest","method":"GET","url":"/files/:id%2F:id.png?exp=1791134143&sig=h3eUnC72nt-uQl4TTkmlatadWogbO0CnPgo9LeY2rg8","status":200,"ms":115,"bytes":64165,"quiet":true,"t":1791130543952,"rel":"04:22"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":86,"bytes":223,"quiet":true,"t":1791130544822,"rel":"04:22"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":89,"bytes":257,"quiet":true,"t":1791130544825,"rel":"04:22"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":90,"bytes":222,"quiet":true,"t":1791130544826,"rel":"04:22"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":88,"bytes":222,"quiet":true,"t":1791130544826,"rel":"04:22"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":92,"bytes":268,"quiet":true,"t":1791130544829,"rel":"04:22"}
+{"who":"student","kind":"tele","type":"livekit_reconnecting","ts":"2026-10-04T16:15:39.841Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"c894e95f-7e10-4ddb-a858-5ddf2165e6be","online":true,"kind":"signal"},"quiet":true,"t":1791130544850,"rel":"04:22"}
+{"who":"student","kind":"tele","type":"livekit_reconnected","ts":"2026-10-04T16:15:42.116Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"c894e95f-7e10-4ddb-a858-5ddf2165e6be","online":true,"durationMs":2275},"quiet":true,"t":1791130544850,"rel":"04:22"}
+{"who":"student","kind":"rest","method":"GET","url":"/files/:id%2F:id.png?exp=1791134144&sig=9Giwr4oZNhGCaKd6A9hEG4LhFtHvPhp_ZKjg_4Sa6BU","status":200,"ms":152,"bytes":106513,"quiet":true,"t":1791130544990,"rel":"04:23"}
+{"who":"student","kind":"rest","method":"GET","url":"/files/:id%2F:id.jpg?exp=1791134144&sig=-_TC4nxry4XgOFy0FhgCAtTLUh9bO1W8Gz6T2OuagMQ","status":200,"ms":231,"bytes":93845,"quiet":true,"t":1791130545069,"rel":"04:23"}
+{"who":"student","kind":"rest","method":"GET","url":"/files/:id%2F:id.png?exp=1791134144&sig=MxufIKU8KSJqSSN6CDdjUsWPq41kqEX_i1T9OmAl48A","status":200,"ms":331,"bytes":104488,"quiet":true,"t":1791130545170,"rel":"04:23"}
+{"who":"student","kind":"rest","method":"GET","url":"/files/:id%2F:id.png?exp=1791134144&sig=ouBpi-B_HAw0eES_4_6a7U4Vx_xJCAGhtxLFSmaiFpM","status":200,"ms":416,"bytes":108568,"quiet":true,"t":1791130545255,"rel":"04:23"}
+{"who":"student","kind":"rest","method":"GET","url":"/files/:id%2F:id.png?exp=1791134144&sig=04VIiesNE_Xy-rPXMJeQAlOxLOsJ0F0820PeEL77vRA","status":200,"ms":472,"bytes":82043,"quiet":true,"t":1791130545321,"rel":"04:23"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":37,"bytes":225,"quiet":true,"t":1791130545850,"rel":"04:23"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":38,"bytes":222,"quiet":true,"t":1791130545850,"rel":"04:23"}
+{"who":"student","kind":"rest","method":"GET","url":"/files/:id%2F:id.jpg?exp=1791134145&sig=jGUwGG1kd638IOZakBntWm98z7Q94JdePIA8x5_XxOg","status":200,"ms":189,"bytes":122487,"quiet":true,"t":1791130546040,"rel":"04:24"}
+{"who":"student","kind":"rest","method":"GET","url":"/files/:id%2F:id.jpg?exp=1791134145&sig=mOAezQ8iQBbzJRmXI6Gh3qv6V485pXUZK_x_2-aHuCM","status":200,"ms":275,"bytes":120158,"quiet":true,"t":1791130546126,"rel":"04:24"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":11,"bytes":245,"quiet":true,"t":1791130546916,"rel":"04:25"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":104,"bytes":223,"quiet":true,"t":1791130547009,"rel":"04:25"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":558,"bytes":223,"quiet":true,"t":1791130547463,"rel":"04:25"}
+{"who":"student","kind":"rest","method":"GET","url":"/files/:id%2F:id.jpg?exp=1791134146&sig=HBhWU_lwCdlKMUp0PnFbEFUHCMhudUUwQcKwEFtc3ck","status":200,"ms":757,"bytes":352569,"quiet":true,"t":1791130547766,"rel":"04:25"}
+{"who":"student","kind":"rest","method":"GET","url":"/files/:id%2F:id.jpg?exp=1791134146&sig=KwmI4dniIUdxCIHg-V4UGnZSCNpi-cIYBTA9GxeoU6Q","status":200,"ms":485,"bytes":195533,"quiet":true,"t":1791130547949,"rel":"04:26"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130557203,"rel":"04:35"}
+{"who":"student","kind":"room.msg","type":"heartbeat","quiet":true,"t":1791130560570,"rel":"04:38"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my-annotations","status":200,"ms":54,"bytes":125,"quiet":true,"t":1791130561057,"rel":"04:39"}
+{"kind":"CHECK_FAIL","text":"rest: material: previously entered answer preserved after reloads","extra":{"ok":false,"radioChecked":null,"dbRows":0},"t":1791130561493,"rel":"04:39"}
+{"who":"teacher","kind":"ws.closed","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESjQ4fiwgAAAAAAAAD7Vtdb9w2FoUDbFEMMECbpz5eYJ85IkXqgwzmIY7ttmgbuE3iAHlaWuKMmYw-IHHscf9Ef1D_wP6sh","frames":523,"t":1791130562317,"rel":"04:40"}
+{"who":"student","kind":"room.msg","type":"participant_updated","quiet":true,"t":1791130562416,"rel":"04:40"}
+{"who":"teacher","kind":"http4xx","status":401,"url":"https://213.21.241.28/api/v1/guest/session","method":"GET","t":1791130562555,"rel":"04:40"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 401 ()","url":"https://213.21.241.28/api/v1/guest/session","t":1791130562556,"rel":"04:40"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/guest/session","status":401,"ms":68,"bytes":187,"quiet":true,"t":1791130562556,"rel":"04:40"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":200,"ms":106,"bytes":699,"quiet":true,"t":1791130562664,"rel":"04:40"}
+{"who":"student","kind":"room.msg","type":"participant_updated","quiet":true,"t":1791130563037,"rel":"04:41"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id","status":200,"ms":84,"bytes":488,"quiet":true,"t":1791130563084,"rel":"04:41"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/join","status":200,"ms":89,"bytes":1061,"quiet":true,"t":1791130563088,"rel":"04:41"}
+{"who":"teacher","kind":"ws.created","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&token=…&cs=be272b8e-db9b-400f-b30b-3f2dccd1153c&attempt=0","t":1791130563141,"rel":"04:41"}
+{"who":"teacher","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESjA4fiwgAAAAAAAAD7VvbbuS4EYUHSBAYaGB3nvaxgDzTzRKpCznoh572eHeBnYmzc9nXyBK7zUzrAoltt_cn9oPyA_msQ","t":1791130563216,"rel":"04:41"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/decks","status":200,"ms":78,"bytes":79,"quiet":true,"t":1791130563217,"rel":"04:41"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/activities","status":200,"ms":79,"bytes":361,"quiet":true,"t":1791130563219,"rel":"04:41"}
+{"who":"teacher","kind":"ws.open","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&token=…&cs=be272b8e-db9b-400f-b30b-3f2dccd1153c&attempt=0","status":101,"t":1791130563295,"rel":"04:41"}
+{"who":"teacher","kind":"room.msg","type":"presence","quiet":true,"t":1791130563296,"rel":"04:41"}
+{"who":"teacher","kind":"room.msg","type":"stage_changed","quiet":true,"t":1791130563300,"rel":"04:41"}
+{"who":"teacher","kind":"room.msg","type":"lesson_mode","quiet":true,"t":1791130563300,"rel":"04:41"}
+{"who":"teacher","kind":"room.msg","type":"entry_locked","quiet":true,"t":1791130563300,"rel":"04:41"}
+{"who":"teacher","kind":"INJECT","text":"status 401 GET /api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/chat","t":1791130563305,"rel":"04:41"}
+{"who":"teacher","kind":"http4xx","status":401,"url":"https://213.21.241.28/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/chat","method":"GET","t":1791130563308,"rel":"04:41"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 401 (Unauthorized)","url":"https://213.21.241.28/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/chat","t":1791130563309,"rel":"04:41"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/chat","status":401,"ms":54,"bytes":102,"quiet":true,"t":1791130563358,"rel":"04:41"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":200,"ms":98,"bytes":752,"quiet":true,"t":1791130563408,"rel":"04:41"}
+{"who":"teacher","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESjA4fiwgAAAAAAAAD7VvbbuS4EYUHSBAYaGB3nvaxgDzTzRKpCznoh572eHeBnYmzc9nXyBK7zUzrAoltt_cn9oPyA_msQ","status":101,"t":1791130563447,"rel":"04:41"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/chat","status":200,"ms":77,"bytes":2342,"quiet":true,"t":1791130563485,"rel":"04:41"}
+{"kind":"CHECK_OK","text":"rest: 401 on API → silent refresh, user stays in lesson","extra":{"ok":true,"onLogin":false},"t":1791130563822,"rel":"04:41"}
+{"who":"teacher","kind":"ws.closed","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESjA4fiwgAAAAAAAAD7VvbbuS4EYUHSBAYaGB3nvaxgDzTzRKpCznoh572eHeBnYmzc9nXyBK7zUzrAoltt_cn9oPyA_msQ","frames":21,"t":1791130563906,"rel":"04:42"}
+{"who":"student","kind":"room.msg","type":"participant_updated","quiet":true,"t":1791130564019,"rel":"04:42"}
+{"who":"teacher","kind":"http4xx","status":401,"url":"https://213.21.241.28/api/v1/guest/session","method":"GET","t":1791130564163,"rel":"04:42"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 401 ()","url":"https://213.21.241.28/api/v1/guest/session","t":1791130564164,"rel":"04:42"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/guest/session","status":401,"ms":56,"bytes":194,"quiet":true,"t":1791130564164,"rel":"04:42"}
+{"who":"teacher","kind":"INJECT","text":"status 503 POST /api/v1/auth/refresh","t":1791130564169,"rel":"04:42"}
+{"who":"teacher","kind":"http5xx","status":503,"url":"https://213.21.241.28/api/v1/auth/refresh","method":"POST","t":1791130564212,"rel":"04:42"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"https://213.21.241.28/api/v1/auth/refresh","t":1791130564213,"rel":"04:42"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":503,"ms":53,"bytes":109,"quiet":true,"t":1791130564221,"rel":"04:42"}
+{"who":"teacher","kind":"INJECT","text":"status 503 POST /api/v1/auth/refresh","t":1791130567173,"rel":"04:45"}
+{"who":"teacher","kind":"http5xx","status":503,"url":"https://213.21.241.28/api/v1/auth/refresh","method":"POST","t":1791130567175,"rel":"04:45"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"https://213.21.241.28/api/v1/auth/refresh","t":1791130567176,"rel":"04:45"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":503,"ms":53,"bytes":109,"quiet":true,"t":1791130567226,"rel":"04:45"}
+{"kind":"CHECK_OK","text":"rest: refresh 503 (server down): user NOT logged out","extra":{"ok":true,"onLogin":false,"path":"/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"},"t":1791130569873,"rel":"04:48"}

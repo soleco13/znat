@@ -1,0 +1,7 @@
+{"kind":"NET","text":"student -> HORRIBLE","extra":{"student":{"up":"delay 400ms 150ms distribution normal loss 15% rate 32kbit limit 30","down":"delay 400ms 150ms distribution normal loss 15% rate 64kbit limit 30"}},"t":1791130989255,"rel":"00:00"}
+{"who":"load-HORRIBLE","kind":"rest","method":"GET","url":"/api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc","status":200,"ms":2365,"bytes":386,"quiet":true,"t":1791131023749,"rel":"00:35"}
+{"who":"load-HORRIBLE","kind":"http4xx","status":401,"url":"https://213.21.241.28/api/v1/auth/refresh","method":"POST","quiet":true,"t":1791131023978,"rel":"00:35"}
+{"who":"load-HORRIBLE","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 401 ()","url":"https://213.21.241.28/api/v1/auth/refresh","quiet":true,"t":1791131023979,"rel":"00:35"}
+{"who":"load-HORRIBLE","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":401,"ms":2667,"bytes":160,"quiet":true,"t":1791131024062,"rel":"00:35"}
+{"who":"load-HORRIBLE","kind":"rest","method":"POST","url":"/api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc/enter","status":201,"ms":7443,"bytes":635,"quiet":true,"t":1791131031799,"rel":"00:43"}
+{"kind":"LOAD","text":"HORRIBLE","extra":{"formMs":34656,"devMs":120222,"roomMs":121089,"audioMs":null,"fcp":31992,"lcp":34664,"req":100,"kb":146,"fails":1},"t":1791131202256,"rel":"03:33"}

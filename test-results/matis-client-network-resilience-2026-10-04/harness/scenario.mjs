@@ -125,25 +125,29 @@ async function answerInner(tag) {
   // ищем страницу с неотвеченным вопросом-выбором
   let target = null;
   for (let i = 0; i < 20 && !target; i++) {
-    target = await S.eval(`(() => { const done = ${JSON.stringify([...answered])}; const r = [...document.querySelectorAll('input[type=radio][name^="q-"]')].filter(x => x.getBoundingClientRect().width > 0 || x.closest('label')?.getBoundingClientRect().width > 0); const names = [...new Set(r.map(x => x.name))].filter(n => !done.includes(n)); if (!names.length) return null; const n = names[0]; const opts = r.filter(x => x.name === n); const o = opts[Math.floor(Math.random() * opts.length)]; return { name: n, value: o.value }; })()`);
+    target = await S.eval(`(() => { const done = ${JSON.stringify([...answered])}; const r = [...document.querySelectorAll('input[type=radio][name^="q-"]')].filter(x => x.getBoundingClientRect().width > 0 || x.closest('label')?.getBoundingClientRect().width > 0); const names = [...new Set(r.map(x => x.name))].filter(n => !done.includes(n)); if (!names.length) return null; const n = names[0]; const opts = r.filter(x => x.name === n); const idx = Math.floor(Math.random() * opts.length); const o = opts[idx]; return { name: n, idx, attr: o.getAttribute('value'), text: (o.closest('label')?.textContent || '').trim() }; })()`);
     if (!target) { await S.click(byLabel("Следующая страница")); await sleep(1500); }
   }
   if (!target) return { ok: false, why: "no unanswered question", openMs };
   answered.add(target.name);
   let ok = false;
   for (let i = 0; i < 10 && !ok; i++) {
-    ok = await S.click(`([...document.querySelectorAll('input[name=${JSON.stringify(target.name)}][value=${JSON.stringify(target.value)}]')].map(x => x.closest('label')).find(l => l && l.getBoundingClientRect().width > 0) || null)`).catch(() => false);
+    // по индексу в группе, а не по [value=…]: у «Верно/Неверно» атрибута value нет (свойство .value = "on"),
+    // и селектор по атрибуту не находил ничего — шаг падал как «radio vanished» на каждом таком вопросе
+    ok = await S.click(`(document.querySelectorAll('input[type=radio][name=${JSON.stringify(target.name)}]')[${target.idx}]?.closest('label') || null)`).catch(() => false);
     if (!ok) await sleep(1500);
   }
   if (!ok) return { ok: false, why: "radio vanished (re-render)", openMs };
   const t1 = Date.now();
   const qid = target.name.slice(2);
+  // single_choice хранит id варианта, true_false — {"value": true|false}
+  const expect = target.attr ?? (target.text === "Верно" ? '"value": true' : '"value": false');
   const sid = ((await L.lkParticipants()).list || []).find((x) => (x.name || "").startsWith("E2E Ученик"))?.identity || L.lastSample.livekit?.list?.find((x) => (x.name || "").startsWith("E2E Ученик"))?.identity;
-  const saved = await waitFor(async () => Number((await L.sql(`select count(*) from responses where lesson_id='${L.LID}' and question_id='${qid}' and participant_id in (select id from lesson_participants where guest_id::text='${sid}' or user_id::text='${sid}') and response::text like '%${target.value}%'`))[0]) > 0, 60000, 1000);
+  const saved = await waitFor(async () => Number((await L.sql(`select count(*) from responses where lesson_id='${L.LID}' and question_id='${qid}' and participant_id in (select id from lesson_participants where guest_id::text='${sid}' or user_id::text='${sid}') and response::text like '%${expect}%'`))[0]) > 0, 60000, 1000);
   const uiStatus = await S.eval("(() => { const t = document.body.innerText; return ['сохранено','сохраняется','не сохранено','ошибка','Сохраняем'].filter(s => t.toLowerCase().includes(s.toLowerCase())); })()").catch(() => null);
   // вернуть стейдж «люди» у ученика
   await S.click(byLabel("Свернуть задание")).catch(() => {});
-  return { ok: ok && saved.ok, openMs, saveMs: saved.ok ? Date.now() - t1 : null, qid, uiStatus };
+  return { ok: ok && saved.ok, openMs, saveMs: saved.ok ? Date.now() - t1 : null, qid, kind: target.attr ? "choice" : "true_false", uiStatus };
 }
 
 /** Полный раунд действий на текущей сети. */
@@ -226,7 +230,8 @@ async function outage(name, sec, base = "NORMAL") {
   await L.press(T, "Доска"); // смена стейджа, пока ученика нет
   const stageWanted = !boardBefore;
   const uiDuring = [];
-  while (Date.now() - tCut < sec * 1000) { uiDuring.push({ s: Math.round((Date.now() - tCut) / 1000), ui: await L.uiState(S) }); await sleep(2500); }
+  let pillAtS = null;
+  while (Date.now() - tCut < sec * 1000) { const ui = await L.uiState(S); uiDuring.push({ s: Math.round((Date.now() - tCut) / 1000), ui }); if (pillAtS === null && (ui.lkWarn || []).length) pillAtS = Math.round((Date.now() - tCut) / 1000); await sleep(2500); }
   await L.cut("student", false);
   const tUp = Date.now();
   mark(`${name}: network ON`);
@@ -241,6 +246,12 @@ async function outage(name, sec, base = "NORMAL") {
   // что стало с сообщением ученика, отправленным без сети
   await sleep(2000);
   const offlineMsg = { atTeacher: await L.countText(T, sDuring), atStudent: await L.countText(S, sDuring), errShown: await S.eval(`document.body.innerText.includes('Сообщение не отправлено')`).catch(() => null), draftKept: await S.eval(`(document.querySelector('[aria-label="Сообщение классу"]')||{}).value || ''`).catch(() => null) };
+  offlineMsg.dbRows = Number((await L.sql(`select count(*) from chat_messages where lesson_id='${L.LID}' and body='${sDuring}'`))[0]);
+  // если текст вернулся в поле — человек жмёт «Отправить» ещё раз (проверка идемпотентности)
+  if (offlineMsg.draftKept === sDuring) {
+    await L.press(S, "Отправить"); await sleep(4000);
+    offlineMsg.afterResend = { atTeacher: await L.countText(T, sDuring), dbRows: Number((await L.sql(`select count(*) from chat_messages where lesson_id='${L.LID}' and body='${sDuring}'`))[0]) };
+  }
   // новые сообщения после восстановления
   const c1 = await L.chat(T, S, `${name}-after-t2s`, 20000);
   const c2 = await L.chat(S, T, `${name}-after-s2t`, 20000);
@@ -249,9 +260,10 @@ async function outage(name, sec, base = "NORMAL") {
   const lk = await L.lkParticipants();
   const ids = (lk.list || []).filter((x) => !x.identity.startsWith("EG_")).map((x) => x.identity);
   const after = { pcs: await S.eval("window.__pcs.length") };
-  const r = { sec, base, pcReconnectMs: pc.ok ? Date.now() - tUp - 0 : null, mediaMs: audioMs, roomWs: ws.ok, roomWsMs: ws.ok ? ws.ms : null,
+  const pillGone = await waitFor(async () => !((await L.uiState(S)).lkWarn || []).length, 60000, 1000);
+  const r = { mediaPill: { shownAfterS: pillAtS, goneAfterRestoreMs: pillGone.ok ? Date.now() - tUp : null }, sec, base, pcReconnectMs: pc.ok ? Date.now() - tUp - 0 : null, mediaMs: audioMs, roomWs: ws.ok, roomWsMs: ws.ok ? ws.ms : null,
     missedChat: { delivered: gotMissed.ok, copies: missedCopies }, stageSynced: stageSynced.ok, offlineMsg, chatAfter: c1.ok && c2.ok, chatAfterDup: [c1.copiesAtReceiver, c2.copiesAtReceiver],
-    participants: ids.length, dup: ids.length !== new Set(ids).size, newPCs: after.pcs - before.pcs, uiDuring: uiDuring.filter((x, i) => i % 2 === 0).map((x) => ({ s: x.s, overlay: x.ui.overlayReconnect, pill: x.ui.pill, lkWarn: x.ui.lkWarn, q: x.ui.quality })), uiAfter: await L.uiState(S) };
+    participants: ids.length, dup: ids.length !== new Set(ids).size, newPCs: after.pcs - before.pcs, uiDuring: uiDuring.filter((x, i) => i % 2 === 0).map((x) => ({ s: x.s, overlay: x.ui.overlayReconnect, pill: x.ui.pill, lkWarn: x.ui.lkWarn, q: x.ui.quality, mic: null })), uiAfter: await L.uiState(S) };
   r.pcReconnectMs = pc.ok ? pc.ms : null;
   r.ok = r.mediaMs !== null && r.roomWs && r.missedChat.delivered && r.missedChat.copies === 1 && r.stageSynced && r.chatAfter && ids.length === 2 && !r.dup;
   check(`${name}: outage ${sec}s recovered (media, WS, missed chat, stage, no dup)`, r.ok, r);
@@ -443,6 +455,15 @@ try {
   else if (SUITE === "long") await longRun();
   else if (SUITE === "turn") await turn();
   else if (SUITE === "recording") await recordingSuite();
+  else if (SUITE === "answer") {
+    // только шаг answer: 1-й вопрос (выбор) на NORMAL, 2-й («Верно/Неверно») на PROFILE — как раунды 1 и 2 матрицы
+    const prof = process.env.PROFILE || "LOSS5";
+    ROUNDS.answer = { NORMAL: await answer("NORMAL") };
+    check("answer NORMAL", ROUNDS.answer.NORMAL.ok, ROUNDS.answer.NORMAL);
+    await L.setProfile("both", prof); await sleep(Number(process.env.SETTLE_SEC || 20) * 1000);
+    ROUNDS.answer[prof] = await answer(prof);
+    check(`answer ${prof}`, ROUNDS.answer[prof].ok, ROUNDS.answer[prof]);
+  }
 } catch (e) {
   log({ kind: "SCENARIO_ERROR", text: String(e.stack || e).slice(0, 1500) });
   await L.shot("99-error").catch(() => {});

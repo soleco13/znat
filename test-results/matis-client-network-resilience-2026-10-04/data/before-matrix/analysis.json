@@ -2888,7 +2888,7 @@
    "who": "teacher",
    "kind": "net.fail",
    "text": "net::ERR_CONNECTION_TIMED_OUT",
-   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiI5N2UxNGQwOC1iYjc1LTQyNmEtYjNlMi0xYzg2Mjk3N2U3NzUiLCJleHAiOjE3OTExNTk4NDIs",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=<JWT-REDACTED>",
    "method": "GET",
    "ms": 10715,
    "status": null
@@ -2898,7 +2898,7 @@
    "who": "teacher",
    "kind": "net.fail",
    "text": "net::ERR_CONNECTION_TIMED_OUT",
-   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiI5N2UxNGQwOC1iYjc1LTQyNmEtYjNlMi0xYzg2Mjk3N2U3NzUiLCJleHAiOjE3OTExNTk4NDIs",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=<JWT-REDACTED>",
    "method": "GET",
    "ms": 8801,
    "status": null
@@ -2918,7 +2918,7 @@
    "who": "teacher",
    "kind": "net.fail",
    "text": "net::ERR_TIMED_OUT",
-   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiI5N2UxNGQwOC1iYjc1LTQyNmEtYjNlMi0xYzg2Mjk3N2U3NzUiLCJleHAiOjE3OTExNTk4NDIs",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=<JWT-REDACTED>",
    "method": "GET",
    "ms": 10673,
    "status": null
@@ -2968,7 +2968,7 @@
    "who": "student",
    "kind": "net.fail",
    "text": "net::ERR_TIMED_OUT",
-   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiIzZmY3ZGI2OC0xMzJhLTRkMTQtOTIwOS1lNjYzNzY4YzZlNGQiLCJleHAiOjE3OTExMzgyNDYs",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=<JWT-REDACTED>",
    "method": "GET",
    "ms": 10228,
    "status": null
@@ -2998,7 +2998,7 @@
    "who": "teacher",
    "kind": "net.fail",
    "text": "net::ERR_TIMED_OUT",
-   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiI5N2UxNGQwOC1iYjc1LTQyNmEtYjNlMi0xYzg2Mjk3N2U3NzUiLCJleHAiOjE3OTExNTk4NDIs",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=<JWT-REDACTED>",
    "method": "GET",
    "ms": 3365,
    "status": null
@@ -3038,7 +3038,7 @@
    "who": "student",
    "kind": "net.fail",
    "text": "net::ERR_TIMED_OUT",
-   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiIzZmY3ZGI2OC0xMzJhLTRkMTQtOTIwOS1lNjYzNzY4YzZlNGQiLCJleHAiOjE3OTExMzgyNDYs",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=<JWT-REDACTED>",
    "method": "GET",
    "ms": 1902,
    "status": null
@@ -3058,7 +3058,7 @@
    "who": "student",
    "kind": "net.fail",
    "text": "net::ERR_CONNECTION_TIMED_OUT",
-   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiIzZmY3ZGI2OC0xMzJhLTRkMTQtOTIwOS1lNjYzNzY4YzZlNGQiLCJleHAiOjE3OTExMzgyNDYs",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=<JWT-REDACTED>",
    "method": "GET",
    "ms": 26066,
    "status": null
@@ -3078,7 +3078,7 @@
    "who": "teacher",
    "kind": "net.fail",
    "text": "net::ERR_CONNECTION_TIMED_OUT",
-   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiI5N2UxNGQwOC1iYjc1LTQyNmEtYjNlMi0xYzg2Mjk3N2U3NzUiLCJleHAiOjE3OTExNTk4NDIs",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=<JWT-REDACTED>",
    "method": "GET",
    "ms": 12915,
    "status": null
@@ -3088,7 +3088,7 @@
    "who": "teacher",
    "kind": "net.fail",
    "text": "net::ERR_TIMED_OUT",
-   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiI5N2UxNGQwOC1iYjc1LTQyNmEtYjNlMi0xYzg2Mjk3N2U3NzUiLCJleHAiOjE3OTExNTk4NDIs",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=<JWT-REDACTED>",
    "method": "GET",
    "ms": 6325,
    "status": null
@@ -3158,7 +3158,7 @@
    "who": "teacher",
    "kind": "net.fail",
    "text": "net::ERR_CONNECTION_TIMED_OUT",
-   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiI5N2UxNGQwOC1iYjc1LTQyNmEtYjNlMi0xYzg2Mjk3N2U3NzUiLCJleHAiOjE3OTExNTk4NDIs",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=<JWT-REDACTED>",
    "method": "GET",
    "ms": 1497,
    "status": null
@@ -3198,7 +3198,7 @@
    "who": "student",
    "kind": "net.fail",
    "text": "net::ERR_HTTP2_PING_FAILED",
-   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiIzZmY3ZGI2OC0xMzJhLTRkMTQtOTIwOS1lNjYzNzY4YzZlNGQiLCJleHAiOjE3OTExMzgyNDYs",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=<JWT-REDACTED>",
    "method": "GET",
    "ms": 20493,
    "status": null
@@ -3248,7 +3248,7 @@
    "who": "student",
    "kind": "net.fail",
    "text": "net::ERR_TIMED_OUT",
-   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiIzZmY3ZGI2OC0xMzJhLTRkMTQtOTIwOS1lNjYzNzY4YzZlNGQiLCJleHAiOjE3OTExMzgyNDYs",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=<JWT-REDACTED>",
    "method": "GET",
    "ms": 15172,
    "status": null
@@ -3308,7 +3308,7 @@
    "who": "student",
    "kind": "net.fail",
    "text": "net::ERR_CONNECTION_TIMED_OUT",
-   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiIzZmY3ZGI2OC0xMzJhLTRkMTQtOTIwOS1lNjYzNzY4YzZlNGQiLCJleHAiOjE3OTExMzgyNDYs",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=<JWT-REDACTED>",
    "method": "GET",
    "ms": 2876,
    "status": null

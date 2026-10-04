@@ -1,0 +1,876 @@
+{
+  "NORMAL": {
+    "formMs": 833,
+    "devCheckMs": 1797,
+    "inRoomMs": 2676,
+    "audioMs": 3681,
+    "fcp": 540,
+    "lcp": 784,
+    "longTasks": 4,
+    "nav": {
+      "ttfb": 137,
+      "dcl": 466,
+      "load": 473,
+      "kb": 0.8
+    },
+    "requests": 107,
+    "totalKb": 150,
+    "byType": {
+      "script": {
+        "n": 36,
+        "kb": 127.3
+      },
+      "link": {
+        "n": 1,
+        "kb": 12.9
+      },
+      "fetch": {
+        "n": 66,
+        "kb": 7.3
+      },
+      "other": {
+        "n": 3,
+        "kb": 2.1
+      }
+    },
+    "beforeForm": {
+      "n": 13,
+      "kb": 143
+    },
+    "heavy": [
+      {
+        "n": "/assets/index-CKVtpw34.js",
+        "t": "script",
+        "start": 166,
+        "end": 398,
+        "kb": 126.3,
+        "decKb": 467
+      },
+      {
+        "n": "/assets/index-CRDIIC9a.css",
+        "t": "link",
+        "start": 166,
+        "end": 237,
+        "kb": 12.9,
+        "decKb": 78
+      },
+      {
+        "n": "/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/chat",
+        "t": "fetch",
+        "start": 2934,
+        "end": 3006,
+        "kb": 2.5,
+        "decKb": 11
+      },
+      {
+        "n": "/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join",
+        "t": "fetch",
+        "start": 2624,
+        "end": 2708,
+        "kb": 1.3,
+        "decKb": 2
+      },
+      {
+        "n": "/sw-assets.json",
+        "t": "fetch",
+        "start": 540,
+        "end": 603,
+        "kb": 1.2,
+        "decKb": 5
+      },
+      {
+        "n": "/excalidraw-asset-path.js",
+        "t": "script",
+        "start": 159,
+        "end": 239,
+        "kb": 1,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 541,
+        "end": 605,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 1260,
+        "end": 1367,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 2666,
+        "end": 2721,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/activities",
+        "t": "fetch",
+        "start": 2728,
+        "end": 2783,
+        "kb": 0.6,
+        "decKb": 0
+      },
+      {
+        "n": "/api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc",
+        "t": "fetch",
+        "start": 539,
+        "end": 604,
+        "kb": 0.5,
+        "decKb": 0
+      },
+      {
+        "n": "/api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc/enter",
+        "t": "fetch",
+        "start": 1139,
+        "end": 1235,
+        "kb": 0.5,
+        "decKb": 0
+      }
+    ],
+    "fails": [
+      {
+        "k": "http4xx",
+        "u": "/api/v1/auth/refresh",
+        "s": 401
+      }
+    ],
+    "sw": true
+  },
+  "BAD_4G": {
+    "formMs": 1535,
+    "devCheckMs": 3976,
+    "inRoomMs": 4845,
+    "audioMs": 8891,
+    "fcp": 1292,
+    "lcp": 1292,
+    "longTasks": 2,
+    "nav": {
+      "ttfb": 388,
+      "dcl": 1183,
+      "load": 1184,
+      "kb": 0.8
+    },
+    "requests": 108,
+    "totalKb": 151,
+    "byType": {
+      "script": {
+        "n": 36,
+        "kb": 127.3
+      },
+      "link": {
+        "n": 1,
+        "kb": 12.9
+      },
+      "fetch": {
+        "n": 67,
+        "kb": 7.7
+      },
+      "other": {
+        "n": 3,
+        "kb": 2.1
+      }
+    },
+    "beforeForm": {
+      "n": 7,
+      "kb": 143
+    },
+    "heavy": [
+      {
+        "n": "/assets/index-CKVtpw34.js",
+        "t": "script",
+        "start": 397,
+        "end": 1133,
+        "kb": 126.3,
+        "decKb": 467
+      },
+      {
+        "n": "/assets/index-CRDIIC9a.css",
+        "t": "link",
+        "start": 397,
+        "end": 569,
+        "kb": 12.9,
+        "decKb": 78
+      },
+      {
+        "n": "/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/chat",
+        "t": "fetch",
+        "start": 6405,
+        "end": 6670,
+        "kb": 2.5,
+        "decKb": 11
+      },
+      {
+        "n": "/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join",
+        "t": "fetch",
+        "start": 4807,
+        "end": 5869,
+        "kb": 1.4,
+        "decKb": 2
+      },
+      {
+        "n": "/sw-assets.json",
+        "t": "fetch",
+        "start": 1276,
+        "end": 1395,
+        "kb": 1.2,
+        "decKb": 5
+      },
+      {
+        "n": "/excalidraw-asset-path.js",
+        "t": "script",
+        "start": 396,
+        "end": 572,
+        "kb": 1,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 1281,
+        "end": 1399,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 1982,
+        "end": 2614,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 4838,
+        "end": 5866,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/activities",
+        "t": "fetch",
+        "start": 5890,
+        "end": 6053,
+        "kb": 0.6,
+        "decKb": 0
+      },
+      {
+        "n": "/api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc",
+        "t": "fetch",
+        "start": 1273,
+        "end": 1378,
+        "kb": 0.5,
+        "decKb": 0
+      },
+      {
+        "n": "/api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc/enter",
+        "t": "fetch",
+        "start": 1825,
+        "end": 1955,
+        "kb": 0.5,
+        "decKb": 0
+      }
+    ],
+    "fails": [
+      {
+        "k": "http4xx",
+        "u": "/api/v1/auth/refresh",
+        "s": 401
+      }
+    ],
+    "sw": true
+  },
+  "3G": {
+    "formMs": 2849,
+    "devCheckMs": 7357,
+    "inRoomMs": 8273,
+    "audioMs": 16318,
+    "fcp": 2396,
+    "lcp": 2768,
+    "longTasks": 3,
+    "nav": {
+      "ttfb": 788,
+      "dcl": 2320,
+      "load": 2321,
+      "kb": 0.8
+    },
+    "requests": 110,
+    "totalKb": 151,
+    "byType": {
+      "script": {
+        "n": 36,
+        "kb": 127.3
+      },
+      "link": {
+        "n": 1,
+        "kb": 12.9
+      },
+      "fetch": {
+        "n": 69,
+        "kb": 8.3
+      },
+      "other": {
+        "n": 3,
+        "kb": 2.1
+      }
+    },
+    "beforeForm": {
+      "n": 7,
+      "kb": 143
+    },
+    "heavy": [
+      {
+        "n": "/assets/index-CKVtpw34.js",
+        "t": "script",
+        "start": 797,
+        "end": 2276,
+        "kb": 126.3,
+        "decKb": 467
+      },
+      {
+        "n": "/assets/index-CRDIIC9a.css",
+        "t": "link",
+        "start": 797,
+        "end": 1162,
+        "kb": 12.9,
+        "decKb": 78
+      },
+      {
+        "n": "/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/chat",
+        "t": "fetch",
+        "start": 12957,
+        "end": 13240,
+        "kb": 2.5,
+        "decKb": 11
+      },
+      {
+        "n": "/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join",
+        "t": "fetch",
+        "start": 8173,
+        "end": 11036,
+        "kb": 1.4,
+        "decKb": 3
+      },
+      {
+        "n": "/sw-assets.json",
+        "t": "fetch",
+        "start": 2382,
+        "end": 2652,
+        "kb": 1.2,
+        "decKb": 5
+      },
+      {
+        "n": "/excalidraw-asset-path.js",
+        "t": "script",
+        "start": 797,
+        "end": 1165,
+        "kb": 1,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 2389,
+        "end": 2661,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 3387,
+        "end": 3681,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 8214,
+        "end": 11039,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/activities",
+        "t": "fetch",
+        "start": 11059,
+        "end": 11641,
+        "kb": 0.6,
+        "decKb": 0
+      },
+      {
+        "n": "/api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc",
+        "t": "fetch",
+        "start": 2379,
+        "end": 2539,
+        "kb": 0.5,
+        "decKb": 0
+      },
+      {
+        "n": "/api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc/enter",
+        "t": "fetch",
+        "start": 3104,
+        "end": 3367,
+        "kb": 0.5,
+        "decKb": 0
+      }
+    ],
+    "fails": [
+      {
+        "k": "http4xx",
+        "u": "/api/v1/auth/refresh",
+        "s": 401
+      }
+    ],
+    "sw": true
+  },
+  "BAD_3G": {
+    "formMs": 6435,
+    "devCheckMs": 17338,
+    "inRoomMs": 18237,
+    "audioMs": 37285,
+    "fcp": 4980,
+    "lcp": 6424,
+    "longTasks": 2,
+    "nav": {
+      "ttfb": 1322,
+      "dcl": 4925,
+      "load": 4927,
+      "kb": 0.8
+    },
+    "requests": 113,
+    "totalKb": 159,
+    "byType": {
+      "script": {
+        "n": 36,
+        "kb": 127.3
+      },
+      "link": {
+        "n": 1,
+        "kb": 12.9
+      },
+      "fetch": {
+        "n": 70,
+        "kb": 8.6
+      },
+      "other": {
+        "n": 4,
+        "kb": 2.8
+      },
+      "audio": {
+        "n": 1,
+        "kb": 6.6
+      }
+    },
+    "beforeForm": {
+      "n": 7,
+      "kb": 143
+    },
+    "heavy": [
+      {
+        "n": "/assets/index-CKVtpw34.js",
+        "t": "script",
+        "start": 1367,
+        "end": 4887,
+        "kb": 126.3,
+        "decKb": 467
+      },
+      {
+        "n": "/assets/index-CRDIIC9a.css",
+        "t": "link",
+        "start": 1368,
+        "end": 2077,
+        "kb": 12.9,
+        "decKb": 78
+      },
+      {
+        "n": "/sounds/participant-left.mp3",
+        "t": "audio",
+        "start": 34644,
+        "end": 35770,
+        "kb": 6.6,
+        "decKb": 6
+      },
+      {
+        "n": "/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/chat",
+        "t": "fetch",
+        "start": 30019,
+        "end": 32003,
+        "kb": 2.5,
+        "decKb": 11
+      },
+      {
+        "n": "/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join",
+        "t": "fetch",
+        "start": 18165,
+        "end": 28467,
+        "kb": 1.4,
+        "decKb": 2
+      },
+      {
+        "n": "/sw-assets.json",
+        "t": "fetch",
+        "start": 4976,
+        "end": 5422,
+        "kb": 1.2,
+        "decKb": 5
+      },
+      {
+        "n": "/excalidraw-asset-path.js",
+        "t": "script",
+        "start": 1367,
+        "end": 2079,
+        "kb": 1,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 4977,
+        "end": 6335,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 7436,
+        "end": 7793,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 18193,
+        "end": 28472,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 35780,
+        "end": 36385,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/activities",
+        "t": "fetch",
+        "start": 28491,
+        "end": 29356,
+        "kb": 0.6,
+        "decKb": 0
+      }
+    ],
+    "fails": [
+      {
+        "k": "http4xx",
+        "u": "/api/v1/auth/refresh",
+        "s": 401
+      }
+    ],
+    "sw": true
+  },
+  "EXTREME": {
+    "formMs": 16407,
+    "devCheckMs": 46398,
+    "inRoomMs": 47323,
+    "audioMs": null,
+    "fcp": 14300,
+    "lcp": 14300,
+    "longTasks": 2,
+    "nav": {
+      "ttfb": 3528,
+      "dcl": 14218,
+      "load": 14219,
+      "kb": 0.8
+    },
+    "requests": 104,
+    "totalKb": 146,
+    "byType": {
+      "script": {
+        "n": 36,
+        "kb": 127.3
+      },
+      "link": {
+        "n": 1,
+        "kb": 12.9
+      },
+      "fetch": {
+        "n": 63,
+        "kb": 2.6
+      },
+      "other": {
+        "n": 3,
+        "kb": 2.1
+      }
+    },
+    "beforeForm": {
+      "n": 7,
+      "kb": 143
+    },
+    "heavy": [
+      {
+        "n": "/assets/index-CKVtpw34.js",
+        "t": "script",
+        "start": 3543,
+        "end": 14178,
+        "kb": 126.3,
+        "decKb": 467
+      },
+      {
+        "n": "/assets/index-CRDIIC9a.css",
+        "t": "link",
+        "start": 3543,
+        "end": 6264,
+        "kb": 12.9,
+        "decKb": 78
+      },
+      {
+        "n": "/sw-assets.json",
+        "t": "fetch",
+        "start": 14282,
+        "end": 16278,
+        "kb": 1.2,
+        "decKb": 5
+      },
+      {
+        "n": "/excalidraw-asset-path.js",
+        "t": "script",
+        "start": 3542,
+        "end": 6263,
+        "kb": 1,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 14288,
+        "end": 16281,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 19603,
+        "end": 21563,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 47275,
+        "end": 80725,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc",
+        "t": "fetch",
+        "start": 14281,
+        "end": 16279,
+        "kb": 0.5,
+        "decKb": 0
+      },
+      {
+        "n": "/api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc/enter",
+        "t": "fetch",
+        "start": 16713,
+        "end": 19594,
+        "kb": 0.5,
+        "decKb": 0
+      },
+      {
+        "n": "/api/v1/auth/refresh",
+        "t": "fetch",
+        "start": 14294,
+        "end": 16110,
+        "kb": 0.4,
+        "decKb": 0
+      },
+      {
+        "n": "/assets/RoomPage-DAH6--lm.js",
+        "t": "fetch",
+        "start": 16288,
+        "end": 19145,
+        "kb": 0,
+        "decKb": 102
+      },
+      {
+        "n": "/assets/activity-api-B2wE5_Ts.js",
+        "t": "fetch",
+        "start": 16292,
+        "end": 19141,
+        "kb": 0,
+        "decKb": 1
+      }
+    ],
+    "fails": [
+      {
+        "k": "http4xx",
+        "u": "/api/v1/auth/refresh",
+        "s": 401
+      }
+    ],
+    "sw": true
+  },
+  "HORRIBLE": {
+    "formMs": 44876,
+    "devCheckMs": 110764,
+    "inRoomMs": 111680,
+    "audioMs": null,
+    "fcp": 33856,
+    "lcp": 44852,
+    "longTasks": 1,
+    "nav": {
+      "ttfb": 6459,
+      "dcl": 33790,
+      "load": 33791,
+      "kb": 0.8
+    },
+    "requests": 103,
+    "totalKb": 146,
+    "byType": {
+      "script": {
+        "n": 36,
+        "kb": 127.3
+      },
+      "link": {
+        "n": 1,
+        "kb": 12.9
+      },
+      "fetch": {
+        "n": 62,
+        "kb": 2.6
+      },
+      "other": {
+        "n": 3,
+        "kb": 2.1
+      }
+    },
+    "beforeForm": {
+      "n": 6,
+      "kb": 143
+    },
+    "heavy": [
+      {
+        "n": "/assets/index-CKVtpw34.js",
+        "t": "script",
+        "start": 6535,
+        "end": 33754,
+        "kb": 126.3,
+        "decKb": 467
+      },
+      {
+        "n": "/assets/index-CRDIIC9a.css",
+        "t": "link",
+        "start": 6535,
+        "end": 13821,
+        "kb": 12.9,
+        "decKb": 78
+      },
+      {
+        "n": "/sw-assets.json",
+        "t": "fetch",
+        "start": 33852,
+        "end": 41244,
+        "kb": 1.2,
+        "decKb": 5
+      },
+      {
+        "n": "/excalidraw-asset-path.js",
+        "t": "script",
+        "start": 6534,
+        "end": 13823,
+        "kb": 1,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 33855,
+        "end": 44778,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 52537,
+        "end": 53626,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 111630,
+        "end": 177967,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc",
+        "t": "fetch",
+        "start": 33850,
+        "end": 41242,
+        "kb": 0.5,
+        "decKb": 0
+      },
+      {
+        "n": "/api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc/enter",
+        "t": "fetch",
+        "start": 45146,
+        "end": 52509,
+        "kb": 0.5,
+        "decKb": 0
+      },
+      {
+        "n": "/api/v1/auth/refresh",
+        "t": "fetch",
+        "start": 33860,
+        "end": 45045,
+        "kb": 0.4,
+        "decKb": 0
+      },
+      {
+        "n": "/assets/RoomPage-DAH6--lm.js",
+        "t": "fetch",
+        "start": 41250,
+        "end": 52524,
+        "kb": 0,
+        "decKb": 102
+      },
+      {
+        "n": "/assets/activity-api-B2wE5_Ts.js",
+        "t": "fetch",
+        "start": 41251,
+        "end": 52518,
+        "kb": 0,
+        "decKb": 1
+      }
+    ],
+    "fails": [
+      {
+        "k": "http4xx",
+        "u": "/api/v1/auth/refresh",
+        "s": 401
+      }
+    ],
+    "sw": true
+  }
+}
