@@ -49,6 +49,20 @@ const FINAL_DISCONNECT_REASONS = new Set<DisconnectReason>([
 ]);
 const CHECK_MS = 5000;
 const RETRY_MAX_MS = 30_000;
+/**
+ * После (пере)подключения публикации возвращаются не мгновенно. Пока идёт
+ * это окно, текущее «ничего не опубликовано» — не выбор человека, и
+ * запоминать его нельзя: иначе намерение «камера и микрофон включены»
+ * терялось навсегда (E2E-тест 2026-10-04).
+ */
+const SETTLE_MS = 15_000;
+/** Когда проверить, что включённое вернулось. */
+const ENSURE_AFTER_MS = [3000, 9000];
+
+export interface WantedMedia {
+  camera: boolean;
+  microphone: boolean;
+}
 
 /**
  * Если LiveKit так и не подключился или исчерпал переподключения —
@@ -68,6 +82,8 @@ export function MediaRecovery({
   onBlocked,
   onTakenOver,
   resumeSignal,
+  initialWanted,
+  onWantedChange,
 }: {
   lessonId: string;
   restoreCamera: (participant: LocalParticipant) => Promise<unknown>;
@@ -78,26 +94,70 @@ export function MediaRecovery({
   onTakenOver: () => void;
   /** Меняется — человек нажал «Продолжить здесь»: подключаемся снова. */
   resumeSignal: number;
+  /** Что было включено до перезагрузки вкладки — вернуть после подключения. */
+  initialWanted?: WantedMedia;
+  /** Включённое изменилось (для `rejoin-state.ts`). */
+  onWantedChange?: (wanted: WantedMedia) => void;
 }) {
   const room = useRoomContext();
-  const callbacks = useRef({ restoreCamera, onRejoined, onBlocked, onTakenOver });
-  callbacks.current = { restoreCamera, onRejoined, onBlocked, onTakenOver };
+  const callbacks = useRef({ restoreCamera, onRejoined, onBlocked, onTakenOver, onWantedChange });
+  callbacks.current = { restoreCamera, onRejoined, onBlocked, onTakenOver, onWantedChange };
   // Что было включено — переживает перезапуск эффекта по «Продолжить здесь».
-  const wantedRef = useRef({ camera: false, microphone: false });
+  const wantedRef = useRef<WantedMedia>(initialWanted ?? { camera: false, microphone: false });
 
   useEffect(() => {
     let finished = false;
     let busy = false;
     let attempt = 0;
     let nextTryAt = 0;
+    let settleUntil = 0;
+    const timers = new Set<ReturnType<typeof setTimeout>>();
 
     // Что было включено, пока связь была: при обрыве публикации уже сняты.
     const remember = () => {
-      if (room.state !== ConnectionState.Connected) return;
-      wantedRef.current = {
+      if (room.state !== ConnectionState.Connected || Date.now() < settleUntil) return;
+      const next = {
         camera: room.localParticipant.isCameraEnabled,
         microphone: room.localParticipant.isMicrophoneEnabled,
       };
+      const prev = wantedRef.current;
+      if (prev.camera === next.camera && prev.microphone === next.microphone) return;
+      wantedRef.current = next;
+      callbacks.current.onWantedChange?.(next);
+    };
+
+    // Вернуть включённое, если после (пере)подключения его нет: LiveKit сам
+    // переопубликует треки при восстановлении, это — страховка.
+    const ensurePublished = async () => {
+      if (finished || room.state !== ConnectionState.Connected) return;
+      const participant = room.localParticipant;
+      if (participant.permissions && !participant.permissions.canPublish) return;
+      const wanted = wantedRef.current;
+      if (wanted.microphone && !participant.isMicrophoneEnabled) {
+        await participant
+          .setMicrophoneEnabled(true)
+          .catch((err: unknown) => reportMediaDeviceError("microphone", err));
+      }
+      if (wanted.camera && !participant.isCameraEnabled) {
+        await callbacks.current
+          .restoreCamera(participant)
+          .catch((err: unknown) => reportMediaDeviceError("camera", err));
+      }
+    };
+    const settle = () => {
+      settleUntil = Date.now() + SETTLE_MS;
+      for (const ms of ENSURE_AFTER_MS) {
+        const timer = setTimeout(() => {
+          timers.delete(timer);
+          void ensurePublished();
+        }, ms);
+        timers.add(timer);
+      }
+    };
+    const onReconnecting = () => {
+      remember();
+      // Пока восстанавливается — не запоминаем «ничего не опубликовано».
+      settleUntil = Number.POSITIVE_INFINITY;
     };
 
     const recover = async () => {
@@ -111,16 +171,7 @@ export function MediaRecovery({
         attempt = 0;
         // Не вернулись микрофон или камера — человек должен узнать, иначе он
         // говорит, а его после восстановления связи не слышно.
-        if (wantedRef.current.microphone) {
-          await room.localParticipant
-            .setMicrophoneEnabled(true)
-            .catch((err: unknown) => reportMediaDeviceError("microphone", err));
-        }
-        if (wantedRef.current.camera) {
-          await callbacks.current
-            .restoreCamera(room.localParticipant)
-            .catch((err: unknown) => reportMediaDeviceError("camera", err));
-        }
+        await ensurePublished();
       } catch (err) {
         reportLiveKitConnectionFailed(lessonId, err, "recover");
         if (callbacks.current.onBlocked(err)) {
@@ -139,10 +190,15 @@ export function MediaRecovery({
       if (reason === DisconnectReason.DUPLICATE_IDENTITY) callbacks.current.onTakenOver();
     };
 
-    room.on(RoomEvent.Reconnecting, remember);
+    room.on(RoomEvent.Reconnecting, onReconnecting);
+    room.on(RoomEvent.SignalReconnecting, onReconnecting);
+    room.on(RoomEvent.Reconnected, settle);
+    room.on(RoomEvent.Connected, settle);
     room.on(RoomEvent.LocalTrackPublished, remember);
     room.on(RoomEvent.LocalTrackUnpublished, remember);
     room.on(RoomEvent.Disconnected, onDisconnected);
+    // Эффект перезапустился на уже подключённой комнате («Продолжить здесь»).
+    if (room.state === ConnectionState.Connected) settle();
     // Раз в несколько секунд: запоминаем включённое и, если комната в
     // `Disconnected` (первое подключение не удалось или переподключения
     // исчерпаны), подключаем заново. Пока идёт подключение или LiveKit
@@ -156,7 +212,11 @@ export function MediaRecovery({
     return () => {
       finished = true;
       clearInterval(interval);
-      room.off(RoomEvent.Reconnecting, remember);
+      for (const timer of timers) clearTimeout(timer);
+      room.off(RoomEvent.Reconnecting, onReconnecting);
+      room.off(RoomEvent.SignalReconnecting, onReconnecting);
+      room.off(RoomEvent.Reconnected, settle);
+      room.off(RoomEvent.Connected, settle);
       room.off(RoomEvent.LocalTrackPublished, remember);
       room.off(RoomEvent.LocalTrackUnpublished, remember);
       room.off(RoomEvent.Disconnected, onDisconnected);

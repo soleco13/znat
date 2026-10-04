@@ -138,7 +138,13 @@ export const ScreenShareAutoPip = forwardRef<
     const lockedHeight = pipWindow.outerHeight;
     pipWindow.addEventListener("resize", () => {
       if (pipWindow.outerWidth !== lockedWidth || pipWindow.outerHeight !== lockedHeight) {
-        pipWindow.resizeTo(lockedWidth, lockedHeight);
+        // Без свежего user activation браузер отказывает (NotAllowedError) —
+        // например, когда окно меняет размер само при остановке демонстрации.
+        try {
+          pipWindow.resizeTo(lockedWidth, lockedHeight);
+        } catch {
+          // размер окна PiP не критичен
+        }
       }
     });
     copyStylesInto(pipWindow.document);

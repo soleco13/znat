@@ -122,6 +122,7 @@ import { Loader } from "@/shared/ui/loader";
 import { BrandMark } from "@/shared/ui/brand-mark";
 import { PoorLinkMediaAdapter } from "./PoorLinkMedia.js";
 import { MEDIA_CONNECT_OPTIONS, MEDIA_RECONNECT_POLICY, MediaRecovery } from "./MediaRecovery.js";
+import { clearRejoinState, readRejoinState, writeRejoinState } from "./rejoin-state.js";
 import { MediaTelemetry, reportLiveKitConnectionFailed } from "./MediaTelemetry.js";
 
 // Э5.1/Э5.2 — см. подробные комментарии ниже у <LiveKitRoom>. 720p + simulcast,
@@ -325,12 +326,15 @@ export function RoomPage() {
   const [removeTarget, setRemoveTarget] = useState<ParticipantSnapshot | null>(null);
   const [media, setMedia] = useState<MediaConnection | null>(null);
   const [clientMediaSettings, setClientMediaSettings] = useState<ClientMediaSettings | null>(null);
-  const [deviceCheckDone, setDeviceCheckDone] = useState(false);
-  const [micDeviceId, setMicDeviceId] = useState<string | null>(null);
-  const [camDeviceId, setCamDeviceId] = useState<string | null>(null);
-  const [spkDeviceId, setSpkDeviceId] = useState<string | null>(null);
-  const [joinMicEnabled, setJoinMicEnabled] = useState(true);
-  const [joinCamEnabled, setJoinCamEnabled] = useState(true);
+  // Перезагрузка вкладки посреди урока — сразу обратно в урок, с теми же
+  // устройствами и тем, что было включено (см. `rejoin-state.ts`).
+  const [rejoin] = useState(readRejoinState);
+  const [deviceCheckDone, setDeviceCheckDone] = useState(rejoin !== null);
+  const [micDeviceId, setMicDeviceId] = useState<string | null>(rejoin?.micId ?? null);
+  const [camDeviceId, setCamDeviceId] = useState<string | null>(rejoin?.camId ?? null);
+  const [spkDeviceId, setSpkDeviceId] = useState<string | null>(rejoin?.spkId ?? null);
+  const [joinMicEnabled, setJoinMicEnabled] = useState(rejoin ? rejoin.mic : true);
+  const [joinCamEnabled, setJoinCamEnabled] = useState(rejoin ? rejoin.cam : true);
   const [lessonTitle, setLessonTitle] = useState<string | null>(null);
   const [lessonJoinPath, setLessonJoinPath] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -502,7 +506,10 @@ export function RoomPage() {
   const status = useRoomSocket(
     lessonId ?? "",
     handleMessage,
-    deviceCheckDone && !blocked && !leftAsGuest,
+    // Только после успешного /join: у гостя (без запроса токена) сокет
+    // успевал раньше входа, сервер закрывал его 4003, а повтор делал второй
+    // /join (E2E-тест 2026-10-04).
+    deviceCheckDone && media !== null && !blocked && !leftAsGuest,
     isGuest ? "guest" : "staff",
     undefined,
     rejoinAfterEviction,
@@ -554,6 +561,17 @@ export function RoomPage() {
     if (!lessonId || !deviceCheckDone) return;
     attemptJoin();
   }, [lessonId, deviceCheckDone, attemptJoin]);
+
+  // `onError` входит в зависимости эффекта подключения `useLiveKitRoom`:
+  // новая функция на каждом рендере заново вызывала `room.connect()`. Пока
+  // комната подключена, это пустой вызов, но во время переподключения LiveKit
+  // (обрыв связи от ~15 с) он заменял восстановление новой сессией без
+  // камеры и микрофона — ученик оставался в уроке без звука и видео
+  // (E2E-тест 2026-10-04). Поэтому колбэки — только стабильные.
+  const handleLiveKitError = useCallback(
+    (err: Error) => reportLiveKitConnectionFailed(lessonId ?? "", err, "initial"),
+    [lessonId],
+  );
 
   // Всё второстепенное — после входа: на медленной сети эти запросы и куски
   // сборки делили бы канал с самим входом (/join, соединение урока, медиа).
@@ -633,9 +651,10 @@ export function RoomPage() {
       .catch(() => undefined);
   }, [lessonId]);
 
+  // Презентации — маршрут персонала; гость получал 401 на каждом входе.
   useEffect(() => {
-    if (joined) refreshDecks();
-  }, [refreshDecks, joined]);
+    if (joined && !isGuest) refreshDecks();
+  }, [refreshDecks, joined, isGuest]);
 
   useEffect(() => {
     if (!lessonId || !joined) return;
@@ -671,6 +690,7 @@ export function RoomPage() {
     // До запроса: пока /leave идёт, сервер может закрыть соединение урока, и
     // повторный вход (`rejoinAfterEviction`) не должен успеть сработать.
     leftRef.current = true;
+    clearRejoinState();
     await apiFetch(`/lessons/${lessonId}/leave`, { method: "POST" }).catch(() => undefined);
     if (isGuest) {
       // У гостя нет /lessons и личного кабинета — показываем экран выхода.
@@ -1800,6 +1820,13 @@ export function RoomPage() {
           setSpkDeviceId(r.spkDeviceId);
           setJoinMicEnabled(r.micEnabled);
           setJoinCamEnabled(r.camEnabled);
+          writeRejoinState({
+            mic: r.micEnabled,
+            cam: r.camEnabled,
+            micId: r.micDeviceId,
+            camId: r.camDeviceId,
+            spkId: r.spkDeviceId,
+          });
           setDeviceCheckDone(true);
         }}
       />
@@ -1845,8 +1872,7 @@ export function RoomPage() {
         // Разрыв аудио не показываем баннером — состояние видно на самой
         // кнопке микрофона, плюс индикатор связи в шапке. Обрыв, который
         // LiveKit не пережил сам, чинит `MediaRecovery` ниже.
-        onDisconnected={() => undefined}
-        onError={(err) => reportLiveKitConnectionFailed(lessonId ?? "", err, "initial")}
+        onError={handleLiveKitError}
       >
         {lessonId ? <MediaTelemetry lessonId={lessonId} /> : null}
         <ApplyAudioOutput deviceId={spkDeviceId} />
@@ -1879,6 +1905,8 @@ export function RoomPage() {
             }}
             onTakenOver={() => setMediaTakenOver(true)}
             resumeSignal={mediaResumeSignal}
+            initialWanted={rejoin ? { camera: rejoin.cam, microphone: rejoin.mic } : undefined}
+            onWantedChange={(w) => writeRejoinState({ cam: w.camera, mic: w.microphone })}
           />
         ) : null}
         {clientMediaSettings?.pipEnabled !== false ? (

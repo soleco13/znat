@@ -105,8 +105,34 @@ function brotliAssets(): Plugin {
   };
 }
 
+/**
+ * Excalidraw 0.18 к каждому шрифту дописывает запасной источник на esm.sh
+ * (`ASSETS_FALLBACK_URL`). Шрифты у нас свои (`public/fonts`,
+ * `EXCALIDRAW_ASSET_PATH`), CSP чужой адрес всё равно не пустит, но Chrome
+ * проверяет CSP для каждого `src` при создании FontFace — ~230 нарушений CSP
+ * в консоли на каждое открытие доски (E2E-тест 2026-10-04). Подменяем
+ * запасной адрес на свой. Если после обновления Excalidraw замена не
+ * найдётся — сборка падает, чтобы чужой CDN не вернулся молча.
+ */
+function excalidrawNoCdnFallback(): Plugin {
+  const FALLBACK = /("ASSETS_FALLBACK_URL",\s*)`https:\/\/esm\.sh\/[\s\S]*?\/dist\/(?:prod|dev)\/`/;
+  return {
+    name: "excalidraw-no-cdn-fallback",
+    apply: "build",
+    transform(code, id) {
+      if (!id.includes("@excalidraw/excalidraw/dist/") || !code.includes("esm.sh")) return null;
+      // База `new URL()` должна быть абсолютной.
+      const next = code.replace(FALLBACK, '$1(window.location.origin + "/")');
+      if (next === code || next.includes("https://esm.sh/")) {
+        this.error(`excalidraw-no-cdn-fallback: адрес esm.sh в ${id} не заменён — проверьте ASSETS_FALLBACK_URL`);
+      }
+      return { code: next, map: null };
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), lessonAssetsManifest(), brotliAssets()],
+  plugins: [react(), lessonAssetsManifest(), brotliAssets(), excalidrawNoCdnFallback()],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
