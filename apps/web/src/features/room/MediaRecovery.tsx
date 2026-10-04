@@ -50,6 +50,16 @@ const FINAL_DISCONNECT_REASONS = new Set<DisconnectReason>([
 const CHECK_MS = 5000;
 const RETRY_MAX_MS = 30_000;
 /**
+ * «Зомби»: LiveKit сдался (движок закрыт), но запоздавшая попытка рестарта
+ * успела перевести комнату в `Reconnecting` — и так она остаётся навсегда:
+ * `Disconnected` больше не наступит, медиа нет даже на хорошей сети
+ * (livekit-client 2.22.0, E2E 2026-10-04 AFTER, HORRIBLE 6 мин). Столько
+ * ждём, прежде чем отключить такую комнату и войти заново.
+ */
+const ZOMBIE_AFTER_MS = 10_000;
+/** Страховка без опоры на внутренности движка: не подключены дольше окна переподключения LiveKit. */
+const STUCK_AFTER_MS = RECONNECT_WINDOW_MS + 60_000;
+/**
  * После (пере)подключения публикации возвращаются не мгновенно. Пока идёт
  * это окно, текущее «ничего не опубликовано» — не выбор человека, и
  * запоминать его нельзя: иначе намерение «камера и микрофон включены»
@@ -111,6 +121,10 @@ export function MediaRecovery({
     let attempt = 0;
     let nextTryAt = 0;
     let settleUntil = 0;
+    let notConnectedSince = 0;
+    let zombieSince = 0;
+    /** Отключаем сами в `unstick` — `CLIENT_INITIATED` тогда не финал. */
+    let unsticking = false;
     const timers = new Set<ReturnType<typeof setTimeout>>();
 
     // Что было включено, пока связь была: при обрыве публикации уже сняты.
@@ -160,7 +174,43 @@ export function MediaRecovery({
       settleUntil = Number.POSITIVE_INFINITY;
     };
 
+    // Комната застряла не в `Disconnected` (см. ZOMBIE_AFTER_MS) — отключаем
+    // её сами, дальше обычное восстановление.
+    const unstick = async () => {
+      const now = Date.now();
+      const state = room.state;
+      if (state === ConnectionState.Connected || state === ConnectionState.Disconnected) {
+        notConnectedSince = 0;
+        zombieSince = 0;
+        return;
+      }
+      if (!notConnectedSince) notConnectedSince = now;
+      const engineClosed = room.engine?.isClosed ?? false;
+      zombieSince = engineClosed ? zombieSince || now : 0;
+      const zombie = zombieSince > 0 && now - zombieSince >= ZOMBIE_AFTER_MS;
+      if (!zombie && now - notConnectedSince < STUCK_AFTER_MS) return;
+      reportLiveKitConnectionFailed(
+        lessonId,
+        new Error(zombie ? "room stuck reconnecting with closed engine" : "room stuck not connected"),
+        "recover",
+      );
+      notConnectedSince = 0;
+      zombieSince = 0;
+      busy = true;
+      unsticking = true;
+      try {
+        await room.disconnect();
+      } catch {
+        // Движок уже закрыт — нам нужно только состояние `Disconnected`.
+      } finally {
+        unsticking = false;
+        busy = false;
+      }
+    };
+
     const recover = async () => {
+      if (finished || busy) return;
+      await unstick();
       if (finished || busy || room.state !== ConnectionState.Disconnected || Date.now() < nextTryAt) return;
       busy = true;
       try {
@@ -186,6 +236,7 @@ export function MediaRecovery({
     };
 
     const onDisconnected = (reason?: DisconnectReason) => {
+      if (unsticking) return;
       if (reason !== undefined && FINAL_DISCONNECT_REASONS.has(reason)) finished = true;
       if (reason === DisconnectReason.DUPLICATE_IDENTITY) callbacks.current.onTakenOver();
     };

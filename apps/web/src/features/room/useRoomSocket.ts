@@ -13,8 +13,14 @@ const MAX_BACKOFF_MS = 16_000;
  * приходили через ~30 с после возврата сети (E2E 2026-10-04, сценарий W).
  */
 const STALE_AFTER_MS = 50_000;
-/** Подключение, зависшее без ответа (SYN теряются), тоже бросаем. */
+/**
+ * Подключение, зависшее без ответа (SYN теряются), тоже бросаем. Срок растёт
+ * с каждой неудачей подряд: на 32 кбит/с с потерями 15 % TCP+TLS+upgrade
+ * идёт 20–30 с, и жёсткие 20 с рвали каждую попытку — канал урока лежал
+ * ~4 мин (E2E 2026-10-04 AFTER, HORRIBLE).
+ */
 const CONNECT_TIMEOUT_MS = 20_000;
+const CONNECT_TIMEOUT_MAX_MS = 60_000;
 const STALE_CHECK_MS = 5_000;
 /** Сервер закрывает так сокет участника, которого нет в комнате (`rooms/ws.ts`). */
 const NOT_JOINED_CLOSE_CODE = 4003;
@@ -62,6 +68,8 @@ export function useRoomSocket(
     let stopped = false;
     let lastMessageAt = 0;
     let connectingSince = 0;
+    /** Сколько подключений подряд брошено по таймауту — от этого растёт срок. */
+    let connectTimeouts = 0;
     const report = mode !== "recorder";
 
     const connect = async () => {
@@ -94,6 +102,7 @@ export function useRoomSocket(
       connectingSince = Date.now();
 
       current.onopen = () => {
+        connectTimeouts = 0;
         openedAt = Date.now();
         lastMessageAt = Date.now();
         setStatus("connected");
@@ -158,11 +167,13 @@ export function useRoomSocket(
     const staleTimer = setInterval(() => {
       const current = socket;
       if (stopped || !current) return;
+      const connectTimeout = Math.min(CONNECT_TIMEOUT_MS * 2 ** connectTimeouts, CONNECT_TIMEOUT_MAX_MS);
+      const connectStuck =
+        current.readyState === WebSocket.CONNECTING && Date.now() - connectingSince >= connectTimeout;
       const stale =
-        current.readyState === WebSocket.OPEN
-          ? Date.now() - lastMessageAt >= STALE_AFTER_MS
-          : current.readyState === WebSocket.CONNECTING && Date.now() - connectingSince >= CONNECT_TIMEOUT_MS;
+        connectStuck || (current.readyState === WebSocket.OPEN && Date.now() - lastMessageAt >= STALE_AFTER_MS);
       if (!stale) return;
+      if (connectStuck) connectTimeouts += 1;
       socket = null;
       current.close(4000, "stale");
       if (report) {
