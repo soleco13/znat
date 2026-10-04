@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Link2Off, WifiOff } from "lucide-react";
 
-import { ApiError } from "@/shared/api-client";
+import { ApiError, apiFetch, hasStaffSession, setGuestMode } from "@/shared/api-client";
+import { useAuthStore } from "@/shared/auth-store";
 import { useAsync } from "@/shared/hooks/use-async";
 import { Button } from "@/shared/ui/button";
 import { PersonalDataConsent } from "@/shared/PersonalDataConsent";
@@ -14,6 +15,7 @@ import { Label } from "@/shared/ui/label";
 import { prefetchLessonStage } from "@/features/room/lazy-stage";
 import { warmChunk } from "@/shared/chunk-warmup";
 import { enterGuestLesson, fetchGuestLessonInfo } from "./guest-api.js";
+import { useGuestSessionStore } from "./guest-session-store.js";
 
 // Только докачка, без `import()`: оборванный `import()` браузер запоминает,
 // и страница урока потом не открылась бы до перезагрузки.
@@ -46,6 +48,24 @@ async function fetchLessonInfoWithRetry(token: string, deadLink: { current: bool
 }
 
 /**
+ * Учитель или админ этого урока, уже вошедший в браузере, — id урока; иначе
+ * `null` и обычный гостевой вход. Ошибки (сеть, чужой урок) тоже ведут к
+ * гостевой форме: она работает и без аккаунта.
+ */
+async function resolveStaffLesson(token: string): Promise<string | null> {
+  if (!(await hasStaffSession())) return null;
+  const role = useAuthStore.getState().user?.role;
+  if (role !== "admin" && role !== "teacher") return null;
+  try {
+    setGuestMode(false);
+    const res = await apiFetch<{ lessonId: string }>(`/j/${encodeURIComponent(token)}/staff`);
+    return res.lessonId;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Э12.6 — экран входа ученика по прямой ссылке (`/j/:token`). Вне `AppShell`
  * и `RequireAuth`: у ученика аккаунта нет (§0 план-ТЗ). Поток: карточка
  * урока → «Представьтесь» произвольным именем → комната (экран проверки
@@ -56,6 +76,24 @@ export function GuestJoinPage() {
   const navigate = useNavigate();
   const deadLink = useRef(false);
   const info = useAsync(() => fetchLessonInfoWithRetry(token, deadLink), [token]);
+  const [checkingStaff, setCheckingStaff] = useState(true);
+
+  // Учитель открыл ссылку своего урока вне приложения — входит учителем, а не учеником.
+  useEffect(() => {
+    let cancelled = false;
+    void resolveStaffLesson(token).then((lessonId) => {
+      if (cancelled) return;
+      if (lessonId) {
+        useGuestSessionStore.getState().clearSession();
+        navigate(`/lessons/${lessonId}/room`, { replace: true });
+      } else {
+        setCheckingStaff(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, navigate]);
 
   // Пока ученик вводит имя, в фоне качаем урок, а за ним — доску и задания.
   // Именно по очереди: параллельно доска (~725 КБ) делила бы медленный канал
@@ -86,7 +124,7 @@ export function GuestJoinPage() {
 
   return (
     <StatusScreen>
-        {info.loading ? (
+        {info.loading || checkingStaff ? (
           <CenteredSpinner label="Загружаем урок…" />
         ) : info.error && !deadLink.current ? (
           <Empty className="p-0 md:p-0">

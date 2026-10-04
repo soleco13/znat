@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { refreshAccessTokenDetailed, setGuestMode } from "./api-client.js";
 import { useAuthStore } from "./auth-store.js";
 import { FullscreenLoader } from "./ui/fullscreen-loader.js";
@@ -8,6 +8,7 @@ const RETRY_MS = 3000;
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const accessToken = useAuthStore((s) => s.accessToken);
+  const location = useLocation();
   const [checked, setChecked] = useState(accessToken !== null);
   const [unavailable, setUnavailable] = useState(false);
 
@@ -44,6 +45,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   if (!checked)
     return <FullscreenLoader label={unavailable ? "Сервер недоступен, переподключаемся…" : "Проверяем вход…"} />;
-  if (!accessToken) return <Navigate to="/login" replace />;
+  // После входа LoginPage вернёт на эту же страницу.
+  if (!accessToken) return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   return <>{children}</>;
 }

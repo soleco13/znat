@@ -27,6 +27,7 @@ const {
   hashJoinToken,
   getPublicLessonInfo,
   getGuestSessionInfo,
+  resolveStaffLessonByLink,
 } = await import("./service.js");
 
 const SCHOOL_ID = "11111111-1111-1111-1111-111111111111";
@@ -57,6 +58,25 @@ describe("getPublicLessonInfo (GET /j/:token)", () => {
 
     expect(info).toEqual({ lessonTitle: "Постоянный урок", settings: { defaultMode: "lecture" } });
     expect(Object.keys(info)).toEqual(["lessonTitle", "settings"]);
+  });
+});
+
+describe("resolveStaffLessonByLink (GET /j/:token/staff)", () => {
+  const TEACHER_ID = "33333333-3333-3333-3333-333333333333";
+
+  it("учителю урока и админу школы отдаёт id урока", async () => {
+    lessonsServiceMock.resolveJoinToken.mockResolvedValue(lessonRow({ teacherId: TEACHER_ID }));
+
+    await expect(resolveStaffLessonByLink(JOIN_TOKEN, { sub: TEACHER_ID, schoolId: SCHOOL_ID, role: "teacher" })).resolves.toBe(LESSON_ID);
+    await expect(resolveStaffLessonByLink(JOIN_TOKEN, { sub: "x", schoolId: SCHOOL_ID, role: "admin" })).resolves.toBe(LESSON_ID);
+  });
+
+  it("чужому учителю, методисту и сотруднику другой школы — null", async () => {
+    lessonsServiceMock.resolveJoinToken.mockResolvedValue(lessonRow({ teacherId: TEACHER_ID }));
+
+    await expect(resolveStaffLessonByLink(JOIN_TOKEN, { sub: "other", schoolId: SCHOOL_ID, role: "teacher" })).resolves.toBeNull();
+    await expect(resolveStaffLessonByLink(JOIN_TOKEN, { sub: TEACHER_ID, schoolId: SCHOOL_ID, role: "methodist" })).resolves.toBeNull();
+    await expect(resolveStaffLessonByLink(JOIN_TOKEN, { sub: TEACHER_ID, schoolId: "other-school", role: "admin" })).resolves.toBeNull();
   });
 });
 

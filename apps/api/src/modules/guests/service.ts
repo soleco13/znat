@@ -69,6 +69,23 @@ export async function getPublicLessonInfo(joinToken: string): Promise<GuestLesso
   };
 }
 
+/**
+ * Учитель или админ открыл ссылку ученика в браузере, где он уже вошёл: ему
+ * нужен его же урок как сотруднику, а не гостевой вход под вымышленным именем.
+ * Права — как у `assertMembership` в `rooms`: админ — любой урок своей школы,
+ * учитель — только свой. Иначе `null`, и человек входит по ссылке гостем.
+ */
+export async function resolveStaffLessonByLink(
+  joinToken: string,
+  user: { sub: string; schoolId: string; role: string },
+): Promise<string | null> {
+  const lesson = await lessonsService.resolveJoinToken(joinToken);
+  if (lesson.schoolId !== user.schoolId) return null;
+  if (user.role === "admin") return lesson.id;
+  if (user.role === "teacher" && lesson.teacherId === user.sub) return lesson.id;
+  return null;
+}
+
 export interface GuestSessionIssued {
   token: string;
   payload: GuestTokenPayload;

@@ -107,7 +107,9 @@ export function RequireRoomAccess({ children }: { children: ReactNode }) {
           </EmptyHeader>
           <EmptyContent>
             <Button asChild variant="secondary" size="lg" className="w-full">
-              <Link to="/login">Вход для сотрудников</Link>
+              <Link to="/login" state={{ from: `/lessons/${id}/room` }}>
+                Вход для сотрудников
+              </Link>
             </Button>
           </EmptyContent>
         </Empty>

@@ -1,11 +1,12 @@
-import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState, type FormEvent } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { LoginRequest, MeResponse } from "@school/shared";
 
-import { apiFetch, ApiError } from "@/shared/api-client";
+import { apiFetch, ApiError, hasStaffSession } from "@/shared/api-client";
 import { useAuthStore } from "@/shared/auth-store";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
+import { FullscreenLoader } from "@/shared/ui/fullscreen-loader";
 import { AuthHeading, AuthLayout, Field, FormError, LobbyAside, PasswordInput, authInput, stagger } from "./AuthLayout.js";
 import { ResendVerificationButton } from "@/features/registration/ResendVerificationButton";
 
@@ -17,6 +18,24 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const setAuth = useAuthStore((s) => s.setAuth);
   const navigate = useNavigate();
+  const location = useLocation();
+  // Куда вернуть после входа: страница, с которой сюда отправил RequireAuth.
+  const from = (location.state as { from?: string } | null)?.from;
+  const target = from?.startsWith("/") && !from.startsWith("//") ? from : "/lessons";
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  // Уже вошли в этом браузере (новая вкладка, закладка на /login) — форму не показываем.
+  useEffect(() => {
+    let cancelled = false;
+    void hasStaffSession().then((ok) => {
+      if (cancelled) return;
+      if (ok) navigate(target, { replace: true });
+      else setCheckingSession(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, target]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -25,12 +44,14 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       const body: LoginRequest = { email, password };
-      const data = await apiFetch<{ accessToken: string; user: MeResponse }>("/auth/login", {
-        method: "POST",
-        body: JSON.stringify(body),
-      });
+      // Без повтора через /auth/refresh: 401 здесь — неверный пароль, а не протухший токен.
+      const data = await apiFetch<{ accessToken: string; user: MeResponse }>(
+        "/auth/login",
+        { method: "POST", body: JSON.stringify(body) },
+        false,
+      );
       setAuth(data.accessToken, data.user);
-      navigate("/lessons");
+      navigate(target, { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Не удалось войти");
       if (err instanceof ApiError && err.code === "email_not_verified") setUnverifiedEmail(email);
@@ -38,6 +59,8 @@ export function LoginPage() {
       setSubmitting(false);
     }
   }
+
+  if (checkingSession) return <FullscreenLoader label="Проверяем вход…" />;
 
   return (
     <AuthLayout aside={<LobbyAside />}>

@@ -109,6 +109,17 @@ export async function refreshAccessToken(): Promise<boolean> {
   return (await refreshAccessTokenDetailed()) === "ok";
 }
 
+/**
+ * Вошёл ли человек в этом браузере: токен в памяти вкладки или живая
+ * refresh-кука. Для публичных страниц (вход, ссылка на урок), которые иначе
+ * просили бы войти заново при каждой новой вкладке. Сбой сети — «не вошёл»:
+ * страница покажет обычную форму, а не зависнет.
+ */
+export async function hasStaffSession(): Promise<boolean> {
+  if (useAuthStore.getState().accessToken) return true;
+  return (await refreshAccessTokenDetailed()) === "ok";
+}
+
 /** Запас до истечения, при котором токен уже считаем протухшим — переподключение не должно улететь с токеном, истекающим в пути. */
 const TOKEN_EXPIRY_MARGIN_MS = 30_000;
 

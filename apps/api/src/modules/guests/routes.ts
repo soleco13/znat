@@ -27,6 +27,19 @@ export default async function guestsRoutes(app: FastifyInstance) {
     return reply.send(info);
   });
 
+  /** Ссылка ученика, открытая сотрудником с действующим входом: его ли это урок. */
+  app.get<{ Params: { token: string } }>(
+    "/j/:token/staff",
+    { ...rateLimited, preHandler: app.authenticate },
+    async (request, reply) => {
+      const lessonId = await guestsService.resolveStaffLessonByLink(request.params.token, request.user);
+      if (!lessonId) {
+        throw new AppError(403, "forbidden", "Урок по ссылке не ваш — вход как ученик");
+      }
+      return reply.send({ lessonId });
+    },
+  );
+
   app.post<{ Params: { token: string } }>(
     "/j/:token/enter",
     rateLimited,
