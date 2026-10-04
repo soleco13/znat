@@ -105,6 +105,7 @@ export default async function roomsRoutes(app: FastifyInstance) {
       request.lessonActor,
       request.params.id,
       body.body,
+      body.clientMessageId,
     );
     return reply.status(201).send(message);
   });

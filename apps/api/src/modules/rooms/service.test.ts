@@ -90,6 +90,7 @@ vi.mock("./presence.js", async () => {
   const screenShareLocks = new Map<string, string>();
   const grants = new Map<string, unknown>();
   const entryLocks = new Set<string>();
+  const chatIdem = new Map<string, string>();
   const roomMap = (lessonId: string) => {
     let m = rooms.get(lessonId);
     if (!m) {
@@ -182,7 +183,25 @@ vi.mock("./presence.js", async () => {
     releaseScreenShare: vi.fn(async (lessonId: string, participantId: string) => {
       if (screenShareLocks.get(lessonId) === participantId) screenShareLocks.delete(lessonId);
     }),
+    // Идемпотентность чата — тот же in-memory приём, что и лок демонстрации.
+    claimChatIdempotency: vi.fn(async (lessonId: string, participantId: string, key: string) => {
+      const k = `${lessonId}:${participantId}:${key}`;
+      if (chatIdem.has(k)) return false;
+      chatIdem.set(k, "pending");
+      return true;
+    }),
+    getChatIdempotencyResult: vi.fn(async (lessonId: string, participantId: string, key: string) => {
+      const v = chatIdem.get(`${lessonId}:${participantId}:${key}`);
+      return v === undefined || v === "pending" ? null : v;
+    }),
+    setChatIdempotencyResult: vi.fn(async (lessonId: string, participantId: string, key: string, json: string) => {
+      chatIdem.set(`${lessonId}:${participantId}:${key}`, json);
+    }),
+    releaseChatIdempotency: vi.fn(async (lessonId: string, participantId: string, key: string) => {
+      chatIdem.delete(`${lessonId}:${participantId}:${key}`);
+    }),
     __clear: () => {
+      chatIdem.clear();
       rooms.clear();
       modes.clear();
       modesBeforeShare.clear();
@@ -480,6 +499,44 @@ describe("Э12.4: гость на уроке — журнал, presence, чат,
     });
     expect(message.userId).toBeNull();
     expect(message.authorName).toBe("Ученик");
+  });
+
+  it("повтор сообщения с тем же clientMessageId не создаёт второе (переотправка POST браузером)", async () => {
+    repoMock.insertChatMessage.mockClear();
+    repoMock.insertChatMessage.mockResolvedValue({
+      id: "m-idem",
+      lessonId: LESSON_ID,
+      userId: null,
+      body: "один раз",
+      createdAt: new Date(),
+    });
+    await roomsService.join(guestActor("guest-1"), LESSON_ID);
+    const key = "7f0c3c5e-2c1a-4f53-9d0e-5b8c1f2a6d11";
+
+    const first = await roomsService.sendChatMessage(guestActor("guest-1"), LESSON_ID, "один раз", key);
+    const second = await roomsService.sendChatMessage(guestActor("guest-1"), LESSON_ID, "один раз", key);
+
+    expect(repoMock.insertChatMessage).toHaveBeenCalledTimes(1);
+    expect(second).toEqual(first);
+  });
+
+  it("если запись первого запроса упала, повтор с тем же ключом пишет сообщение", async () => {
+    repoMock.insertChatMessage.mockClear();
+    repoMock.insertChatMessage.mockRejectedValueOnce(new Error("db down")).mockResolvedValueOnce({
+      id: "m-retry",
+      lessonId: LESSON_ID,
+      userId: null,
+      body: "повтор",
+      createdAt: new Date(),
+    });
+    await roomsService.join(guestActor("guest-1"), LESSON_ID);
+    const key = "0b9d2f4e-8a7c-4e61-b3d5-2c9e7a1f4b20";
+
+    await expect(roomsService.sendChatMessage(guestActor("guest-1"), LESSON_ID, "повтор", key)).rejects.toThrow("db down");
+    const message = await roomsService.sendChatMessage(guestActor("guest-1"), LESSON_ID, "повтор", key);
+
+    expect(message.id).toBe("m-retry");
+    expect(repoMock.insertChatMessage).toHaveBeenCalledTimes(2);
   });
 
   it("явный выход гостя закрывает сессию журнала по participantId", async () => {

@@ -645,6 +645,23 @@ export async function setLessonMode(
  * доске. Сам факт «какой сейчас стейдж» не секрет (см. `isLessonRecordingActive`
  * — тот же принцип, recordings/service.ts).
  */
+/**
+ * Состояние урока, которое участник получает только событиями: при каждом
+ * (пере)подключении канала урока шлём его заново. Пока сокет был разорван или
+ * брошен клиентом как зависший, `stage_changed`/`lesson_mode`/`entry_locked`
+ * терялись — ученик оставался на старом стейдже до следующего переключения.
+ */
+export async function getLessonStateSnapshot(
+  lessonId: string,
+): Promise<{ stage: LessonStage; mode: LessonMode; entryLocked: boolean }> {
+  const [stage, mode, entryLocked] = await Promise.all([
+    presence.getLessonStage(lessonId),
+    presence.getLessonMode(lessonId),
+    presence.isEntryLocked(lessonId),
+  ]);
+  return { stage, mode, entryLocked };
+}
+
 export async function getCurrentLessonStage(lessonId: string): Promise<LessonStage> {
   return presence.getLessonStage(lessonId);
 }
@@ -1039,24 +1056,45 @@ export async function handleScreenShareStoppedWebhook(livekitRoom: string, userI
   emitRoomEvent(lesson.id, { type: "lesson_mode", mode: before });
 }
 
+/** Сколько повтор ждёт, пока первый запрос с тем же ключом допишет сообщение. */
+const CHAT_IDEMPOTENCY_WAIT_MS = 5000;
+const CHAT_IDEMPOTENCY_POLL_MS = 100;
+
 export async function sendChatMessage(
   actor: LessonActor,
   lessonId: string,
   body: string,
+  clientMessageId?: string,
 ): Promise<ChatMessage> {
   await assertMembership(actor, lessonId);
   const entry = await presence.getParticipant(lessonId, actor.participantId);
   if (!entry) {
     throw new AppError(409, "not_in_room", "Сначала войдите в урок");
   }
+  if (clientMessageId && !(await presence.claimChatIdempotency(lessonId, actor.participantId, clientMessageId))) {
+    // Повтор того же сообщения: отдаём созданное, второе не пишем и не рассылаем.
+    const deadline = Date.now() + CHAT_IDEMPOTENCY_WAIT_MS;
+    for (;;) {
+      const done = await presence.getChatIdempotencyResult(lessonId, actor.participantId, clientMessageId);
+      if (done) return JSON.parse(done) as ChatMessage;
+      if (Date.now() > deadline) throw new AppError(409, "chat_duplicate_in_flight", "Сообщение уже отправляется");
+      await new Promise((resolve) => setTimeout(resolve, CHAT_IDEMPOTENCY_POLL_MS));
+    }
+  }
   const isStaff = actor.kind === "staff";
-  const row = await repo.insertChatMessage({
-    lessonId,
-    userId: isStaff ? actor.participantId : null,
-    guestId: isStaff ? null : actor.participantId,
-    authorName: entry.fullName,
-    body,
-  });
+  let row: Awaited<ReturnType<typeof repo.insertChatMessage>>;
+  try {
+    row = await repo.insertChatMessage({
+      lessonId,
+      userId: isStaff ? actor.participantId : null,
+      guestId: isStaff ? null : actor.participantId,
+      authorName: entry.fullName,
+      body,
+    });
+  } catch (err) {
+    if (clientMessageId) await presence.releaseChatIdempotency(lessonId, actor.participantId, clientMessageId).catch(() => undefined);
+    throw err;
+  }
   const message: ChatMessage = {
     id: row.id,
     lessonId: row.lessonId,
@@ -1065,6 +1103,9 @@ export async function sendChatMessage(
     body: row.body,
     createdAt: row.createdAt.toISOString(),
   };
+  if (clientMessageId) {
+    await presence.setChatIdempotencyResult(lessonId, actor.participantId, clientMessageId, JSON.stringify(message));
+  }
   emitRoomEvent(lessonId, { type: "chat_message", message });
   return message;
 }

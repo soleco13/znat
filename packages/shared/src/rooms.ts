@@ -90,6 +90,12 @@ export type ChatMessage = z.infer<typeof chatMessageSchema>;
 
 export const sendChatMessageRequestSchema = z.object({
   body: z.string().min(1).max(2000),
+  /**
+   * Ключ идемпотентности, один на черновик: повтор того же сообщения (браузер
+   * переотправил POST по новому соединению, человек нажал «Отправить» ещё раз
+   * после потерянного ответа) возвращает уже созданное, а не второе.
+   */
+  clientMessageId: z.string().uuid().optional(),
 });
 export type SendChatMessageRequest = z.infer<typeof sendChatMessageRequestSchema>;
 
@@ -169,6 +175,12 @@ export const serverRoomMessageSchema = z.discriminatedUnion("type", [
   // перечитывает их сразу, вместо опроса каждые 3 с всем классом.
   z.object({ type: z.literal("annotations_updated"), userId: z.string().uuid(), activityId: z.string().uuid() }),
   z.object({ type: z.literal("error"), message: z.string() }),
+  /**
+   * Пульс канала урока (раз в 20 с). Ping-кадры протокола JavaScript не видит,
+   * а на мобильной сети TCP-сокет может «зависнуть» открытым — клиент без
+   * пульса не отличал тишину от мёртвого соединения (E2E 2026-10-04).
+   */
+  z.object({ type: z.literal("heartbeat") }),
 ]);
 export type ServerRoomMessage = z.infer<typeof serverRoomMessageSchema>;
 

@@ -312,6 +312,8 @@ export function RoomPage() {
   const [lessonMode, setLessonMode] = useState<LessonMode>("lecture");
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [chatDraft, setChatDraft] = useState("");
+  /** Ключ идемпотентности последнего отправляемого текста (`sendChat`). */
+  const chatSendRef = useRef<{ body: string; id: string } | null>(null);
   const [chatSeen, setChatSeen] = useState(0);
   const [peopleQuery, setPeopleQuery] = useState("");
   const [deckStatuses, setDeckStatuses] = useState<Record<string, DeckProgressEvent>>({});
@@ -439,7 +441,8 @@ export function RoomPage() {
         );
         break;
       case "chat_message":
-        setChat((prev) => [...prev, message.message]);
+        // После переподключения история уже могла подтянуть это сообщение.
+        setChat((prev) => (prev.some((m) => m.id === message.message.id) ? prev : [...prev, message.message]));
         break;
       case "lesson_mode":
         setLessonMode(message.mode);
@@ -798,10 +801,19 @@ export function RoomPage() {
     if (!lessonId || !chatDraft.trim()) return;
     const body = chatDraft;
     setChatDraft("");
+    // Повтор того же текста после ошибки — с тем же ключом: если первый запрос
+    // на самом деле дошёл (ответ потерялся), сервер вернёт его, а не создаст второе.
+    const pending = chatSendRef.current;
+    const clientMessageId = pending && pending.body === body ? pending.id : crypto.randomUUID();
+    chatSendRef.current = { body, id: clientMessageId };
     await apiFetch(`/lessons/${lessonId}/chat`, {
       method: "POST",
-      body: JSON.stringify({ body }),
-    }).catch(() => {
+      body: JSON.stringify({ body, clientMessageId }),
+    })
+      .then(() => {
+        if (chatSendRef.current?.id === clientMessageId) chatSendRef.current = null;
+      })
+      .catch(() => {
       // Текст возвращаем в поле, если человек ещё не начал новое сообщение.
       setChatDraft((draft) => draft || body);
       showRoomError("Сообщение не отправлено");

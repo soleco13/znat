@@ -336,3 +336,44 @@ end
 export async function releaseScreenShare(lessonId: string, participantId: string): Promise<void> {
   await redis.eval(RELEASE_SCREEN_SHARE_SCRIPT, 1, screenShareKey(lessonId), participantId);
 }
+
+/**
+ * Идемпотентность отправки в чат (`clientMessageId`). Сетевой стек браузера
+ * сам переотправляет POST, если соединение умерло, не дождавшись ответа, а
+ * старое соединение после возврата сети ещё доносит первый — в БД оказывалось
+ * два одинаковых сообщения (E2E 2026-10-04, обрыв 30 с). Ключ живёт 10 минут:
+ * дольше браузер и человек одно и то же сообщение не повторяют.
+ */
+const CHAT_IDEMPOTENCY_TTL_SECONDS = 10 * 60;
+const CHAT_IDEMPOTENCY_PENDING = "pending";
+
+function chatIdempotencyKey(lessonId: string, participantId: string, clientMessageId: string): string {
+  return `room:${lessonId}:chat-idem:${participantId}:${clientMessageId}`;
+}
+
+/** `true` — ключ наш, сообщение можно создавать; иначе вернуть записанное (`getChatIdempotencyResult`). */
+export async function claimChatIdempotency(lessonId: string, participantId: string, clientMessageId: string): Promise<boolean> {
+  const result = await redis.set(
+    chatIdempotencyKey(lessonId, participantId, clientMessageId),
+    CHAT_IDEMPOTENCY_PENDING,
+    "EX",
+    CHAT_IDEMPOTENCY_TTL_SECONDS,
+    "NX",
+  );
+  return result === "OK";
+}
+
+/** Созданное по ключу сообщение (JSON) или `null`, пока первый запрос ещё в работе. */
+export async function getChatIdempotencyResult(lessonId: string, participantId: string, clientMessageId: string): Promise<string | null> {
+  const raw = await redis.get(chatIdempotencyKey(lessonId, participantId, clientMessageId));
+  return raw === null || raw === CHAT_IDEMPOTENCY_PENDING ? null : raw;
+}
+
+export async function setChatIdempotencyResult(lessonId: string, participantId: string, clientMessageId: string, messageJson: string): Promise<void> {
+  await redis.set(chatIdempotencyKey(lessonId, participantId, clientMessageId), messageJson, "EX", CHAT_IDEMPOTENCY_TTL_SECONDS);
+}
+
+/** Первый запрос упал до записи — ключ освобождаем, иначе повтор получал бы 409 десять минут. */
+export async function releaseChatIdempotency(lessonId: string, participantId: string, clientMessageId: string): Promise<void> {
+  await redis.del(chatIdempotencyKey(lessonId, participantId, clientMessageId));
+}
