@@ -228,7 +228,7 @@ export const ScreenShareAutoPip = forwardRef<
           activeLabel="Остановить демонстрацию"
           inactiveLabel="Остановить демонстрацию"
           onToggle={() => {
-            void localParticipant.setScreenShareEnabled(false);
+            void localParticipant.setScreenShareEnabled(false).catch(() => undefined);
             if (lessonId) void apiFetch(`/lessons/${lessonId}/screen-share/release`, { method: "POST" }).catch(() => undefined);
             pipWindowRef.current?.close();
           }}

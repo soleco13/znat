@@ -128,7 +128,7 @@ export function SelfScreenShareButton({
     }
     if (!isScreenShareEnabledRef.current) return;
     onScreenShareStopped?.();
-    void localParticipant.setScreenShareEnabled(false);
+    void localParticipant.setScreenShareEnabled(false).catch(() => undefined);
     toast.info("Демонстрацию перехватил учитель/администратор");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preemptedSignal]);
@@ -276,8 +276,16 @@ export function ScreenShareStatusBar({
 
   async function stop() {
     onStopped?.();
-    await localParticipant.setScreenShareEnabled(false);
-    if (lessonId) releaseScreenShare(lessonId);
+    // Остановка на плохой связи может упасть по таймауту переговоров LiveKit —
+    // блокировку демонстрации на сервере всё равно освобождаем, иначе её
+    // не мог начать никто другой.
+    try {
+      await localParticipant.setScreenShareEnabled(false);
+    } catch {
+      // трек всё равно снимается при переподключении
+    } finally {
+      if (lessonId) releaseScreenShare(lessonId);
+    }
   }
 
   return (
