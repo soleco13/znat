@@ -163,6 +163,61 @@ describe("refresh — гонка вкладок", () => {
     expect(repoMock.revokeFamily).toHaveBeenCalledWith(FAMILY);
   });
 
+  // Ротация прошла, ответ потерялся в сети: возвращаем запись о преемнике из
+  // первой ротации, как её положил бы сервер.
+  async function rotateAndCapture(token: string) {
+    repoMock.findRefreshTokenByHash.mockResolvedValueOnce(record());
+    const first = await refresh(token);
+    const [key, value] = redisMock.set.mock.calls.at(-1)!;
+    const successorHash = repoMock.rotateRefreshToken.mock.calls.at(-1)![0].newTokenHash as string;
+    vi.clearAllMocks();
+    repoMock.findUserById.mockResolvedValue(USER);
+    redisMock.get.mockImplementation(async (k: string) => (k === key ? value : null));
+    return { first, successorHash, value: value as string };
+  }
+
+  it("ответ на refresh потерялся, повтор через 73 с — тот же преемник, цепочка цела", async () => {
+    const { first, successorHash } = await rotateAndCapture("tok");
+    repoMock.findRefreshTokenByHash
+      .mockResolvedValueOnce(record({ revokedAt: new Date(Date.now() - 73_000), replacedByHash: successorHash }))
+      .mockResolvedValueOnce(record({ tokenHash: successorHash, expiresAt: first.refreshExpiresAt }));
+    const replay = await refresh("tok");
+    expect(replay.refreshToken).toBe(first.refreshToken);
+    expect(replay.accessToken).toEqual(expect.any(String));
+    expect(repoMock.insertRefreshToken).not.toHaveBeenCalled();
+    expect(repoMock.rotateRefreshToken).not.toHaveBeenCalled();
+    expect(repoMock.revokeFamily).not.toHaveBeenCalled();
+  });
+
+  it("преемник уже использован — повтор старым токеном вне окна гонки отзывает цепочку", async () => {
+    const { successorHash } = await rotateAndCapture("tok");
+    repoMock.findRefreshTokenByHash
+      .mockResolvedValueOnce(record({ revokedAt: new Date(Date.now() - 73_000), replacedByHash: successorHash }))
+      .mockResolvedValueOnce(record({ tokenHash: successorHash, revokedAt: new Date(), replacedByHash: "next2" }));
+    await expect(refresh("tok")).rejects.toMatchObject({ code: "refresh_token_reused" });
+    expect(repoMock.revokeFamily).toHaveBeenCalledWith(FAMILY);
+  });
+
+  it("повтор позже окна в 5 минут — отзыв цепочки", async () => {
+    const { successorHash } = await rotateAndCapture("tok");
+    repoMock.findRefreshTokenByHash.mockResolvedValue(
+      record({ revokedAt: new Date(Date.now() - 6 * 60_000), replacedByHash: successorHash }),
+    );
+    await expect(refresh("tok")).rejects.toMatchObject({ code: "refresh_token_reused" });
+    expect(repoMock.revokeFamily).toHaveBeenCalledWith(FAMILY);
+  });
+
+  it("запись о преемнике не расшифровывается чужим токеном — отказ", async () => {
+    const { successorHash, value } = await rotateAndCapture("tok");
+    // Отдаём запись под любым ключом: проверяем именно шифрование, а не адресацию.
+    redisMock.get.mockResolvedValue(value);
+    repoMock.findRefreshTokenByHash.mockResolvedValueOnce(
+      record({ revokedAt: new Date(Date.now() - 73_000), replacedByHash: successorHash }),
+    );
+    await expect(refresh("other-token")).rejects.toMatchObject({ code: "refresh_token_reused" });
+    expect(repoMock.insertRefreshToken).not.toHaveBeenCalled();
+  });
+
   it("токен после выхода (отозван без преемника) — отказ даже сразу", async () => {
     repoMock.findRefreshTokenByHash.mockResolvedValue(record({ revokedAt: new Date(), replacedByHash: null }));
     await expect(refresh("tok")).rejects.toMatchObject({ code: "refresh_token_reused" });

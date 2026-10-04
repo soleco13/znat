@@ -1,4 +1,4 @@
-import { randomUUID, randomBytes, createHash } from "node:crypto";
+import { randomUUID, randomBytes, createHash, createCipheriv, createDecipheriv } from "node:crypto";
 import argon2 from "argon2";
 import { SignJWT, jwtVerify } from "jose";
 import { accessTokenPayloadSchema, type AccessTokenPayload, type Role } from "@school/shared";
@@ -13,6 +13,14 @@ const ACCESS_TOKEN_TTL = "15m";
 const REFRESH_TOKEN_TTL_DAYS = 30;
 /** Окно, в которое повторное предъявление только что ротированного refresh-токена считается гонкой вкладок, а не кражей. */
 const REFRESH_REUSE_GRACE_MS = 30_000;
+/**
+ * Окно, в которое повторное предъявление ротированного токена отдаёт уже
+ * выданного преемника, пока тот ещё не использован. Ответ на refresh может
+ * потеряться на плохой сети: сервер ротировал, клиент об этом не узнал и
+ * через минуту-другую приходит со старым токеном. Раньше это считалось
+ * кражей — цепочку отзывали, учителя выбрасывало из урока.
+ */
+const REFRESH_REPLAY_WINDOW_MS = 5 * 60_000;
 
 const accessSecret = new TextEncoder().encode(env.JWT_ACCESS_SECRET);
 
@@ -31,6 +39,49 @@ async function issueAccessToken(payload: AccessTokenPayload): Promise<string> {
 export async function verifyAccessToken(token: string): Promise<AccessTokenPayload> {
   const { payload } = await jwtVerify(token, accessSecret);
   return accessTokenPayloadSchema.parse(payload);
+}
+
+const replayKey = (oldHash: string) => `auth:rt-replay:${oldHash}`;
+
+/**
+ * Преемник хранится зашифрованным ключом из самого старого токена: в БД
+ * лежит только его хэш, так что расшифровать запись может лишь тот, кто
+ * предъявил старый токен, — утечка Redis токенов не раскрывает.
+ */
+function replayCipherKey(oldToken: string): Buffer {
+  return createHash("sha256").update(`rt-replay|${oldToken}`).digest();
+}
+
+async function rememberSuccessor(oldToken: string, oldHash: string, successor: string): Promise<void> {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", replayCipherKey(oldToken), iv);
+  const ct = Buffer.concat([cipher.update(successor, "utf8"), cipher.final()]);
+  const value = [iv, cipher.getAuthTag(), ct].map((b) => b.toString("base64url")).join(".");
+  try {
+    await redis.set(replayKey(oldHash), value, "PX", REFRESH_REPLAY_WINDOW_MS);
+  } catch {
+    // Без записи повтор старым токеном пойдёт прежним путём (окно гонки).
+  }
+}
+
+async function recallSuccessor(oldToken: string, oldHash: string, successorHash: string): Promise<string | null> {
+  let value: string | null;
+  try {
+    value = await redis.get(replayKey(oldHash));
+  } catch {
+    return null;
+  }
+  if (!value) return null;
+  const [iv, tag, ct] = value.split(".").map((part) => Buffer.from(part, "base64url"));
+  if (!iv || !tag || !ct) return null;
+  try {
+    const decipher = createDecipheriv("aes-256-gcm", replayCipherKey(oldToken), iv);
+    decipher.setAuthTag(tag);
+    const successor = Buffer.concat([decipher.update(ct), decipher.final()]).toString("utf8");
+    return hashOpaqueToken(successor) === successorHash ? successor : null;
+  } catch {
+    return null;
+  }
 }
 
 async function issueRefreshToken(userId: string, familyId: string) {
@@ -146,6 +197,10 @@ export async function refresh(presentedToken: string) {
   if (!record) {
     throw new AppError(401, "invalid_refresh_token", "Недействительный refresh-токен");
   }
+  if (record.revokedAt && record.replacedByHash !== null) {
+    const replay = await replaySuccessor(presentedToken, presentedHash, record.revokedAt, record.replacedByHash);
+    if (replay) return replay;
+  }
   if (record.revokedAt) {
     // Только что ротирован (есть преемник, прошло меньше окна) — это вторая
     // вкладка или проснувшийся ноутбук, отправившие тот же токен почти
@@ -181,20 +236,43 @@ export async function refresh(presentedToken: string) {
       oldTokenHash: presentedHash,
       newTokenHash: hashOpaqueToken(nextRefresh.token),
     });
+    await rememberSuccessor(presentedToken, presentedHash, nextRefresh.token);
   }
 
+  return sessionFor(user, nextRefresh);
+}
+
+async function sessionFor(user: NonNullable<Awaited<ReturnType<typeof repo.findUserById>>>, refreshToken: { token: string; expiresAt: Date }) {
   const accessToken = await issueAccessToken({
     sub: user.id,
     schoolId: user.schoolId,
     role: user.role as Role,
   });
-
   return {
     accessToken,
-    refreshToken: nextRefresh.token,
-    refreshExpiresAt: nextRefresh.expiresAt,
+    refreshToken: refreshToken.token,
+    refreshExpiresAt: refreshToken.expiresAt,
     user,
   };
+}
+
+/**
+ * Повтор refresh, ответ на который потерялся: тот же преемник, что уже
+ * выдан, — новой ветки цепочки не появляется. Только пока преемник ещё
+ * не использован: если клиент им уже ротировал, старый токен — либо
+ * отставшая вкладка (окно гонки ниже), либо кража.
+ */
+async function replaySuccessor(presentedToken: string, presentedHash: string, revokedAt: Date, successorHash: string) {
+  if (Date.now() - revokedAt.getTime() >= REFRESH_REPLAY_WINDOW_MS) return null;
+  const successor = await recallSuccessor(presentedToken, presentedHash, successorHash);
+  if (!successor) return null;
+  const successorRecord = await repo.findRefreshTokenByHash(successorHash);
+  if (!successorRecord || successorRecord.revokedAt || successorRecord.expiresAt.getTime() < Date.now()) return null;
+  const user = await repo.findUserById(successorRecord.userId);
+  if (!user || !user.isActive) {
+    throw new AppError(401, "invalid_credentials", "Пользователь недоступен");
+  }
+  return sessionFor(user, { token: successor, expiresAt: successorRecord.expiresAt });
 }
 
 const REFRESH_CHAIN_MAX_HOPS = 10;
