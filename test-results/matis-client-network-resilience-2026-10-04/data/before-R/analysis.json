@@ -1,0 +1,580 @@
+{
+ "rounds": {
+  "-": {
+   "teacher": {
+    "n": 5,
+    "rttMs": {
+     "med": 47.0,
+     "p95": 53,
+     "max": 53
+    },
+    "jitterAudioMs": {
+     "med": 9,
+     "p95": 10
+    },
+    "jitterVideoMs": {
+     "med": 8.5,
+     "p95": 9
+    },
+    "lossAudioPct": {
+     "med": 0.0,
+     "p95": 0
+    },
+    "lossVideoPct": {
+     "med": 0,
+     "p95": 0
+    },
+    "inAudioKbps": {
+     "med": 0,
+     "min": 0
+    },
+    "inVideoKbps": {
+     "med": 0,
+     "min": 0
+    },
+    "outAudioKbps": 55,
+    "outVideoKbps": 487,
+    "outBwKbps": 2412.0,
+    "inFps": 20.0,
+    "inRes": [
+     "640x360"
+    ],
+    "framesDropped": 0,
+    "freezes": 0,
+    "concealedAudioPct": 0.5,
+    "outLayers": [
+     "f:1280x720@20",
+     "h:640x360@0[bandwidth]",
+     "h:640x360@20",
+     "q:320x180@0[bandwidth]",
+     "q:320x180@20"
+    ],
+    "pair": [
+     "host/udp -> host/udp:55760"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     1,
+     15
+    ],
+    "listeners": [
+     0,
+     785
+    ],
+    "nodes": [
+     8,
+     1646
+    ],
+    "uiQuality": [],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [
+      "00:10"
+     ],
+     "longestSec": 15
+    }
+   },
+   "student": {
+    "n": 5,
+    "rttMs": {
+     "med": 47,
+     "p95": 51,
+     "max": 51
+    },
+    "jitterAudioMs": {
+     "med": 8,
+     "p95": 10
+    },
+    "jitterVideoMs": {
+     "med": 7,
+     "p95": 9
+    },
+    "lossAudioPct": {
+     "med": 0.0,
+     "p95": 0
+    },
+    "lossVideoPct": {
+     "med": 0.0,
+     "p95": 0
+    },
+    "inAudioKbps": {
+     "med": 0,
+     "min": 0
+    },
+    "inVideoKbps": {
+     "med": 0,
+     "min": 0
+    },
+    "outAudioKbps": 0,
+    "outVideoKbps": 0,
+    "outBwKbps": 580,
+    "inFps": 20,
+    "inRes": [
+     "320x180",
+     "640x360"
+    ],
+    "framesDropped": 0,
+    "freezes": 0,
+    "concealedAudioPct": 0.0,
+    "outLayers": [
+     "h:640x360@21",
+     "q:320x180@21"
+    ],
+    "pair": [
+     "host/udp -> host/udp:55616"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     1,
+     14
+    ],
+    "listeners": [
+     0,
+     754
+    ],
+    "nodes": [
+     8,
+     1934
+    ],
+    "uiQuality": [],
+    "uiOverlay": 0,
+    "uiPill": 1,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [
+      "00:10"
+     ],
+     "longestSec": 15
+    }
+   },
+   "livekit": {
+    "dupSamples": 0,
+    "maxParticipants": 2,
+    "states": [
+     "ACTIVE"
+    ]
+   }
+  },
+  "R/recovery": {
+   "teacher": {
+    "n": 6,
+    "rttMs": {
+     "med": 48.5,
+     "p95": 53,
+     "max": 53
+    },
+    "jitterAudioMs": {
+     "med": 8.0,
+     "p95": 9
+    },
+    "jitterVideoMs": {
+     "med": 8.0,
+     "p95": 8
+    },
+    "lossAudioPct": {
+     "med": 0.0,
+     "p95": 4.3
+    },
+    "lossVideoPct": {
+     "med": 0,
+     "p95": 0
+    },
+    "inAudioKbps": {
+     "med": 89.5,
+     "min": 65
+    },
+    "inVideoKbps": {
+     "med": 8.0,
+     "min": 0
+    },
+    "outAudioKbps": 80.0,
+    "outVideoKbps": 1193.0,
+    "outBwKbps": 2412.0,
+    "inFps": 20,
+    "inRes": [
+     "640x360"
+    ],
+    "framesDropped": 0,
+    "freezes": 0,
+    "concealedAudioPct": 0.0,
+    "outLayers": [
+     "f:1280x720@20",
+     "h:640x360@19",
+     "h:640x360@20",
+     "q:320x180@20",
+     "q:320x180@21"
+    ],
+    "pair": [
+     "host/udp -> host/udp:55760"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     15,
+     13
+    ],
+    "listeners": [
+     1499,
+     782
+    ],
+    "nodes": [
+     2121,
+     1331
+    ],
+    "uiQuality": [],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [],
+     "longestSec": 0
+    }
+   },
+   "student": {
+    "n": 6,
+    "rttMs": {
+     "med": 40.5,
+     "p95": 57,
+     "max": 57
+    },
+    "jitterAudioMs": {
+     "med": 9.0,
+     "p95": 13
+    },
+    "jitterVideoMs": {
+     "med": 10.5,
+     "p95": 15
+    },
+    "lossAudioPct": {
+     "med": 0.0,
+     "p95": 2.4
+    },
+    "lossVideoPct": {
+     "med": 0.0,
+     "p95": 0.8
+    },
+    "inAudioKbps": {
+     "med": 80.0,
+     "min": 44
+    },
+    "inVideoKbps": {
+     "med": 548.0,
+     "min": 334
+    },
+    "outAudioKbps": 89.0,
+    "outVideoKbps": 176.5,
+    "outBwKbps": 689.0,
+    "inFps": 20.0,
+    "inRes": [
+     "1280x720",
+     "640x360"
+    ],
+    "framesDropped": 0,
+    "freezes": 1,
+    "concealedAudioPct": 0.0,
+    "outLayers": [
+     "h:640x360@13",
+     "h:640x360@20",
+     "h:640x360@21",
+     "q:320x180@13",
+     "q:320x180@20",
+     "q:320x180@21"
+    ],
+    "pair": [
+     "host/udp -> host/udp:52305",
+     "host/udp -> host/udp:55616"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     17,
+     12
+    ],
+    "listeners": [
+     1301,
+     1000
+    ],
+    "nodes": [
+     2303,
+     1401
+    ],
+    "uiQuality": [],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [],
+     "longestSec": 0
+    }
+   },
+   "livekit": {
+    "dupSamples": 0,
+    "maxParticipants": 2,
+    "states": [
+     "ACTIVE"
+    ]
+   }
+  }
+ },
+ "eventCounts": {
+  "teacher:ws.created": 3,
+  "student:ws.created": 14,
+  "student:ws.closed": 12,
+  "student:net.fail": 12,
+  "student:console.error": 4,
+  "student:exception": 3,
+  "teacher:ws.closed": 1
+ },
+ "telemetry": {
+  "teacher:livekit_connection_started": 1,
+  "teacher:livekit_connected": 1,
+  "student:livekit_connection_started": 1,
+  "student:livekit_connected": 1,
+  "student:livekit_reconnecting": 1,
+  "student:websocket_disconnected": 3,
+  "student:websocket_reconnect": 3,
+  "student:whiteboard_sync_started": 1,
+  "student:client_error": 3,
+  "student:whiteboard_disconnected": 8,
+  "teacher:whiteboard_sync_started": 1,
+  "teacher:whiteboard_synced": 1,
+  "student:livekit_reconnected": 1
+ },
+ "rest": {
+  "POST /api/v1/auth/refresh": {
+   "n": 3,
+   "medMs": 122,
+   "maxMs": 277
+  },
+  "POST /api/v1/auth/login": {
+   "n": 1,
+   "medMs": 180,
+   "maxMs": 180
+  },
+  "GET /api/v1/lessons": {
+   "n": 1,
+   "medMs": 47,
+   "maxMs": 47
+  },
+  "GET /api/v1/lessons/presence-counts?ids=:id": {
+   "n": 1,
+   "medMs": 67,
+   "maxMs": 67
+  },
+  "GET /api/v1/lessons/:id/materials": {
+   "n": 1,
+   "medMs": 77,
+   "maxMs": 77
+  },
+  "GET /api/v1/lessons/:id/recordings": {
+   "n": 1,
+   "medMs": 84,
+   "maxMs": 84
+  },
+  "GET /api/v1/guest/session": {
+   "n": 1,
+   "medMs": 54,
+   "maxMs": 54
+  },
+  "GET /api/v1/lessons/:id": {
+   "n": 1,
+   "medMs": 121,
+   "maxMs": 121
+  },
+  "POST /api/v1/lessons/:id/join": {
+   "n": 2,
+   "medMs": 30.0,
+   "maxMs": 36
+  },
+  "GET /api/v1/lessons/:id/decks": {
+   "n": 1,
+   "medMs": 153,
+   "maxMs": 153
+  },
+  "GET /api/v1/lessons/:id/activities": {
+   "n": 2,
+   "medMs": 120.0,
+   "maxMs": 172
+  },
+  "GET /api/v1/lessons/:id/chat": {
+   "n": 3,
+   "medMs": 64,
+   "maxMs": 68
+  },
+  "GET /api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc": {
+   "n": 1,
+   "medMs": 49,
+   "maxMs": 49
+  },
+  "POST /api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc/enter": {
+   "n": 1,
+   "medMs": 57,
+   "maxMs": 57
+  },
+  "POST /api/v1/lessons/:id/chat": {
+   "n": 3,
+   "medMs": 60,
+   "maxMs": 171
+  }
+ },
+ "failures": [
+  {
+   "rel": "00:17",
+   "who": "student",
+   "kind": "net.fail",
+   "text": "net::ERR_CONNECTION_REFUSED",
+   "url": "https://213.21.241.28/ping",
+   "method": "GET",
+   "ms": 3,
+   "status": null
+  },
+  {
+   "rel": "00:17",
+   "who": "student",
+   "kind": "net.fail",
+   "text": "net::ERR_CONNECTION_REFUSED",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiI4Y2M0OTYxYS0yMGY1LTRiNmEtYTdjYi1hYWZjMjQ1ZGVhNzgiLCJleHAiOjE3OTExNDQ0NDIs",
+   "method": "GET",
+   "ms": 3,
+   "status": null
+  },
+  {
+   "rel": "00:18",
+   "who": "student",
+   "kind": "net.fail",
+   "text": "net::ERR_CONNECTION_REFUSED",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiI4Y2M0OTYxYS0yMGY1LTRiNmEtYTdjYi1hYWZjMjQ1ZGVhNzgiLCJleHAiOjE3OTExNDQ0NDIs",
+   "method": "GET",
+   "ms": 17,
+   "status": null
+  },
+  {
+   "rel": "00:18",
+   "who": "student",
+   "kind": "net.fail",
+   "text": "net::ERR_FAILED",
+   "url": "https://213.21.241.28/assets/file-open-002ab408-DIuFHtCF.js",
+   "method": "GET",
+   "ms": 26,
+   "status": null
+  },
+  {
+   "rel": "00:18",
+   "who": "student",
+   "kind": "net.fail",
+   "text": "net::ERR_FAILED",
+   "url": "https://213.21.241.28/assets/directory-open-4ed118d0-CunoC1EB.js",
+   "method": "GET",
+   "ms": 27,
+   "status": null
+  },
+  {
+   "rel": "00:18",
+   "who": "student",
+   "kind": "net.fail",
+   "text": "net::ERR_FAILED",
+   "url": "https://213.21.241.28/assets/file-save-745eba88-Bb9F9Kg7.js",
+   "method": "GET",
+   "ms": 29,
+   "status": null
+  },
+  {
+   "rel": "00:18",
+   "who": "student",
+   "kind": "exception",
+   "text": "TypeError: Failed to fetch dynamically imported module: https://213.21.241.28/assets/file-open-002ab408-DIuFHtCF.js",
+   "url": null,
+   "method": null,
+   "ms": null,
+   "status": null
+  },
+  {
+   "rel": "00:18",
+   "who": "student",
+   "kind": "exception",
+   "text": "TypeError: Failed to fetch dynamically imported module: https://213.21.241.28/assets/directory-open-4ed118d0-CunoC1EB.js",
+   "url": null,
+   "method": null,
+   "ms": null,
+   "status": null
+  },
+  {
+   "rel": "00:18",
+   "who": "student",
+   "kind": "exception",
+   "text": "TypeError: Failed to fetch dynamically imported module: https://213.21.241.28/assets/file-save-745eba88-Bb9F9Kg7.js",
+   "url": null,
+   "method": null,
+   "ms": null,
+   "status": null
+  },
+  {
+   "rel": "00:19",
+   "who": "student",
+   "kind": "net.fail",
+   "text": "net::ERR_CONNECTION_REFUSED",
+   "url": "https://213.21.241.28/ping",
+   "method": "GET",
+   "ms": 2,
+   "status": null
+  },
+  {
+   "rel": "00:19",
+   "who": "student",
+   "kind": "net.fail",
+   "text": "net::ERR_CONNECTION_REFUSED",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiI4Y2M0OTYxYS0yMGY1LTRiNmEtYTdjYi1hYWZjMjQ1ZGVhNzgiLCJleHAiOjE3OTExNDQ0NDIs",
+   "method": "GET",
+   "ms": 10,
+   "status": null
+  },
+  {
+   "rel": "00:21",
+   "who": "student",
+   "kind": "net.fail",
+   "text": "net::ERR_CONNECTION_REFUSED",
+   "url": "https://213.21.241.28/ping",
+   "method": "GET",
+   "ms": 6,
+   "status": null
+  },
+  {
+   "rel": "00:21",
+   "who": "student",
+   "kind": "net.fail",
+   "text": "net::ERR_CONNECTION_REFUSED",
+   "url": "https://213.21.241.28/livekit/rtc/v1/validate?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkZXZrZXkiLCJzdWIiOiI4Y2M0OTYxYS0yMGY1LTRiNmEtYTdjYi1hYWZjMjQ1ZGVhNzgiLCJleHAiOjE3OTExNDQ0NDIs",
+   "method": "GET",
+   "ms": 4,
+   "status": null
+  },
+  {
+   "rel": "00:22",
+   "who": "student",
+   "kind": "net.fail",
+   "text": "net::ERR_CONNECTION_REFUSED",
+   "url": "https://213.21.241.28/api/v1/telemetry",
+   "method": "POST",
+   "ms": 2,
+   "status": null
+  },
+  {
+   "rel": "00:23",
+   "who": "student",
+   "kind": "net.fail",
+   "text": "net::ERR_CONNECTION_REFUSED",
+   "url": "https://213.21.241.28/ping",
+   "method": "GET",
+   "ms": 10,
+   "status": null
+  }
+ ]
+}

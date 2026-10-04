@@ -1,0 +1,147 @@
+{
+  "HORRIBLE": {
+    "formMs": 42552,
+    "devCheckMs": null,
+    "inRoomMs": null,
+    "audioMs": null,
+    "fcp": 33236,
+    "lcp": 33236,
+    "longTasks": 1,
+    "nav": {
+      "ttfb": 10703,
+      "dcl": 33152,
+      "load": 33153,
+      "kb": 0.8
+    },
+    "requests": 67,
+    "totalKb": 144,
+    "byType": {
+      "script": {
+        "n": 2,
+        "kb": 127.2
+      },
+      "link": {
+        "n": 1,
+        "kb": 12.9
+      },
+      "fetch": {
+        "n": 62,
+        "kb": 2.1
+      },
+      "other": {
+        "n": 1,
+        "kb": 0.7
+      }
+    },
+    "beforeForm": {
+      "n": 9,
+      "kb": 143
+    },
+    "heavy": [
+      {
+        "n": "/assets/index-D529bZai.js",
+        "t": "script",
+        "start": 10713,
+        "end": 33116,
+        "kb": 126.2,
+        "decKb": 466
+      },
+      {
+        "n": "/assets/index-CRDIIC9a.css",
+        "t": "link",
+        "start": 10713,
+        "end": 15150,
+        "kb": 12.9,
+        "decKb": 78
+      },
+      {
+        "n": "/sw-assets.json",
+        "t": "fetch",
+        "start": 33222,
+        "end": 35684,
+        "kb": 1.2,
+        "decKb": 5
+      },
+      {
+        "n": "/excalidraw-asset-path.js",
+        "t": "script",
+        "start": 10713,
+        "end": 15152,
+        "kb": 1,
+        "decKb": 1
+      },
+      {
+        "n": "/favicon.svg",
+        "t": "other",
+        "start": 33223,
+        "end": 35686,
+        "kb": 0.7,
+        "decKb": 1
+      },
+      {
+        "n": "/api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc",
+        "t": "fetch",
+        "start": 33222,
+        "end": 35675,
+        "kb": 0.5,
+        "decKb": 0
+      },
+      {
+        "n": "/api/v1/auth/refresh",
+        "t": "fetch",
+        "start": 33235,
+        "end": 42466,
+        "kb": 0.4,
+        "decKb": 0
+      },
+      {
+        "n": "/assets/RoomPage-njEt1H-H.js",
+        "t": "fetch",
+        "start": 35695,
+        "end": 42545,
+        "kb": 0,
+        "decKb": 101
+      },
+      {
+        "n": "/assets/activity-api-I7E7UPOH.js",
+        "t": "fetch",
+        "start": 35696,
+        "end": 42471,
+        "kb": 0,
+        "decKb": 1
+      },
+      {
+        "n": "/assets/alert-Db3R6q_g.js",
+        "t": "fetch",
+        "start": 35696,
+        "end": 44566,
+        "kb": 0,
+        "decKb": 1
+      },
+      {
+        "n": "/assets/alert-dialog-Df1bPcd0.js",
+        "t": "fetch",
+        "start": 35696,
+        "end": 44561,
+        "kb": 0,
+        "decKb": 4
+      },
+      {
+        "n": "/assets/annotations-events-_WcUBcPm.js",
+        "t": "fetch",
+        "start": 35699,
+        "end": 44250,
+        "kb": 0,
+        "decKb": 13
+      }
+    ],
+    "fails": [
+      {
+        "k": "http4xx",
+        "u": "/api/v1/auth/refresh",
+        "s": 401
+      }
+    ],
+    "sw": true
+  }
+}

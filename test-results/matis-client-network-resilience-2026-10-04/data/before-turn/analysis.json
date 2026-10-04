@@ -1,0 +1,322 @@
+{
+ "rounds": {
+  "-": {
+   "teacher": {
+    "n": 38,
+    "rttMs": {
+     "med": 43,
+     "p95": 60,
+     "max": 66
+    },
+    "jitterAudioMs": {
+     "med": 8.0,
+     "p95": 10
+    },
+    "jitterVideoMs": {
+     "med": 9,
+     "p95": 15
+    },
+    "lossAudioPct": {
+     "med": 0.0,
+     "p95": 0
+    },
+    "lossVideoPct": {
+     "med": 0.0,
+     "p95": 0
+    },
+    "inAudioKbps": {
+     "med": 24.0,
+     "min": 0
+    },
+    "inVideoKbps": {
+     "med": 0.0,
+     "min": 0
+    },
+    "outAudioKbps": 85.0,
+    "outVideoKbps": 479.5,
+    "outBwKbps": 2559,
+    "inFps": 20.0,
+    "inRes": [
+     "320x180",
+     "640x360"
+    ],
+    "framesDropped": 0,
+    "freezes": 3,
+    "concealedAudioPct": 0,
+    "outLayers": [
+     "f:1280x720@11",
+     "f:1280x720@19",
+     "f:1280x720@20",
+     "h:640x360@0[bandwidth]",
+     "h:640x360@12",
+     "h:640x360@19",
+     "h:640x360@20",
+     "h:640x360@21"
+    ],
+    "pair": [
+     "host/udp -> host/udp:55296"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     1,
+     14
+    ],
+    "listeners": [
+     0,
+     1235
+    ],
+    "nodes": [
+     8,
+     1581
+    ],
+    "uiQuality": [
+     "Плохая связь"
+    ],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [
+      "00:10"
+     ],
+     "longestSec": 15
+    }
+   },
+   "student": {
+    "n": 38,
+    "rttMs": {
+     "med": 43,
+     "p95": 57,
+     "max": 66
+    },
+    "jitterAudioMs": {
+     "med": 8.0,
+     "p95": 12
+    },
+    "jitterVideoMs": {
+     "med": 7.0,
+     "p95": 12
+    },
+    "lossAudioPct": {
+     "med": 0,
+     "p95": 4.2
+    },
+    "lossVideoPct": {
+     "med": 0.0,
+     "p95": 42.3
+    },
+    "inAudioKbps": {
+     "med": 27.0,
+     "min": 0
+    },
+    "inVideoKbps": {
+     "med": 47.5,
+     "min": 0
+    },
+    "outAudioKbps": 82.5,
+    "outVideoKbps": 50.5,
+    "outBwKbps": 549,
+    "inFps": 20,
+    "inRes": [
+     "320x180",
+     "640x360"
+    ],
+    "framesDropped": 20,
+    "freezes": 2,
+    "concealedAudioPct": 3,
+    "outLayers": [
+     "h:640x360@0[bandwidth]",
+     "h:640x360@18[bandwidth]",
+     "h:640x360@20",
+     "h:640x360@21",
+     "q:320x180@10[bandwidth]",
+     "q:320x180@11[bandwidth]",
+     "q:320x180@14[bandwidth]",
+     "q:320x180@16[bandwidth]"
+    ],
+    "pair": [
+     "host/udp -> host/udp:52110",
+     "host/udp -> host/udp:53742",
+     "host/udp -> host/udp:55412",
+     "prflx/tcp -> host/tcp:7881",
+     "relay/udp/tls -> host/udp:50041",
+     "relay/udp/tls -> host/udp:50670",
+     "relay/udp/tls -> host/udp:53668",
+     "relay/udp/udp -> host/udp:54201",
+     "relay/udp/udp -> host/udp:58939"
+    ],
+    "maxRoomWs": 7,
+    "maxLkWs": 2,
+    "maxPcs": 1,
+    "heapMB": [
+     1,
+     20
+    ],
+    "listeners": [
+     0,
+     778
+    ],
+    "nodes": [
+     8,
+     1253
+    ],
+    "uiQuality": [
+     "Плохая связь"
+    ],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [
+      "00:10",
+      "00:55"
+     ],
+     "longestSec": 15
+    }
+   },
+   "livekit": {
+    "dupSamples": 0,
+    "maxParticipants": 2,
+    "states": [
+     "ACTIVE",
+     "JOINED"
+    ]
+   }
+  }
+ },
+ "eventCounts": {
+  "teacher:ws.created": 2,
+  "student:ws.created": 23,
+  "student:ws.closed": 9
+ },
+ "telemetry": {
+  "teacher:livekit_connection_started": 1,
+  "teacher:livekit_connected": 1,
+  "student:livekit_connection_started": 7,
+  "student:livekit_connected": 7,
+  "student:livekit_reconnecting": 4,
+  "student:livekit_reconnected": 3,
+  "student:whiteboard_sync_started": 6,
+  "student:whiteboard_synced": 6
+ },
+ "rest": {
+  "POST /api/v1/auth/refresh": {
+   "n": 3,
+   "medMs": 127,
+   "maxMs": 321
+  },
+  "POST /api/v1/auth/login": {
+   "n": 1,
+   "medMs": 180,
+   "maxMs": 180
+  },
+  "GET /api/v1/lessons": {
+   "n": 1,
+   "medMs": 53,
+   "maxMs": 53
+  },
+  "GET /api/v1/lessons/presence-counts?ids=:id": {
+   "n": 1,
+   "medMs": 74,
+   "maxMs": 74
+  },
+  "GET /api/v1/lessons/:id/materials": {
+   "n": 1,
+   "medMs": 81,
+   "maxMs": 81
+  },
+  "GET /api/v1/lessons/:id/recordings": {
+   "n": 1,
+   "medMs": 100,
+   "maxMs": 100
+  },
+  "GET /api/v1/guest/session": {
+   "n": 7,
+   "medMs": 60,
+   "maxMs": 132
+  },
+  "GET /api/v1/lessons/:id": {
+   "n": 1,
+   "medMs": 7,
+   "maxMs": 7
+  },
+  "POST /api/v1/lessons/:id/join": {
+   "n": 8,
+   "medMs": 70.5,
+   "maxMs": 118
+  },
+  "GET /api/v1/lessons/:id/decks": {
+   "n": 1,
+   "medMs": 186,
+   "maxMs": 186
+  },
+  "GET /api/v1/lessons/:id/activities": {
+   "n": 8,
+   "medMs": 123.0,
+   "maxMs": 288
+  },
+  "GET /api/v1/lessons/:id/chat": {
+   "n": 8,
+   "medMs": 84.5,
+   "maxMs": 165
+  },
+  "GET /api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc": {
+   "n": 1,
+   "medMs": 131,
+   "maxMs": 131
+  },
+  "POST /api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc/enter": {
+   "n": 1,
+   "medMs": 4,
+   "maxMs": 4
+  },
+  "GET /api/v1/materials": {
+   "n": 2,
+   "medMs": 46.5,
+   "maxMs": 55
+  },
+  "GET /api/v1/materials?source=platform": {
+   "n": 2,
+   "medMs": 64.0,
+   "maxMs": 88
+  },
+  "POST /api/v1/lessons/:id/activities": {
+   "n": 1,
+   "medMs": 280,
+   "maxMs": 280
+  },
+  "GET /api/v1/activities/:id/progress": {
+   "n": 44,
+   "medMs": 68.5,
+   "maxMs": 319
+  },
+  "GET /api/v1/activities/:id/my-annotations": {
+   "n": 1,
+   "medMs": 132,
+   "maxMs": 132
+  },
+  "GET /api/v1/activities/:id/my": {
+   "n": 1,
+   "medMs": 176,
+   "maxMs": 176
+  },
+  "GET /api/v1/assets/:id/url": {
+   "n": 4,
+   "medMs": 66.0,
+   "maxMs": 68
+  },
+  "GET /files/:id%2F:id.png?exp=1791123917&sig=u2ahaUb8iYGr_MUgcKNJcrzOMiB3hEqFSI0DNWZFxGc": {
+   "n": 1,
+   "medMs": 100,
+   "maxMs": 100
+  },
+  "POST /api/v1/lessons/:id/chat": {
+   "n": 12,
+   "medMs": 52.0,
+   "maxMs": 8637
+  }
+ },
+ "failures": []
+}

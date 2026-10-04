@@ -1,0 +1,245 @@
+{
+ "rounds": {},
+ "eventCounts": {
+  "teacher:INJECT": 10,
+  "teacher:http5xx": 4,
+  "teacher:net.fail": 3,
+  "teacher:ws.created": 12,
+  "teacher:ws.closed": 4,
+  "student:ws.created": 4,
+  "student:INJECT": 5,
+  "student:http5xx": 4,
+  "student:net.fail": 1,
+  "student:ws.closed": 1
+ },
+ "telemetry": {
+  "teacher:livekit_connection_started": 1,
+  "teacher:livekit_connected": 1,
+  "student:livekit_connection_started": 2,
+  "student:livekit_connected": 2
+ },
+ "rest": {
+  "POST /api/v1/auth/refresh": {
+   "n": 13,
+   "medMs": 82,
+   "maxMs": 214
+  },
+  "POST /api/v1/auth/login": {
+   "n": 5,
+   "medMs": 183,
+   "maxMs": 207
+  },
+  "GET /api/v1/lessons": {
+   "n": 3,
+   "medMs": 58,
+   "maxMs": 66
+  },
+  "GET /api/v1/lessons/presence-counts?ids=:id": {
+   "n": 3,
+   "medMs": 25,
+   "maxMs": 57
+  },
+  "GET /api/v1/lessons/:id/recordings": {
+   "n": 3,
+   "medMs": 57,
+   "maxMs": 75
+  },
+  "GET /api/v1/lessons/:id/materials": {
+   "n": 3,
+   "medMs": 67,
+   "maxMs": 75
+  },
+  "GET /api/v1/guest/session": {
+   "n": 8,
+   "medMs": 60.5,
+   "maxMs": 106
+  },
+  "GET /api/v1/lessons/:id": {
+   "n": 6,
+   "medMs": 73.5,
+   "maxMs": 91
+  },
+  "POST /api/v1/lessons/:id/join": {
+   "n": 9,
+   "medMs": 45,
+   "maxMs": 109
+  },
+  "GET /api/v1/lessons/:id/decks": {
+   "n": 6,
+   "medMs": 116.5,
+   "maxMs": 136
+  },
+  "GET /api/v1/lessons/:id/activities": {
+   "n": 8,
+   "medMs": 115.5,
+   "maxMs": 138
+  },
+  "GET /api/v1/lessons/:id/chat": {
+   "n": 9,
+   "medMs": 63,
+   "maxMs": 235
+  },
+  "GET /api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc": {
+   "n": 1,
+   "medMs": 41,
+   "maxMs": 41
+  },
+  "POST /api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc/enter": {
+   "n": 1,
+   "medMs": 49,
+   "maxMs": 49
+  },
+  "POST /api/v1/lessons/:id/chat": {
+   "n": 3,
+   "medMs": 45,
+   "maxMs": 80
+  },
+  "GET /api/v1/activities/:id/my": {
+   "n": 4,
+   "medMs": 80.5,
+   "maxMs": 163
+  },
+  "GET /api/v1/activities/:id/my-annotations": {
+   "n": 7,
+   "medMs": 107,
+   "maxMs": 125
+  },
+  "GET /api/v1/assets/:id/url": {
+   "n": 4,
+   "medMs": 126.5,
+   "maxMs": 127
+  },
+  "GET /files/:id%2F:id.png?exp=1791126302&sig=0-h_sw1IxqtlfQl0oQuCDwVDZVtMFAZ8zzSSxMRz-_Y": {
+   "n": 1,
+   "medMs": 243,
+   "maxMs": 243
+  },
+  "POST /api/v1/activities/:id/responses": {
+   "n": 3,
+   "medMs": 48,
+   "maxMs": 67
+  }
+ },
+ "failures": [
+  {
+   "rel": "00:01",
+   "who": "teacher",
+   "kind": "http5xx",
+   "text": null,
+   "url": "https://213.21.241.28/api/v1/auth/login",
+   "method": "POST",
+   "ms": null,
+   "status": 503
+  },
+  {
+   "rel": "00:09",
+   "who": "teacher",
+   "kind": "net.fail",
+   "text": "net::ERR_CONNECTION_RESET",
+   "url": "https://213.21.241.28/api/v1/auth/login",
+   "method": "POST",
+   "ms": 4,
+   "status": null
+  },
+  {
+   "rel": "00:14",
+   "who": "teacher",
+   "kind": "http5xx",
+   "text": null,
+   "url": "https://213.21.241.28/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join",
+   "method": "POST",
+   "ms": null,
+   "status": 503
+  },
+  {
+   "rel": "00:17",
+   "who": "teacher",
+   "kind": "net.fail",
+   "text": "net::ERR_CONNECTION_RESET",
+   "url": "https://213.21.241.28/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join",
+   "method": "POST",
+   "ms": 44,
+   "status": null
+  },
+  {
+   "rel": "00:20",
+   "who": "teacher",
+   "kind": "net.fail",
+   "text": "net::ERR_CONNECTION_RESET",
+   "url": "https://213.21.241.28/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/join",
+   "method": "POST",
+   "ms": 65,
+   "status": null
+  },
+  {
+   "rel": "01:04",
+   "who": "student",
+   "kind": "http5xx",
+   "text": null,
+   "url": "https://213.21.241.28/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/chat",
+   "method": "POST",
+   "ms": null,
+   "status": 503
+  },
+  {
+   "rel": "01:09",
+   "who": "student",
+   "kind": "net.fail",
+   "text": "net::ERR_CONNECTION_RESET",
+   "url": "https://213.21.241.28/api/v1/lessons/add87950-752e-43b0-85c3-7628bbc079d5/chat",
+   "method": "POST",
+   "ms": 22,
+   "status": null
+  },
+  {
+   "rel": "01:16",
+   "who": "student",
+   "kind": "http5xx",
+   "text": null,
+   "url": "https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/my",
+   "method": "GET",
+   "ms": null,
+   "status": 503
+  },
+  {
+   "rel": "02:21",
+   "who": "student",
+   "kind": "http5xx",
+   "text": null,
+   "url": "https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/responses",
+   "method": "POST",
+   "ms": null,
+   "status": 503
+  },
+  {
+   "rel": "02:31",
+   "who": "student",
+   "kind": "http5xx",
+   "text": null,
+   "url": "https://213.21.241.28/api/v1/activities/4a9524da-3163-446c-985d-ae46fab4584c/responses",
+   "method": "POST",
+   "ms": null,
+   "status": 503
+  },
+  {
+   "rel": "04:19",
+   "who": "teacher",
+   "kind": "http5xx",
+   "text": null,
+   "url": "https://213.21.241.28/api/v1/auth/refresh",
+   "method": "POST",
+   "ms": null,
+   "status": 503
+  },
+  {
+   "rel": "04:23",
+   "who": "teacher",
+   "kind": "http5xx",
+   "text": null,
+   "url": "https://213.21.241.28/api/v1/auth/refresh",
+   "method": "POST",
+   "ms": null,
+   "status": 503
+  }
+ ]
+}

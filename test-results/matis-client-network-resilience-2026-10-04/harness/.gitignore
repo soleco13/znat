@@ -1,0 +1,5 @@
+ctl/
+.secrets/
+voice-*.wav
+explore*.mjs
+dbg-*.mjs

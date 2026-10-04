@@ -1,0 +1,18 @@
+{
+ "rounds": {},
+ "eventCounts": {},
+ "telemetry": {},
+ "rest": {
+  "GET /api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc": {
+   "n": 1,
+   "medMs": 2462,
+   "maxMs": 2462
+  },
+  "POST /api/v1/auth/refresh": {
+   "n": 1,
+   "medMs": 9317,
+   "maxMs": 9317
+  }
+ },
+ "failures": []
+}

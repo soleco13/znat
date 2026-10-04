@@ -1,0 +1,209 @@
+{
+  "T0": 1791122833867,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "setup: teacher login",
+      "ok": true,
+      "detail": {
+        "ms": 503
+      },
+      "rel": "00:02",
+      "t": 1791122835715
+    },
+    {
+      "name": "setup: teacher join",
+      "ok": true,
+      "rel": "00:05",
+      "t": 1791122838528
+    },
+    {
+      "name": "setup: guest enter",
+      "ok": true,
+      "rel": "00:06",
+      "t": 1791122839685
+    },
+    {
+      "name": "setup: student join",
+      "ok": true,
+      "rel": "00:08",
+      "t": 1791122842355
+    },
+    {
+      "name": "setup: two-way audio+video",
+      "ok": true,
+      "rel": "00:14",
+      "t": 1791122848363
+    },
+    {
+      "name": "R: after real WS reconnect — stage and missed chat synced",
+      "ok": true,
+      "detail": {
+        "wsReconnectMs": 1857,
+        "stageSynced": true,
+        "stageMs": 1,
+        "missedChat": true,
+        "missedCopies": 1,
+        "recovery": {
+          "ok": true,
+          "mediaMs": 23203,
+          "pubs": [
+            "E2E Ученик:CAMERA+MICROPHONE",
+            "E2E Учитель:CAMERA+MICROPHONE"
+          ],
+          "participants": 2,
+          "dup": false,
+          "chat": true,
+          "chatDup": [
+            1,
+            1
+          ],
+          "ui": {
+            "teacher": {
+              "inRoom": true,
+              "overlayReconnect": false,
+              "pill": [],
+              "lkWarn": [],
+              "updated": false,
+              "errorScreen": null,
+              "spinners": 0,
+              "quality": [],
+              "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+            },
+            "student": {
+              "inRoom": true,
+              "overlayReconnect": false,
+              "pill": [],
+              "lkWarn": [],
+              "updated": false,
+              "errorScreen": null,
+              "spinners": 0,
+              "quality": [],
+              "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+            }
+          },
+          "camUi": {
+            "teacher": true,
+            "student": true
+          },
+          "micUi": {
+            "teacher": true,
+            "student": true
+          }
+        }
+      },
+      "rel": "00:25",
+      "t": 1791122859235
+    },
+    {
+      "name": "R: recovered on NORMAL",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "mediaMs": 23203,
+        "pubs": [
+          "E2E Ученик:CAMERA+MICROPHONE",
+          "E2E Учитель:CAMERA+MICROPHONE"
+        ],
+        "participants": 2,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": true
+        },
+        "micUi": {
+          "teacher": true,
+          "student": true
+        }
+      },
+      "rel": "00:55",
+      "t": 1791122888523
+    }
+  ],
+  "suite": "transitions",
+  "rounds": {
+    "R": {
+      "wsReconnectMs": 1857,
+      "stageSynced": true,
+      "stageMs": 1,
+      "missedChat": true,
+      "missedCopies": 1,
+      "recovery": {
+        "ok": true,
+        "mediaMs": 23203,
+        "pubs": [
+          "E2E Ученик:CAMERA+MICROPHONE",
+          "E2E Учитель:CAMERA+MICROPHONE"
+        ],
+        "participants": 2,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": true
+        },
+        "micUi": {
+          "teacher": true,
+          "student": true
+        }
+      }
+    }
+  }
+}

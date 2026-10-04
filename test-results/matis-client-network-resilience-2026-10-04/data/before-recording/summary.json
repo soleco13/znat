@@ -1,0 +1,790 @@
+{
+  "T0": 1791121355023,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "setup: teacher login",
+      "ok": true,
+      "detail": {
+        "ms": 503
+      },
+      "rel": "00:02",
+      "t": 1791121356940
+    },
+    {
+      "name": "setup: teacher join",
+      "ok": true,
+      "rel": "00:05",
+      "t": 1791121359709
+    },
+    {
+      "name": "setup: guest enter",
+      "ok": true,
+      "rel": "00:06",
+      "t": 1791121361092
+    },
+    {
+      "name": "setup: student join",
+      "ok": true,
+      "rel": "00:09",
+      "t": 1791121363761
+    },
+    {
+      "name": "setup: two-way audio+video",
+      "ok": true,
+      "rel": "00:15",
+      "t": 1791121369721
+    },
+    {
+      "name": "recording: egress joined + student sees recording badge",
+      "ok": true,
+      "detail": {
+        "egressJoinedMs": 4411,
+        "studentSeesBadge": true,
+        "row": "a60ed68b-786d-48fe-be11-38e632b27872|starting",
+        "phases": {
+          "NORMAL": {
+            "media": {
+              "ok": true,
+              "ms": 3026,
+              "audioT2S": true,
+              "audioS2T": true,
+              "videoT2S": true,
+              "videoS2T": true,
+              "inKbps": {
+                "student": "audio:79 video:335",
+                "teacher": "audio:90 video:239"
+              }
+            },
+            "chat": true,
+            "host": {
+              "rows": [
+                "znat-livekit-1|6.22%|80.63MiB / 3.828GiB",
+                "znat-app-1|0.49%|164.2MiB / 3.828GiB",
+                "e2e-teacher|49.26%|474.1MiB / 3.828GiB",
+                "e2e-student|34.17%|410.1MiB / 3.828GiB"
+              ],
+              "load": "1.85 1.72 2.00 3/925 2901148",
+              "_ms": 2540,
+              "_t": 1791121399659
+            }
+          },
+          "board": {
+            "ok": true,
+            "localDrawn": true,
+            "openMs": 1956,
+            "t2sMs": 1875,
+            "s2tOk": true,
+            "s2tMs": 778
+          },
+          "BAD_3G": {
+            "media": {
+              "ok": true,
+              "ms": 3041,
+              "audioT2S": true,
+              "audioS2T": true,
+              "videoT2S": true,
+              "videoS2T": true,
+              "inKbps": {
+                "student": "audio:84 video:145",
+                "teacher": "audio:66 video:24"
+              }
+            },
+            "chat": true,
+            "host": {
+              "rows": [
+                "znat-livekit-1|6.20%|79.49MiB / 3.828GiB",
+                "znat-app-1|0.75%|148.6MiB / 3.828GiB",
+                "e2e-teacher|45.50%|475.4MiB / 3.828GiB",
+                "e2e-student|28.77%|421.3MiB / 3.828GiB"
+              ],
+              "load": "3.79 2.56 2.29 8/916 2902032",
+              "_ms": 2532,
+              "_t": 1791121462758
+            }
+          },
+          "NORMAL-2": {
+            "media": {
+              "ok": true,
+              "ms": 3021,
+              "audioT2S": true,
+              "audioS2T": true,
+              "videoT2S": true,
+              "videoS2T": true,
+              "inKbps": {
+                "student": "audio:87 video:332",
+                "teacher": "audio:95 video:201"
+              }
+            },
+            "chat": true,
+            "host": {
+              "rows": [
+                "znat-livekit-1|6.04%|79.3MiB / 3.828GiB",
+                "znat-app-1|0.71%|149.1MiB / 3.828GiB",
+                "e2e-teacher|48.37%|493.8MiB / 3.828GiB",
+                "e2e-student|37.30%|451.9MiB / 3.828GiB"
+              ],
+              "load": "6.52 3.83 2.77 15/913 2903140",
+              "_ms": 2539,
+              "_t": 1791121553382
+            }
+          }
+        },
+        "outage": {
+          "sec": 15,
+          "base": "BAD_3G",
+          "pcReconnectMs": 4883,
+          "mediaMs": 16201,
+          "roomWs": true,
+          "roomWsMs": 0,
+          "missedChat": {
+            "delivered": true,
+            "copies": 1
+          },
+          "stageSynced": true,
+          "offlineMsg": {
+            "atTeacher": 1,
+            "atStudent": 1,
+            "errShown": false,
+            "draftKept": ""
+          },
+          "chatAfter": true,
+          "chatAfterDup": [
+            1,
+            1
+          ],
+          "participants": 2,
+          "dup": false,
+          "newPCs": 0,
+          "uiDuring": [
+            {
+              "s": 9,
+              "overlay": false,
+              "pill": [],
+              "lkWarn": [],
+              "q": [
+                "Плохая связь"
+              ]
+            },
+            {
+              "s": 14,
+              "overlay": false,
+              "pill": [],
+              "lkWarn": [],
+              "q": [
+                "Плохая связь"
+              ]
+            }
+          ],
+          "uiAfter": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [
+              "Плохая связь"
+            ],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "ok": true
+        },
+        "recovery": {
+          "ok": true,
+          "mediaMs": 3089,
+          "pubs": [
+            ":",
+            "E2E Ученик:CAMERA+MICROPHONE",
+            "E2E Учитель:CAMERA+MICROPHONE"
+          ],
+          "participants": 2,
+          "dup": false,
+          "chat": true,
+          "chatDup": [
+            1,
+            1
+          ],
+          "ui": {
+            "teacher": {
+              "inRoom": true,
+              "overlayReconnect": false,
+              "pill": [],
+              "lkWarn": [],
+              "updated": false,
+              "errorScreen": null,
+              "spinners": 0,
+              "quality": [],
+              "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+            },
+            "student": {
+              "inRoom": true,
+              "overlayReconnect": false,
+              "pill": [],
+              "lkWarn": [],
+              "updated": false,
+              "errorScreen": null,
+              "spinners": 0,
+              "quality": [],
+              "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+            }
+          },
+          "camUi": {
+            "teacher": true,
+            "student": true
+          },
+          "micUi": {
+            "teacher": true,
+            "student": true
+          }
+        },
+        "badgeAfterReconnect": true,
+        "final": "a60ed68b-786d-48fe-be11-38e632b27872|processing|",
+        "badgeGoneAtStudent": true
+      },
+      "rel": "00:22",
+      "t": 1791121377083
+    },
+    {
+      "name": "rec-outage: outage 15s recovered (media, WS, missed chat, stage, no dup)",
+      "ok": true,
+      "detail": {
+        "sec": 15,
+        "base": "BAD_3G",
+        "pcReconnectMs": 4883,
+        "mediaMs": 16201,
+        "roomWs": true,
+        "roomWsMs": 0,
+        "missedChat": {
+          "delivered": true,
+          "copies": 1
+        },
+        "stageSynced": true,
+        "offlineMsg": {
+          "atTeacher": 1,
+          "atStudent": 1,
+          "errShown": false,
+          "draftKept": ""
+        },
+        "chatAfter": true,
+        "chatAfterDup": [
+          1,
+          1
+        ],
+        "participants": 2,
+        "dup": false,
+        "newPCs": 0,
+        "uiDuring": [
+          {
+            "s": 9,
+            "overlay": false,
+            "pill": [],
+            "lkWarn": [],
+            "q": [
+              "Плохая связь"
+            ]
+          },
+          {
+            "s": 14,
+            "overlay": false,
+            "pill": [],
+            "lkWarn": [],
+            "q": [
+              "Плохая связь"
+            ]
+          }
+        ],
+        "uiAfter": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [
+            "Плохая связь"
+          ],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        },
+        "ok": true
+      },
+      "rel": "02:36",
+      "t": 1791121511097
+    },
+    {
+      "name": "rec: recovered on NORMAL",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "mediaMs": 3089,
+        "pubs": [
+          ":",
+          "E2E Ученик:CAMERA+MICROPHONE",
+          "E2E Учитель:CAMERA+MICROPHONE"
+        ],
+        "participants": 2,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": true
+        },
+        "micUi": {
+          "teacher": true,
+          "student": true
+        }
+      },
+      "rel": "02:46",
+      "t": 1791121520763
+    },
+    {
+      "name": "recording: stopped and finalized",
+      "ok": true,
+      "detail": {
+        "egressJoinedMs": 4411,
+        "studentSeesBadge": true,
+        "row": "a60ed68b-786d-48fe-be11-38e632b27872|starting",
+        "phases": {
+          "NORMAL": {
+            "media": {
+              "ok": true,
+              "ms": 3026,
+              "audioT2S": true,
+              "audioS2T": true,
+              "videoT2S": true,
+              "videoS2T": true,
+              "inKbps": {
+                "student": "audio:79 video:335",
+                "teacher": "audio:90 video:239"
+              }
+            },
+            "chat": true,
+            "host": {
+              "rows": [
+                "znat-livekit-1|6.22%|80.63MiB / 3.828GiB",
+                "znat-app-1|0.49%|164.2MiB / 3.828GiB",
+                "e2e-teacher|49.26%|474.1MiB / 3.828GiB",
+                "e2e-student|34.17%|410.1MiB / 3.828GiB"
+              ],
+              "load": "1.85 1.72 2.00 3/925 2901148",
+              "_ms": 2540,
+              "_t": 1791121399659
+            }
+          },
+          "board": {
+            "ok": true,
+            "localDrawn": true,
+            "openMs": 1956,
+            "t2sMs": 1875,
+            "s2tOk": true,
+            "s2tMs": 778
+          },
+          "BAD_3G": {
+            "media": {
+              "ok": true,
+              "ms": 3041,
+              "audioT2S": true,
+              "audioS2T": true,
+              "videoT2S": true,
+              "videoS2T": true,
+              "inKbps": {
+                "student": "audio:84 video:145",
+                "teacher": "audio:66 video:24"
+              }
+            },
+            "chat": true,
+            "host": {
+              "rows": [
+                "znat-livekit-1|6.20%|79.49MiB / 3.828GiB",
+                "znat-app-1|0.75%|148.6MiB / 3.828GiB",
+                "e2e-teacher|45.50%|475.4MiB / 3.828GiB",
+                "e2e-student|28.77%|421.3MiB / 3.828GiB"
+              ],
+              "load": "3.79 2.56 2.29 8/916 2902032",
+              "_ms": 2532,
+              "_t": 1791121462758
+            }
+          },
+          "NORMAL-2": {
+            "media": {
+              "ok": true,
+              "ms": 3021,
+              "audioT2S": true,
+              "audioS2T": true,
+              "videoT2S": true,
+              "videoS2T": true,
+              "inKbps": {
+                "student": "audio:87 video:332",
+                "teacher": "audio:95 video:201"
+              }
+            },
+            "chat": true,
+            "host": {
+              "rows": [
+                "znat-livekit-1|6.04%|79.3MiB / 3.828GiB",
+                "znat-app-1|0.71%|149.1MiB / 3.828GiB",
+                "e2e-teacher|48.37%|493.8MiB / 3.828GiB",
+                "e2e-student|37.30%|451.9MiB / 3.828GiB"
+              ],
+              "load": "6.52 3.83 2.77 15/913 2903140",
+              "_ms": 2539,
+              "_t": 1791121553382
+            }
+          }
+        },
+        "outage": {
+          "sec": 15,
+          "base": "BAD_3G",
+          "pcReconnectMs": 4883,
+          "mediaMs": 16201,
+          "roomWs": true,
+          "roomWsMs": 0,
+          "missedChat": {
+            "delivered": true,
+            "copies": 1
+          },
+          "stageSynced": true,
+          "offlineMsg": {
+            "atTeacher": 1,
+            "atStudent": 1,
+            "errShown": false,
+            "draftKept": ""
+          },
+          "chatAfter": true,
+          "chatAfterDup": [
+            1,
+            1
+          ],
+          "participants": 2,
+          "dup": false,
+          "newPCs": 0,
+          "uiDuring": [
+            {
+              "s": 9,
+              "overlay": false,
+              "pill": [],
+              "lkWarn": [],
+              "q": [
+                "Плохая связь"
+              ]
+            },
+            {
+              "s": 14,
+              "overlay": false,
+              "pill": [],
+              "lkWarn": [],
+              "q": [
+                "Плохая связь"
+              ]
+            }
+          ],
+          "uiAfter": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [
+              "Плохая связь"
+            ],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "ok": true
+        },
+        "recovery": {
+          "ok": true,
+          "mediaMs": 3089,
+          "pubs": [
+            ":",
+            "E2E Ученик:CAMERA+MICROPHONE",
+            "E2E Учитель:CAMERA+MICROPHONE"
+          ],
+          "participants": 2,
+          "dup": false,
+          "chat": true,
+          "chatDup": [
+            1,
+            1
+          ],
+          "ui": {
+            "teacher": {
+              "inRoom": true,
+              "overlayReconnect": false,
+              "pill": [],
+              "lkWarn": [],
+              "updated": false,
+              "errorScreen": null,
+              "spinners": 0,
+              "quality": [],
+              "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+            },
+            "student": {
+              "inRoom": true,
+              "overlayReconnect": false,
+              "pill": [],
+              "lkWarn": [],
+              "updated": false,
+              "errorScreen": null,
+              "spinners": 0,
+              "quality": [],
+              "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+            }
+          },
+          "camUi": {
+            "teacher": true,
+            "student": true
+          },
+          "micUi": {
+            "teacher": true,
+            "student": true
+          }
+        },
+        "badgeAfterReconnect": true,
+        "final": "a60ed68b-786d-48fe-be11-38e632b27872|processing|",
+        "badgeGoneAtStudent": true
+      },
+      "rel": "03:27",
+      "t": 1791121561895
+    }
+  ],
+  "suite": "recording",
+  "rounds": {
+    "recording": {
+      "egressJoinedMs": 4411,
+      "studentSeesBadge": true,
+      "row": "a60ed68b-786d-48fe-be11-38e632b27872|starting",
+      "phases": {
+        "NORMAL": {
+          "media": {
+            "ok": true,
+            "ms": 3026,
+            "audioT2S": true,
+            "audioS2T": true,
+            "videoT2S": true,
+            "videoS2T": true,
+            "inKbps": {
+              "student": "audio:79 video:335",
+              "teacher": "audio:90 video:239"
+            }
+          },
+          "chat": true,
+          "host": {
+            "rows": [
+              "znat-livekit-1|6.22%|80.63MiB / 3.828GiB",
+              "znat-app-1|0.49%|164.2MiB / 3.828GiB",
+              "e2e-teacher|49.26%|474.1MiB / 3.828GiB",
+              "e2e-student|34.17%|410.1MiB / 3.828GiB"
+            ],
+            "load": "1.85 1.72 2.00 3/925 2901148",
+            "_ms": 2540,
+            "_t": 1791121399659
+          }
+        },
+        "board": {
+          "ok": true,
+          "localDrawn": true,
+          "openMs": 1956,
+          "t2sMs": 1875,
+          "s2tOk": true,
+          "s2tMs": 778
+        },
+        "BAD_3G": {
+          "media": {
+            "ok": true,
+            "ms": 3041,
+            "audioT2S": true,
+            "audioS2T": true,
+            "videoT2S": true,
+            "videoS2T": true,
+            "inKbps": {
+              "student": "audio:84 video:145",
+              "teacher": "audio:66 video:24"
+            }
+          },
+          "chat": true,
+          "host": {
+            "rows": [
+              "znat-livekit-1|6.20%|79.49MiB / 3.828GiB",
+              "znat-app-1|0.75%|148.6MiB / 3.828GiB",
+              "e2e-teacher|45.50%|475.4MiB / 3.828GiB",
+              "e2e-student|28.77%|421.3MiB / 3.828GiB"
+            ],
+            "load": "3.79 2.56 2.29 8/916 2902032",
+            "_ms": 2532,
+            "_t": 1791121462758
+          }
+        },
+        "NORMAL-2": {
+          "media": {
+            "ok": true,
+            "ms": 3021,
+            "audioT2S": true,
+            "audioS2T": true,
+            "videoT2S": true,
+            "videoS2T": true,
+            "inKbps": {
+              "student": "audio:87 video:332",
+              "teacher": "audio:95 video:201"
+            }
+          },
+          "chat": true,
+          "host": {
+            "rows": [
+              "znat-livekit-1|6.04%|79.3MiB / 3.828GiB",
+              "znat-app-1|0.71%|149.1MiB / 3.828GiB",
+              "e2e-teacher|48.37%|493.8MiB / 3.828GiB",
+              "e2e-student|37.30%|451.9MiB / 3.828GiB"
+            ],
+            "load": "6.52 3.83 2.77 15/913 2903140",
+            "_ms": 2539,
+            "_t": 1791121553382
+          }
+        }
+      },
+      "outage": {
+        "sec": 15,
+        "base": "BAD_3G",
+        "pcReconnectMs": 4883,
+        "mediaMs": 16201,
+        "roomWs": true,
+        "roomWsMs": 0,
+        "missedChat": {
+          "delivered": true,
+          "copies": 1
+        },
+        "stageSynced": true,
+        "offlineMsg": {
+          "atTeacher": 1,
+          "atStudent": 1,
+          "errShown": false,
+          "draftKept": ""
+        },
+        "chatAfter": true,
+        "chatAfterDup": [
+          1,
+          1
+        ],
+        "participants": 2,
+        "dup": false,
+        "newPCs": 0,
+        "uiDuring": [
+          {
+            "s": 9,
+            "overlay": false,
+            "pill": [],
+            "lkWarn": [],
+            "q": [
+              "Плохая связь"
+            ]
+          },
+          {
+            "s": 14,
+            "overlay": false,
+            "pill": [],
+            "lkWarn": [],
+            "q": [
+              "Плохая связь"
+            ]
+          }
+        ],
+        "uiAfter": {
+          "inRoom": true,
+          "overlayReconnect": false,
+          "pill": [],
+          "lkWarn": [],
+          "updated": false,
+          "errorScreen": null,
+          "spinners": 0,
+          "quality": [
+            "Плохая связь"
+          ],
+          "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+        },
+        "ok": true
+      },
+      "recovery": {
+        "ok": true,
+        "mediaMs": 3089,
+        "pubs": [
+          ":",
+          "E2E Ученик:CAMERA+MICROPHONE",
+          "E2E Учитель:CAMERA+MICROPHONE"
+        ],
+        "participants": 2,
+        "dup": false,
+        "chat": true,
+        "chatDup": [
+          1,
+          1
+        ],
+        "ui": {
+          "teacher": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          },
+          "student": {
+            "inRoom": true,
+            "overlayReconnect": false,
+            "pill": [],
+            "lkWarn": [],
+            "updated": false,
+            "errorScreen": null,
+            "spinners": 0,
+            "quality": [],
+            "path": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"
+          }
+        },
+        "camUi": {
+          "teacher": true,
+          "student": true
+        },
+        "micUi": {
+          "teacher": true,
+          "student": true
+        }
+      },
+      "badgeAfterReconnect": true,
+      "final": "a60ed68b-786d-48fe-be11-38e632b27872|processing|",
+      "badgeGoneAtStudent": true
+    }
+  }
+}

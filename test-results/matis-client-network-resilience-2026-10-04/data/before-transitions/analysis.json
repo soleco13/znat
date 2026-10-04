@@ -1,0 +1,1732 @@
+{
+ "rounds": {
+  "-": {
+   "teacher": {
+    "n": 18,
+    "rttMs": {
+     "med": 45,
+     "p95": 56,
+     "max": 60
+    },
+    "jitterAudioMs": {
+     "med": 15,
+     "p95": 17
+    },
+    "jitterVideoMs": {
+     "med": 16,
+     "p95": 23
+    },
+    "lossAudioPct": {
+     "med": 0.9,
+     "p95": 1.7
+    },
+    "lossVideoPct": {
+     "med": 0.0,
+     "p95": 0
+    },
+    "inAudioKbps": {
+     "med": 86.0,
+     "min": 0
+    },
+    "inVideoKbps": {
+     "med": 205.5,
+     "min": 0
+    },
+    "outAudioKbps": 84.0,
+    "outVideoKbps": 152.0,
+    "outBwKbps": 1932.0,
+    "inFps": 20,
+    "inRes": [
+     "320x180",
+     "640x360"
+    ],
+    "framesDropped": 0,
+    "freezes": 8,
+    "concealedAudioPct": 0.0,
+    "outLayers": [
+     "h:640x360@20[bandwidth]",
+     "q:320x180@19",
+     "q:320x180@20",
+     "q:320x180@20[bandwidth]"
+    ],
+    "pair": [
+     "host/udp -> host/udp:58572"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     1,
+     23
+    ],
+    "listeners": [
+     0,
+     2109
+    ],
+    "nodes": [
+     8,
+     1956
+    ],
+    "uiQuality": [],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [
+      "00:11"
+     ],
+     "longestSec": 20
+    }
+   },
+   "student": {
+    "n": 18,
+    "rttMs": {
+     "med": 118.5,
+     "p95": 144,
+     "max": 152
+    },
+    "jitterAudioMs": {
+     "med": 13.0,
+     "p95": 17
+    },
+    "jitterVideoMs": {
+     "med": 14.0,
+     "p95": 18
+    },
+    "lossAudioPct": {
+     "med": 0.6,
+     "p95": 1.8
+    },
+    "lossVideoPct": {
+     "med": 0,
+     "p95": 0.9
+    },
+    "inAudioKbps": {
+     "med": 82.5,
+     "min": 0
+    },
+    "inVideoKbps": {
+     "med": 152.0,
+     "min": 0
+    },
+    "outAudioKbps": 88.0,
+    "outVideoKbps": 347.0,
+    "outBwKbps": 653.0,
+    "inFps": 20.0,
+    "inRes": [
+     "320x180"
+    ],
+    "framesDropped": 0,
+    "freezes": 3,
+    "concealedAudioPct": 0,
+    "outLayers": [
+     "h:640x360@0[bandwidth]",
+     "h:640x360@14",
+     "h:640x360@17",
+     "h:640x360@20",
+     "q:320x180@17[bandwidth]",
+     "q:320x180@18",
+     "q:320x180@20",
+     "q:320x180@20[bandwidth]"
+    ],
+    "pair": [
+     "host/udp -> host/udp:52349"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     1,
+     13
+    ],
+    "listeners": [
+     0,
+     720
+    ],
+    "nodes": [
+     8,
+     1230
+    ],
+    "uiQuality": [],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [
+      "00:11"
+     ],
+     "longestSec": 15
+    }
+   },
+   "livekit": {
+    "dupSamples": 0,
+    "maxParticipants": 2,
+    "states": [
+     "ACTIVE"
+    ]
+   }
+  },
+  "A/recovery": {
+   "teacher": {
+    "n": 29,
+    "rttMs": {
+     "med": 43,
+     "p95": 55,
+     "max": 56
+    },
+    "jitterAudioMs": {
+     "med": 14,
+     "p95": 18
+    },
+    "jitterVideoMs": {
+     "med": 24,
+     "p95": 179
+    },
+    "lossAudioPct": {
+     "med": 2.9,
+     "p95": 33.3
+    },
+    "lossVideoPct": {
+     "med": 1,
+     "p95": 35.3
+    },
+    "inAudioKbps": {
+     "med": 85,
+     "min": 59
+    },
+    "inVideoKbps": {
+     "med": 65,
+     "min": 16
+    },
+    "outAudioKbps": 85,
+    "outVideoKbps": 154,
+    "outBwKbps": 1932,
+    "inFps": 17.0,
+    "inRes": [
+     "320x180",
+     "640x360"
+    ],
+    "framesDropped": 0,
+    "freezes": 37,
+    "concealedAudioPct": 2,
+    "outLayers": [
+     "q:320x180@20"
+    ],
+    "pair": [
+     "host/udp -> host/udp:58572"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     20,
+     23
+    ],
+    "listeners": [
+     2724,
+     1272
+    ],
+    "nodes": [
+     2234,
+     1605
+    ],
+    "uiQuality": [
+     "Плохая связь"
+    ],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [],
+     "longestSec": 0
+    }
+   },
+   "student": {
+    "n": 29,
+    "rttMs": {
+     "med": 285,
+     "p95": 940,
+     "max": 940
+    },
+    "jitterAudioMs": {
+     "med": 16,
+     "p95": 18
+    },
+    "jitterVideoMs": {
+     "med": 17,
+     "p95": 25
+    },
+    "lossAudioPct": {
+     "med": 3.1,
+     "p95": 7
+    },
+    "lossVideoPct": {
+     "med": 3.3,
+     "p95": 7
+    },
+    "inAudioKbps": {
+     "med": 82,
+     "min": 76
+    },
+    "inVideoKbps": {
+     "med": 154,
+     "min": 146
+    },
+    "outAudioKbps": 90,
+    "outVideoKbps": 66,
+    "outBwKbps": 95,
+    "inFps": 20,
+    "inRes": [
+     "320x180"
+    ],
+    "framesDropped": 0,
+    "freezes": 56,
+    "concealedAudioPct": 0,
+    "outLayers": [
+     "h:640x360@0[bandwidth]",
+     "h:640x360@20",
+     "q:320x180@10[bandwidth]",
+     "q:320x180@11[bandwidth]",
+     "q:320x180@12[bandwidth]",
+     "q:320x180@14[bandwidth]",
+     "q:320x180@15[bandwidth]",
+     "q:320x180@17[bandwidth]"
+    ],
+    "pair": [
+     "host/udp -> host/udp:52349"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     14,
+     22
+    ],
+    "listeners": [
+     1400,
+     1194
+    ],
+    "nodes": [
+     1543,
+     1468
+    ],
+    "uiQuality": [
+     "Плохая связь"
+    ],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [],
+     "longestSec": 0
+    }
+   },
+   "livekit": {
+    "dupSamples": 0,
+    "maxParticipants": 2,
+    "states": [
+     "ACTIVE"
+    ]
+   }
+  },
+  "B/recovery": {
+   "teacher": {
+    "n": 28,
+    "rttMs": {
+     "med": 43.5,
+     "p95": 54,
+     "max": 57
+    },
+    "jitterAudioMs": {
+     "med": 8.0,
+     "p95": 10
+    },
+    "jitterVideoMs": {
+     "med": 9.0,
+     "p95": 20
+    },
+    "lossAudioPct": {
+     "med": 7.8,
+     "p95": 11.5
+    },
+    "lossVideoPct": {
+     "med": 0.0,
+     "p95": 1
+    },
+    "inAudioKbps": {
+     "med": 83.5,
+     "min": 77
+    },
+    "inVideoKbps": {
+     "med": 172.5,
+     "min": 45
+    },
+    "outAudioKbps": 85.0,
+    "outVideoKbps": 154.0,
+    "outBwKbps": 1932.0,
+    "inFps": 20.0,
+    "inRes": [
+     "320x180",
+     "640x360"
+    ],
+    "framesDropped": 0,
+    "freezes": 48,
+    "concealedAudioPct": 0.0,
+    "outLayers": [
+     "q:320x180@19",
+     "q:320x180@20"
+    ],
+    "pair": [
+     "host/udp -> host/udp:58572"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     33,
+     35
+    ],
+    "listeners": [
+     1958,
+     2141
+    ],
+    "nodes": [
+     1905,
+     2034
+    ],
+    "uiQuality": [
+     "Плохая связь"
+    ],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [],
+     "longestSec": 0
+    }
+   },
+   "student": {
+    "n": 28,
+    "rttMs": {
+     "med": 40.5,
+     "p95": 56,
+     "max": 59
+    },
+    "jitterAudioMs": {
+     "med": 8.0,
+     "p95": 10
+    },
+    "jitterVideoMs": {
+     "med": 8.0,
+     "p95": 10
+    },
+    "lossAudioPct": {
+     "med": 6.3,
+     "p95": 12.1
+    },
+    "lossVideoPct": {
+     "med": 6.3,
+     "p95": 12.1
+    },
+    "inAudioKbps": {
+     "med": 79.5,
+     "min": 56
+    },
+    "inVideoKbps": {
+     "med": 155.0,
+     "min": 151
+    },
+    "outAudioKbps": 90.0,
+    "outVideoKbps": 358.5,
+    "outBwKbps": 586.0,
+    "inFps": 20.0,
+    "inRes": [
+     "320x180"
+    ],
+    "framesDropped": 0,
+    "freezes": 43,
+    "concealedAudioPct": 0.0,
+    "outLayers": [
+     "h:640x360@20",
+     "q:320x180@20",
+     "q:320x180@20[bandwidth]"
+    ],
+    "pair": [
+     "host/udp -> host/udp:52349"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     19,
+     13
+    ],
+    "listeners": [
+     1814,
+     558
+    ],
+    "nodes": [
+     1768,
+     1192
+    ],
+    "uiQuality": [
+     "Плохая связь"
+    ],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [],
+     "longestSec": 0
+    }
+   },
+   "livekit": {
+    "dupSamples": 0,
+    "maxParticipants": 2,
+    "states": [
+     "ACTIVE"
+    ]
+   }
+  },
+  "C/recovery": {
+   "teacher": {
+    "n": 6,
+    "rttMs": {
+     "med": 41.5,
+     "p95": 52,
+     "max": 52
+    },
+    "jitterAudioMs": {
+     "med": 8.0,
+     "p95": 9
+    },
+    "jitterVideoMs": {
+     "med": 8.0,
+     "p95": 11
+    },
+    "lossAudioPct": {
+     "med": 0.0,
+     "p95": 2.9
+    },
+    "lossVideoPct": {
+     "med": 0.0,
+     "p95": 82.4
+    },
+    "inAudioKbps": {
+     "med": 88.0,
+     "min": 22
+    },
+    "inVideoKbps": {
+     "med": 153.0,
+     "min": 34
+    },
+    "outAudioKbps": 86.5,
+    "outVideoKbps": 154.5,
+    "outBwKbps": 1932.0,
+    "inFps": 20,
+    "inRes": [
+     "320x180",
+     "640x360"
+    ],
+    "framesDropped": 0,
+    "freezes": 3,
+    "concealedAudioPct": 0.0,
+    "outLayers": [
+     "q:320x180@20"
+    ],
+    "pair": [
+     "host/udp -> host/udp:58572"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     19,
+     14
+    ],
+    "listeners": [
+     2765,
+     824
+    ],
+    "nodes": [
+     2314,
+     1149
+    ],
+    "uiQuality": [
+     "Плохая связь"
+    ],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [],
+     "longestSec": 0
+    }
+   },
+   "student": {
+    "n": 6,
+    "rttMs": {
+     "med": 37.0,
+     "p95": 54,
+     "max": 54
+    },
+    "jitterAudioMs": {
+     "med": 6.0,
+     "p95": 10
+    },
+    "jitterVideoMs": {
+     "med": 7.0,
+     "p95": 13
+    },
+    "lossAudioPct": {
+     "med": 0.0,
+     "p95": 6.3
+    },
+    "lossVideoPct": {
+     "med": 0.0,
+     "p95": 40.6
+    },
+    "inAudioKbps": {
+     "med": 82.5,
+     "min": 24
+    },
+    "inVideoKbps": {
+     "med": 153.5,
+     "min": 43
+    },
+    "outAudioKbps": 90.5,
+    "outVideoKbps": 369.0,
+    "outBwKbps": 810.5,
+    "inFps": 20,
+    "inRes": [
+     "320x180"
+    ],
+    "framesDropped": 0,
+    "freezes": 0,
+    "concealedAudioPct": 0.5,
+    "outLayers": [
+     "h:640x360@11",
+     "h:640x360@18",
+     "h:640x360@20",
+     "q:320x180@11",
+     "q:320x180@19",
+     "q:320x180@20"
+    ],
+    "pair": [
+     "host/udp -> host/udp:52349"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     22,
+     15
+    ],
+    "listeners": [
+     1238,
+     675
+    ],
+    "nodes": [
+     1507,
+     990
+    ],
+    "uiQuality": [
+     "Плохая связь"
+    ],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [],
+     "longestSec": 0
+    }
+   },
+   "livekit": {
+    "dupSamples": 0,
+    "maxParticipants": 2,
+    "states": [
+     "ACTIVE"
+    ]
+   }
+  },
+  "D/recovery": {
+   "teacher": {
+    "n": 10,
+    "rttMs": {
+     "med": 42.0,
+     "p95": 53,
+     "max": 53
+    },
+    "jitterAudioMs": {
+     "med": 8.0,
+     "p95": 11
+    },
+    "jitterVideoMs": {
+     "med": 9.0,
+     "p95": 11
+    },
+    "lossAudioPct": {
+     "med": 0.0,
+     "p95": 0
+    },
+    "lossVideoPct": {
+     "med": 0.0,
+     "p95": 88.1
+    },
+    "inAudioKbps": {
+     "med": 88.0,
+     "min": 0
+    },
+    "inVideoKbps": {
+     "med": 139.5,
+     "min": 0
+    },
+    "outAudioKbps": 85.5,
+    "outVideoKbps": 157.0,
+    "outBwKbps": 1932.0,
+    "inFps": 20,
+    "inRes": [
+     "320x180",
+     "640x360"
+    ],
+    "framesDropped": 0,
+    "freezes": 0,
+    "concealedAudioPct": 0.0,
+    "outLayers": [
+     "q:320x180@20"
+    ],
+    "pair": [
+     "host/udp -> host/udp:58572"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     13,
+     15
+    ],
+    "listeners": [
+     1008,
+     1987
+    ],
+    "nodes": [
+     1163,
+     2031
+    ],
+    "uiQuality": [
+     "Плохая связь"
+    ],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [],
+     "longestSec": 0
+    }
+   },
+   "student": {
+    "n": 10,
+    "rttMs": {
+     "med": 46.5,
+     "p95": 62,
+     "max": 62
+    },
+    "jitterAudioMs": {
+     "med": 7.5,
+     "p95": 9
+    },
+    "jitterVideoMs": {
+     "med": 8.0,
+     "p95": 13
+    },
+    "lossAudioPct": {
+     "med": 0.0,
+     "p95": 0
+    },
+    "lossVideoPct": {
+     "med": 0.0,
+     "p95": 42.7
+    },
+    "inAudioKbps": {
+     "med": 80.5,
+     "min": 0
+    },
+    "inVideoKbps": {
+     "med": 154.0,
+     "min": 0
+    },
+    "outAudioKbps": 90.0,
+    "outVideoKbps": 355.0,
+    "outBwKbps": 819.0,
+    "inFps": 20,
+    "inRes": [
+     "320x180"
+    ],
+    "framesDropped": 0,
+    "freezes": 0,
+    "concealedAudioPct": 0.0,
+    "outLayers": [
+     "h:640x360@0[bandwidth]",
+     "h:640x360@13",
+     "h:640x360@15",
+     "h:640x360@20",
+     "q:320x180@10[bandwidth]",
+     "q:320x180@15",
+     "q:320x180@18",
+     "q:320x180@20"
+    ],
+    "pair": [
+     "host/udp -> host/udp:50649",
+     "host/udp -> host/udp:52349"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     18,
+     15
+    ],
+    "listeners": [
+     903,
+     1166
+    ],
+    "nodes": [
+     1005,
+     1617
+    ],
+    "uiQuality": [
+     "Плохая связь"
+    ],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [],
+     "longestSec": 10
+    }
+   },
+   "livekit": {
+    "dupSamples": 0,
+    "maxParticipants": 2,
+    "states": [
+     "ACTIVE"
+    ]
+   }
+  },
+  "E/recovery": {
+   "teacher": {
+    "n": 16,
+    "rttMs": {
+     "med": 47.0,
+     "p95": 56,
+     "max": 76
+    },
+    "jitterAudioMs": {
+     "med": 9.0,
+     "p95": 11
+    },
+    "jitterVideoMs": {
+     "med": 8.0,
+     "p95": 10
+    },
+    "lossAudioPct": {
+     "med": 0.0,
+     "p95": 0
+    },
+    "lossVideoPct": {
+     "med": 0.0,
+     "p95": 0
+    },
+    "inAudioKbps": {
+     "med": 0.0,
+     "min": 0
+    },
+    "inVideoKbps": {
+     "med": 0.0,
+     "min": 0
+    },
+    "outAudioKbps": 85.0,
+    "outVideoKbps": 158.5,
+    "outBwKbps": 2249.5,
+    "inFps": 20.0,
+    "inRes": [
+     "640x360"
+    ],
+    "framesDropped": 0,
+    "freezes": 0,
+    "concealedAudioPct": 0,
+    "outLayers": [
+     "f:1280x720@20",
+     "h:640x360@20",
+     "q:320x180@20"
+    ],
+    "pair": [
+     "host/udp -> host/udp:58572"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     14,
+     18
+    ],
+    "listeners": [
+     1219,
+     948
+    ],
+    "nodes": [
+     1964,
+     1750
+    ],
+    "uiQuality": [
+     "Плохая связь"
+    ],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [
+      "08:26"
+     ],
+     "longestSec": 35
+    }
+   },
+   "student": {
+    "n": 16,
+    "rttMs": {
+     "med": 44.0,
+     "p95": 52,
+     "max": 52
+    },
+    "jitterAudioMs": {
+     "med": 8.0,
+     "p95": 8
+    },
+    "jitterVideoMs": {
+     "med": 5.0,
+     "p95": 8
+    },
+    "lossAudioPct": {
+     "med": 0.0,
+     "p95": 0
+    },
+    "lossVideoPct": {
+     "med": 0.0,
+     "p95": 0
+    },
+    "inAudioKbps": {
+     "med": 0.0,
+     "min": 0
+    },
+    "inVideoKbps": {
+     "med": 0.0,
+     "min": 0
+    },
+    "outAudioKbps": 88.0,
+    "outVideoKbps": 41.5,
+    "outBwKbps": 732.0,
+    "inFps": 20.0,
+    "inRes": [
+     "320x180"
+    ],
+    "framesDropped": 0,
+    "freezes": 0,
+    "concealedAudioPct": 100,
+    "outLayers": [
+     "h:640x360@0[bandwidth]",
+     "h:640x360@20",
+     "q:320x180@10[bandwidth]",
+     "q:320x180@13[bandwidth]",
+     "q:320x180@14[bandwidth]",
+     "q:320x180@15[bandwidth]",
+     "q:320x180@17[bandwidth]",
+     "q:320x180@20"
+    ],
+    "pair": [
+     "host/udp -> host/udp:50649",
+     "host/udp -> host/udp:50963"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 2,
+    "maxPcs": 2,
+    "heapMB": [
+     13,
+     14
+    ],
+    "listeners": [
+     1865,
+     1186
+    ],
+    "nodes": [
+     2209,
+     1752
+    ],
+    "uiQuality": [],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [
+      "08:11"
+     ],
+     "longestSec": 50
+    }
+   },
+   "livekit": {
+    "dupSamples": 0,
+    "maxParticipants": 2,
+    "states": [
+     "ACTIVE"
+    ]
+   }
+  },
+  "F/recovery": {
+   "teacher": {
+    "n": 24,
+    "rttMs": {
+     "med": 36.0,
+     "p95": 54,
+     "max": 57
+    },
+    "jitterAudioMs": {
+     "med": 9,
+     "p95": 10
+    },
+    "jitterVideoMs": {
+     "med": 9,
+     "p95": 10
+    },
+    "lossAudioPct": {
+     "med": 0,
+     "p95": 0
+    },
+    "lossVideoPct": {
+     "med": 0,
+     "p95": 0
+    },
+    "inAudioKbps": {
+     "med": 0.0,
+     "min": 0
+    },
+    "inVideoKbps": {
+     "med": 0.0,
+     "min": 0
+    },
+    "outAudioKbps": 85.0,
+    "outVideoKbps": 139.0,
+    "outBwKbps": 2567.0,
+    "inFps": 20,
+    "inRes": [
+     "640x360"
+    ],
+    "framesDropped": 0,
+    "freezes": 0,
+    "concealedAudioPct": 0.0,
+    "outLayers": [
+     "f:1280x720@20",
+     "f:1280x720@21",
+     "h:640x360@20",
+     "q:320x180@20"
+    ],
+    "pair": [
+     "host/udp -> host/udp:58572"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     17,
+     20
+    ],
+    "listeners": [
+     1527,
+     1020
+    ],
+    "nodes": [
+     2276,
+     1705
+    ],
+    "uiQuality": [
+     "Плохая связь"
+    ],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [
+      "09:46"
+     ],
+     "longestSec": 70
+    }
+   },
+   "student": {
+    "n": 24,
+    "rttMs": {
+     "med": 42.5,
+     "p95": 54,
+     "max": 54
+    },
+    "jitterAudioMs": {
+     "med": 10.0,
+     "p95": 10
+    },
+    "jitterVideoMs": {
+     "med": 11.0,
+     "p95": 11
+    },
+    "lossAudioPct": {
+     "med": 0,
+     "p95": 0
+    },
+    "lossVideoPct": {
+     "med": 0,
+     "p95": 0
+    },
+    "inAudioKbps": {
+     "med": 0.0,
+     "min": 0
+    },
+    "inVideoKbps": {
+     "med": 0.0,
+     "min": 0
+    },
+    "outAudioKbps": 88.0,
+    "outVideoKbps": 30.0,
+    "outBwKbps": 641.5,
+    "inFps": 20,
+    "inRes": [
+     "320x180",
+     "640x360"
+    ],
+    "framesDropped": 0,
+    "freezes": 0,
+    "concealedAudioPct": 100,
+    "outLayers": [
+     "h:640x360@11[bandwidth]",
+     "h:640x360@20",
+     "h:640x360@21",
+     "q:320x180@10[bandwidth]",
+     "q:320x180@12[bandwidth]",
+     "q:320x180@13[bandwidth]",
+     "q:320x180@14[bandwidth]",
+     "q:320x180@15[bandwidth]"
+    ],
+    "pair": [
+     "host/udp -> host/udp:50963",
+     "host/udp -> host/udp:53348"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 2,
+    "maxPcs": 3,
+    "heapMB": [
+     16,
+     14
+    ],
+    "listeners": [
+     1821,
+     1953
+    ],
+    "nodes": [
+     2297,
+     2159
+    ],
+    "uiQuality": [],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [
+      "09:31"
+     ],
+     "longestSec": 85
+    }
+   },
+   "livekit": {
+    "dupSamples": 0,
+    "maxParticipants": 2,
+    "states": [
+     "ACTIVE"
+    ]
+   }
+  },
+  "G/recovery": {
+   "teacher": {
+    "n": 19,
+    "rttMs": {
+     "med": 44,
+     "p95": 50,
+     "max": 52
+    },
+    "jitterAudioMs": {
+     "med": 7,
+     "p95": 10
+    },
+    "jitterVideoMs": {
+     "med": 8,
+     "p95": 9
+    },
+    "lossAudioPct": {
+     "med": 0,
+     "p95": 0
+    },
+    "lossVideoPct": {
+     "med": 0,
+     "p95": 0
+    },
+    "inAudioKbps": {
+     "med": 91,
+     "min": 76
+    },
+    "inVideoKbps": {
+     "med": 242,
+     "min": 221
+    },
+    "outAudioKbps": 86,
+    "outVideoKbps": 478,
+    "outBwKbps": 2567,
+    "inFps": 20,
+    "inRes": [
+     "640x360"
+    ],
+    "framesDropped": 0,
+    "freezes": 1,
+    "concealedAudioPct": 0,
+    "outLayers": [
+     "h:640x360@20",
+     "h:640x360@21",
+     "q:320x180@20"
+    ],
+    "pair": [
+     "host/udp -> host/udp:58572"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     24,
+     24
+    ],
+    "listeners": [
+     1365,
+     1389
+    ],
+    "nodes": [
+     2103,
+     2173
+    ],
+    "uiQuality": [],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [],
+     "longestSec": 0
+    }
+   },
+   "student": {
+    "n": 19,
+    "rttMs": {
+     "med": 44,
+     "p95": 51,
+     "max": 56
+    },
+    "jitterAudioMs": {
+     "med": 8,
+     "p95": 10
+    },
+    "jitterVideoMs": {
+     "med": 8,
+     "p95": 10
+    },
+    "lossAudioPct": {
+     "med": 0,
+     "p95": 0
+    },
+    "lossVideoPct": {
+     "med": 0,
+     "p95": 0
+    },
+    "inAudioKbps": {
+     "med": 86,
+     "min": 77
+    },
+    "inVideoKbps": {
+     "med": 333,
+     "min": 105
+    },
+    "outAudioKbps": 91,
+    "outVideoKbps": 371,
+    "outBwKbps": 678,
+    "inFps": 20,
+    "inRes": [
+     "320x180",
+     "640x360"
+    ],
+    "framesDropped": 0,
+    "freezes": 1,
+    "concealedAudioPct": 0,
+    "outLayers": [
+     "h:640x360@20",
+     "h:640x360@21",
+     "q:320x180@20",
+     "q:320x180@21"
+    ],
+    "pair": [
+     "host/udp -> host/udp:53348",
+     "host/udp -> host/udp:53805"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 2,
+    "maxPcs": 3,
+    "heapMB": [
+     16,
+     16
+    ],
+    "listeners": [
+     839,
+     1538
+    ],
+    "nodes": [
+     1884,
+     2534
+    ],
+    "uiQuality": [],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [],
+     "longestSec": 0
+    }
+   },
+   "livekit": {
+    "dupSamples": 0,
+    "maxParticipants": 2,
+    "states": [
+     "ACTIVE"
+    ]
+   }
+  },
+  "W/recovery": {
+   "teacher": {
+    "n": 20,
+    "rttMs": {
+     "med": 41.5,
+     "p95": 53,
+     "max": 54
+    },
+    "jitterAudioMs": {
+     "med": 16.0,
+     "p95": 28
+    },
+    "jitterVideoMs": {
+     "med": 97.0,
+     "p95": 158
+    },
+    "lossAudioPct": {
+     "med": 27.6,
+     "p95": 44.5
+    },
+    "lossVideoPct": {
+     "med": 8.6,
+     "p95": 83.6
+    },
+    "inAudioKbps": {
+     "med": 56.0,
+     "min": 0
+    },
+    "inVideoKbps": {
+     "med": 23.0,
+     "min": 0
+    },
+    "outAudioKbps": 86.0,
+    "outVideoKbps": 153.5,
+    "outBwKbps": 2567.0,
+    "inFps": 18.0,
+    "inRes": [
+     "320x180",
+     "640x360"
+    ],
+    "framesDropped": 0,
+    "freezes": 14,
+    "concealedAudioPct": 14.0,
+    "outLayers": [
+     "h:640x360@20",
+     "h:640x360@4",
+     "q:320x180@20"
+    ],
+    "pair": [
+     "host/udp -> host/udp:58572"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     16,
+     16
+    ],
+    "listeners": [
+     1628,
+     690
+    ],
+    "nodes": [
+     2183,
+     1339
+    ],
+    "uiQuality": [
+     "Плохая связь"
+    ],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [],
+     "longestSec": 0
+    }
+   },
+   "student": {
+    "n": 20,
+    "rttMs": {
+     "med": 750.5,
+     "p95": 855,
+     "max": 972
+    },
+    "jitterAudioMs": {
+     "med": 17.0,
+     "p95": 24
+    },
+    "jitterVideoMs": {
+     "med": 29.5,
+     "p95": 44
+    },
+    "lossAudioPct": {
+     "med": 4.2,
+     "p95": 19.9
+    },
+    "lossVideoPct": {
+     "med": 4.5,
+     "p95": 18.5
+    },
+    "inAudioKbps": {
+     "med": 76.0,
+     "min": 0
+    },
+    "inVideoKbps": {
+     "med": 111.5,
+     "min": 0
+    },
+    "outAudioKbps": 90.0,
+    "outVideoKbps": 54.0,
+    "outBwKbps": 30.0,
+    "inFps": 10.0,
+    "inRes": [
+     "320x180",
+     "640x360"
+    ],
+    "framesDropped": 0,
+    "freezes": 26,
+    "concealedAudioPct": 3.0,
+    "outLayers": [
+     "h:640x360@1[bandwidth]",
+     "h:640x360@20",
+     "q:320x180@10[bandwidth]",
+     "q:320x180@11[bandwidth]",
+     "q:320x180@12[bandwidth]",
+     "q:320x180@13[bandwidth]",
+     "q:320x180@15[bandwidth]",
+     "q:320x180@20"
+    ],
+    "pair": [
+     "host/udp -> host/udp:53805",
+     "host/udp -> host/udp:54934"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 2,
+    "maxPcs": 3,
+    "heapMB": [
+     16,
+     18
+    ],
+    "listeners": [
+     1733,
+     2196
+    ],
+    "nodes": [
+     2543,
+     2519
+    ],
+    "uiQuality": [
+     "Плохая связь"
+    ],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [],
+     "longestSec": 0
+    }
+   },
+   "livekit": {
+    "dupSamples": 0,
+    "maxParticipants": 2,
+    "states": [
+     "ACTIVE"
+    ]
+   }
+  },
+  "H/recovery": {
+   "teacher": {
+    "n": 2,
+    "rttMs": {
+     "med": 39.5,
+     "p95": 45,
+     "max": 45
+    },
+    "jitterAudioMs": {
+     "med": 8.0,
+     "p95": 8
+    },
+    "jitterVideoMs": {
+     "med": 50.5,
+     "p95": 90
+    },
+    "lossAudioPct": {
+     "med": 4.2,
+     "p95": 8.5
+    },
+    "lossVideoPct": {
+     "med": 1.8,
+     "p95": 3.6
+    },
+    "inAudioKbps": {
+     "med": 91.5,
+     "min": 89
+    },
+    "inVideoKbps": {
+     "med": 33.0,
+     "min": 29
+    },
+    "outAudioKbps": 86.5,
+    "outVideoKbps": 152.0,
+    "outBwKbps": 2567.0,
+    "inFps": 11.0,
+    "inRes": [
+     "320x180"
+    ],
+    "framesDropped": 0,
+    "freezes": 1,
+    "concealedAudioPct": 1.0,
+    "outLayers": [
+     "q:320x180@20"
+    ],
+    "pair": [
+     "host/udp -> host/udp:58572"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 1,
+    "heapMB": [
+     19,
+     23
+    ],
+    "listeners": [
+     839,
+     1111
+    ],
+    "nodes": [
+     1348,
+     1371
+    ],
+    "uiQuality": [
+     "Плохая связь"
+    ],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [],
+     "longestSec": 0
+    }
+   },
+   "student": {
+    "n": 2,
+    "rttMs": {
+     "med": 47.0,
+     "p95": 48,
+     "max": 48
+    },
+    "jitterAudioMs": {
+     "med": 7.0,
+     "p95": 8
+    },
+    "jitterVideoMs": {
+     "med": 8.5,
+     "p95": 9
+    },
+    "lossAudioPct": {
+     "med": 0.8,
+     "p95": 1.7
+    },
+    "lossVideoPct": {
+     "med": 0.0,
+     "p95": 0
+    },
+    "inAudioKbps": {
+     "med": 88.0,
+     "min": 86
+    },
+    "inVideoKbps": {
+     "med": 182.5,
+     "min": 172
+    },
+    "outAudioKbps": 90.0,
+    "outVideoKbps": 37.0,
+    "outBwKbps": 45.5,
+    "inFps": 11.0,
+    "inRes": [
+     "320x180"
+    ],
+    "framesDropped": 0,
+    "freezes": 0,
+    "concealedAudioPct": 0.0,
+    "outLayers": [
+     "q:320x180@14[bandwidth]",
+     "q:320x180@7[bandwidth]"
+    ],
+    "pair": [
+     "host/udp -> host/udp:54934"
+    ],
+    "maxRoomWs": 1,
+    "maxLkWs": 1,
+    "maxPcs": 3,
+    "heapMB": [
+     15,
+     15
+    ],
+    "listeners": [
+     2395,
+     2670
+    ],
+    "nodes": [
+     2540,
+     2563
+    ],
+    "uiQuality": [
+     "Плохая связь"
+    ],
+    "uiOverlay": 0,
+    "uiPill": 0,
+    "uiLkWarn": 0,
+    "silentMediaLoss": {
+     "episodes": [],
+     "longestSec": 0
+    }
+   },
+   "livekit": {
+    "dupSamples": 0,
+    "maxParticipants": 2,
+    "states": [
+     "ACTIVE"
+    ]
+   }
+  }
+ },
+ "eventCounts": {
+  "teacher:ws.created": 8,
+  "student:ws.created": 18,
+  "teacher:ws.closed": 6,
+  "student:ws.closed": 16,
+  "student:console.error": 5
+ },
+ "telemetry": {
+  "teacher:livekit_connection_started": 1,
+  "teacher:livekit_connected": 1,
+  "teacher:whiteboard_sync_started": 6,
+  "teacher:whiteboard_synced": 6,
+  "student:livekit_connection_started": 1,
+  "student:whiteboard_sync_started": 6,
+  "student:whiteboard_synced": 6,
+  "student:livekit_connected": 1,
+  "student:livekit_reconnecting": 12,
+  "student:livekit_reconnected": 5,
+  "student:whiteboard_sync_failed": 1
+ },
+ "rest": {
+  "POST /api/v1/auth/refresh": {
+   "n": 3,
+   "medMs": 180,
+   "maxMs": 483
+  },
+  "POST /api/v1/auth/login": {
+   "n": 1,
+   "medMs": 180,
+   "maxMs": 180
+  },
+  "GET /api/v1/lessons": {
+   "n": 1,
+   "medMs": 46,
+   "maxMs": 46
+  },
+  "GET /api/v1/lessons/presence-counts?ids=:id": {
+   "n": 1,
+   "medMs": 51,
+   "maxMs": 51
+  },
+  "GET /api/v1/lessons/:id/recordings": {
+   "n": 1,
+   "medMs": 71,
+   "maxMs": 71
+  },
+  "GET /api/v1/lessons/:id/materials": {
+   "n": 1,
+   "medMs": 77,
+   "maxMs": 77
+  },
+  "GET /api/v1/guest/session": {
+   "n": 1,
+   "medMs": 41,
+   "maxMs": 41
+  },
+  "GET /api/v1/lessons/:id": {
+   "n": 1,
+   "medMs": 55,
+   "maxMs": 55
+  },
+  "POST /api/v1/lessons/:id/join": {
+   "n": 2,
+   "medMs": 54.5,
+   "maxMs": 64
+  },
+  "GET /api/v1/lessons/:id/decks": {
+   "n": 1,
+   "medMs": 191,
+   "maxMs": 191
+  },
+  "GET /api/v1/lessons/:id/activities": {
+   "n": 2,
+   "medMs": 158.0,
+   "maxMs": 190
+  },
+  "GET /api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc": {
+   "n": 1,
+   "medMs": 104,
+   "maxMs": 104
+  },
+  "GET /api/v1/lessons/:id/chat": {
+   "n": 2,
+   "medMs": 132.5,
+   "maxMs": 213
+  },
+  "POST /api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc/enter": {
+   "n": 1,
+   "medMs": 50,
+   "maxMs": 50
+  },
+  "POST /api/v1/lessons/:id/chat": {
+   "n": 46,
+   "medMs": 68.0,
+   "maxMs": 29040
+  }
+ },
+ "failures": []
+}

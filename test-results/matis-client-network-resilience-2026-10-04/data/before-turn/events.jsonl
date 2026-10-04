@@ -1,0 +1,486 @@
+{"kind":"env","text":"Chrome/150.0.7871.46","t":1791120301253,"rel":"00:00"}
+{"who":"livekit","kind":"lk.participants","t":1791120301619,"rel":"00:00"}
+{"kind":"NET","text":"both -> NORMAL","extra":{"teacher":{"up":"delay 20ms 5ms distribution normal rate 5000kbit limit 534","down":"delay 20ms 5ms distribution normal rate 10000kbit limit 1068"},"student":{"up":"delay 20ms 5ms distribution normal rate 5000kbit limit 534","down":"delay 20ms 5ms distribution normal rate 10000kbit limit 1068"}},"t":1791120301620,"rel":"00:00"}
+{"who":"teacher","kind":"http4xx","status":401,"url":"https://213.21.241.28/api/v1/auth/refresh","method":"POST","t":1791120302191,"rel":"00:01"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 401 ()","url":"https://213.21.241.28/api/v1/auth/refresh","t":1791120302191,"rel":"00:01"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":401,"ms":127,"bytes":250,"quiet":true,"t":1791120302268,"rel":"00:01"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/login","status":200,"ms":180,"bytes":702,"quiet":true,"t":1791120302577,"rel":"00:01"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons","status":200,"ms":53,"bytes":486,"quiet":true,"t":1791120302763,"rel":"00:02"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/presence-counts?ids=:id","status":200,"ms":74,"bytes":121,"quiet":true,"t":1791120302847,"rel":"00:02"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":81,"bytes":467,"quiet":true,"t":1791120302855,"rel":"00:02"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":100,"bytes":106,"quiet":true,"t":1791120302874,"rel":"00:02"}
+{"kind":"CHECK_OK","text":"setup: teacher login","extra":{"ms":508},"t":1791120302904,"rel":"00:02"}
+{"who":"teacher","kind":"http4xx","status":401,"url":"https://213.21.241.28/api/v1/guest/session","method":"GET","t":1791120303152,"rel":"00:02"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 401 ()","url":"https://213.21.241.28/api/v1/guest/session","t":1791120303153,"rel":"00:02"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/guest/session","status":401,"ms":52,"bytes":187,"quiet":true,"t":1791120303154,"rel":"00:02"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":200,"ms":61,"bytes":708,"quiet":true,"t":1791120303230,"rel":"00:02"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id","status":200,"ms":7,"bytes":482,"quiet":true,"t":1791120303591,"rel":"00:02"}
+{"kind":"CHECK_OK","text":"setup: teacher join","t":1791120305666,"rel":"00:05"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/join","status":200,"ms":71,"bytes":1042,"quiet":true,"t":1791120305732,"rel":"00:05"}
+{"who":"teacher","kind":"ws.created","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&token=…&cs=8fbf7b1d-531e-4db5-a205-191a450ef279&attempt=0","t":1791120305810,"rel":"00:05"}
+{"who":"teacher","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAEShg4fiwgAAAAAAAAD7Vtdb9y4FYUDtCgMDNDN0z5eoM_0kCL1QQbzYI_X6WKTwNgk7mtpiTNmM_qAxLHH-yf2B_UP9Gctq","t":1791120305919,"rel":"00:05"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/decks","status":200,"ms":186,"bytes":82,"quiet":true,"t":1791120305954,"rel":"00:05"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/activities","status":200,"ms":197,"bytes":75,"quiet":true,"t":1791120305967,"rel":"00:05"}
+{"who":"teacher","kind":"ws.open","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&token=…&cs=8fbf7b1d-531e-4db5-a205-191a450ef279&attempt=0","status":101,"t":1791120305971,"rel":"00:05"}
+{"who":"teacher","kind":"room.msg","type":"presence","quiet":true,"t":1791120305978,"rel":"00:05"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/chat","status":200,"ms":49,"bytes":76,"quiet":true,"t":1791120306027,"rel":"00:05"}
+{"who":"teacher","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAEShg4fiwgAAAAAAAAD7Vtdb9y4FYUDtCgMDNDN0z5eoM_0kCL1QQbzYI_X6WKTwNgk7mtpiTNmM_qAxLHH-yf2B_UP9Gctq","status":101,"t":1791120306114,"rel":"00:05"}
+{"who":"student","kind":"http4xx","status":401,"url":"https://213.21.241.28/api/v1/auth/refresh","method":"POST","t":1791120306140,"rel":"00:05"}
+{"who":"student","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 401 ()","url":"https://213.21.241.28/api/v1/auth/refresh","t":1791120306141,"rel":"00:05"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc","status":200,"ms":131,"bytes":363,"quiet":true,"t":1791120306143,"rel":"00:05"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":401,"ms":321,"bytes":152,"quiet":true,"t":1791120306337,"rel":"00:05"}
+{"who":"teacher","kind":"pc.created","text":"pc0=","t":1791120305848,"quiet":false,"rel":"00:05"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120306177,"quiet":true,"rel":"00:05"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120306190,"quiet":true,"rel":"00:05"}
+{"who":"teacher","kind":"pc.gather","text":"pc0=gathering","t":1791120306194,"quiet":true,"rel":"00:05"}
+{"who":"teacher","kind":"pc.ice","text":"pc0=checking","t":1791120306214,"quiet":false,"rel":"00:05"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120306218,"quiet":true,"rel":"00:05"}
+{"who":"teacher","kind":"pc.conn","text":"pc0=connecting","t":1791120306219,"quiet":false,"rel":"00:05"}
+{"who":"teacher","kind":"pc.ice","text":"pc0=connected","t":1791120306241,"quiet":false,"rel":"00:05"}
+{"who":"teacher","kind":"pc.gather","text":"pc0=complete","t":1791120306242,"quiet":true,"rel":"00:05"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120306296,"quiet":true,"rel":"00:05"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120306365,"quiet":true,"rel":"00:05"}
+{"who":"teacher","kind":"pc.conn","text":"pc0=connected","t":1791120306374,"quiet":false,"rel":"00:05"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120306456,"quiet":true,"rel":"00:05"}
+{"who":"livekit","kind":"lk.participants","text":"E2E Учитель[ACTIVE](MICROPHONE,CAMERA)","t":1791120306669,"rel":"00:06"}
+{"kind":"CHECK_OK","text":"setup: guest enter","t":1791120306912,"rel":"00:06"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc/enter","status":201,"ms":4,"bytes":608,"quiet":true,"t":1791120306920,"rel":"00:06"}
+{"who":"teacher","kind":"room.msg","type":"participant_joined","quiet":true,"t":1791120309659,"rel":"00:08"}
+{"kind":"CHECK_OK","text":"setup: student join","t":1791120309721,"rel":"00:09"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/join","status":200,"ms":36,"bytes":1056,"quiet":true,"t":1791120309731,"rel":"00:09"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&cs=b9448a58-b80b-4cc8-8cdb-8d7ebfb4bda9&attempt=0","t":1791120309796,"rel":"00:09"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESjA4fiwgAAAAAAAAD7VvbbuS4EYUHSLAw0MDuPO1jAXkM6GaJ1I2DfnC7PbsDzA4amUuQPEWWqDYzrQsktt3en9gP2h_IZ","t":1791120309846,"rel":"00:09"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/activities","status":200,"ms":52,"bytes":333,"quiet":true,"t":1791120309849,"rel":"00:09"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&cs=b9448a58-b80b-4cc8-8cdb-8d7ebfb4bda9&attempt=0","status":101,"t":1791120309900,"rel":"00:09"}
+{"who":"student","kind":"room.msg","type":"presence","quiet":true,"t":1791120309902,"rel":"00:09"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/chat","status":200,"ms":37,"bytes":76,"quiet":true,"t":1791120309974,"rel":"00:09"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESjA4fiwgAAAAAAAAD7VvbbuS4EYUHSLAw0MDuPO1jAXkM6GaJ1I2DfnC7PbsDzA4amUuQPEWWqDYzrQsktt3en9gP2h_IZ","status":101,"t":1791120310072,"rel":"00:09"}
+{"who":"teacher","kind":"tele","type":"livekit_connection_started","ts":"2026-10-04T13:25:05.796Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":null,"identity":null,"online":true,"attempt":0},"quiet":true,"t":1791120310816,"rel":"00:10"}
+{"who":"teacher","kind":"tele","type":"livekit_connected","ts":"2026-10-04T13:25:06.405Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"a6d459cf-c148-44bc-8019-faa210d98b94","online":true,"durationMs":609},"quiet":true,"t":1791120310816,"rel":"00:10"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120310820,"quiet":true,"rel":"00:10"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120310913,"quiet":true,"rel":"00:10"}
+{"who":"student","kind":"pc.created","text":"pc0=","t":1791120309803,"quiet":false,"rel":"00:09"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120310105,"quiet":true,"rel":"00:09"}
+{"who":"student","kind":"pc.gather","text":"pc0=gathering","t":1791120310112,"quiet":true,"rel":"00:09"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120310133,"quiet":true,"rel":"00:09"}
+{"who":"student","kind":"pc.ice","text":"pc0=checking","t":1791120310146,"quiet":false,"rel":"00:09"}
+{"who":"student","kind":"pc.conn","text":"pc0=connecting","t":1791120310154,"quiet":false,"rel":"00:09"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120310161,"quiet":true,"rel":"00:09"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120310225,"quiet":true,"rel":"00:09"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120310251,"quiet":true,"rel":"00:09"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120310336,"quiet":true,"rel":"00:09"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120310359,"quiet":true,"rel":"00:09"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120310441,"quiet":true,"rel":"00:09"}
+{"who":"student","kind":"pc.gather","text":"pc0=complete","t":1791120310555,"quiet":true,"rel":"00:09"}
+{"who":"student","kind":"pc.ice","text":"pc0=connected","t":1791120310556,"quiet":false,"rel":"00:09"}
+{"who":"student","kind":"pc.conn","text":"pc0=connected","t":1791120310603,"quiet":false,"rel":"00:09"}
+{"who":"livekit","kind":"lk.participants","text":"E2E Ученик[ACTIVE](MICROPHONE) ; E2E Учитель[ACTIVE](MICROPHONE,CAMERA)","t":1791120311607,"rel":"00:10"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/materials","status":200,"ms":55,"bytes":125,"quiet":true,"t":1791120313772,"rel":"00:13"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/materials?source=platform","status":200,"ms":88,"bytes":512,"quiet":true,"t":1791120313807,"rel":"00:13"}
+{"who":"student","kind":"tele","type":"livekit_connection_started","ts":"2026-10-04T13:25:09.795Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":null,"identity":null,"online":true,"attempt":0},"quiet":true,"t":1791120314798,"rel":"00:14"}
+{"who":"student","kind":"tele","type":"livekit_connected","ts":"2026-10-04T13:25:10.668Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"c8a4f03b-1b53-43a5-a448-fc212b00795b","online":true,"durationMs":873},"quiet":true,"t":1791120314798,"rel":"00:14"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/materials","status":200,"ms":38,"bytes":103,"quiet":true,"t":1791120315027,"rel":"00:14"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/materials?source=platform","status":200,"ms":40,"bytes":508,"quiet":true,"t":1791120315030,"rel":"00:14"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120312701,"quiet":true,"rel":"00:12"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120312794,"quiet":true,"rel":"00:12"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120312362,"quiet":true,"rel":"00:11"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120312494,"quiet":true,"rel":"00:11"}
+{"who":"livekit","kind":"lk.participants","text":"E2E Ученик[ACTIVE](MICROPHONE,CAMERA) ; E2E Учитель[ACTIVE](MICROPHONE,CAMERA)","t":1791120316634,"rel":"00:15"}
+{"who":"student","kind":"room.msg","type":"activity_started","quiet":true,"t":1791120317133,"rel":"00:16"}
+{"who":"teacher","kind":"room.msg","type":"activity_started","quiet":true,"t":1791120317139,"rel":"00:16"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/activities","status":201,"ms":280,"bytes":632,"quiet":true,"t":1791120317388,"rel":"00:16"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":95,"bytes":407,"quiet":true,"t":1791120317579,"rel":"00:16"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my-annotations","status":200,"ms":132,"bytes":160,"quiet":true,"t":1791120317586,"rel":"00:16"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/activities/:id/my","status":200,"ms":176,"bytes":28825,"quiet":true,"t":1791120317629,"rel":"00:16"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":66,"bytes":253,"quiet":true,"t":1791120317949,"rel":"00:17"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":66,"bytes":222,"quiet":true,"t":1791120317951,"rel":"00:17"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":66,"bytes":238,"quiet":true,"t":1791120317952,"rel":"00:17"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/assets/:id/url","status":200,"ms":68,"bytes":223,"quiet":true,"t":1791120317954,"rel":"00:17"}
+{"who":"student","kind":"rest","method":"GET","url":"/files/:id%2F:id.png?exp=1791123917&sig=u2ahaUb8iYGr_MUgcKNJcrzOMiB3hEqFSI0DNWZFxGc","status":200,"ms":100,"bytes":52576,"quiet":true,"t":1791120318109,"rel":"00:17"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":57,"bytes":404,"quiet":true,"t":1791120321534,"rel":"00:20"}
+{"kind":"CHECK_OK","text":"setup: two-way audio+video","t":1791120324298,"rel":"00:23"}
+{"kind":"MARK","text":"=== TURN/TCP: block=udp (student) ===","t":1791120324473,"rel":"00:23"}
+{"kind":"NET","text":"student block=udp","extra":{"student":"-N E2EBLK\n-A OUTPUT -j E2EBLK\n-A E2EBLK -d 213.21.241.28/32 -p udp -j DROP","_ms":9,"_t":1791120324490},"t":1791120324525,"rel":"00:23"}
+{"who":"student","kind":"ws.closed","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESjA4fiwgAAAAAAAAD7VvbbuS4EYUHSLAw0MDuPO1jAXkM6GaJ1I2DfnC7PbsDzA4amUuQPEWWqDYzrQsktt3en9gP2h_IZ","frames":53,"t":1791120324654,"rel":"00:23"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":73,"bytes":384,"quiet":true,"t":1791120325550,"rel":"00:24"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120324833,"quiet":true,"rel":"00:24"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120324900,"quiet":true,"rel":"00:24"}
+{"who":"teacher","kind":"room.msg","type":"participant_updated","quiet":true,"t":1791120328624,"rel":"00:27"}
+{"who":"livekit","kind":"lk.participants","text":"E2E Учитель[ACTIVE](MICROPHONE,CAMERA)","t":1791120328653,"rel":"00:27"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/guest/session","status":200,"ms":55,"bytes":364,"quiet":true,"t":1791120329356,"rel":"00:28"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":91,"bytes":384,"quiet":true,"t":1791120329568,"rel":"00:28"}
+{"who":"teacher","kind":"room.msg","type":"participant_updated","quiet":true,"t":1791120329863,"rel":"00:29"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/join","status":200,"ms":50,"bytes":1039,"quiet":true,"t":1791120329871,"rel":"00:29"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&cs=5529cb56-fc87-42fe-9734-f624510b564e&attempt=0","t":1791120329939,"rel":"00:29"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESiw4fiwgAAAAAAAAD7VvLbuQ2FoUbmEFgoICkV1leYNa0eEXqxUYt7HI7DyQNz7jbvR1ZYpU5XXpAYrnK-Yl8UH4gnzWQq","t":1791120330019,"rel":"00:29"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/activities","status":200,"ms":84,"bytes":360,"quiet":true,"t":1791120330024,"rel":"00:29"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&cs=5529cb56-fc87-42fe-9734-f624510b564e&attempt=0","status":101,"t":1791120330060,"rel":"00:29"}
+{"who":"student","kind":"room.msg","type":"presence","quiet":true,"t":1791120330073,"rel":"00:29"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/chat","status":200,"ms":47,"bytes":102,"quiet":true,"t":1791120330118,"rel":"00:29"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESiw4fiwgAAAAAAAAD7VvLbuQ2FoUbmEFgoICkV1leYNa0eEXqxUYt7HI7DyQNz7jbvR1ZYpU5XXpAYrnK-Yl8UH4gnzWQq","status":101,"t":1791120330218,"rel":"00:29"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120331070,"quiet":true,"rel":"00:30"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120331163,"quiet":true,"rel":"00:30"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120331249,"quiet":true,"rel":"00:30"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120331346,"quiet":true,"rel":"00:30"}
+{"who":"student","kind":"pc.created","text":"pc0=","t":1791120329974,"quiet":false,"rel":"00:29"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120330254,"quiet":true,"rel":"00:29"}
+{"who":"student","kind":"pc.gather","text":"pc0=gathering","t":1791120330256,"quiet":true,"rel":"00:29"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120330262,"quiet":true,"rel":"00:29"}
+{"who":"student","kind":"pc.ice","text":"pc0=checking","t":1791120330268,"quiet":false,"rel":"00:29"}
+{"who":"student","kind":"pc.conn","text":"pc0=connecting","t":1791120330278,"quiet":false,"rel":"00:29"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120330282,"quiet":true,"rel":"00:29"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120330359,"quiet":true,"rel":"00:29"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120330430,"quiet":true,"rel":"00:29"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120330542,"quiet":true,"rel":"00:29"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120330576,"quiet":true,"rel":"00:29"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120330650,"quiet":true,"rel":"00:29"}
+{"who":"student","kind":"pc.ice","text":"pc0=connected","t":1791120330760,"quiet":false,"rel":"00:30"}
+{"who":"student","kind":"pc.gather","text":"pc0=complete","t":1791120330760,"quiet":true,"rel":"00:30"}
+{"who":"student","kind":"pc.conn","text":"pc0=connected","t":1791120330810,"quiet":false,"rel":"00:30"}
+{"who":"livekit","kind":"lk.participants","text":"E2E Ученик[ACTIVE](CAMERA,MICROPHONE) ; E2E Учитель[ACTIVE](MICROPHONE,CAMERA)","t":1791120331606,"rel":"00:30"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":79,"bytes":384,"quiet":true,"t":1791120333561,"rel":"00:32"}
+{"who":"student","kind":"tele","type":"livekit_connection_started","ts":"2026-10-04T13:25:29.933Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":null,"identity":null,"online":true,"attempt":0},"quiet":true,"t":1791120334936,"rel":"00:34"}
+{"who":"student","kind":"tele","type":"livekit_connected","ts":"2026-10-04T13:25:30.856Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"c8a4f03b-1b53-43a5-a448-fc212b00795b","online":true,"durationMs":923},"quiet":true,"t":1791120334936,"rel":"00:34"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":68,"bytes":384,"quiet":true,"t":1791120337553,"rel":"00:36"}
+{"kind":"MARK","text":"turn-udp: student network OFF 15s (base NORMAL)","t":1791120339376,"rel":"00:38"}
+{"kind":"NET","text":"student CUT (network OFF)","t":1791120339478,"rel":"00:38"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":65,"bytes":465,"quiet":true,"t":1791120341542,"rel":"00:40"}
+{"who":"teacher","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120343894,"rel":"00:43"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/chat","status":201,"ms":42,"bytes":342,"quiet":true,"t":1791120343926,"rel":"00:43"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":61,"bytes":389,"quiet":true,"t":1791120345539,"rel":"00:44"}
+{"who":"student","kind":"pc.ice","text":"pc0=disconnected","t":1791120346137,"quiet":false,"rel":"00:45"}
+{"who":"student","kind":"pc.conn","text":"pc0=disconnected","t":1791120346137,"quiet":false,"rel":"00:45"}
+{"who":"teacher","kind":"room.msg","type":"stage_changed","quiet":true,"t":1791120348165,"rel":"00:47"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":55,"bytes":385,"quiet":true,"t":1791120349533,"rel":"00:48"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":65,"bytes":386,"quiet":true,"t":1791120353542,"rel":"00:52"}
+{"who":"student","kind":"console.warn","text":"ping timeout triggered. last pong received at: Sun, 04 Oct 2026 13:25:39 GMT Object","t":1791120354362,"rel":"00:53"}
+{"who":"student","kind":"console.warn","text":"signal disconnected Object","t":1791120354613,"rel":"00:53"}
+{"who":"student","kind":"console.warn","text":"detected connection state mismatch Object","t":1791120354863,"rel":"00:54"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESQB-LCAAAAAAAAAPjEuRgFGIz0jMy0jOQEExgymJkEmISYLRgdGD04g9wjPcKDS2KMM1zLAlyKwEABa6n3iwAAAA%3D","t":1791120354919,"rel":"00:54"}
+{"kind":"NET","text":"student network ON","t":1791120355709,"rel":"00:55"}
+{"kind":"MARK","text":"turn-udp: network ON","t":1791120355710,"rel":"00:55"}
+{"who":"teacher","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120355982,"rel":"00:55"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/chat","status":201,"ms":7910,"bytes":306,"quiet":true,"t":1791120355998,"rel":"00:55"}
+{"who":"student","kind":"console.warn","text":"peerconnection failed disconnected Object","t":1791120356077,"rel":"00:55"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESQB-LCAAAAAAAAAPjEuRgFGIz0jMy0jOQEExgymJkEmISYLRgdGD04g9wjPcKDS2KMM1zLAlyKwEABa6n3iwAAAA%3D","status":101,"t":1791120356105,"rel":"00:55"}
+{"who":"student","kind":"console.warn","text":"triggering ICE restart Object","t":1791120356111,"rel":"00:55"}
+{"who":"student","kind":"ws.closed","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESiw4fiwgAAAAAAAAD7VvLbuQ2FoUbmEFgoICkV1leYNa0eEXqxUYt7HI7DyQNz7jbvR1ZYpU5XXpAYrnK-Yl8UH4gnzWQq","frames":51,"t":1791120356234,"rel":"00:55"}
+{"who":"student","kind":"console.warn","text":"already attempting reconnect, returning early Object","t":1791120356380,"rel":"00:55"}
+{"who":"student","kind":"pc.conn","text":"pc0=failed","t":1791120356075,"quiet":false,"rel":"00:55"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120356151,"quiet":true,"rel":"00:55"}
+{"who":"student","kind":"pc.gather","text":"pc0=gathering","t":1791120356153,"quiet":true,"rel":"00:55"}
+{"who":"student","kind":"pc.conn","text":"pc0=disconnected","t":1791120356155,"quiet":false,"rel":"00:55"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120356224,"quiet":true,"rel":"00:55"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":61,"bytes":386,"quiet":true,"t":1791120357539,"rel":"00:56"}
+{"who":"student","kind":"tele","type":"livekit_reconnecting","ts":"2026-10-04T13:25:54.914Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"c8a4f03b-1b53-43a5-a448-fc212b00795b","online":true,"kind":"signal"},"quiet":true,"t":1791120359918,"rel":"00:59"}
+{"who":"student","kind":"tele","type":"livekit_reconnecting","ts":"2026-10-04T13:25:56.085Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"c8a4f03b-1b53-43a5-a448-fc212b00795b","online":true,"kind":"media"},"quiet":true,"t":1791120359919,"rel":"00:59"}
+{"who":"student","kind":"tele","type":"livekit_reconnected","ts":"2026-10-04T13:25:58.153Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"c8a4f03b-1b53-43a5-a448-fc212b00795b","online":true,"durationMs":3239},"quiet":true,"t":1791120359919,"rel":"00:59"}
+{"who":"student","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120360290,"rel":"00:59"}
+{"who":"student","kind":"room.msg","type":"stage_changed","quiet":true,"t":1791120360337,"rel":"00:59"}
+{"who":"student","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120360410,"rel":"00:59"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/collab?cs=5529cb56-fc87-42fe-9734-f624510b564e","t":1791120360847,"rel":"01:00"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/collab?cs=5529cb56-fc87-42fe-9734-f624510b564e","status":101,"t":1791120361017,"rel":"01:00"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":65,"bytes":407,"quiet":true,"t":1791120361543,"rel":"01:00"}
+{"who":"student","kind":"pc.ice","text":"pc0=connected","t":1791120356619,"quiet":false,"rel":"00:55"}
+{"who":"student","kind":"pc.gather","text":"pc0=complete","t":1791120356619,"quiet":true,"rel":"00:55"}
+{"who":"student","kind":"pc.conn","text":"pc0=connected","t":1791120356619,"quiet":false,"rel":"00:55"}
+{"who":"student","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120364673,"rel":"01:04"}
+{"who":"teacher","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120364693,"rel":"01:04"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/chat","status":201,"ms":43,"bytes":429,"quiet":true,"t":1791120364703,"rel":"01:04"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":71,"bytes":385,"quiet":true,"t":1791120365548,"rel":"01:04"}
+{"who":"student","kind":"tele","type":"whiteboard_sync_started","ts":"2026-10-04T13:26:00.816Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5"},"quiet":true,"t":1791120365832,"rel":"01:05"}
+{"who":"student","kind":"tele","type":"whiteboard_synced","ts":"2026-10-04T13:26:01.091Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","durationMs":31,"connects":2},"quiet":true,"t":1791120365832,"rel":"01:05"}
+{"who":"teacher","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120367831,"rel":"01:07"}
+{"who":"student","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120367849,"rel":"01:07"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/chat","status":201,"ms":77,"bytes":370,"quiet":true,"t":1791120367893,"rel":"01:07"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":110,"bytes":405,"quiet":true,"t":1791120369589,"rel":"01:08"}
+{"kind":"CHECK_OK","text":"turn-udp: outage 15s recovered (media, WS, missed chat, stage, no dup)","extra":{"sec":15,"base":"NORMAL","pcReconnectMs":1017,"mediaMs":4032,"roomWs":true,"roomWsMs":1,"missedChat":{"delivered":true,"copies":1},"stageSynced":true,"offlineMsg":{"atTeacher":1,"atStudent":1,"errShown":false,"draftKept":""},"chatAfter":true,"chatAfterDup":[1,1],"participants":2,"dup":false,"newPCs":0,"uiDuring":[{"s":9,"overlay":false,"pill":[],"lkWarn":[],"q":[]},{"s":14,"overlay":false,"pill":[],"lkWarn":[],"q":[]}],"uiAfter":{"inRoom":true,"overlayReconnect":false,"pill":[],"lkWarn":[],"updated":false,"errorScreen":null,"spinners":0,"quality":[],"path":"/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"},"ok":true},"t":1791120369598,"rel":"01:08"}
+{"who":"student","kind":"room.msg","type":"stage_changed","quiet":true,"t":1791120369628,"rel":"01:08"}
+{"who":"teacher","kind":"room.msg","type":"stage_changed","quiet":true,"t":1791120369634,"rel":"01:08"}
+{"kind":"CHECK_OK","text":"turn udp: media works, path=prflx/tcp -> host/tcp:7881","extra":{"mode":"udp","mediaOk":true,"joinToAudioMs":8843,"path":"prflx/tcp -> host/tcp:7881","outage15":{"sec":15,"base":"NORMAL","pcReconnectMs":1017,"mediaMs":4032,"roomWs":true,"roomWsMs":1,"missedChat":{"delivered":true,"copies":1},"stageSynced":true,"offlineMsg":{"atTeacher":1,"atStudent":1,"errShown":false,"draftKept":""},"chatAfter":true,"chatAfterDup":[1,1],"participants":2,"dup":false,"newPCs":0,"uiDuring":[{"s":9,"overlay":false,"pill":[],"lkWarn":[],"q":[]},{"s":14,"overlay":false,"pill":[],"lkWarn":[],"q":[]}],"uiAfter":{"inRoom":true,"overlayReconnect":false,"pill":[],"lkWarn":[],"updated":false,"errorScreen":null,"spinners":0,"quality":[],"path":"/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"},"ok":true},"pathAfter":"prflx/tcp -> host/tcp:7881","mediaAfter":{"ok":true,"ms":3012,"audioT2S":true,"audioS2T":true,"videoT2S":true,"videoS2T":true,"inKbps":{"student":"audio:87 video:149","teacher":"audio:94 video:201"}}},"t":1791120372808,"rel":"01:12"}
+{"kind":"NET","text":"student block=none","extra":{"student":"no-block","_ms":7,"_t":1791120372849},"t":1791120372859,"rel":"01:12"}
+{"who":"student","kind":"ws.closed","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESQB-LCAAAAAAAAAPjEuRgFGIz0jMy0jOQEExgymJkEmISYLRgdGD04g9wjPcKDS2KMM1zLAlyKwEABa6n3iwAAAA%3D","frames":50,"t":1791120372948,"rel":"01:12"}
+{"who":"teacher","kind":"room.msg","type":"participant_updated","quiet":true,"t":1791120373050,"rel":"01:12"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/guest/session","status":200,"ms":60,"bytes":317,"quiet":true,"t":1791120373180,"rel":"01:12"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":61,"bytes":385,"quiet":true,"t":1791120373540,"rel":"01:12"}
+{"who":"teacher","kind":"room.msg","type":"participant_updated","quiet":true,"t":1791120373836,"rel":"01:13"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/join","status":200,"ms":73,"bytes":1021,"quiet":true,"t":1791120373847,"rel":"01:13"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&cs=2fcafbed-16c0-469d-9cc5-fe1f16a16cdb&attempt=0","t":1791120373883,"rel":"01:13"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAEShw4fiwgAAAAAAAAD7Vtdb-O4FUUGaFEEMNCdp328QJ8Z8YrUFwd-SJxMu8Vu4O3MpK9VJNphx_qARMfO_In9Qf0D_VmFZ","t":1791120374046,"rel":"01:13"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/activities","status":200,"ms":194,"bytes":361,"quiet":true,"t":1791120374078,"rel":"01:13"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&cs=2fcafbed-16c0-469d-9cc5-fe1f16a16cdb&attempt=0","status":101,"t":1791120374152,"rel":"01:13"}
+{"who":"student","kind":"room.msg","type":"presence","quiet":true,"t":1791120374345,"rel":"01:13"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAEShw4fiwgAAAAAAAAD7Vtdb-O4FUUGaFEEMNCdp328QJ8Z8YrUFwd-SJxMu8Vu4O3MpK9VJNphx_qARMfO_In9Qf0D_VmFZ","status":101,"t":1791120374375,"rel":"01:13"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/chat","status":200,"ms":107,"bytes":492,"quiet":true,"t":1791120374479,"rel":"01:13"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/collab?cs=2fcafbed-16c0-469d-9cc5-fe1f16a16cdb","t":1791120374686,"rel":"01:14"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/collab?cs=2fcafbed-16c0-469d-9cc5-fe1f16a16cdb","status":101,"t":1791120374872,"rel":"01:14"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120373166,"quiet":true,"rel":"01:12"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120373245,"quiet":true,"rel":"01:12"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120375050,"quiet":true,"rel":"01:14"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120375150,"quiet":true,"rel":"01:14"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120375909,"quiet":true,"rel":"01:15"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120375990,"quiet":true,"rel":"01:15"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":58,"bytes":385,"quiet":true,"t":1791120377536,"rel":"01:16"}
+{"who":"student","kind":"tele","type":"livekit_connection_started","ts":"2026-10-04T13:26:13.875Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":null,"identity":null,"online":true,"attempt":0},"quiet":true,"t":1791120378956,"rel":"01:18"}
+{"who":"student","kind":"tele","type":"whiteboard_sync_started","ts":"2026-10-04T13:26:14.675Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5"},"quiet":true,"t":1791120378957,"rel":"01:18"}
+{"who":"student","kind":"tele","type":"livekit_connected","ts":"2026-10-04T13:26:14.719Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"c8a4f03b-1b53-43a5-a448-fc212b00795b","online":true,"durationMs":843},"quiet":true,"t":1791120378957,"rel":"01:18"}
+{"who":"student","kind":"tele","type":"whiteboard_synced","ts":"2026-10-04T13:26:14.954Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","durationMs":8,"connects":2},"quiet":true,"t":1791120378957,"rel":"01:18"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":73,"bytes":384,"quiet":true,"t":1791120381551,"rel":"01:20"}
+{"who":"student","kind":"pc.created","text":"pc0=","t":1791120373903,"quiet":false,"rel":"01:13"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120374482,"quiet":true,"rel":"01:13"}
+{"who":"student","kind":"pc.gather","text":"pc0=gathering","t":1791120374496,"quiet":true,"rel":"01:13"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120374529,"quiet":true,"rel":"01:13"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120374540,"quiet":true,"rel":"01:13"}
+{"who":"student","kind":"pc.ice","text":"pc0=checking","t":1791120374550,"quiet":false,"rel":"01:13"}
+{"who":"student","kind":"pc.conn","text":"pc0=connecting","t":1791120374565,"quiet":false,"rel":"01:13"}
+{"who":"student","kind":"pc.ice","text":"pc0=connected","t":1791120374639,"quiet":false,"rel":"01:13"}
+{"who":"student","kind":"pc.gather","text":"pc0=complete","t":1791120374662,"quiet":true,"rel":"01:14"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120374664,"quiet":true,"rel":"01:14"}
+{"who":"student","kind":"pc.conn","text":"pc0=connected","t":1791120374709,"quiet":false,"rel":"01:14"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120374826,"quiet":true,"rel":"01:14"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120375026,"quiet":true,"rel":"01:14"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120375298,"quiet":true,"rel":"01:14"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120375415,"quiet":true,"rel":"01:14"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120375501,"quiet":true,"rel":"01:14"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120375589,"quiet":true,"rel":"01:14"}
+{"kind":"MARK","text":"=== TURN/TCP: block=udp_tcp7881 (student) ===","t":1791120383295,"rel":"01:22"}
+{"kind":"NET","text":"student block=udp_tcp7881","extra":{"student":"-N E2EBLK\n-A OUTPUT -j E2EBLK\n-A E2EBLK -d 213.21.241.28/32 -p udp -j DROP\n-A E2EBLK -d 213.21.241.28/32 -p tcp -m tcp --dport 7881 -j DROP","_ms":13,"_t":1791120383391},"t":1791120383397,"rel":"01:22"}
+{"who":"student","kind":"ws.closed","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAEShw4fiwgAAAAAAAAD7Vtdb-O4FUUGaFEEMNCdp328QJ8Z8YrUFwd-SJxMu8Vu4O3MpK9VJNphx_qARMfO_In9Qf0D_VmFZ","frames":47,"t":1791120383466,"rel":"01:22"}
+{"who":"teacher","kind":"room.msg","type":"participant_updated","quiet":true,"t":1791120383587,"rel":"01:22"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/guest/session","status":200,"ms":132,"bytes":334,"quiet":true,"t":1791120383829,"rel":"01:23"}
+{"who":"teacher","kind":"room.msg","type":"participant_updated","quiet":true,"t":1791120384281,"rel":"01:23"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/join","status":200,"ms":70,"bytes":1065,"quiet":true,"t":1791120384301,"rel":"01:23"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&cs=3a8b1cbf-eefa-40d5-862b-2875b28baff8&attempt=0","t":1791120384365,"rel":"01:23"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESig4fiwgAAAAAAAAD7Vtdbxy3FYUMtCgWWKDxUx4v0GfukkPOF4190JcTI44h1LbS9KnUDHfFer4ww5VW_hP5QfkD-VkFZ","t":1791120384639,"rel":"01:23"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/activities","status":200,"ms":288,"bytes":356,"quiet":true,"t":1791120384653,"rel":"01:23"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&cs=3a8b1cbf-eefa-40d5-862b-2875b28baff8&attempt=0","status":101,"t":1791120384669,"rel":"01:24"}
+{"who":"student","kind":"room.msg","type":"presence","quiet":true,"t":1791120384704,"rel":"01:24"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESig4fiwgAAAAAAAAD7Vtdbxy3FYUMtCgWWKDxUx4v0GfukkPOF4190JcTI44h1LbS9KnUDHfFer4ww5VW_hP5QfkD-VkFZ","status":101,"t":1791120384868,"rel":"01:24"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/chat","status":200,"ms":165,"bytes":477,"quiet":true,"t":1791120384869,"rel":"01:24"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/collab?cs=3a8b1cbf-eefa-40d5-862b-2875b28baff8","t":1791120385129,"rel":"01:24"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/collab?cs=3a8b1cbf-eefa-40d5-862b-2875b28baff8","status":101,"t":1791120385310,"rel":"01:24"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":72,"bytes":408,"quiet":true,"t":1791120385551,"rel":"01:24"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120383735,"quiet":true,"rel":"01:23"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120383852,"quiet":true,"rel":"01:23"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120385731,"quiet":true,"rel":"01:25"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120385801,"quiet":true,"rel":"01:25"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120386225,"quiet":true,"rel":"01:25"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120386335,"quiet":true,"rel":"01:25"}
+{"who":"student","kind":"tele","type":"livekit_connection_started","ts":"2026-10-04T13:26:24.370Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":null,"identity":null,"online":true,"attempt":0},"quiet":true,"t":1791120389374,"rel":"01:28"}
+{"who":"student","kind":"tele","type":"whiteboard_sync_started","ts":"2026-10-04T13:26:25.122Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5"},"quiet":true,"t":1791120389374,"rel":"01:28"}
+{"who":"student","kind":"tele","type":"whiteboard_synced","ts":"2026-10-04T13:26:25.370Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","durationMs":8,"connects":2},"quiet":true,"t":1791120389375,"rel":"01:28"}
+{"who":"student","kind":"tele","type":"livekit_connected","ts":"2026-10-04T13:26:25.600Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"c8a4f03b-1b53-43a5-a448-fc212b00795b","online":true,"durationMs":1230},"quiet":true,"t":1791120389375,"rel":"01:28"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":58,"bytes":465,"quiet":true,"t":1791120389535,"rel":"01:28"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":71,"bytes":383,"quiet":true,"t":1791120393550,"rel":"01:32"}
+{"kind":"MARK","text":"turn-udp_tcp7881: student network OFF 15s (base NORMAL)","t":1791120394639,"rel":"01:33"}
+{"kind":"NET","text":"student CUT (network OFF)","t":1791120394743,"rel":"01:34"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":63,"bytes":403,"quiet":true,"t":1791120397541,"rel":"01:36"}
+{"who":"teacher","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120399197,"rel":"01:38"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/chat","status":201,"ms":52,"bytes":363,"quiet":true,"t":1791120399213,"rel":"01:38"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":94,"bytes":384,"quiet":true,"t":1791120401571,"rel":"01:40"}
+{"who":"student","kind":"pc.ice","text":"pc0=disconnected","t":1791120399965,"quiet":false,"rel":"01:39"}
+{"who":"student","kind":"pc.conn","text":"pc0=disconnected","t":1791120399965,"quiet":false,"rel":"01:39"}
+{"who":"teacher","kind":"room.msg","type":"stage_changed","quiet":true,"t":1791120403513,"rel":"01:42"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":71,"bytes":385,"quiet":true,"t":1791120405548,"rel":"01:44"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":57,"bytes":409,"quiet":true,"t":1791120409550,"rel":"01:48"}
+{"who":"student","kind":"console.warn","text":"ping timeout triggered. last pong received at: Sun, 04 Oct 2026 13:26:34 GMT Object","t":1791120409649,"rel":"01:48"}
+{"who":"student","kind":"console.warn","text":"signal disconnected Object","t":1791120409902,"rel":"01:49"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESQB-LCAAAAAAAAAPjEuRgFGIz0jMy0jOQEExgymJkEmISYLRgdGD04g9wjM8PD053dDHLDSoIsAQAw59yiiwAAAA%3D","t":1791120410207,"rel":"01:49"}
+{"kind":"NET","text":"student network ON","t":1791120411095,"rel":"01:50"}
+{"kind":"MARK","text":"turn-udp_tcp7881: network ON","t":1791120411095,"rel":"01:50"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESQB-LCAAAAAAAAAPjEuRgFGIz0jMy0jOQEExgymJkEmISYLRgdGD04g9wjM8PD053dDHLDSoIsAQAw59yiiwAAAA%3D","status":101,"t":1791120411492,"rel":"01:50"}
+{"who":"student","kind":"console.warn","text":"triggering ICE restart Object","t":1791120411508,"rel":"01:50"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120411541,"quiet":true,"rel":"01:50"}
+{"who":"student","kind":"pc.gather","text":"pc0=gathering","t":1791120411547,"quiet":true,"rel":"01:50"}
+{"who":"teacher","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120411870,"rel":"01:51"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/chat","status":201,"ms":8454,"bytes":297,"quiet":true,"t":1791120411898,"rel":"01:51"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":80,"bytes":465,"quiet":true,"t":1791120413559,"rel":"01:52"}
+{"who":"student","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120415078,"rel":"01:54"}
+{"who":"student","kind":"room.msg","type":"stage_changed","quiet":true,"t":1791120415120,"rel":"01:54"}
+{"who":"student","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120415121,"rel":"01:54"}
+{"who":"student","kind":"tele","type":"livekit_reconnecting","ts":"2026-10-04T13:26:50.203Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"c8a4f03b-1b53-43a5-a448-fc212b00795b","online":true,"kind":"signal"},"quiet":true,"t":1791120415212,"rel":"01:54"}
+{"who":"student","kind":"tele","type":"livekit_reconnected","ts":"2026-10-04T13:26:53.544Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"c8a4f03b-1b53-43a5-a448-fc212b00795b","online":true,"durationMs":3342},"quiet":true,"t":1791120415212,"rel":"01:54"}
+{"who":"student","kind":"pc.ice","text":"pc0=connected","t":1791120411702,"quiet":false,"rel":"01:51"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120411709,"quiet":true,"rel":"01:51"}
+{"who":"student","kind":"pc.conn","text":"pc0=connected","t":1791120411719,"quiet":false,"rel":"01:51"}
+{"who":"student","kind":"pc.gather","text":"pc0=complete","t":1791120411991,"quiet":true,"rel":"01:51"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":87,"bytes":385,"quiet":true,"t":1791120417564,"rel":"01:56"}
+{"who":"student","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120418698,"rel":"01:58"}
+{"who":"teacher","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120418705,"rel":"01:58"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/chat","status":201,"ms":26,"bytes":358,"quiet":true,"t":1791120418718,"rel":"01:58"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":46,"bytes":405,"quiet":true,"t":1791120421523,"rel":"02:00"}
+{"who":"teacher","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120421805,"rel":"02:01"}
+{"who":"student","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120421816,"rel":"02:01"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/chat","status":201,"ms":62,"bytes":344,"quiet":true,"t":1791120421862,"rel":"02:01"}
+{"kind":"CHECK_OK","text":"turn-udp_tcp7881: outage 15s recovered (media, WS, missed chat, stage, no dup)","extra":{"sec":15,"base":"NORMAL","pcReconnectMs":765,"mediaMs":3777,"roomWs":true,"roomWsMs":0,"missedChat":{"delivered":true,"copies":1},"stageSynced":true,"offlineMsg":{"atTeacher":1,"atStudent":1,"errShown":false,"draftKept":""},"chatAfter":true,"chatAfterDup":[1,1],"participants":2,"dup":false,"newPCs":0,"uiDuring":[{"s":9,"overlay":false,"pill":[],"lkWarn":[],"q":[]},{"s":14,"overlay":false,"pill":[],"lkWarn":[],"q":[]}],"uiAfter":{"inRoom":true,"overlayReconnect":false,"pill":[],"lkWarn":[],"updated":false,"errorScreen":null,"spinners":0,"quality":[],"path":"/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"},"ok":true},"t":1791120423532,"rel":"02:02"}
+{"who":"student","kind":"room.msg","type":"stage_changed","quiet":true,"t":1791120423570,"rel":"02:02"}
+{"who":"teacher","kind":"room.msg","type":"stage_changed","quiet":true,"t":1791120423624,"rel":"02:02"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":65,"bytes":384,"quiet":true,"t":1791120425542,"rel":"02:04"}
+{"who":"student","kind":"ws.closed","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESig4fiwgAAAAAAAAD7Vtdbxy3FYUMtCgWWKDxUx4v0GfukkPOF4190JcTI44h1LbS9KnUDHfFer4ww5VW_hP5QfkD-VkFZ","frames":48,"t":1791120426641,"rel":"02:05"}
+{"kind":"CHECK_OK","text":"turn udp_tcp7881: media works, path=relay/udp/tls -> host/udp:53668","extra":{"mode":"udp_tcp7881","mediaOk":true,"joinToAudioMs":5238,"path":"relay/udp/tls -> host/udp:53668","outage15":{"sec":15,"base":"NORMAL","pcReconnectMs":765,"mediaMs":3777,"roomWs":true,"roomWsMs":0,"missedChat":{"delivered":true,"copies":1},"stageSynced":true,"offlineMsg":{"atTeacher":1,"atStudent":1,"errShown":false,"draftKept":""},"chatAfter":true,"chatAfterDup":[1,1],"participants":2,"dup":false,"newPCs":0,"uiDuring":[{"s":9,"overlay":false,"pill":[],"lkWarn":[],"q":[]},{"s":14,"overlay":false,"pill":[],"lkWarn":[],"q":[]}],"uiAfter":{"inRoom":true,"overlayReconnect":false,"pill":[],"lkWarn":[],"updated":false,"errorScreen":null,"spinners":0,"quality":[],"path":"/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"},"ok":true},"pathAfter":"relay/udp/tls -> host/udp:50041","mediaAfter":{"ok":true,"ms":3015,"audioT2S":true,"audioS2T":true,"videoT2S":true,"videoS2T":true,"inKbps":{"student":"audio:85 video:153","teacher":"audio:93 video:186"}}},"t":1791120426781,"rel":"02:06"}
+{"kind":"NET","text":"student block=none","extra":{"student":"no-block","_ms":9,"_t":1791120426844},"t":1791120426882,"rel":"02:06"}
+{"who":"student","kind":"ws.closed","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESQB-LCAAAAAAAAAPjEuRgFGIz0jMy0jOQEExgymJkEmISYLRgdGD04g9wjM8PD053dDHLDSoIsAQAw59yiiwAAAA%3D","frames":50,"t":1791120426959,"rel":"02:06"}
+{"who":"teacher","kind":"room.msg","type":"participant_updated","quiet":true,"t":1791120427061,"rel":"02:06"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/guest/session","status":200,"ms":57,"bytes":317,"quiet":true,"t":1791120427194,"rel":"02:06"}
+{"who":"teacher","kind":"room.msg","type":"participant_updated","quiet":true,"t":1791120427696,"rel":"02:07"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/join","status":200,"ms":76,"bytes":1032,"quiet":true,"t":1791120427707,"rel":"02:07"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&cs=78bf6b9b-4e08-44a5-8817-7350d15a862d&attempt=0","t":1791120427821,"rel":"02:07"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAEShA4fiwgAAAAAAAAD7Vtdb-O4FUUGaFEEMNCdp328QJ8Z8YrUBznwQyaZtgPsTrOdL6BPVSTaYdf6qETHzv6J_UH9A_1Zh","t":1791120427913,"rel":"02:07"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/activities","status":200,"ms":97,"bytes":376,"quiet":true,"t":1791120427919,"rel":"02:07"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&cs=78bf6b9b-4e08-44a5-8817-7350d15a862d&attempt=0","status":101,"t":1791120427936,"rel":"02:07"}
+{"who":"student","kind":"room.msg","type":"presence","quiet":true,"t":1791120427965,"rel":"02:07"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAEShA4fiwgAAAAAAAAD7Vtdb-O4FUUGaFEEMNCdp328QJ8Z8YrUBznwQyaZtgPsTrOdL6BPVSTaYdf6qETHzv6J_UH9A_1Zh","status":101,"t":1791120428085,"rel":"02:07"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/chat","status":200,"ms":125,"bytes":657,"quiet":true,"t":1791120428088,"rel":"02:07"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/collab?cs=78bf6b9b-4e08-44a5-8817-7350d15a862d","t":1791120428603,"rel":"02:07"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/collab?cs=78bf6b9b-4e08-44a5-8817-7350d15a862d","status":101,"t":1791120428817,"rel":"02:08"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":63,"bytes":384,"quiet":true,"t":1791120429541,"rel":"02:08"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120427202,"quiet":true,"rel":"02:06"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120427302,"quiet":true,"rel":"02:06"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120428696,"quiet":true,"rel":"02:08"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120428776,"quiet":true,"rel":"02:08"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120429615,"quiet":true,"rel":"02:08"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120429708,"quiet":true,"rel":"02:09"}
+{"who":"student","kind":"tele","type":"livekit_connection_started","ts":"2026-10-04T13:27:07.821Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":null,"identity":null,"online":true,"attempt":0},"quiet":true,"t":1791120432824,"rel":"02:12"}
+{"who":"student","kind":"tele","type":"livekit_connected","ts":"2026-10-04T13:27:08.428Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"c8a4f03b-1b53-43a5-a448-fc212b00795b","online":true,"durationMs":607},"quiet":true,"t":1791120432824,"rel":"02:12"}
+{"who":"student","kind":"tele","type":"whiteboard_sync_started","ts":"2026-10-04T13:27:08.556Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5"},"quiet":true,"t":1791120432824,"rel":"02:12"}
+{"who":"student","kind":"tele","type":"whiteboard_synced","ts":"2026-10-04T13:27:08.902Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","durationMs":21,"connects":2},"quiet":true,"t":1791120432824,"rel":"02:12"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":70,"bytes":408,"quiet":true,"t":1791120433547,"rel":"02:12"}
+{"who":"student","kind":"pc.created","text":"pc0=","t":1791120427857,"quiet":false,"rel":"02:07"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120428116,"quiet":true,"rel":"02:07"}
+{"who":"student","kind":"pc.gather","text":"pc0=gathering","t":1791120428119,"quiet":true,"rel":"02:07"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120428131,"quiet":true,"rel":"02:07"}
+{"who":"student","kind":"pc.ice","text":"pc0=checking","t":1791120428139,"quiet":false,"rel":"02:07"}
+{"who":"student","kind":"pc.conn","text":"pc0=connecting","t":1791120428156,"quiet":false,"rel":"02:07"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120428159,"quiet":true,"rel":"02:07"}
+{"who":"student","kind":"pc.ice","text":"pc0=connected","t":1791120428170,"quiet":false,"rel":"02:07"}
+{"who":"student","kind":"pc.gather","text":"pc0=complete","t":1791120428171,"quiet":true,"rel":"02:07"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120428219,"quiet":true,"rel":"02:07"}
+{"who":"student","kind":"pc.conn","text":"pc0=connected","t":1791120428428,"quiet":false,"rel":"02:07"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120428445,"quiet":true,"rel":"02:07"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120428661,"quiet":true,"rel":"02:07"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120428906,"quiet":true,"rel":"02:08"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120429052,"quiet":true,"rel":"02:08"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120429263,"quiet":true,"rel":"02:08"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120429358,"quiet":true,"rel":"02:08"}
+{"kind":"MARK","text":"=== TURN/TCP: block=direct_udp (student) ===","t":1791120437070,"rel":"02:16"}
+{"kind":"NET","text":"student block=direct_udp","extra":{"student":"-N E2EBLK\n-A OUTPUT -j E2EBLK\n-A E2EBLK -d 213.21.241.28/32 -p udp -m udp --dport 50000:60000 -j DROP\n-A E2EBLK -d 213.21.241.28/32 -p tcp -m tcp --dport 7881 -j DROP","_ms":18,"_t":1791120437095},"t":1791120437120,"rel":"02:16"}
+{"who":"student","kind":"ws.closed","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAEShA4fiwgAAAAAAAAD7Vtdb-O4FUUGaFEEMNCdp328QJ8Z8YrUBznwQyaZtgPsTrOdL6BPVSTaYdf6qETHzv6J_UH9A_1Zh","frames":46,"t":1791120437196,"rel":"02:16"}
+{"who":"teacher","kind":"room.msg","type":"participant_updated","quiet":true,"t":1791120437281,"rel":"02:16"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/guest/session","status":200,"ms":112,"bytes":340,"quiet":true,"t":1791120437468,"rel":"02:16"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":115,"bytes":465,"quiet":true,"t":1791120437607,"rel":"02:16"}
+{"who":"teacher","kind":"room.msg","type":"participant_updated","quiet":true,"t":1791120438071,"rel":"02:17"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/join","status":200,"ms":53,"bytes":1046,"quiet":true,"t":1791120438077,"rel":"02:17"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&cs=94ab6738-4ba5-4982-b812-812cf5ef4506&attempt=0","t":1791120438130,"rel":"02:17"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESig4fiwgAAAAAAAAD7VvLbhy5FYUMJAgENJDxapYEsqaat8h6kEYv9GjHBmYcIbaVxypUFbvFuOuBKrbUmp-YD8oP5LMCV","t":1791120438224,"rel":"02:17"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/activities","status":200,"ms":126,"bytes":377,"quiet":true,"t":1791120438257,"rel":"02:17"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&cs=94ab6738-4ba5-4982-b812-812cf5ef4506&attempt=0","status":101,"t":1791120438267,"rel":"02:17"}
+{"who":"student","kind":"room.msg","type":"presence","quiet":true,"t":1791120438318,"rel":"02:17"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/chat","status":200,"ms":92,"bytes":638,"quiet":true,"t":1791120438404,"rel":"02:17"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESig4fiwgAAAAAAAAD7VvLbhy5FYUMJAgENJDxapYEsqaat8h6kEYv9GjHBmYcIbaVxypUFbvFuOuBKrbUmp-YD8oP5LMCV","status":101,"t":1791120438411,"rel":"02:17"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/collab?cs=94ab6738-4ba5-4982-b812-812cf5ef4506","t":1791120438576,"rel":"02:17"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/collab?cs=94ab6738-4ba5-4982-b812-812cf5ef4506","status":101,"t":1791120438756,"rel":"02:18"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":83,"bytes":385,"quiet":true,"t":1791120441560,"rel":"02:20"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120437473,"quiet":true,"rel":"02:16"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120437666,"quiet":true,"rel":"02:17"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120439051,"quiet":true,"rel":"02:18"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120439166,"quiet":true,"rel":"02:18"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120439796,"quiet":true,"rel":"02:19"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120439898,"quiet":true,"rel":"02:19"}
+{"who":"student","kind":"tele","type":"livekit_connection_started","ts":"2026-10-04T13:27:18.144Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":null,"identity":null,"online":true,"attempt":0},"quiet":true,"t":1791120443146,"rel":"02:22"}
+{"who":"student","kind":"tele","type":"whiteboard_sync_started","ts":"2026-10-04T13:27:18.567Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5"},"quiet":true,"t":1791120443146,"rel":"02:22"}
+{"who":"student","kind":"tele","type":"whiteboard_synced","ts":"2026-10-04T13:27:18.807Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","durationMs":2,"connects":2},"quiet":true,"t":1791120443146,"rel":"02:22"}
+{"who":"student","kind":"tele","type":"livekit_connected","ts":"2026-10-04T13:27:18.824Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"c8a4f03b-1b53-43a5-a448-fc212b00795b","online":true,"durationMs":680},"quiet":true,"t":1791120443146,"rel":"02:22"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":57,"bytes":385,"quiet":true,"t":1791120445534,"rel":"02:24"}
+{"kind":"MARK","text":"turn-direct_udp: student network OFF 15s (base NORMAL)","t":1791120448337,"rel":"02:27"}
+{"kind":"NET","text":"student CUT (network OFF)","t":1791120448490,"rel":"02:27"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":60,"bytes":405,"quiet":true,"t":1791120449538,"rel":"02:28"}
+{"who":"teacher","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120452825,"rel":"02:32"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/chat","status":201,"ms":19,"bytes":357,"quiet":true,"t":1791120452843,"rel":"02:32"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":55,"bytes":384,"quiet":true,"t":1791120453533,"rel":"02:32"}
+{"who":"student","kind":"pc.ice","text":"pc0=disconnected","t":1791120455918,"quiet":false,"rel":"02:35"}
+{"who":"student","kind":"pc.conn","text":"pc0=disconnected","t":1791120455918,"quiet":false,"rel":"02:35"}
+{"who":"teacher","kind":"room.msg","type":"stage_changed","quiet":true,"t":1791120457176,"rel":"02:36"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":59,"bytes":383,"quiet":true,"t":1791120457537,"rel":"02:36"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":51,"bytes":464,"quiet":true,"t":1791120461528,"rel":"02:40"}
+{"who":"student","kind":"console.warn","text":"ping timeout triggered. last pong received at: Sun, 04 Oct 2026 13:27:28 GMT Object","t":1791120463346,"rel":"02:42"}
+{"who":"student","kind":"console.warn","text":"signal disconnected Object","t":1791120463597,"rel":"02:42"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESQB-LCAAAAAAAAAPjEuRgFGIz0jMy0jOQEExgymJkEmISYLRgdGD04g9wjHcqcLYsropyDioNMQEAlGsQHCwAAAA%3D","t":1791120463901,"rel":"02:43"}
+{"kind":"NET","text":"student network ON","t":1791120464738,"rel":"02:44"}
+{"kind":"MARK","text":"turn-direct_udp: network ON","t":1791120464739,"rel":"02:44"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESQB-LCAAAAAAAAAPjEuRgFGIz0jMy0jOQEExgymJkEmISYLRgdGD04g9wjHcqcLYsropyDioNMQEAlGsQHCwAAAA%3D","status":101,"t":1791120465263,"rel":"02:44"}
+{"who":"student","kind":"console.warn","text":"triggering ICE restart Object","t":1791120465268,"rel":"02:44"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":69,"bytes":385,"quiet":true,"t":1791120465546,"rel":"02:44"}
+{"who":"teacher","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120465681,"rel":"02:45"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/chat","status":201,"ms":8637,"bytes":296,"quiet":true,"t":1791120465746,"rel":"02:45"}
+{"who":"student","kind":"pc.ice","text":"pc0=connected","t":1791120464775,"quiet":false,"rel":"02:44"}
+{"who":"student","kind":"pc.conn","text":"pc0=connected","t":1791120464775,"quiet":false,"rel":"02:44"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120465302,"quiet":true,"rel":"02:44"}
+{"who":"student","kind":"pc.gather","text":"pc0=gathering","t":1791120465307,"quiet":true,"rel":"02:44"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120465376,"quiet":true,"rel":"02:44"}
+{"who":"student","kind":"pc.gather","text":"pc0=complete","t":1791120465540,"quiet":true,"rel":"02:44"}
+{"who":"student","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120468830,"rel":"02:48"}
+{"who":"student","kind":"room.msg","type":"stage_changed","quiet":true,"t":1791120468873,"rel":"02:48"}
+{"who":"student","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120468874,"rel":"02:48"}
+{"who":"student","kind":"tele","type":"livekit_reconnecting","ts":"2026-10-04T13:27:43.898Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"c8a4f03b-1b53-43a5-a448-fc212b00795b","online":true,"kind":"signal"},"quiet":true,"t":1791120468904,"rel":"02:48"}
+{"who":"student","kind":"tele","type":"livekit_reconnected","ts":"2026-10-04T13:27:47.305Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"c8a4f03b-1b53-43a5-a448-fc212b00795b","online":true,"durationMs":3407},"quiet":true,"t":1791120468904,"rel":"02:48"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":70,"bytes":385,"quiet":true,"t":1791120469547,"rel":"02:48"}
+{"who":"teacher","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120472329,"rel":"02:51"}
+{"who":"student","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120472331,"rel":"02:51"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/chat","status":201,"ms":41,"bytes":371,"quiet":true,"t":1791120472361,"rel":"02:51"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":76,"bytes":397,"quiet":true,"t":1791120473554,"rel":"02:52"}
+{"who":"teacher","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120475412,"rel":"02:54"}
+{"who":"student","kind":"room.msg","type":"chat_message","quiet":true,"t":1791120475416,"rel":"02:54"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/chat","status":201,"ms":52,"bytes":342,"quiet":true,"t":1791120475423,"rel":"02:54"}
+{"kind":"CHECK_OK","text":"turn-direct_udp: outage 15s recovered (media, WS, missed chat, stage, no dup)","extra":{"sec":15,"base":"NORMAL","pcReconnectMs":255,"mediaMs":3271,"roomWs":true,"roomWsMs":0,"missedChat":{"delivered":true,"copies":1},"stageSynced":true,"offlineMsg":{"atTeacher":1,"atStudent":1,"errShown":false,"draftKept":""},"chatAfter":true,"chatAfterDup":[1,1],"participants":2,"dup":false,"newPCs":0,"uiDuring":[{"s":9,"overlay":false,"pill":[],"lkWarn":[],"q":[]},{"s":14,"overlay":false,"pill":[],"lkWarn":[],"q":[]}],"uiAfter":{"inRoom":true,"overlayReconnect":false,"pill":[],"lkWarn":[],"updated":false,"errorScreen":null,"spinners":0,"quality":[],"path":"/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"},"ok":true},"t":1791120477122,"rel":"02:56"}
+{"who":"student","kind":"room.msg","type":"stage_changed","quiet":true,"t":1791120477155,"rel":"02:56"}
+{"who":"teacher","kind":"room.msg","type":"stage_changed","quiet":true,"t":1791120477164,"rel":"02:56"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":86,"bytes":362,"quiet":true,"t":1791120477563,"rel":"02:56"}
+{"kind":"CHECK_OK","text":"turn direct_udp: media works, path=relay/udp/udp -> host/udp:54201","extra":{"mode":"direct_udp","mediaOk":true,"joinToAudioMs":5215,"path":"relay/udp/udp -> host/udp:54201","outage15":{"sec":15,"base":"NORMAL","pcReconnectMs":255,"mediaMs":3271,"roomWs":true,"roomWsMs":0,"missedChat":{"delivered":true,"copies":1},"stageSynced":true,"offlineMsg":{"atTeacher":1,"atStudent":1,"errShown":false,"draftKept":""},"chatAfter":true,"chatAfterDup":[1,1],"participants":2,"dup":false,"newPCs":0,"uiDuring":[{"s":9,"overlay":false,"pill":[],"lkWarn":[],"q":[]},{"s":14,"overlay":false,"pill":[],"lkWarn":[],"q":[]}],"uiAfter":{"inRoom":true,"overlayReconnect":false,"pill":[],"lkWarn":[],"updated":false,"errorScreen":null,"spinners":0,"quality":[],"path":"/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room"},"ok":true},"pathAfter":"relay/udp/udp -> host/udp:58939","mediaAfter":{"ok":true,"ms":3010,"audioT2S":true,"audioS2T":true,"videoT2S":true,"videoS2T":true,"inKbps":{"student":"audio:87 video:154","teacher":"audio:93 video:42"}}},"t":1791120480335,"rel":"02:59"}
+{"who":"student","kind":"ws.closed","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESig4fiwgAAAAAAAAD7VvLbhy5FYUMJAgENJDxapYEsqaat8h6kEYv9GjHBmYcIbaVxypUFbvFuOuBKrbUmp-YD8oP5LMCV","frames":49,"t":1791120480394,"rel":"02:59"}
+{"kind":"NET","text":"student block=none","extra":{"student":"no-block","_ms":8,"_t":1791120480444},"t":1791120480488,"rel":"02:59"}
+{"who":"student","kind":"ws.closed","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESQB-LCAAAAAAAAAPjEuRgFGIz0jMy0jOQEExgymJkEmISYLRgdGD04g9wjHcqcLYsropyDioNMQEAlGsQHCwAAAA%3D","frames":49,"t":1791120480577,"rel":"02:59"}
+{"who":"teacher","kind":"room.msg","type":"participant_updated","quiet":true,"t":1791120480673,"rel":"03:00"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/guest/session","status":200,"ms":65,"bytes":316,"quiet":true,"t":1791120480797,"rel":"03:00"}
+{"who":"teacher","kind":"room.msg","type":"participant_updated","quiet":true,"t":1791120481708,"rel":"03:01"}
+{"who":"student","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/join","status":200,"ms":118,"bytes":1313,"quiet":true,"t":1791120481737,"rel":"03:01"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":319,"bytes":407,"quiet":true,"t":1791120481812,"rel":"03:01"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120480818,"quiet":true,"rel":"03:00"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120480908,"quiet":true,"rel":"03:00"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&cs=3f8b580e-73a7-41dc-b4d1-94850ef1ec53&attempt=0","t":1791120481873,"rel":"03:01"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESjQ4fiwgAAAAAAAAD7VvLbiS3FYUGSGAIaMCelZcXyDJgF1lkvTjohZ6O4RlFk3kE2YWqYrfo6Xq4ii21_BP-IP9APitgd","t":1791120481980,"rel":"03:01"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/activities","status":200,"ms":120,"bytes":396,"quiet":true,"t":1791120481998,"rel":"03:01"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/ws?lessonId=add87950-752e-43b0-85c3-7628bbc079d5&cs=3f8b580e-73a7-41dc-b4d1-94850ef1ec53&attempt=0","status":101,"t":1791120482020,"rel":"03:01"}
+{"who":"student","kind":"room.msg","type":"presence","quiet":true,"t":1791120482096,"rel":"03:01"}
+{"who":"student","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/chat","status":200,"ms":77,"bytes":877,"quiet":true,"t":1791120482141,"rel":"03:01"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/livekit/rtc/v1?access_token=…&join_request=CAESjQ4fiwgAAAAAAAAD7VvLbiS3FYUGSGAIaMCelZcXyDJgF1lkvTjohZ6O4RlFk3kE2YWqYrfo6Xq4ii21_BP-IP9APitgd","status":101,"t":1791120482169,"rel":"03:01"}
+{"who":"livekit","kind":"lk.participants","text":"E2E Ученик[JOINED]() ; E2E Учитель[ACTIVE](MICROPHONE,CAMERA)","t":1791120482223,"rel":"03:01"}
+{"who":"student","kind":"ws.created","url":"wss://213.21.241.28/collab?cs=3f8b580e-73a7-41dc-b4d1-94850ef1ec53","t":1791120482460,"rel":"03:01"}
+{"who":"student","kind":"ws.open","url":"wss://213.21.241.28/collab?cs=3f8b580e-73a7-41dc-b4d1-94850ef1ec53","status":101,"t":1791120482652,"rel":"03:01"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":69,"bytes":464,"quiet":true,"t":1791120485550,"rel":"03:04"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120482828,"quiet":true,"rel":"03:02"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120482913,"quiet":true,"rel":"03:02"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120483569,"quiet":true,"rel":"03:02"}
+{"who":"teacher","kind":"pc.sig","text":"pc0=stable","t":1791120483703,"quiet":true,"rel":"03:03"}
+{"who":"student","kind":"pc.created","text":"pc0=","t":1791120481905,"quiet":false,"rel":"03:01"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120482250,"quiet":true,"rel":"03:01"}
+{"who":"student","kind":"pc.gather","text":"pc0=gathering","t":1791120482263,"quiet":true,"rel":"03:01"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120482268,"quiet":true,"rel":"03:01"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120482276,"quiet":true,"rel":"03:01"}
+{"who":"student","kind":"pc.ice","text":"pc0=checking","t":1791120482283,"quiet":false,"rel":"03:01"}
+{"who":"student","kind":"pc.conn","text":"pc0=connecting","t":1791120482313,"quiet":false,"rel":"03:01"}
+{"who":"student","kind":"pc.ice","text":"pc0=connected","t":1791120482382,"quiet":false,"rel":"03:01"}
+{"who":"student","kind":"pc.gather","text":"pc0=complete","t":1791120482409,"quiet":true,"rel":"03:01"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120482415,"quiet":true,"rel":"03:01"}
+{"who":"student","kind":"pc.conn","text":"pc0=connected","t":1791120482504,"quiet":false,"rel":"03:01"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120482607,"quiet":true,"rel":"03:01"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120482834,"quiet":true,"rel":"03:02"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120482988,"quiet":true,"rel":"03:02"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120483094,"quiet":true,"rel":"03:02"}
+{"who":"student","kind":"pc.sig","text":"pc0=have-local-offer","t":1791120483226,"quiet":true,"rel":"03:02"}
+{"who":"student","kind":"pc.sig","text":"pc0=stable","t":1791120483314,"quiet":true,"rel":"03:02"}
+{"who":"livekit","kind":"lk.participants","text":"E2E Ученик[ACTIVE](MICROPHONE,CAMERA) ; E2E Учитель[ACTIVE](MICROPHONE,CAMERA)","t":1791120486604,"rel":"03:05"}
+{"who":"student","kind":"tele","type":"livekit_connection_started","ts":"2026-10-04T13:28:01.892Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":null,"identity":null,"online":true,"attempt":0},"quiet":true,"t":1791120486896,"rel":"03:06"}
+{"who":"student","kind":"tele","type":"whiteboard_sync_started","ts":"2026-10-04T13:28:02.429Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5"},"quiet":true,"t":1791120486896,"rel":"03:06"}
+{"who":"student","kind":"tele","type":"livekit_connected","ts":"2026-10-04T13:28:02.626Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","livekitRoom":"lesson-add87950-752e-43b0-85c3-7628bbc079d5","identity":"c8a4f03b-1b53-43a5-a448-fc212b00795b","online":true,"durationMs":734},"quiet":true,"t":1791120486896,"rel":"03:06"}
+{"who":"student","kind":"tele","type":"whiteboard_synced","ts":"2026-10-04T13:28:02.771Z","extra":{"lessonId":"add87950-752e-43b0-85c3-7628bbc079d5","durationMs":9,"connects":2},"quiet":true,"t":1791120486896,"rel":"03:06"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/activities/:id/progress","status":200,"ms":48,"bytes":384,"quiet":true,"t":1791120489526,"rel":"03:08"}
