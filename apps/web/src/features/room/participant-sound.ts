@@ -5,8 +5,8 @@
  */
 
 const SOUND_URL: Record<"joined" | "left", string> = {
-  joined: "/sounds/participant-joined.wav",
-  left: "/sounds/participant-left.wav",
+  joined: "/sounds/participant-joined.mp3",
+  left: "/sounds/participant-left.mp3",
 };
 
 export function playParticipantSound(kind: "joined" | "left"): void {
