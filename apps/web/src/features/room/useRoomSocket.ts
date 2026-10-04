@@ -6,6 +6,16 @@ import { clientSessionId, track } from "../../shared/telemetry.js";
 export type SocketStatus = "connecting" | "connected" | "reconnecting" | "closed";
 
 const MAX_BACKOFF_MS = 16_000;
+/**
+ * Сервер шлёт `heartbeat` раз в 20 с. Если за это время не пришло ни одного
+ * сообщения, сокет считаем мёртвым и открываем новый: зависший на мобильной
+ * сети TCP иначе «оживал» только по таймеру повторной передачи — события урока
+ * приходили через ~30 с после возврата сети (E2E 2026-10-04, сценарий W).
+ */
+const STALE_AFTER_MS = 50_000;
+/** Подключение, зависшее без ответа (SYN теряются), тоже бросаем. */
+const CONNECT_TIMEOUT_MS = 20_000;
+const STALE_CHECK_MS = 5_000;
 /** Сервер закрывает так сокет участника, которого нет в комнате (`rooms/ws.ts`). */
 const NOT_JOINED_CLOSE_CODE = 4003;
 /** Учитель удалил участника из урока — переподключаться незачем. */
@@ -50,6 +60,8 @@ export function useRoomSocket(
     let connects = 0;
     let openedAt = 0;
     let stopped = false;
+    let lastMessageAt = 0;
+    let connectingSince = 0;
     const report = mode !== "recorder";
 
     const connect = async () => {
@@ -77,13 +89,19 @@ export function useRoomSocket(
       setStatus(attempt === 0 ? "connecting" : "reconnecting");
       connects += 1;
       openedAt = 0;
-      socket = new WebSocket(url);
+      const current = new WebSocket(url);
+      socket = current;
+      connectingSince = Date.now();
 
-      socket.onopen = () => {
+      current.onopen = () => {
         openedAt = Date.now();
+        lastMessageAt = Date.now();
         setStatus("connected");
       };
-      socket.onmessage = (event) => {
+      current.onmessage = (event) => {
+        // Брошенный сокет (см. staleTimer) мог ожить — его события уже не наши.
+        if (current !== socket) return;
+        lastMessageAt = Date.now();
         // Бэкофф сбрасываем по первому сообщению, а не по open: сокет, который
         // сервер закрывает сразу после рукопожатия (4003), иначе долбил бы раз
         // в секунду бесконечно.
@@ -94,8 +112,8 @@ export function useRoomSocket(
           // игнорируем нераспознанные сообщения
         }
       };
-      socket.onclose = (event) => {
-        if (stopped) return;
+      current.onclose = (event) => {
+        if (stopped || current !== socket) return;
         if (report) {
           track("websocket_disconnected", {
             channel: "room",
@@ -134,8 +152,38 @@ export function useRoomSocket(
 
     void connect();
 
+    // Пульса нет дольше STALE_AFTER_MS — бросаем сокет и подключаемся заново.
+    // Закрытие мёртвого сокета само `onclose` может не дать долго (рукопожатие
+    // закрытия ждёт тот же зависший TCP), поэтому переподключаемся сразу.
+    const staleTimer = setInterval(() => {
+      const current = socket;
+      if (stopped || !current) return;
+      const stale =
+        current.readyState === WebSocket.OPEN
+          ? Date.now() - lastMessageAt >= STALE_AFTER_MS
+          : current.readyState === WebSocket.CONNECTING && Date.now() - connectingSince >= CONNECT_TIMEOUT_MS;
+      if (!stale) return;
+      socket = null;
+      current.close(4000, "stale");
+      if (report) {
+        track("websocket_disconnected", {
+          channel: "room",
+          lessonId,
+          closeCode: 4000,
+          wasClean: false,
+          opened: openedAt > 0,
+          connectedMs: openedAt > 0 ? Date.now() - openedAt : null,
+          online: navigator.onLine,
+        });
+      }
+      setStatus("reconnecting");
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(connect, 0);
+    }, STALE_CHECK_MS);
+
     return () => {
       stopped = true;
+      clearInterval(staleTimer);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       socket?.close();
     };

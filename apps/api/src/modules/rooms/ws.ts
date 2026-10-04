@@ -190,7 +190,9 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
     // а участник числился «на связи» до зачистки.
     roomEvents.on(lessonId, onEvent);
     const pingTimer = setInterval(() => {
-      if (socket.readyState === socket.OPEN) socket.ping();
+      if (socket.readyState !== socket.OPEN) return;
+      socket.ping();
+      send({ type: "heartbeat" });
     }, PING_INTERVAL_MS);
     let cleanedUp = false;
     const cleanup = () => {
@@ -227,6 +229,10 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
 
     try {
       send({ type: "presence", participants: await roomsService.listParticipantsSnapshot(lessonId) });
+      const state = await roomsService.getLessonStateSnapshot(lessonId);
+      send({ type: "stage_changed", stage: state.stage });
+      send({ type: "lesson_mode", mode: state.mode });
+      send({ type: "entry_locked", locked: state.entryLocked });
 
       // Э10.3, 152-ФЗ: зашли в уже идущий урок, где запись уже стартовала —
       // сразу показать баннер согласия, не дожидаясь следующего старта/стопа.
