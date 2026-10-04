@@ -1,0 +1,855 @@
+{
+  "T0": 1791101608027,
+  "checks": [
+    {
+      "name": "teacher login",
+      "ok": true,
+      "detail": {
+        "ms": 510
+      },
+      "rel": "00:02"
+    },
+    {
+      "name": "teacher device check + join",
+      "ok": true,
+      "rel": "00:04"
+    },
+    {
+      "name": "teacher LiveKit PC connected",
+      "ok": true,
+      "detail": {
+        "msFromJoinClick": 3137
+      },
+      "rel": "00:05"
+    },
+    {
+      "name": "teacher room WS open",
+      "ok": true,
+      "rel": "00:05"
+    },
+    {
+      "name": "teacher LiveKit signal WS open",
+      "ok": true,
+      "rel": "00:05"
+    },
+    {
+      "name": "teacher local audio+video published (bytes moving)",
+      "ok": true,
+      "detail": {
+        "conn": "connected",
+        "inAudioBytes": 0,
+        "inVideoFrames": 0,
+        "outAudioBytes": 36186,
+        "outVideoBytes": 376713,
+        "inAudioEnergy": 0,
+        "inAudioLevel": 0,
+        "remoteCam": [],
+        "remoteScreen": [],
+        "localCam": 1
+      },
+      "rel": "00:08"
+    },
+    {
+      "name": "student guest enter",
+      "ok": true,
+      "rel": "00:09"
+    },
+    {
+      "name": "student device check + join",
+      "ok": true,
+      "rel": "00:12"
+    },
+    {
+      "name": "student LiveKit PC connected",
+      "ok": true,
+      "detail": {
+        "msFromJoinClick": 3409
+      },
+      "rel": "00:13"
+    },
+    {
+      "name": "student room WS open",
+      "ok": true,
+      "detail": {
+        "ms": 0
+      },
+      "rel": "00:13"
+    },
+    {
+      "name": "media: teacherHearsStudent",
+      "ok": true,
+      "rel": "00:21"
+    },
+    {
+      "name": "media: studentHearsTeacher",
+      "ok": true,
+      "rel": "00:21"
+    },
+    {
+      "name": "media: studentSeesTeacher",
+      "ok": true,
+      "rel": "00:21"
+    },
+    {
+      "name": "media: teacherSeesStudent",
+      "ok": true,
+      "rel": "00:21"
+    },
+    {
+      "name": "screen share received by student",
+      "ok": true,
+      "detail": {
+        "msFromClick": 6372
+      },
+      "rel": "00:27"
+    },
+    {
+      "name": "screen share still flowing after hold",
+      "ok": true,
+      "detail": {
+        "conn": "connected",
+        "inAudioBytes": 30178,
+        "inVideoFrames": 105,
+        "outAudioBytes": 34679,
+        "outVideoBytes": 137863,
+        "inAudioEnergy": 0.5481779755033962,
+        "inAudioLevel": 0.0010071108127079073,
+        "remoteCam": [
+          "320x180"
+        ],
+        "remoteScreen": [
+          "960x540"
+        ],
+        "localCam": 1
+      },
+      "rel": "01:30"
+    },
+    {
+      "name": "screen share stopped on student",
+      "ok": true,
+      "detail": {
+        "ms": 3011
+      },
+      "rel": "01:34"
+    },
+    {
+      "name": "chat teacher->student",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "ms": 115,
+        "text": "e2e-t2s-1724"
+      },
+      "rel": "01:36"
+    },
+    {
+      "name": "chat student->teacher",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "ms": 100,
+        "text": "e2e-s2t-3579"
+      },
+      "rel": "01:37"
+    },
+    {
+      "name": "board visible on student",
+      "ok": true,
+      "detail": {
+        "ms": 1840
+      },
+      "rel": "01:39"
+    },
+    {
+      "name": "board collab WS open (teacher)",
+      "ok": true,
+      "rel": "01:39"
+    },
+    {
+      "name": "board collab WS open (student)",
+      "ok": true,
+      "rel": "01:39"
+    },
+    {
+      "name": "teacher drew on board (no exception)",
+      "ok": true,
+      "rel": "01:43"
+    },
+    {
+      "name": "media alive while board active",
+      "ok": true,
+      "detail": {
+        "teacherHearsStudent": true,
+        "studentHearsTeacher": true,
+        "studentSeesTeacher": true,
+        "teacherSeesStudent": true
+      },
+      "rel": "01:49"
+    },
+    {
+      "name": "media alive after materials panel",
+      "ok": true,
+      "detail": {
+        "teacherHearsStudent": true,
+        "studentHearsTeacher": true,
+        "studentSeesTeacher": true,
+        "teacherSeesStudent": true
+      },
+      "rel": "01:59"
+    },
+    {
+      "name": "toggle 1: teacher camera OFF->ON, student sees video",
+      "ok": true,
+      "detail": {
+        "ms": 3021
+      },
+      "rel": "02:07"
+    },
+    {
+      "name": "toggle 1: teacher mic OFF->ON, student hears",
+      "ok": true,
+      "detail": {
+        "ms": 3014
+      },
+      "rel": "02:12"
+    },
+    {
+      "name": "toggle 2: teacher camera OFF->ON, student sees video",
+      "ok": true,
+      "detail": {
+        "ms": 3012
+      },
+      "rel": "02:18"
+    },
+    {
+      "name": "toggle 2: teacher mic OFF->ON, student hears",
+      "ok": true,
+      "detail": {
+        "ms": 3024
+      },
+      "rel": "02:23"
+    },
+    {
+      "name": "toggle 3: teacher camera OFF->ON, student sees video",
+      "ok": true,
+      "detail": {
+        "ms": 3008
+      },
+      "rel": "02:29"
+    },
+    {
+      "name": "toggle 3: teacher mic OFF->ON, student hears",
+      "ok": true,
+      "detail": {
+        "ms": 3012
+      },
+      "rel": "02:34"
+    },
+    {
+      "name": "toggle 1: student camera OFF->ON, teacher sees video",
+      "ok": true,
+      "detail": {
+        "ms": 3008
+      },
+      "rel": "02:40"
+    },
+    {
+      "name": "toggle 1: student mic OFF->ON, teacher hears",
+      "ok": true,
+      "detail": {
+        "ms": 3008
+      },
+      "rel": "02:45"
+    },
+    {
+      "name": "toggle 2: student camera OFF->ON, teacher sees video",
+      "ok": true,
+      "detail": {
+        "ms": 3008
+      },
+      "rel": "02:51"
+    },
+    {
+      "name": "toggle 2: student mic OFF->ON, teacher hears",
+      "ok": true,
+      "detail": {
+        "ms": 3036
+      },
+      "rel": "02:57"
+    },
+    {
+      "name": "toggle 1: screen share START received",
+      "ok": true,
+      "detail": {
+        "ms": 6522
+      },
+      "rel": "03:03"
+    },
+    {
+      "name": "toggle 1: screen share STOP",
+      "ok": true,
+      "detail": {
+        "ms": 3007
+      },
+      "rel": "03:10"
+    },
+    {
+      "name": "toggle 2: screen share START received",
+      "ok": true,
+      "detail": {
+        "ms": 6526
+      },
+      "rel": "03:17"
+    },
+    {
+      "name": "toggle 2: screen share STOP",
+      "ok": true,
+      "detail": {
+        "ms": 3006
+      },
+      "rel": "03:24"
+    },
+    {
+      "name": "two-way media after toggles",
+      "ok": true,
+      "detail": {
+        "teacherHearsStudent": true,
+        "studentHearsTeacher": true,
+        "studentSeesTeacher": true,
+        "teacherSeesStudent": true
+      },
+      "rel": "03:30"
+    },
+    {
+      "name": "long session: media OK every minute (55 checks)",
+      "ok": true,
+      "detail": {
+        "badChecks": 0,
+        "checks": 55
+      },
+      "rel": "63:38"
+    },
+    {
+      "name": "net cut 5s: LiveKit reconnected",
+      "ok": true,
+      "detail": {
+        "sec": 5,
+        "pcReconnectMsAfterRestore": 2607,
+        "mediaRestoredMsAfterRestore": 8636,
+        "screenShareRestoredMs": 11648,
+        "roomWsOpen": true,
+        "newPeerConnections": 0,
+        "lkParticipants": 2,
+        "duplicate": false,
+        "stillInRoom": true,
+        "chatT2S": true,
+        "chatS2T": true,
+        "blocked": null
+      },
+      "rel": "64:05"
+    },
+    {
+      "name": "net cut 5s: two-way media restored",
+      "ok": true,
+      "detail": {
+        "mediaMs": 8636
+      },
+      "rel": "64:05"
+    },
+    {
+      "name": "net cut 5s: screen share restored",
+      "ok": true,
+      "detail": {
+        "shareMs": 11648
+      },
+      "rel": "64:05"
+    },
+    {
+      "name": "net cut 5s: room WS reconnected",
+      "ok": true,
+      "rel": "64:05"
+    },
+    {
+      "name": "net cut 5s: no duplicate/stale participant (LiveKit has 2)",
+      "ok": true,
+      "detail": {
+        "ids": [
+          "6386c224-0884-44fe-9059-b6e2940650f3",
+          "97e14d08-bb75-426a-b3e2-1c862977e775"
+        ]
+      },
+      "rel": "64:05"
+    },
+    {
+      "name": "net cut 5s: chat works both ways",
+      "ok": true,
+      "rel": "64:05"
+    },
+    {
+      "name": "net cut 5s: student still in lesson",
+      "ok": true,
+      "rel": "64:05"
+    },
+    {
+      "name": "net cut 25s: LiveKit reconnected",
+      "ok": true,
+      "detail": {
+        "sec": 25,
+        "pcReconnectMsAfterRestore": 6597,
+        "mediaRestoredMsAfterRestore": null,
+        "screenShareRestoredMs": "n/a",
+        "roomWsOpen": true,
+        "newPeerConnections": 1,
+        "lkParticipants": 2,
+        "duplicate": false,
+        "stillInRoom": true,
+        "chatT2S": true,
+        "chatS2T": true,
+        "blocked": null
+      },
+      "rel": "66:29"
+    },
+    {
+      "name": "net cut 25s: two-way media restored",
+      "ok": false,
+      "detail": {
+        "mediaMs": null
+      },
+      "rel": "66:29"
+    },
+    {
+      "name": "net cut 25s: room WS reconnected",
+      "ok": true,
+      "rel": "66:29"
+    },
+    {
+      "name": "net cut 25s: no duplicate/stale participant (LiveKit has 2)",
+      "ok": true,
+      "detail": {
+        "ids": [
+          "6386c224-0884-44fe-9059-b6e2940650f3",
+          "97e14d08-bb75-426a-b3e2-1c862977e775"
+        ]
+      },
+      "rel": "66:29"
+    },
+    {
+      "name": "net cut 25s: chat works both ways",
+      "ok": true,
+      "rel": "66:29"
+    },
+    {
+      "name": "net cut 25s: student still in lesson",
+      "ok": true,
+      "rel": "66:29"
+    },
+    {
+      "name": "net cut 60s: LiveKit reconnected",
+      "ok": true,
+      "detail": {
+        "sec": 60,
+        "pcReconnectMsAfterRestore": 51399,
+        "mediaRestoredMsAfterRestore": null,
+        "screenShareRestoredMs": "n/a",
+        "roomWsOpen": true,
+        "newPeerConnections": 2,
+        "lkParticipants": 2,
+        "duplicate": false,
+        "stillInRoom": true,
+        "chatT2S": true,
+        "chatS2T": true,
+        "blocked": null
+      },
+      "rel": "70:10"
+    },
+    {
+      "name": "net cut 60s: two-way media restored",
+      "ok": false,
+      "detail": {
+        "mediaMs": null
+      },
+      "rel": "70:10"
+    },
+    {
+      "name": "net cut 60s: room WS reconnected",
+      "ok": true,
+      "rel": "70:10"
+    },
+    {
+      "name": "net cut 60s: no duplicate/stale participant (LiveKit has 2)",
+      "ok": true,
+      "detail": {
+        "ids": [
+          "6386c224-0884-44fe-9059-b6e2940650f3",
+          "97e14d08-bb75-426a-b3e2-1c862977e775"
+        ]
+      },
+      "rel": "70:10"
+    },
+    {
+      "name": "net cut 60s: chat works both ways",
+      "ok": true,
+      "rel": "70:10"
+    },
+    {
+      "name": "net cut 60s: student still in lesson",
+      "ok": true,
+      "rel": "70:10"
+    },
+    {
+      "name": "student reload: back in lesson",
+      "ok": true,
+      "detail": {
+        "needJoinClick": true,
+        "inRoomMs": 16557,
+        "mediaRestoredMs": 16557,
+        "roomWs": true,
+        "lkParticipants": 2,
+        "duplicate": false,
+        "chat": true
+      },
+      "rel": "70:42"
+    },
+    {
+      "name": "student reload: two-way media restored",
+      "ok": true,
+      "detail": {
+        "ms": 16557
+      },
+      "rel": "70:42"
+    },
+    {
+      "name": "student reload: room WS",
+      "ok": true,
+      "rel": "70:42"
+    },
+    {
+      "name": "student reload: no duplicate participant (LiveKit has 2)",
+      "ok": true,
+      "detail": {
+        "ids": [
+          "6386c224-0884-44fe-9059-b6e2940650f3",
+          "97e14d08-bb75-426a-b3e2-1c862977e775"
+        ]
+      },
+      "rel": "70:42"
+    },
+    {
+      "name": "student reload: chat after reload",
+      "ok": true,
+      "rel": "70:42"
+    },
+    {
+      "name": "teacher reload: back in lesson",
+      "ok": true,
+      "detail": {
+        "needJoinClick": true,
+        "inRoomMs": 15562,
+        "mediaRestoredMs": 15562,
+        "roomWs": true,
+        "lkParticipants": 2,
+        "duplicate": false,
+        "chat": true
+      },
+      "rel": "71:07"
+    },
+    {
+      "name": "teacher reload: two-way media restored",
+      "ok": true,
+      "detail": {
+        "ms": 15562
+      },
+      "rel": "71:07"
+    },
+    {
+      "name": "teacher reload: room WS",
+      "ok": true,
+      "rel": "71:07"
+    },
+    {
+      "name": "teacher reload: no duplicate participant (LiveKit has 2)",
+      "ok": true,
+      "detail": {
+        "ids": [
+          "97e14d08-bb75-426a-b3e2-1c862977e775",
+          "6386c224-0884-44fe-9059-b6e2940650f3"
+        ]
+      },
+      "rel": "71:07"
+    },
+    {
+      "name": "teacher reload: chat after reload",
+      "ok": true,
+      "rel": "71:07"
+    },
+    {
+      "name": "final two-way media",
+      "ok": true,
+      "detail": {
+        "teacherHearsStudent": true,
+        "studentHearsTeacher": true,
+        "studentSeesTeacher": true,
+        "teacherSeesStudent": true
+      },
+      "rel": "71:24"
+    }
+  ],
+  "timeline": [
+    {
+      "rel": "00:00",
+      "t": 1791101608377,
+      "text": "teacher: open /login"
+    },
+    {
+      "rel": "00:08",
+      "t": 1791101615880,
+      "text": "teacher connected"
+    },
+    {
+      "rel": "00:08",
+      "t": 1791101615880,
+      "text": "student: open join link"
+    },
+    {
+      "rel": "00:13",
+      "t": 1791101620925,
+      "text": "student connected"
+    },
+    {
+      "rel": "00:21",
+      "t": 1791101628976,
+      "text": "two-way media established",
+      "extra": {
+        "ms": 6018
+      }
+    },
+    {
+      "rel": "00:21",
+      "t": 1791101629104,
+      "text": "teacher: screen share START"
+    },
+    {
+      "rel": "00:27",
+      "t": 1791101635476,
+      "text": "student receives screen share",
+      "extra": {
+        "ms": 6372
+      }
+    },
+    {
+      "rel": "01:34",
+      "t": 1791101701724,
+      "text": "teacher: screen share STOP"
+    },
+    {
+      "rel": "01:37",
+      "t": 1791101705304,
+      "text": "chat roundtrip done"
+    },
+    {
+      "rel": "01:37",
+      "t": 1791101705304,
+      "text": "teacher: open board for class"
+    },
+    {
+      "rel": "01:49",
+      "t": 1791101717267,
+      "text": "teacher: open lesson materials"
+    },
+    {
+      "rel": "02:01",
+      "t": 1791101728930,
+      "text": "board/materials closed"
+    },
+    {
+      "rel": "03:30",
+      "t": 1791101817841,
+      "text": "toggles done"
+    },
+    {
+      "rel": "03:30",
+      "t": 1791101817841,
+      "text": "long session start (60 min)"
+    },
+    {
+      "rel": "63:38",
+      "t": 1791105425777,
+      "text": "long session end"
+    },
+    {
+      "rel": "63:45",
+      "t": 1791105432543,
+      "text": "network cut student 5s (screen share active)"
+    },
+    {
+      "rel": "63:50",
+      "t": 1791105437755,
+      "text": "network restored (5s)"
+    },
+    {
+      "rel": "64:05",
+      "t": 1791105452945,
+      "text": "recovered from 5s cut",
+      "extra": {
+        "pcMs": 2607,
+        "mediaMs": 8636,
+        "shareMs": 11648
+      }
+    },
+    {
+      "rel": "64:22",
+      "t": 1791105470165,
+      "text": "network cut student 25s"
+    },
+    {
+      "rel": "64:47",
+      "t": 1791105495442,
+      "text": "network restored (25s)"
+    },
+    {
+      "rel": "66:29",
+      "t": 1791105596623,
+      "text": "recovered from 25s cut",
+      "extra": {
+        "pcMs": 6597,
+        "mediaMs": null,
+        "shareMs": null
+      }
+    },
+    {
+      "rel": "66:44",
+      "t": 1791105611787,
+      "text": "network cut student 60s"
+    },
+    {
+      "rel": "67:44",
+      "t": 1791105671865,
+      "text": "network restored (60s)"
+    },
+    {
+      "rel": "70:10",
+      "t": 1791105817990,
+      "text": "recovered from 60s cut",
+      "extra": {
+        "pcMs": 51399,
+        "mediaMs": null,
+        "shareMs": null
+      }
+    },
+    {
+      "rel": "70:25",
+      "t": 1791105833168,
+      "text": "student: page reload"
+    },
+    {
+      "rel": "70:42",
+      "t": 1791105849726,
+      "text": "student restored after reload",
+      "extra": {
+        "needJoinClick": true,
+        "inRoomMs": 16557,
+        "mediaRestoredMs": 16557,
+        "roomWs": true,
+        "lkParticipants": 2,
+        "duplicate": false,
+        "chat": true
+      }
+    },
+    {
+      "rel": "70:52",
+      "t": 1791105859950,
+      "text": "teacher: page reload"
+    },
+    {
+      "rel": "71:07",
+      "t": 1791105875512,
+      "text": "teacher restored after reload",
+      "extra": {
+        "needJoinClick": true,
+        "inRoomMs": 15562,
+        "mediaRestoredMs": 15562,
+        "roomWs": true,
+        "lkParticipants": 2,
+        "duplicate": false,
+        "chat": true
+      }
+    },
+    {
+      "rel": "71:24",
+      "t": 1791105891739,
+      "text": "scenario end"
+    }
+  ],
+  "results": {
+    "material": {
+      "opened": true
+    },
+    "cut5": {
+      "sec": 5,
+      "pcReconnectMsAfterRestore": 2607,
+      "mediaRestoredMsAfterRestore": 8636,
+      "screenShareRestoredMs": 11648,
+      "roomWsOpen": true,
+      "newPeerConnections": 0,
+      "lkParticipants": 2,
+      "duplicate": false,
+      "stillInRoom": true,
+      "chatT2S": true,
+      "chatS2T": true,
+      "blocked": null
+    },
+    "cut25": {
+      "sec": 25,
+      "pcReconnectMsAfterRestore": 6597,
+      "mediaRestoredMsAfterRestore": null,
+      "screenShareRestoredMs": "n/a",
+      "roomWsOpen": true,
+      "newPeerConnections": 1,
+      "lkParticipants": 2,
+      "duplicate": false,
+      "stillInRoom": true,
+      "chatT2S": true,
+      "chatS2T": true,
+      "blocked": null
+    },
+    "cut60": {
+      "sec": 60,
+      "pcReconnectMsAfterRestore": 51399,
+      "mediaRestoredMsAfterRestore": null,
+      "screenShareRestoredMs": "n/a",
+      "roomWsOpen": true,
+      "newPeerConnections": 2,
+      "lkParticipants": 2,
+      "duplicate": false,
+      "stillInRoom": true,
+      "chatT2S": true,
+      "chatS2T": true,
+      "blocked": null
+    },
+    "reload-student": {
+      "needJoinClick": true,
+      "inRoomMs": 16557,
+      "mediaRestoredMs": 16557,
+      "roomWs": true,
+      "lkParticipants": 2,
+      "duplicate": false,
+      "chat": true
+    },
+    "reload-teacher": {
+      "needJoinClick": true,
+      "inRoomMs": 15562,
+      "mediaRestoredMs": 15562,
+      "roomWs": true,
+      "lkParticipants": 2,
+      "duplicate": false,
+      "chat": true
+    }
+  },
+  "chrome": "Chrome/150.0.7871.46",
+  "longMin": 60,
+  "cuts": [
+    5,
+    25,
+    60
+  ]
+}

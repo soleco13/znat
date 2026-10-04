@@ -1,0 +1,629 @@
+{
+ "long": {
+  "teacher": {
+   "samples": 174,
+   "sampleErrors": 0,
+   "notConnected": 1,
+   "connStates": {
+    "null": 1,
+    "connected": 173
+   },
+   "rttMs": {
+    "n": 173,
+    "min": 0,
+    "median": 1,
+    "p95": 3,
+    "max": 33
+   },
+   "outBwKbps": {
+    "n": 173,
+    "min": 4863,
+    "median": 5132,
+    "p95": 5132,
+    "max": 5132
+   },
+   "pairs": {
+    "host/udp -> host/udp:58926": 173
+   },
+   "outAudioKbps": {
+    "n": 173,
+    "min": 0,
+    "median": 85,
+    "p95": 87,
+    "max": 88
+   },
+   "outVideoKbps": {
+    "n": 173,
+    "min": 0,
+    "median": 477,
+    "p95": 497,
+    "max": 2126
+   },
+   "qualityLimitation": {},
+   "in_audio": {
+    "kbps": {
+     "n": 4,
+     "min": 0,
+     "median": 48,
+     "p95": 73,
+     "max": 73
+    },
+    "packets": 328,
+    "lost": 0,
+    "lossPct": 0.0,
+    "jitterMs": {
+     "n": 5,
+     "min": 2,
+     "median": 2,
+     "p95": 2,
+     "max": 2
+    },
+    "lossSpikes": 0,
+    "concealedPct": {
+     "n": 4,
+     "min": 0,
+     "median": 100,
+     "p95": 100,
+     "max": 100
+    },
+    "silentSamples": 3
+   },
+   "in_video": {
+    "kbps": {
+     "n": 3,
+     "min": 0,
+     "median": 0,
+     "p95": 153,
+     "max": 153
+    },
+    "packets": 122,
+    "lost": 0,
+    "lossPct": 0.0,
+    "jitterMs": {
+     "n": 4,
+     "min": 1,
+     "median": 1,
+     "p95": 2,
+     "max": 2
+    },
+    "lossSpikes": 0,
+    "fps": {
+     "n": 1,
+     "min": 21,
+     "median": 21,
+     "p95": 21,
+     "max": 21
+    },
+    "res": {
+     "640x360": 4
+    },
+    "freezeCount": 0,
+    "freezeSec": 0,
+    "zeroFrameSamples": 2
+   },
+   "remoteCamElementStalls": "2/3"
+  },
+  "student": {
+   "samples": 174,
+   "sampleErrors": 9,
+   "notConnected": 7,
+   "connStates": {
+    "null": 12,
+    "connected": 158,
+    "new": 4
+   },
+   "rttMs": {
+    "n": 159,
+    "min": 0,
+    "median": 1,
+    "p95": 2,
+    "max": 7
+   },
+   "outBwKbps": {
+    "n": 159,
+    "min": 300,
+    "median": 300,
+    "p95": 300,
+    "max": 549
+   },
+   "pairs": {
+    "host/udp -> host/udp:58296": 2,
+    "host/udp -> host/udp:59537": 52,
+    "host/udp -> host/udp:50348": 51,
+    "host/udp -> host/udp:52001": 54
+   },
+   "outAudioKbps": {
+    "n": 2,
+    "min": 0,
+    "median": 0,
+    "p95": 73,
+    "max": 73
+   },
+   "outVideoKbps": {
+    "n": 1,
+    "min": 0,
+    "median": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "qualityLimitation": {},
+   "in_audio": {
+    "kbps": {
+     "n": 155,
+     "min": 72,
+     "median": 85,
+     "p95": 87,
+     "max": 96
+    },
+    "packets": 34343,
+    "lost": 0,
+    "lossPct": 0.0,
+    "jitterMs": {
+     "n": 159,
+     "min": 0,
+     "median": 1,
+     "p95": 2,
+     "max": 5
+    },
+    "lossSpikes": 0,
+    "concealedPct": {
+     "n": 104,
+     "min": 0,
+     "median": 0,
+     "p95": 0,
+     "max": 0
+    },
+    "silentSamples": 4
+   },
+   "in_video": {
+    "kbps": {
+     "n": 154,
+     "min": 109,
+     "median": 332,
+     "p95": 347,
+     "max": 350
+    },
+    "packets": 32797,
+    "lost": 0,
+    "lossPct": 0.0,
+    "jitterMs": {
+     "n": 158,
+     "min": 0,
+     "median": 1,
+     "p95": 3,
+     "max": 7
+    },
+    "lossSpikes": 0,
+    "fps": {
+     "n": 158,
+     "min": 19,
+     "median": 20,
+     "p95": 20,
+     "max": 21
+    },
+    "res": {
+     "640x360": 144,
+     "320x180": 14
+    },
+    "freezeCount": 0,
+    "freezeSec": 0,
+    "zeroFrameSamples": 0
+   },
+   "remoteCamElementStalls": "1/161"
+  },
+  "livekit": {
+   "samples": 87,
+   "maxParticipants": 2,
+   "duplicateSamples": 0,
+   "counts": {
+    "2": 85,
+    "1": 2
+   },
+   "errors": 0
+  }
+ },
+ "all": {
+  "teacher": {
+   "samples": 174,
+   "sampleErrors": 0,
+   "notConnected": 1,
+   "connStates": {
+    "null": 1,
+    "connected": 173
+   },
+   "rttMs": {
+    "n": 173,
+    "min": 0,
+    "median": 1,
+    "p95": 3,
+    "max": 33
+   },
+   "outBwKbps": {
+    "n": 173,
+    "min": 4863,
+    "median": 5132,
+    "p95": 5132,
+    "max": 5132
+   },
+   "pairs": {
+    "host/udp -> host/udp:58926": 173
+   },
+   "outAudioKbps": {
+    "n": 173,
+    "min": 0,
+    "median": 85,
+    "p95": 87,
+    "max": 88
+   },
+   "outVideoKbps": {
+    "n": 173,
+    "min": 0,
+    "median": 477,
+    "p95": 497,
+    "max": 2126
+   },
+   "qualityLimitation": {},
+   "in_audio": {
+    "kbps": {
+     "n": 4,
+     "min": 0,
+     "median": 48,
+     "p95": 73,
+     "max": 73
+    },
+    "packets": 328,
+    "lost": 0,
+    "lossPct": 0.0,
+    "jitterMs": {
+     "n": 5,
+     "min": 2,
+     "median": 2,
+     "p95": 2,
+     "max": 2
+    },
+    "lossSpikes": 0,
+    "concealedPct": {
+     "n": 4,
+     "min": 0,
+     "median": 100,
+     "p95": 100,
+     "max": 100
+    },
+    "silentSamples": 3
+   },
+   "in_video": {
+    "kbps": {
+     "n": 3,
+     "min": 0,
+     "median": 0,
+     "p95": 153,
+     "max": 153
+    },
+    "packets": 122,
+    "lost": 0,
+    "lossPct": 0.0,
+    "jitterMs": {
+     "n": 4,
+     "min": 1,
+     "median": 1,
+     "p95": 2,
+     "max": 2
+    },
+    "lossSpikes": 0,
+    "fps": {
+     "n": 1,
+     "min": 21,
+     "median": 21,
+     "p95": 21,
+     "max": 21
+    },
+    "res": {
+     "640x360": 4
+    },
+    "freezeCount": 0,
+    "freezeSec": 0,
+    "zeroFrameSamples": 2
+   },
+   "remoteCamElementStalls": "2/3"
+  },
+  "student": {
+   "samples": 174,
+   "sampleErrors": 9,
+   "notConnected": 7,
+   "connStates": {
+    "null": 12,
+    "connected": 158,
+    "new": 4
+   },
+   "rttMs": {
+    "n": 159,
+    "min": 0,
+    "median": 1,
+    "p95": 2,
+    "max": 7
+   },
+   "outBwKbps": {
+    "n": 159,
+    "min": 300,
+    "median": 300,
+    "p95": 300,
+    "max": 549
+   },
+   "pairs": {
+    "host/udp -> host/udp:58296": 2,
+    "host/udp -> host/udp:59537": 52,
+    "host/udp -> host/udp:50348": 51,
+    "host/udp -> host/udp:52001": 54
+   },
+   "outAudioKbps": {
+    "n": 2,
+    "min": 0,
+    "median": 0,
+    "p95": 73,
+    "max": 73
+   },
+   "outVideoKbps": {
+    "n": 1,
+    "min": 0,
+    "median": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "qualityLimitation": {},
+   "in_audio": {
+    "kbps": {
+     "n": 155,
+     "min": 72,
+     "median": 85,
+     "p95": 87,
+     "max": 96
+    },
+    "packets": 34343,
+    "lost": 0,
+    "lossPct": 0.0,
+    "jitterMs": {
+     "n": 159,
+     "min": 0,
+     "median": 1,
+     "p95": 2,
+     "max": 5
+    },
+    "lossSpikes": 0,
+    "concealedPct": {
+     "n": 104,
+     "min": 0,
+     "median": 0,
+     "p95": 0,
+     "max": 0
+    },
+    "silentSamples": 4
+   },
+   "in_video": {
+    "kbps": {
+     "n": 154,
+     "min": 109,
+     "median": 332,
+     "p95": 347,
+     "max": 350
+    },
+    "packets": 32797,
+    "lost": 0,
+    "lossPct": 0.0,
+    "jitterMs": {
+     "n": 158,
+     "min": 0,
+     "median": 1,
+     "p95": 3,
+     "max": 7
+    },
+    "lossSpikes": 0,
+    "fps": {
+     "n": 158,
+     "min": 19,
+     "median": 20,
+     "p95": 20,
+     "max": 21
+    },
+    "res": {
+     "640x360": 144,
+     "320x180": 14
+    },
+    "freezeCount": 0,
+    "freezeSec": 0,
+    "zeroFrameSamples": 0
+   },
+   "remoteCamElementStalls": "1/161"
+  },
+  "livekit": {
+   "samples": 87,
+   "maxParticipants": 2,
+   "duplicateSamples": 0,
+   "counts": {
+    "2": 85,
+    "1": 2
+   },
+   "errors": 0
+  }
+ },
+ "events": {
+  "byKind": {
+   "teacher|http4xx": 2,
+   "teacher|browser.log": 2,
+   "student|http4xx": 2,
+   "student|browser.log": 8,
+   "student|console.error": 10,
+   "student|ws.error": 2
+  },
+  "details": [
+   [
+    "student",
+    "console.error",
+    null,
+    "cannot send signal request before connected, type: leave Object",
+    2
+   ],
+   [
+    "student",
+    "console.error",
+    null,
+    "Encountered websocket error during connection establishment Object",
+    2
+   ],
+   [
+    "student",
+    "console.error",
+    null,
+    "DataChannel error on lossy: User-Initiated Abort, reason= Object",
+    2
+   ],
+   [
+    "teacher",
+    "http4xx",
+    401,
+    "https://213.21.241.28/api/v1/auth/refresh",
+    1
+   ],
+   [
+    "teacher",
+    "http4xx",
+    401,
+    "https://213.21.241.28/api/v1/guest/session",
+    1
+   ],
+   [
+    "student",
+    "http4xx",
+    401,
+    "https://213.21.241.28/api/v1/auth/refresh",
+    1
+   ],
+   [
+    "student",
+    "http4xx",
+    401,
+    "https://213.21.241.28/api/v1/lessons/:id/decks",
+    1
+   ],
+   [
+    "student",
+    "console.error",
+    null,
+    "publisher data channel 'LOSSY' closed unexpectedly Object",
+    1
+   ],
+   [
+    "student",
+    "console.error",
+    null,
+    "DataChannel error on reliable: User-Initiated Abort, reason= Object",
+    1
+   ],
+   [
+    "student",
+    "console.error",
+    null,
+    "publisher data channel 'RELIABLE' closed unexpectedly Object",
+    1
+   ],
+   [
+    "student",
+    "console.error",
+    null,
+    "publisher data channel 'DATA_TRACK_LOSSY' closed unexpectedly Object",
+    1
+   ]
+  ],
+  "ws": {
+   "teacher|ws.created|room": 1,
+   "teacher|ws.created|lk": 1,
+   "student|ws.created|room": 2,
+   "student|ws.closed|room": 1,
+   "student|ws.created|lk": 7,
+   "student|ws.error|lk": 2,
+   "student|ws.closed|lk": 6
+  },
+  "pcStates": {
+   "teacher|pc.ice|checking": 1,
+   "teacher|pc.ice|connected": 1,
+   "teacher|pc.conn|connecting": 1,
+   "teacher|pc.conn|connected": 1,
+   "student|pc.ice|checking": 4,
+   "student|pc.ice|connected": 5,
+   "student|pc.conn|connecting": 4,
+   "student|pc.conn|connected": 5,
+   "student|pc.ice|disconnected": 3,
+   "student|pc.conn|disconnected": 3,
+   "student|pc.conn|failed": 1
+  }
+ },
+ "checks": {
+  "total": 33,
+  "failed": [
+   {
+    "name": "net cut 25s: two-way media restored",
+    "ok": false,
+    "detail": {
+     "mediaMs": null
+    },
+    "rel": "04:59"
+   },
+   {
+    "name": "net cut 25s: two-way media restored",
+    "ok": false,
+    "detail": {
+     "mediaMs": null
+    },
+    "rel": "09:49"
+   },
+   {
+    "name": "net cut 15s: two-way media restored",
+    "ok": false,
+    "detail": {
+     "mediaMs": null
+    },
+    "rel": "14:35"
+   },
+   {
+    "name": "final two-way media",
+    "ok": false,
+    "detail": {
+     "teacherHearsStudent": false,
+     "studentHearsTeacher": true,
+     "studentSeesTeacher": true,
+     "teacherSeesStudent": false
+    },
+    "rel": "14:56"
+   }
+  ]
+ },
+ "results": {
+  "cut25": {
+   "sec": 25,
+   "pcReconnectMsAfterRestore": 5692,
+   "mediaRestoredMsAfterRestore": null,
+   "screenShareRestoredMs": "n/a",
+   "roomWsOpen": true,
+   "newPeerConnections": 1,
+   "lkParticipants": 2,
+   "duplicate": false,
+   "stillInRoom": true,
+   "chatT2S": true,
+   "chatS2T": true,
+   "blocked": null
+  },
+  "cut15": {
+   "sec": 15,
+   "pcReconnectMsAfterRestore": 11992,
+   "mediaRestoredMsAfterRestore": null,
+   "screenShareRestoredMs": "n/a",
+   "roomWsOpen": true,
+   "newPeerConnections": 1,
+   "lkParticipants": 2,
+   "duplicate": false,
+   "stillInRoom": true,
+   "chatT2S": true,
+   "chatS2T": true,
+   "blocked": null
+  }
+ }
+}
