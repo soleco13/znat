@@ -3,11 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   LiveKitRoom,
   RoomAudioRenderer,
+  useMaybeRoomContext,
   useParticipants,
   useRoomContext,
   useTracks,
 } from "@livekit/components-react";
-import { ConnectionQuality, Track, VideoPresets, type RoomOptions } from "livekit-client";
+import { ConnectionQuality, ConnectionState, RoomEvent, Track, VideoPresets, type RoomOptions } from "livekit-client";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -1439,6 +1440,7 @@ export function RoomPage() {
           <span className="truncate text-xs leading-tight text-muted-foreground">{headerMeta}</span>
         </span>
         <StatusPill status={status} />
+        <MediaLinkPill hidden={status !== "connected"} />
         {recordingActive ? <RecordingIcon /> : null}
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {isTeacher && lessonJoinPath ? (
@@ -1467,6 +1469,7 @@ export function RoomPage() {
         <BrandMark className="size-[26px] text-primary" />
         <span className="min-w-0 truncate text-[13.5px] font-bold">{lessonTitle ?? "Урок"}</span>
         <StatusPill status={status} compact />
+        <MediaLinkPill hidden={status !== "connected"} compact />
         {recordingActive ? <RecordingIcon /> : null}
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
@@ -1961,6 +1964,58 @@ function StatusPill({ status, compact = false }: { status: SocketStatusLike; com
         )}
       />
       {STATUS_LABEL[status]}
+    </span>
+  );
+}
+
+/** Сколько медиа должно быть без связи, чтобы показать метку (короткий джиттер — не повод). */
+const MEDIA_PILL_DELAY_MS = 4000;
+
+/**
+ * Звук и видео сейчас не идут: LiveKit переподключается или отключился, а
+ * канал урока при этом жив. Раньше в этом состоянии не было видно ничего —
+ * кнопка «Микрофон» горела, а собеседника не было слышно до ~50 с
+ * (E2E 2026-10-04, профиль 64 кбит/с). Метка — только по фактическому
+ * состоянию комнаты LiveKit и только после первого подключения; когда канал
+ * урока тоже рвётся, место занимает `StatusPill`.
+ */
+function MediaLinkPill({ hidden, compact = false }: { hidden: boolean; compact?: boolean }) {
+  const room = useMaybeRoomContext();
+  const [down, setDown] = useState(false);
+  useEffect(() => {
+    if (!room) return;
+    let everConnected = room.state === ConnectionState.Connected;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const update = () => {
+      if (room.state === ConnectionState.Connected) {
+        everConnected = true;
+        if (timer) clearTimeout(timer);
+        timer = null;
+        setDown(false);
+        return;
+      }
+      if (!everConnected || timer) return;
+      timer = setTimeout(() => setDown(true), MEDIA_PILL_DELAY_MS);
+    };
+    room.on(RoomEvent.ConnectionStateChanged, update);
+    update();
+    return () => {
+      room.off(RoomEvent.ConnectionStateChanged, update);
+      if (timer) clearTimeout(timer);
+    };
+  }, [room]);
+  if (!down || hidden) return null;
+  return (
+    <span
+      role="status"
+      className={cn(
+        "inline-flex shrink-0 items-center rounded-full font-semibold",
+        compact ? "h-[22px] gap-[5px] px-2 text-[11px]" : "ml-2 h-[26px] gap-1.5 px-2.5 text-xs",
+        STATUS_TONE.reconnecting,
+      )}
+    >
+      <span className={cn("rounded-full bg-current", compact ? "size-[5px]" : "size-1.5")} />
+      Восстанавливаем звук и видео…
     </span>
   );
 }
