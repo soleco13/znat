@@ -39,6 +39,7 @@ import schoolSettingsRoutes from "./modules/school-settings/routes.js";
 import registrationRoutes from "./modules/registration/routes.js";
 import invitesRoutes from "./modules/invites/routes.js";
 import telemetryRoutes from "./modules/telemetry/routes.js";
+import { admitClientEvent } from "./modules/telemetry/service.js";
 import {
   startRecordingRetentionSweep,
   stopRecordingRetentionSweep,
@@ -121,7 +122,8 @@ export function buildServer() {
     { config: { rateLimit: false }, logLevel: "silent" },
     async (request, reply) => {
       const { link, who } = request.query;
-      if ((link === "poor" || link === "ok") && who && /^[0-9a-f-]{36}$/.test(who)) {
+      // Маршрут вне лимита запросов — запись в лог идёт из общего бюджета телеметрии (G-08).
+      if ((link === "poor" || link === "ok") && who && /^[0-9a-f-]{36}$/.test(who) && admitClientEvent()) {
         logEvent("client_event", { clientEvent: "link_quality_changed", poorLink: link === "poor", participantId: who });
       }
       return reply.header("Cache-Control", "no-store").status(204).send();

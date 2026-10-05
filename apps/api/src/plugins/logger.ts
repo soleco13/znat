@@ -1,10 +1,10 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash, randomUUID } from "node:crypto";
-import { createWriteStream } from "node:fs";
 import type { IncomingMessage } from "node:http";
 import type { FastifyBaseLogger, FastifyServerOptions } from "fastify";
 import { env } from "./env.js";
 import { serializeRequest } from "./log-redact.js";
+import { createLogFileSink } from "./log-file-sink.js";
 
 /**
  * Единый логгер API. Задача — чтобы по жалобе «у ученика пропала доска/видео
@@ -101,16 +101,12 @@ const SERVICE_VERSION = process.env.APP_VERSION ?? "dev";
  */
 function logStream(): { write(chunk: string): void } | undefined {
   if (!env.LOG_FILE) return undefined;
-  const file = createWriteStream(env.LOG_FILE, { flags: "a" });
-  let fileBroken = false;
-  file.on("error", (err) => {
-    if (!fileBroken) process.stderr.write(`log file unavailable: ${err.message}\n`);
-    fileBroken = true;
-  });
+  // Потолки на файл (бюджет байт, место на диске, переоткрытие) — log-file-sink.ts.
+  const file = createLogFileSink(env.LOG_FILE);
   return {
     write(chunk: string) {
       process.stdout.write(chunk);
-      if (!fileBroken) file.write(chunk);
+      file.write(chunk);
     },
   };
 }
@@ -198,6 +194,7 @@ export type LogEventName =
   | "request_failed"
   | "http_request"
   | "client_event"
+  | "client_events_dropped"
   | "background_task_failed"
   | "process_unhandled_rejection"
   | "process_uncaught_exception";

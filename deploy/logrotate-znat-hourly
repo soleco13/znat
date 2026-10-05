@@ -1,0 +1,8 @@
+#!/bin/sh
+# /etc/cron.hourly/znat-logrotate — ежечасный прогон ротации логов API.
+# Системный logrotate идёт раз в сутки, и `maxsize 200M` в
+# /etc/logrotate.d/znat срабатывал бы только тогда: за сутки поток запросов
+# успевал бы вырастить файл намного больше. Установка:
+#   install -m 755 deploy/logrotate-znat-hourly /etc/cron.hourly/znat-logrotate
+# Файл состояния общий с суточным прогоном: иначе «daily» срабатывал бы дважды в сутки.
+exec /usr/sbin/logrotate /etc/logrotate.d/znat

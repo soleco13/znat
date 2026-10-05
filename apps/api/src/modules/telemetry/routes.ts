@@ -33,14 +33,30 @@ async function identify(request: FastifyRequest): Promise<void> {
 }
 
 export default async function telemetryRoutes(app: FastifyInstance) {
-  app.post("/telemetry", { bodyLimit: 64 * 1024 }, async (request, reply) => {
-    const body = clientEventBatchSchema.parse(request.body);
-    if (!currentLogContext()?.clientSessionId) {
-      const fromBody = safeClientId(body.clientSessionId);
-      if (fromBody) setLogContext({ clientSessionId: fromBody });
-    }
-    await identify(request);
-    telemetryService.logClientEvents(body.events, request.log);
-    return reply.status(204).send();
-  });
+  // G-08: клиент шлёт пачку раз в 5 с (≤ 12 в минуту) и при уходе со
+  // страницы — свой лимит запросов с запасом. Без сессии (ключ по IP) —
+  // строже: за одним школьным IP сидят и вошедшие ученики, но их запросы
+  // считаются по личности, не по IP.
+  app.post(
+    "/telemetry",
+    {
+      bodyLimit: 64 * 1024,
+      config: {
+        rateLimit: {
+          max: (_request: FastifyRequest, key: string) => (key.startsWith("ip:") ? 20 : 30),
+          timeWindow: "1 minute",
+        },
+      },
+    },
+    async (request, reply) => {
+      const body = clientEventBatchSchema.parse(request.body);
+      if (!currentLogContext()?.clientSessionId) {
+        const fromBody = safeClientId(body.clientSessionId);
+        if (fromBody) setLogContext({ clientSessionId: fromBody });
+      }
+      await identify(request);
+      telemetryService.logClientEvents(body.events, request.log);
+      return reply.status(204).send();
+    },
+  );
 }

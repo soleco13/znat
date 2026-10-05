@@ -32,12 +32,24 @@
 # PacketLossWarning в приложении), чтобы понять, того ли стоит.
 # ─────────────────────────────────────────────────────────────────────────
 
+# Ротация docker-логов (json-file). Без неё логи livekit/coturn/caddy/БД
+# росли до заполнения диска: каждый вход и выход участника, каждая
+# TURN-аллокация — строка, а на том же диске Postgres и Redis (G-08 аудита
+# гостевого доступа 2026-10-05). У app свой предел ниже (тот же размер).
+x-logging: &rotated-logs
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "3"
+
 services:
   livekit:
     cpuset: "0"
+    logging: *rotated-logs
 
   coturn:
     cpuset: "0"
+    logging: *rotated-logs
 
   app:
     cpuset: "1"
@@ -59,12 +71,15 @@ services:
 
   postgres:
     cpuset: "1"
+    logging: *rotated-logs
 
   redis:
     cpuset: "1"
+    logging: *rotated-logs
 
   converter:
     cpuset: "1"
+    logging: *rotated-logs
     # На 8-ядерном шаблоне у конвертера было своё эксклюзивное ядро с
     # квотой 0.8. Здесь оно делит ядро 1 с app/postgres/redis/caddy —
     # квота понижена до 0.5, чтобы всплеск конвертации не забирал себе
@@ -75,6 +90,7 @@ services:
 
   caddy:
     cpuset: "1"
+    logging: *rotated-logs
     # Через Caddy идёт весь TLS и раздача /files (слайды, картинки, MP4
     # записей) — при 0.1 CPU он становился узким местом при входе класса.
     cpu_quota: 50000
