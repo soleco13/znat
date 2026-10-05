@@ -28,6 +28,12 @@ const NOT_JOINED_CLOSE_CODE = 4003;
 const REMOVED_CLOSE_CODE = 4005;
 /** Сервер не принял личность (`rooms/ws.ts`): у гостя — в том числе удалён или ссылку перевыпустили. */
 const INVALID_TOKEN_CLOSE_CODE = 4001;
+/**
+ * Сервер вытеснил этот сокет более новым подключением той же личности
+ * (`rooms/socket-registry.ts`): открыто больше вкладок, чем он держит.
+ * Переподключаемся не сразу — иначе вкладки выбивали бы друг друга по кругу.
+ */
+const SUPERSEDED_CLOSE_CODE = 4009;
 
 /**
  * WS-канал комнаты урока: только пуш от сервера, переподключение с экспоненциальным
@@ -139,7 +145,8 @@ export function useRoomSocket(
           return;
         }
         setStatus("reconnecting");
-        const delay = Math.min(1000 * 2 ** attempt, MAX_BACKOFF_MS);
+        const delay =
+          event.code === SUPERSEDED_CLOSE_CODE ? MAX_BACKOFF_MS : Math.min(1000 * 2 ** attempt, MAX_BACKOFF_MS);
         attempt += 1;
         if (report) track("websocket_reconnect", { channel: "room", lessonId, attempt: connects, delayMs: delay, closeCode: event.code });
         // Гостя удалили или перевыпустили ссылку, пока его соединение было

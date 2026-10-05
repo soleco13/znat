@@ -7,6 +7,7 @@ import { GUEST_COOKIE_NAME, resolveGuestSession } from "../guests/service.js";
 import { verifyRecorderToken } from "../recorder-auth/service.js";
 import * as recordingsService from "../recordings/service.js";
 import { roomEvents } from "./events.js";
+import { SUPERSEDED_CLOSE_CODE, registerSocket, unregisterSocket } from "./socket-registry.js";
 import * as roomsService from "./service.js";
 import { AppError } from "../../plugins/errors.js";
 import { logEvent, safeClientId } from "../../plugins/logger.js";
@@ -189,6 +190,11 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
     // уже прошёл, слушатель roomEvents и таймер пинга оставались навсегда,
     // а участник числился «на связи» до зачистки.
     roomEvents.on(lessonId, onEvent);
+    // G-04: не больше MAX_SOCKETS_PER_PARTICIPANT каналов на участника —
+    // лишние старые закрываются (см. socket-registry.ts).
+    for (const evicted of registerSocket(lessonId, userId, socket)) {
+      evicted.close(SUPERSEDED_CLOSE_CODE, "superseded");
+    }
     const pingTimer = setInterval(() => {
       if (socket.readyState !== socket.OPEN) return;
       socket.ping();
@@ -200,6 +206,8 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
       cleanedUp = true;
       clearInterval(pingTimer);
       roomEvents.off(lessonId, onEvent);
+      // Живо другое подключение того же участника — он на связи.
+      if (!unregisterSocket(lessonId, userId, socket)) return;
       roomsService
         .markDisconnected(lessonId, userId)
         .catch((err: unknown) => wsLog.warn({ err }, "room mark disconnected failed"));
