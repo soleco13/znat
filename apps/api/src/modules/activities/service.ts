@@ -443,7 +443,7 @@ const STUCK_AFTER_MS = 3 * 60 * 1000;
 async function computeActivityProgress(activity: ActivityRow): Promise<ActivityProgress> {
   const activityId = activity.id;
   const [stats, loaded] = await Promise.all([
-    repo.answeredStatsByActivity(activityId),
+    repo.answeredStatsByActivity(activityId, BLANK_RESPONSES),
     materialsService.getMaterialVersion(activity.materialVersionId),
   ]);
   const roster = await roomsService.listLessonParticipants(activity.lessonId, {
@@ -473,7 +473,12 @@ async function computeActivityProgress(activity: ActivityRow): Promise<ActivityP
     const hasStarted = answered > 0 || opened.has(p.id);
 
     let status: StudentProgress["status"];
-    if (!hasStarted) {
+    if (s?.submitted) {
+      // Раньше сдавших не было видно: статус оставался «в работе», а пустые
+      // ответы, которые сдача дописывает на неотвеченные вопросы, считались
+      // ответами — сдавший 4 из 139 выглядел как «ответил на всё».
+      status = "submitted";
+    } else if (!hasStarted) {
       status = "not_started";
     } else if (
       answered < total &&
@@ -573,7 +578,7 @@ export async function getStudentAttempt(
     materialsService.getMaterialVersion(activity.materialVersionId),
     repo.findResponsesByAttempt(attemptId),
     repo.attemptSubmittedAt(attemptId),
-    repo.answeredStatsByActivity(activityId),
+    repo.answeredStatsByActivity(activityId, BLANK_RESPONSES),
     redis.get(attemptPositionKey(attemptId)),
   ]);
 
@@ -875,6 +880,14 @@ async function openedParticipantIds(
 }
 
 // ─── Сабмит (Э8.12, §8 ТЗ: `POST /activities/:id/submit`) ─────────────────
+
+/** Пустые ответы всех типов — их сдача пишет на неотвеченные вопросы (`answeredStatsByActivity`). */
+const BLANK_RESPONSES: readonly QuestionResponse[] = (
+  [
+    "single_choice", "multiple_choice", "true_false", "text_input", "numeric_input", "open_answer", "cloze_dropdown",
+    "cloze_text", "matching", "ordering", "categorize", "highlight_text", "table_fill",
+  ] as const
+).map((type) => emptyResponseFor(type));
 
 /** Пустой ответ своего типа — вопрос, на который ученик вообще не сохранил черновик, идёт через ТОТ ЖЕ движок проверки, что и отвеченный (см. докстринг `submitActivity`), а не отдельную ветку «нет ответа». */
 function emptyResponseFor(type: QuestionResponse["type"]): QuestionResponse {

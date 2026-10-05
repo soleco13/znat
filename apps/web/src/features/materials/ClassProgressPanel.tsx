@@ -152,10 +152,11 @@ function Stat({
   );
 }
 
-const STATUS_BADGE: Record<StudentProgressStatus, { label: string; variant: "gray" | "blue" | "yellow" }> = {
+const STATUS_BADGE: Record<StudentProgressStatus, { label: string; variant: "gray" | "blue" | "yellow" | "green" }> = {
   not_started: { label: "не начал", variant: "gray" },
   in_progress: { label: "в работе", variant: "blue" },
   stuck: { label: "застрял", variant: "yellow" },
+  submitted: { label: "сдал(а)", variant: "green" },
 };
 
 function StatusBadge({ status }: { status: StudentProgressStatus }) {
@@ -166,7 +167,7 @@ function StatusBadge({ status }: { status: StudentProgressStatus }) {
 function tally(students: StudentProgress[]) {
   const counts = { not_started: 0, in_progress: 0, stuck: 0, done: 0 };
   for (const s of students) {
-    if (s.status === "in_progress" && s.total > 0 && s.answered >= s.total) counts.done += 1;
+    if (s.status === "submitted" || (s.status === "in_progress" && s.total > 0 && s.answered >= s.total)) counts.done += 1;
     else counts[s.status] += 1;
   }
   return counts;

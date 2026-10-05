@@ -189,12 +189,19 @@ export async function listResponsesByActivity(
  */
 export async function answeredStatsByActivity(
   activityId: string,
-): Promise<{ participantId: string; answered: number; lastAt: string }[]> {
+  /** Пустые ответы (по одному на тип): сдача дописывает их на неотвеченные вопросы — это не ответы. */
+  blankResponses: readonly unknown[],
+): Promise<{ participantId: string; answered: number; lastAt: string; submitted: boolean }[]> {
+  const blanks = sql.join(
+    blankResponses.map((b) => sql`${JSON.stringify(b)}::jsonb`),
+    sql`, `,
+  );
   const rows = await db
     .select({
       participantId: responses.participantId,
-      answered: sql<number>`count(distinct ${responses.questionId})::int`,
+      answered: sql<number>`(count(distinct ${responses.questionId}) filter (where ${responses.response} not in (${blanks})))::int`,
       lastAt: sql<string>`max(${responses.submittedAt})::text`,
+      submitted: sql<boolean>`bool_or(${responses.submitted})`,
     })
     .from(responses)
     .where(eq(responses.activityId, activityId))

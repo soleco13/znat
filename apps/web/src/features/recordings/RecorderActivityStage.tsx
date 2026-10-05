@@ -11,6 +11,7 @@ const STATUS_LABEL: Record<StudentProgress["status"], string> = {
   not_started: "не начал",
   in_progress: "отвечает",
   stuck: "застрял",
+  submitted: "сдал(а)",
 };
 
 /**

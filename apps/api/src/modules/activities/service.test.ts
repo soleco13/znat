@@ -444,6 +444,23 @@ describe("getProgress (Э8.8 → Э12.5) — панель прогресса п�
     expect(anya.status).toBe("in_progress");
   });
 
+  it("сдавший — submitted, пустые ответы сдачи не считаются ответами", async () => {
+    repoMock.answeredStatsByActivity.mockResolvedValue([
+      // Ответил на 1 из 2 и сдал: репозиторий уже не считает пустой ответ, дописанный сдачей.
+      { participantId: PARTICIPANT_A, answered: 1, lastAt: "2020-01-01T00:00:00.000Z", submitted: true },
+    ]);
+    redisMock.mget.mockResolvedValue(["2026-09-04T09:00:00.000Z", null, null]);
+
+    const progress = await getProgress(teacher, ACTIVITY);
+
+    const anya = progress.students.find((s) => s.displayName === "Аня")!;
+    // Давно не сохранял и ответил не на всё — но сдал, поэтому не «застрял».
+    expect(anya).toMatchObject({ status: "submitted", answered: 1 });
+    const blanks = repoMock.answeredStatsByActivity.mock.calls.at(-1)![1] as { type: string }[];
+    expect(blanks).toContainEqual({ type: "single_choice", selectedOptionId: null });
+    expect(new Set(blanks.map((b) => b.type)).size).toBe(13);
+  });
+
   it("чужой учитель не видит прогресс — 403", async () => {
     await expect(getProgress(otherTeacher, ACTIVITY)).rejects.toMatchObject({ statusCode: 403 });
   });

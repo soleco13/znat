@@ -99,9 +99,9 @@ export type SaveActivityPositionRequest = z.infer<typeof saveActivityPositionReq
 /**
  * `not_started` — ученик не открывал задание и не отвечал; `in_progress` —
  * открыл/отвечает; `stuck` — открыл, но давно ничего не сохранял и ответил
- * не на все вопросы («застрял», §7.3 ТЗ).
+ * не на все вопросы («застрял», §7.3 ТЗ); `submitted` — сдал работу.
  */
-export type StudentProgressStatus = "not_started" | "in_progress" | "stuck";
+export type StudentProgressStatus = "not_started" | "in_progress" | "stuck" | "submitted";
 
 export interface StudentProgress {
   /** Э12.5: id строки участника урока (`lesson_participants.id`), не `users.id`. */
