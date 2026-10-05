@@ -26,20 +26,22 @@ await T.send("Performance.enable", { timeDomain: "timeTicks" });
 let VIEW = { width: 1440, height: 900 };
 const setView = async (w, h) => { VIEW = { width: w, height: h }; await T.send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: 1, mobile: false }); };
 await setView(1440, 900);
+// «Слабый компьютер учителя»: CPU вкладки замедлен в THROTTLE раз.
+if (Number(process.env.THROTTLE || 0) > 1) await T.send("Emulation.setCPUThrottlingRate", { rate: Number(process.env.THROTTLE) });
 const shot = async (name) => { await T.shot(`${OUT}/shots/${name}.png`).catch(() => {}); };
 const tEval = (e) => T.eval(e).catch(() => null);
 const inRoom = () => T.eval(`!!${byLabel("Чат")}`).catch(() => false);
 
 // Настоящие ученики-браузеры (активный спикер, производительность у ученика).
 const SB = [];
-for (const [k, host] of [process.env.S1_CDP, process.env.S2_CDP].entries()) {
+for (const [k, host] of [process.env.S1_CDP, process.env.S2_CDP, process.env.S3_CDP].entries()) {
   if (!host) continue;
   const b = await connectBrowser(host);
   const p = await openPage(b, `sb${k + 1}`, (e) => { if (/exception|CRASH|http5xx/.test(e.kind)) log({ ...e, kind: `sb.${e.kind}` }); });
   await p.send("Page.addScriptToEvaluateOnNewDocument", { source: PROBE });
   await p.send("Performance.enable", { timeDomain: "timeTicks" });
   await p.send("Emulation.setDeviceMetricsOverride", { width: 1366, height: 768, deviceScaleFactor: 1, mobile: false });
-  p.label = `Живой ученик ${k + 1}`;
+  p.label = `Живой ученик ${"ABC"[k]}`;
   SB.push(p);
 }
 async function sbEnter(p) {
@@ -268,7 +270,7 @@ try {
   // ── ЧАСТИ 5/6/2. Сетка по числу участников, выходы 30→1 и входы 1→30 (все камеры) ──
   if (PHASES.includes("dynamic")) {
     setPhase("leave-down");
-    const counts = new Set([1, 2, 3, 4, 5, 6, 8, 10, 15, 20, 25, 30]);
+    const counts = new Set([1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 13, 15, 20, 25, 30]);
     const grid = [];
     const perChange = [];
     const measureChange = async (label, fn) => {
@@ -575,6 +577,334 @@ try {
     check("reconnect: all WS back", allWs !== null, { allWs });
     check("reconnect: all media back", allLk !== null, { allLk, last: trace.at(-1) });
     saveSummary();
+  }
+
+  // ── Урок глазами учителя: 25 шагов, время до видимой реакции + скриншоты ──
+  if (PHASES.includes("lesson")) {
+    setPhase("lesson");
+    const steps = [];
+    let n = 0;
+    const step = async (label, fn) => {
+      n += 1;
+      const a = await perfSample(T);
+      const t0 = Date.now();
+      let res = null, err = null;
+      try { res = await fn(); } catch (e) { err = String(e).slice(0, 200); }
+      const b = await perfSample(T);
+      const d = perfDelta(a, b);
+      const ev = (b.events || []).map((e) => e.d);
+      const row = { n, label, ms: Date.now() - t0, ...(res && typeof res === "object" ? res : {}), err, videoMounts: d.videoMounts, tileMoves: d.tileMoves, longTaskMs: d.longTaskMs, slowestInputMs: ev.length ? Math.max(...ev) : 0 };
+      steps.push(row); log({ kind: "lesson", text: `${n}. ${label}`, extra: row });
+      await shot(`L${String(n).padStart(2, "0")}`);
+      fs.writeFileSync(`${OUT}/lesson.json`, JSON.stringify(steps, null, 1));
+    };
+    const until = async (expr, ms = 15000) => { const r = await waitFor(() => T.eval(expr), ms, 50); return { visibleMs: r.ok ? r.ms : null }; };
+    const toasts = () => T.eval(`[...document.querySelectorAll('[data-sonner-toast]')].map(t => t.innerText.trim())`).catch(() => []);
+    await step("Учитель в уроке (до входа учеников)", async () => ({ head: (await gridInfo())?.head }));
+    await step("Пригласить → ссылка скопирована", async () => { await T.click(byText("button", "Пригласить")); await sleep(700); return { toasts: await toasts() }; });
+    await step("30 участников входят постепенно (камеры у всех)", async () => {
+      for (const [k, b] of bots.slice(0, 27).entries()) { await botIn(b, { video: true }); await sleep(1500 + Math.random() * 1500); if (k === 9 && SB[0]) await sbEnter(SB[0]); if (k === 19 && SB[1]) await sbEnter(SB[1]); }
+      await sleep(5000); for (const p of SB) await sbMic(p, false);
+      const ids = []; for (const p of SB) ids.push(await sbIdentity(p));
+      for (const id of ids) if (id) await teacherApi.req("PATCH", `/lessons/${LID}/participants/${id}/permissions`, { canSpeak: true });
+      await sleep(3000); return { head: (await gridInfo())?.head };
+    });
+    await step("Несколько учеников говорят", async () => { if (SB[0]) await sbMic(SB[0], true); if (SB[1]) await sbMic(SB[1], true); await sleep(4000); const g = await tEval(`(() => { const b = [...document.querySelectorAll('button')].find(b => /^Говор/.test((b.innerText||'').trim())); return b ? b.innerText.replace(/\\s+/g,' ') : null; })()`); return { speakerHint: g }; });
+    await shot("L04b-speakers");
+    if (SB[0]) await sbMic(SB[0], false); if (SB[1]) await sbMic(SB[1], false);
+    await step("Открыть чат", async () => { await T.click(byLabel("Чат")); return until(`!!document.querySelector('[aria-label="Сообщение классу"]')`); });
+    await step("Открыть участников", async () => { await T.click(byLabel("Участники")); return until(`[...document.querySelectorAll('aside input')].some(i => /Найти участника/.test(i.placeholder))`); });
+    await step("Открыть материалы", async () => { await T.click(byLabel("Материалы урока")); return until(`!!${byText("button", "Задание классу")}`); });
+    let actId = null;
+    await step("Запустить задание (Витрина)", async () => {
+      await T.click(byText("button", "Задание классу")); await sleep(800);
+      await T.click("document.querySelector('[role=combobox]')"); await sleep(1200);
+      await T.click(byText("[role=option]", "Витрина")); await sleep(500);
+      const t0 = Date.now(); await T.click(byText("button", "Выдать"));
+      const r = await waitFor(() => T.eval(`document.body.innerText.includes('Задание выдано')`), 15000, 50);
+      const rows = await teacherApi.req("GET", `/lessons/${LID}/activities`); actId = rows.json?.items?.[0]?.id;
+      await sleep(2000);
+      return { issuedVisibleMs: r.ok ? Date.now() - t0 : null, studentsGotIt: active().filter((b) => b.firstMsg((m) => m.type === "activity_started", t0)).length };
+    });
+    await step("Ученики отвечают и почти одновременно сдают", async () => {
+      const t0 = Date.now();
+      const res = await Promise.all(active().map(async (b) => {
+        await sleep(Math.random() * 1500);
+        const my = await b.http.req("GET", `/activities/${actId}/my`);
+        const qs = (my.json?.material?.blocks || []).filter((bl) => bl.type === "question" && bl.interaction.type === "single_choice").slice(0, 3);
+        for (const q of qs) await b.http.req("POST", `/activities/${actId}/responses`, { questionId: q.id, response: { type: "single_choice", selectedOptionId: q.interaction.options[0].id } });
+        return (await b.http.req("POST", `/activities/${actId}/submit`)).status;
+      }));
+      await T.click(byText("button", "Показать классу")).catch(() => {}); await sleep(5000);
+      const panel = await tEval(`document.body.innerText.match(/\\d+ ответили/)?.[0] || null`);
+      return { submitted: res.filter((s) => s === 200 || s === 201).length, of: res.length, wallMs: Date.now() - t0, teacherPanel: panel };
+    });
+    await T.click(byText("button", "Свернуть")).catch(() => {}); await sleep(1500);
+    const lostBot = active().find((b) => b.i <= 6);
+    await step("Ученик теряет интернет (30 с, канал и медиа)", async () => { lostBot.stopMedia(); lostBot.dropWs(30000); await sleep(6000); const g = await tEval(`[...document.querySelectorAll('div.grid > div')].filter(t => /Переподключение/.test(t.innerText||'')).map(t => (t.innerText||'').split('\\n').pop())`); return { reconnectingTiles: g }; });
+    await step("Другой ученик выключает камеру", async () => { active()[7].startMedia({ presence: true }); await sleep(5000); return {}; });
+    await step("Третий включает камеру", async () => { active()[7].startMedia({ video: true }); await sleep(6000); return {}; });
+    await step("Потерявший интернет возвращается", async () => { await sleep(25000); lostBot.startMedia({ video: true }); await sleep(8000); const g = await tEval(`[...document.querySelectorAll('div.grid > div')].filter(t => /Переподключение/.test(t.innerText||'')).length`); return { stillReconnecting: g, head: (await gridInfo())?.head }; });
+    await step("Открыть доску", async () => { await T.click(byLabel("Доска")); return until(`!!document.querySelector('.excalidraw canvas')`, 20000); });
+    await step("Нарисовать прямоугольник", async () => { await T.key("r", "KeyR", 82); await sleep(300); await T.drag(500, 300, 700, 450); await sleep(1000); return {}; });
+    await step("Закрыть доску", async () => { await T.click(byLabel("Доска")); return until(`!document.querySelector('.excalidraw')`); });
+    await step("Начать демонстрацию", async () => { await T.click(byLabel("Демонстрация")); return until(`document.body.innerText.includes('Вы показываете экран')`, 30000); });
+    await step("Остановить демонстрацию", async () => { await T.click(byLabel("Остановить демонстрацию")); return until(`!document.body.innerText.includes('Вы показываете экран')`); });
+    await step("Сменить режим урока (Обсуждение)", async () => { await T.click(byLabel("Ещё")); await sleep(500); await T.click(byText("[role=menuitem]", "Режим урока")); await sleep(500); await T.click(byText("[role=menuitem]", "Обсуждение")); const r = await until(`document.body.innerText.includes('Режим: обсуждение')`); return { ...r, students: active().filter((b) => b.msgs.some((m) => m.type === "lesson_mode" && m.extra === "discussion")).length }; });
+    await step("Изменить размер окна 1440→1100→1440", async () => { await setView(1100, 800); await sleep(1500); const g1 = await gridInfo(); await setView(1440, 900); await sleep(1500); return { at1100: g1?.grid }; });
+    await step("Ученик обновляет страницу (F5)", async () => { const p = SB[0]; if (!p) return {}; const h0 = headCount(await gridInfo()); await p.reload(); const back = await waitFor(() => p.eval(`!!${byLabel("Чат")}`), 30000); const h1 = headCount(await gridInfo()); return { backMs: back.ok ? back.ms : null, headBefore: h0, headAfter: h1 }; });
+    await step("Ученик закрывает вкладку", async () => { const p = SB[1]; if (!p) return {}; const h0 = headCount(await gridInfo()); await p.send("Page.close").catch(() => {}); await sleep(4000); const g4 = await tEval(`document.body.innerText.includes('Переподключение')`); await sleep(14000); return { headBefore: h0, after4sReconnectingShown: g4, headAfter18s: headCount(await gridInfo()) }; });
+    await step("Учитель выходит из урока", async () => { await T.click(byText("button", "Выйти")); const r = await waitFor(() => T.eval("location.pathname === '/lessons'"), 10000, 50); return { leftMs: r.ok ? r.ms : null }; });
+    summary.lesson = steps; saveSummary();
+  }
+
+  // ── Короткий capacity smoke: N участников, все камеры ───────────────────
+  if (PHASES.includes("capacity")) {
+    setPhase("capacity");
+    const cap = {};
+    const t0 = Date.now();
+    const res = await Promise.all(bots.slice(0, N).map(async (b) => { await sleep(Math.random() * 4000); return { i: b.i, ...(await botIn(b, { video: true })) }; }));
+    cap.joined = res.filter((r) => r.ok).length; cap.of = N;
+    cap.refused = res.filter((r) => !r.ok).map((r) => r.err?.slice(0, 80));
+    cap.tti = stats(res.filter((r) => r.ok).map((r) => r.ms));
+    cap.api = apiWindow(t0);
+    await sleep(15000);
+    cap.lk = lkList();
+    const tw = Date.now(); await sleep(60000); cap.window = windowStats(tw); cap.rtc = await rtcSummary(T); cap.grid = await gridInfo();
+    // речь учителя (настоящий браузер)
+    await setMic(true); await sleep(5000); cap.teacherSpeaking = await tEval(`[...document.querySelectorAll('.ring-inset.ring-primary')].length > 0`); await setMic(false);
+    // чат
+    const text = `cap ${N} ${Date.now() % 1000}`; await T.click(byLabel("Чат")); await sleep(500); await T.click(byLabel("Сообщение классу")); await T.type(text);
+    const tc = Date.now(); await T.click(byLabel("Отправить")); await sleep(5000);
+    const lat = active().map((b) => b.firstMsg((m) => m.type === "chat_message" && m.body === text, tc)).filter(Boolean).map((m) => m.t - tc);
+    cap.chat = { delivered: lat.length, of: active().length, ...stats(lat) }; await T.click(byLabel("Чат")); await sleep(500);
+    // доска
+    cap.board = await timedClick("board open", byLabel("Доска"), `!!document.querySelector('.excalidraw canvas')`, 20000); await sleep(3000);
+    await timedClick("board close", byLabel("Доска"), `!document.querySelector('.excalidraw')`);
+    // камеры
+    const ta = await perfSample(T); for (const b of active().slice(0, 5)) b.startMedia({ presence: true }); await sleep(5000); for (const b of active().slice(0, 5)) b.startMedia({ video: true }); await sleep(8000);
+    const tb2 = await perfSample(T); const dcam = perfDelta(ta, tb2); cap.cams = { videoMounts: dcam.videoMounts, tileMoves: dcam.tileMoves, longTaskMs: dcam.longTaskMs };
+    // демонстрация
+    cap.shareStart = await timedClick("share start", byLabel("Демонстрация"), `document.body.innerText.includes('Вы показываете экран')`, 30000); await sleep(8000);
+    cap.shareStop = await timedClick("share stop", byLabel("Остановить демонстрацию"), `!document.body.innerText.includes('Вы показываете экран')`);
+    // обрыв сети класса 20 с
+    fs.writeFileSync(`${OUT}/ctl.cut`, `${Date.now()} 20\n`);
+    await waitFor(() => fs.existsSync(`${OUT}/ctl.cut.done`), 60000, 500);
+    const tu = Date.now();
+    const back = await waitFor(() => { const l = lkList(); return l.active >= active().length + 1 && active().every((b) => b.wsState === "connected") ? l : null; }, 120000, 2000);
+    cap.reconnect = { ok: back.ok, ms: back.ok ? Date.now() - tu : null, lk: back.v || lkList(), apiAfter: apiWindow(tu) };
+    cap.host = "см. host-by-phase.json (capacity)";
+    summary.capacity = cap; saveSummary();
+    log({ kind: "capacity", text: `N=${N}`, extra: { joined: cap.joined, refused: cap.refused.length, tti: cap.tti, fps: cap.window.fpsAvg, longTaskPct: cap.window.longTaskPct, chat: cap.chat, reconnect: cap.reconnect.ms } });
+  }
+
+  // ── Выдача права говорить: включается ли микрофон сам? ─────────────────
+  if (PHASES.includes("grant")) {
+    setPhase("grant");
+    const p = SB[0];
+    check("grant: student in", await sbEnter(p));
+    await sleep(20000);
+    const id = await sbIdentity(p);
+    const st = async (label) => {
+      const btn = await p.eval(`(() => { const b = [...document.querySelectorAll('button')].find(x => /Микрофон|Включить звук|поднимите руку/.test(x.getAttribute('aria-label')||'')); return b ? { label: b.getAttribute('aria-label'), pressed: b.getAttribute('aria-pressed') } : null; })()`).catch(() => null);
+      const lk = spawnSync("lk", ["--url", process.env.LK_URL, "--api-key", process.env.LK_KEY, "--api-secret", process.env.LK_SECRET, "room", "participants", "get", "--room", `lesson-${LID}`, id], { encoding: "utf8", timeout: 15000 });
+      const audioTracks = ((lk.stdout || "").match(/"type":\s*"?AUDIO|type: AUDIO|AUDIO/g) || []).length;
+      const r = { label, btn, audioTracks, lkOut: (lk.stdout || lk.stderr || "").slice(0, 300).replace(/\s+/g, " ") };
+      log({ kind: "grant", text: label, extra: r });
+      return r;
+    };
+    const rows = [await st("before grant")];
+    await teacherApi.req("PATCH", `/lessons/${LID}/participants/${id}/permissions`, { canSpeak: true });
+    await sleep(5000); rows.push(await st("5 s after grant"));
+    await sleep(15000); rows.push(await st("20 s after grant"));
+    summary.grant = rows; saveSummary();
+  }
+
+  // ── C-03 / C-04: говорящий вне страницы и короткий разрыв канала урока ───
+  if (PHASES.includes("ux2")) {
+    setPhase("ux2-join");
+    // Порядок входа задаёт страницы: учитель, живой A (стр. 1), 12 ботов,
+    // живой B (стр. 2), 8 ботов, живой C (стр. 3), ещё 6 ботов = 30.
+    const order = [SB[0], ...bots.slice(0, 12), SB[1], ...bots.slice(12, 20), SB[2], ...bots.slice(20, 26)];
+    const camOn = new Set([2, 4, 6, 9, 13, 15, 18, 22]);
+    for (const x of order) {
+      if (!x) continue;
+      if (x instanceof Bot) await botIn(x, { video: camOn.has(x.i) }); else await sbEnter(x);
+      await sleep(400);
+    }
+    await sleep(6000);
+    const ids = [];
+    for (const p of SB) ids.push(await sbIdentity(p));
+    for (const id of ids) if (id) await teacherApi.req("PATCH", `/lessons/${LID}/participants/${id}/permissions`, { canSpeak: true });
+    // Урок с «ученики могут говорить»: живые входят с включённым микрофоном —
+    // выключаем, говорят только по сценарию.
+    for (const p of SB) await sbMic(p, false);
+    await sleep(4000);
+    const g0 = await gridInfo();
+    check("ux2: 30 in lesson, paged", headCount(g0) === 30 && /показаны/.test(g0?.page || ""), g0);
+    const grid = () => tEval(`(() => {
+      const g = [...document.querySelectorAll('div.grid')].find((d) => /repeat\\(/.test(d.style.gridTemplateColumns || ''));
+      const bar = [...document.querySelectorAll('button')].find(b => /^Говор(ит|ят):/.test((b.innerText||'').trim()));
+      const more = [...document.querySelectorAll('button')].find(b => /^\\+\\d+/.test((b.innerText||'').trim()));
+      const tiles = g ? [...g.children].filter(t => !t.matches('button')).map(t => { const r = t.getBoundingClientRect(); return { name: (t.innerText||'').replace('говорит','').replace('Переподключение…','').trim().split('\\n').pop(), speaking: !!t.querySelector('.ring-inset.ring-primary'), reconnecting: /Переподключение/.test(t.innerText||''), x: Math.round(r.x), y: Math.round(r.y) }; }) : [];
+      const page = [...document.querySelectorAll('span')].find(s => /показаны/.test(s.textContent||''));
+      return { chip: bar ? bar.innerText.replace(/\\s+/g,' ').trim() : null, more: more ? more.innerText.replace(/\\s+/g,' ').trim() : null, moreRing: more ? more.className.includes('ring-primary') : false, tiles, page: page ? page.textContent : null, head: [...document.querySelectorAll('header span')].map(s => s.textContent).find(t => /участник/.test(t||'')) };
+    })()`);
+    const say = async (who, on) => { for (const [k, p] of SB.entries()) if (who.includes("ABC"[k])) await sbMic(p, on); };
+    const watch = async (label, ms) => { const out = []; const t0 = Date.now(); while (Date.now() - t0 < ms) { const g = await grid(); out.push({ t: Date.now() - t0, chip: g?.chip, more: g?.more, moreRing: g?.moreRing, speaking: (g?.tiles || []).filter(t => t.speaking).map(t => t.name), pos: (g?.tiles || []).map(t => t.name + '@' + t.x + ',' + t.y).join('|') }); await sleep(250); } const chipChanges = out.filter((o, k) => k > 0 && o.chip !== out[k - 1].chip).length; const posChanges = out.filter((o, k) => k > 0 && o.pos !== out[k - 1].pos).length; const r = { label, samples: out.length, chipChanges, posChanges, chips: [...new Set(out.map(o => o.chip))], more: [...new Set(out.map(o => o.more + (o.moreRing ? ' [ring]' : '')))], speaking: [...new Set(out.flatMap(o => o.speaking))] }; log({ kind: "c03", text: label, extra: r }); return { ...r, trace: out }; };
+    setPhase("c03");
+    const c03 = [];
+    await sleep(2000);
+    say("A", true); c03.push(await watch("1 page-1 student speaks", 8000)); await say("A", false); await sleep(3500);
+    say("B", true); c03.push(await watch("2 page-2 student speaks", 8000)); await shot("c03-page2-speaking"); await say("B", false);
+    c03.push(await watch("5 speaker stops (hold)", 4000));
+    say("C", true); c03.push(await watch("3 page-3 student speaks", 8000));
+    say("B", true); c03.push(await watch("4 B and C together", 8000)); await say("B", false); await say("C", false); await sleep(3500);
+    // Быстрые переключения: B 1 с, пауза 0,5 с, C 1 с, B 1 с, A 1 с.
+    const fast = (async () => { for (const w of ["B", "C", "B", "A", "C", "B"]) { await say(w, true); await sleep(1000); await say(w, false); await sleep(500); } })();
+    c03.push(await watch("6 fast speaker switching", 10000)); await fast; await sleep(3000);
+    // Ручное листание учителем.
+    await T.click(byLabel("Следующие участники")); await sleep(1500);
+    say("B", true); c03.push(await watch("7a teacher on page 2, page-2 student speaks", 5000));
+    say("C", true); c03.push(await watch("7b teacher on page 2, page-3 student speaks", 5000)); await say("B", false); await say("C", false); await sleep(3000);
+    await T.click(byLabel("Следующие участники")); await sleep(1500);
+    say("A", true); c03.push(await watch("7c teacher on page 3, page-1 student speaks", 5000));
+    const chipBtn = `[...document.querySelectorAll('button')].find(b => /^Говор(ит|ят):/.test((b.innerText||'').trim()))`;
+    await T.click(chipBtn); await sleep(1200);
+    const afterClick = await grid();
+    c03.push({ label: "8 click chip → page with speaker", page: afterClick?.page, chip: afterClick?.chip, speakingTiles: (afterClick?.tiles || []).filter(t => t.speaking).map(t => t.name) });
+    log({ kind: "c03", text: "8 click chip", extra: c03.at(-1) });
+    await say("A", false); await sleep(1500);
+    await T.click(byLabel("Предыдущие участники")).catch(() => {}); await sleep(800); await T.click(byLabel("Предыдущие участники")).catch(() => {}); await sleep(1500);
+    fs.writeFileSync(`${OUT}/c03.json`, JSON.stringify(c03, null, 1));
+    summary.c03 = c03.map(({ trace, ...r }) => r);
+    await shot("c03-end");
+
+    setPhase("c04");
+    const c04 = [];
+    const firstPageBot = bots.slice(0, 12).find((b) => !b.left);
+    const nameOf = (b) => b.name;
+    const tileOf = async (name) => { const g = await grid(); const t = (g?.tiles || []).find((x) => x.name === name); return { present: !!t, reconnecting: !!t?.reconnecting, pos: t ? `${t.x},${t.y}` : null, head: headCount({ head: g?.head }), all: (g?.tiles || []).map(x => x.name + '@' + x.x + ',' + x.y).join('|') }; };
+    const observe = async (label, b, action, ms) => {
+      const before = await tileOf(nameOf(b));
+      const t0 = Date.now(); await action();
+      const tr = [];
+      while (Date.now() - t0 < ms) { const s = await tileOf(nameOf(b)); tr.push({ t: Date.now() - t0, present: s.present, reconnecting: s.reconnecting, head: s.head, moved: s.all !== before.all }); await sleep(250); }
+      const firstHidden = tr.find((x) => !x.present)?.t ?? null;
+      const firstBadge = tr.find((x) => x.reconnecting)?.t ?? null;
+      const neighbourMoves = tr.filter((x, k) => k > 0 && x.moved !== tr[k - 1].moved).length;
+      const r = { label, firstBadgeMs: firstBadge, firstHiddenMs: firstHidden, endPresent: tr.at(-1)?.present, endReconnecting: tr.at(-1)?.reconnecting, headMin: Math.min(...tr.map((x) => x.head)), headEnd: tr.at(-1)?.head, layoutChanged: neighbourMoves, samples: tr.length };
+      c04.push(r); log({ kind: "c04", text: label, extra: r });
+      return r;
+    };
+    await observe("ws drop 1.5 s", firstPageBot, () => firstPageBot.dropWs(1500), 6000);
+    await observe("ws drop 5 s", firstPageBot, () => firstPageBot.dropWs(5000), 10000);
+    await observe("ws drop 10 s", firstPageBot, () => firstPageBot.dropWs(10000), 15000);
+    await observe("ws drop 20 s (> grace)", firstPageBot, () => firstPageBot.dropWs(20000), 26000);
+    await sleep(3000);
+    // Долгий обрыв: канал и медиа 60 с, потом возврат.
+    const longBot = bots.slice(0, 12).filter((b) => !b.left)[2];
+    await observe("long outage 60 s (ws + media) and return", longBot, async () => { longBot.stopMedia(); longBot.dropWs(60000); setTimeout(() => longBot.startMedia({ video: camOn.has(longBot.i) }), 60000); }, 70000);
+    // Настоящий выход.
+    const leaver = bots.slice(0, 12).filter((b) => !b.left)[4];
+    await observe("real leave", leaver, () => leaver.leave(), 5000);
+    await sleep(2000);
+    // F5 у живого ученика B и закрытие вкладки у C (их плиток на 1-й странице нет — смотрим шапку и список).
+    const headNow = async () => headCount(await gridInfo());
+    const h0 = await headNow();
+    const tF5 = Date.now(); await SB[1].reload();
+    const f5 = []; while (Date.now() - tF5 < 15000) { f5.push({ t: Date.now() - tF5, head: await headNow() }); await sleep(500); }
+    c04.push({ label: "student F5 (header count)", before: h0, min: Math.min(...f5.map((x) => x.head)), end: f5.at(-1).head, back: await SB[1].eval(`!!${byLabel("Чат")}`).catch(() => false) });
+    log({ kind: "c04", text: "student F5", extra: c04.at(-1) });
+    const tClose = Date.now(); await SB[2].send("Page.close").catch(() => {});
+    const cl = []; while (Date.now() - tClose < 25000) { cl.push({ t: Date.now() - tClose, head: await headNow() }); await sleep(500); }
+    const dropAt = cl.find((x) => x.head < cl[0].head)?.t ?? null;
+    c04.push({ label: "student closes tab (header count)", before: cl[0].head, droppedAtMs: dropAt, end: cl.at(-1).head });
+    log({ kind: "c04", text: "student closes tab", extra: c04.at(-1) });
+    fs.writeFileSync(`${OUT}/c04.json`, JSON.stringify(c04, null, 1));
+    summary.c04 = c04;
+    await shot("c04-end");
+    saveSummary();
+  }
+
+  // ── C-09: heap snapshot после серии входов/выходов участников ───────────
+  if (PHASES.includes("snap")) {
+    setPhase("snap");
+    const takeSnap = async (file) => {
+      await T.send("HeapProfiler.enable");
+      await T.send("HeapProfiler.collectGarbage"); await sleep(500); await T.send("HeapProfiler.collectGarbage");
+      const ws = fs.createWriteStream(file);
+      const prev = tb.listeners.get(T.sessionId);
+      tb.listeners.set(T.sessionId, (m, p) => { if (m === "HeapProfiler.addHeapSnapshotChunk") ws.write(p.chunk); else prev?.(m, p); });
+      await T.send("HeapProfiler.takeHeapSnapshot", { reportProgress: false, captureNumericValue: false }, 300000);
+      tb.listeners.set(T.sessionId, prev);
+      await new Promise((r) => ws.end(r));
+    };
+    const reps = Number(process.env.SNAP_REPS || 12);
+    if (process.env.SNAP_ACTION === "board") {
+      await takeSnap(`${OUT}/before-board.heapsnapshot`);
+      for (let k = 0; k < reps; k++) { await T.click(byLabel("Доска")); await waitFor(() => T.eval("!!document.querySelector('.excalidraw')"), 20000); await sleep(3000); await T.click(byLabel("Доска")); await sleep(3000); }
+    } else {
+      for (let k = 0; k < reps; k++) { const b = active()[k % active().length]; await b.leave(); await sleep(3000); await botIn(b, { video: true }); await sleep(4000); }
+    }
+    await sleep(3000);
+    await takeSnap(`${OUT}/after-churn.heapsnapshot`);
+    log({ kind: "snap", text: "taken" });
+  }
+
+  // ── C-09: какое действие копит отсоединённые DOM-узлы и слушатели ─────────
+  if (PHASES.includes("leak")) {
+    setPhase("leak");
+    const counters = async () => {
+      await T.send("HeapProfiler.collectGarbage").catch(() => {});
+      await sleep(600);
+      await T.send("HeapProfiler.collectGarbage").catch(() => {});
+      const d = await T.send("Memory.getDOMCounters").catch(() => ({}));
+      const m = await T.send("Performance.getMetrics").catch(() => ({ metrics: [] }));
+      const pm = Object.fromEntries(m.metrics.map((x) => [x.name, x.value]));
+      const live = await tEval("document.getElementsByTagName('*').length");
+      return { nodes: d.nodes, listeners: d.jsEventListeners, docs: d.documents, heapMB: +((pm.JSHeapUsedSize || 0) / 1048576).toFixed(2), live };
+    };
+    const rows = [];
+    const series = async (name, reps, once) => {
+      await sleep(1500);
+      const a = await counters();
+      for (let k = 0; k < reps; k++) { await once(k); }
+      await sleep(2500);
+      const b = await counters();
+      const row = { name, reps, dNodes: b.nodes - a.nodes, dListeners: b.listeners - a.listeners, dHeapMB: +(b.heapMB - a.heapMB).toFixed(2), dLive: b.live - a.live, perRepNodes: +((b.nodes - a.nodes) / reps).toFixed(1), perRepListeners: +((b.listeners - a.listeners) / reps).toFixed(1), after: b };
+      rows.push(row);
+      log({ kind: "leak", text: name, extra: row });
+      fs.writeFileSync(`${OUT}/leak.json`, JSON.stringify(rows, null, 1));
+    };
+    const toggle = async (label, waitMs = 1200) => { await T.click(byLabel(label)); await sleep(waitMs); await T.click(byLabel(label)); await sleep(waitMs); };
+    if (process.env.LEAK_MODE === "plateau") {
+      const boardOnce = async () => { await T.click(byLabel("Доска")); await waitFor(() => T.eval("!!document.querySelector('.excalidraw')"), 20000); await sleep(3000); await T.click(byLabel("Доска")); await sleep(3000); };
+      const churnOnce = async (k) => { const b = active()[k % active().length]; await b.leave(); await sleep(3000); await botIn(b, { video: true }); await sleep(4000); };
+      await series("board warmup", 1, boardOnce);
+      await series("board ×5 (1)", 5, boardOnce);
+      await series("board ×5 (2)", 5, boardOnce);
+      await series("leave/rejoin ×8 (1)", 8, churnOnce);
+      await series("leave/rejoin ×8 (2)", 8, churnOnce);
+      await series("leave/rejoin ×8 (3)", 8, churnOnce);
+      await series("screen share once", 1, async () => { await T.click(byLabel("Демонстрация")); await waitFor(() => T.eval(`document.body.innerText.includes('Вы показываете экран')`), 20000); await sleep(3000); await T.click(byLabel("Остановить демонстрацию")); await sleep(3000); });
+      summary.leak = rows; saveSummary();
+    } else {
+    await series("idle 120s", 1, async () => { await sleep(120000); });
+    await series("panel Участники", 10, () => toggle("Участники"));
+    await series("panel Чат", 10, () => toggle("Чат"));
+    await series("panel Материалы", 10, () => toggle("Материалы урока"));
+    await series("layout grid↔speaker", 8, async () => { for (let z = 0; z < 2; z++) { await T.click(byLabel("Ещё")); await sleep(500); await T.click(byText("[role=menuitem]", "Вид:")); await sleep(1500); } });
+    await series("teacher mic on/off", 10, async () => { await setMic(true); await sleep(1000); await setMic(false); await sleep(1000); });
+    await series("bot camera off/on", 10, async (k) => { const b = active()[k % active().length]; b.startMedia({ presence: true }); await sleep(3000); b.startMedia({ video: true }); await sleep(4000); });
+    await series("bot leave/rejoin", 8, async (k) => { const b = active()[k % active().length]; await b.leave(); await sleep(3000); await botIn(b, { video: true }); await sleep(4000); });
+    await series("chat 40 msgs (closed)", 40, (k) => active()[k % active().length].chat(`leak ${k}`));
+    await series("board open/close", 6, async () => { await T.click(byLabel("Доска")); await waitFor(() => T.eval("!!document.querySelector('.excalidraw')"), 20000); await sleep(3000); await T.click(byLabel("Доска")); await sleep(3000); });
+    await series("screen share start/stop", 6, async () => { await T.click(byLabel("Демонстрация")); await waitFor(() => T.eval(`document.body.innerText.includes('Вы показываете экран')`), 20000); await sleep(3000); await T.click(byLabel("Остановить демонстрацию")); await sleep(3000); });
+    await series("idle 120s (end)", 1, async () => { await sleep(120000); });
+    summary.leak = rows;
+    saveSummary();
+    }
   }
 
   // ── ЧАСТЬ 18. Долгий урок с жизнью класса ───────────────────────────────

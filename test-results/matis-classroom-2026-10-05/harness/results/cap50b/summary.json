@@ -1,0 +1,229 @@
+{
+  "setup": {
+    "lk": {
+      "total": 1,
+      "active": 1,
+      "dup": 0,
+      "tracks": 2
+    },
+    "grid": {
+      "head": "E2E: сетевая устойчивость (автотест)1 участник",
+      "grid": null
+    }
+  },
+  "capacity": {
+    "joined": 49,
+    "of": 49,
+    "refused": [],
+    "tti": {
+      "n": 49,
+      "p50": 4927,
+      "p95": 9079,
+      "max": 9407
+    },
+    "api": {
+      "GET /j/:token": {
+        "n": 49,
+        "p50": 584,
+        "p95": 1036,
+        "max": 1045,
+        "errors": []
+      },
+      "POST /auth/refresh": {
+        "n": 49,
+        "p50": 673,
+        "p95": 1242,
+        "max": 1265,
+        "errors": []
+      },
+      "POST /j/:token/enter": {
+        "n": 49,
+        "p50": 191,
+        "p95": 1059,
+        "max": 1165,
+        "errors": []
+      },
+      "POST /lessons/:id/join": {
+        "n": 49,
+        "p50": 1306,
+        "p95": 3550,
+        "max": 3564,
+        "errors": []
+      },
+      "GET /lessons/:id/activities": {
+        "n": 49,
+        "p50": 1081,
+        "p95": 2088,
+        "max": 2553,
+        "errors": []
+      },
+      "GET /lessons/:id/chat": {
+        "n": 49,
+        "p50": 1361,
+        "p95": 3116,
+        "max": 3439,
+        "errors": []
+      }
+    },
+    "lk": {
+      "total": 50,
+      "active": 50,
+      "dup": 0,
+      "tracks": 51
+    },
+    "window": {
+      "samples": 6,
+      "fpsAvg": 30,
+      "fpsMin": 29.9,
+      "longTaskPct": 3.4,
+      "taskPct": 6.8,
+      "commitsPerSec": 1.2,
+      "fnRendersPerSec": 6.7,
+      "videoRenders": 154,
+      "videoMounts": 0,
+      "tileMoves": 0,
+      "gridChanges": 0,
+      "decodedFps": 23.4,
+      "dropped": 9,
+      "layoutPerSec": 1,
+      "recalcMsPerSec": 0,
+      "videosVisible": 11,
+      "videosPlaying": 11,
+      "dom": 336,
+      "heapMB": 10.7,
+      "slowEventMax": 0
+    },
+    "rtc": {
+      "pcs": 1,
+      "inVideo": 49,
+      "inAudio": 0,
+      "lossPct": 0,
+      "jitterP95Ms": 2,
+      "rttMs": 1,
+      "freezes": 0,
+      "framesDropped": 0,
+      "framesDecoded": 934,
+      "bytesIn": 68845179
+    },
+    "grid": {
+      "head": "E2E: сетевая устойчивость (автотест)50 участников",
+      "grid": "repeat(4, 345.5px)",
+      "cells": 12,
+      "tileW": 346,
+      "tileH": 194,
+      "areaW": 1412,
+      "areaH": 698,
+      "more": "+39ещё участников",
+      "page": "50 участников · показаны 1–11",
+      "scrollH": 768,
+      "clientH": 768
+    },
+    "teacherSpeaking": true,
+    "chat": {
+      "delivered": 49,
+      "of": 49,
+      "n": 49,
+      "p50": 350,
+      "p95": 358,
+      "max": 358
+    },
+    "board": {
+      "label": "board open",
+      "ok": true,
+      "ms": 1783
+    },
+    "cams": {
+      "videoMounts": 1,
+      "tileMoves": 12,
+      "longTaskMs": 1185
+    },
+    "shareStart": {
+      "label": "share start",
+      "ok": true,
+      "ms": 1612
+    },
+    "shareStop": {
+      "label": "share stop",
+      "ok": true,
+      "ms": 190
+    },
+    "reconnect": {
+      "ok": true,
+      "ms": 870,
+      "lk": {
+        "total": 50,
+        "active": 50,
+        "dup": 0,
+        "tracks": 2
+      },
+      "apiAfter": {}
+    },
+    "host": "см. host-by-phase.json (capacity)"
+  },
+  "apiAll": {
+    "POST /auth/login": {
+      "n": 1,
+      "p50": 171,
+      "p95": 171,
+      "max": 171,
+      "errors": []
+    },
+    "GET /j/:token": {
+      "n": 49,
+      "p50": 584,
+      "p95": 1036,
+      "max": 1045,
+      "errors": []
+    },
+    "POST /auth/refresh": {
+      "n": 49,
+      "p50": 673,
+      "p95": 1242,
+      "max": 1265,
+      "errors": []
+    },
+    "POST /j/:token/enter": {
+      "n": 49,
+      "p50": 191,
+      "p95": 1059,
+      "max": 1165,
+      "errors": []
+    },
+    "POST /lessons/:id/join": {
+      "n": 49,
+      "p50": 1306,
+      "p95": 3550,
+      "max": 3564,
+      "errors": []
+    },
+    "GET /lessons/:id/activities": {
+      "n": 49,
+      "p50": 1081,
+      "p95": 2088,
+      "max": 2553,
+      "errors": []
+    },
+    "GET /lessons/:id/chat": {
+      "n": 49,
+      "p50": 1361,
+      "p95": 3116,
+      "max": 3439,
+      "errors": []
+    }
+  },
+  "checks": [
+    {
+      "name": "teacher api login",
+      "ok": true,
+      "detail": {
+        "status": 200
+      },
+      "rel": "00:00"
+    },
+    {
+      "name": "teacher in room",
+      "ok": true,
+      "rel": "00:08"
+    }
+  ]
+}

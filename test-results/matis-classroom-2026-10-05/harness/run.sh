@@ -51,10 +51,10 @@ docker run --rm --name cls-driver --network e2e-net -v "$H":/w -v "$H/../media":
   -e LID="${LID:-add87950-752e-43b0-85c3-7628bbc079d5}" -e JOIN_PATH="${JOIN_PATH:-/j/0b0315665c2061b3dd9d6e9713a9b97e8cd3d13b57941c95fecda8ddec5200dc}" \
   -e T_EMAIL=e2e-teacher2@school.dev -e T_PW="$(cat /root/znat/test-results/matis-client-network-resilience-2026-10-04/harness/.secrets/e2e-teacher.pw)" \
   -e T_CDP=$TIP:9223 $SB_ENV -e LK_URL=http://$GW:7880 -e LK_KEY="$LK_KEY" -e LK_SECRET="$LK_SECRET" \
-  -e STORM_CAMS="${STORM_CAMS:-}" -e PHASES="${PHASES:-}" -e STUDENTS="${STUDENTS:-29}" -e SOAK_MIN="${SOAK_MIN:-0}" -e CUT_SEC="${CUT_SEC:-20}" \
+  -e STORM_CAMS="${STORM_CAMS:-}" -e SNAP_ACTION="${SNAP_ACTION:-}" -e SNAP_REPS="${SNAP_REPS:-}" -e LEAK_MODE="${LEAK_MODE:-}" -e THROTTLE="${THROTTLE:-}" -e PHASES="${PHASES:-}" -e STUDENTS="${STUDENTS:-29}" -e SOAK_MIN="${SOAK_MIN:-0}" -e CUT_SEC="${CUT_SEC:-20}" \
   node:22-bookworm-slim node run.mjs > "$OUT/driver.log" 2>&1
 touch "$OUT/done" "$OUT/host.jsonl.stop"
 docker compose logs --no-color --since "$START_UTC" app > "$OUT/app.log" 2>&1
 docker compose logs --no-color --since "$START_UTC" livekit > "$OUT/livekit.log" 2>&1
-docker rm -f cls-teacher cls-teacher-fwd cls-s1 cls-s1-fwd cls-s2 cls-s2-fwd >/dev/null 2>&1
+docker rm -f cls-teacher cls-teacher-fwd cls-s1 cls-s1-fwd cls-s2 cls-s2-fwd cls-s3 cls-s3-fwd >/dev/null 2>&1
 echo DONE

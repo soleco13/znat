@@ -1,0 +1,602 @@
+[
+ {
+  "min": 0,
+  "heapMB": 13.4,
+  "nodes": 923,
+  "listeners": 563,
+  "dom": 433,
+  "videos": 1,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 1,
+  "heapMB": 15.5,
+  "nodes": 1577,
+  "listeners": 752,
+  "dom": 436,
+  "videos": 1,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 2,
+  "heapMB": 13.9,
+  "nodes": 839,
+  "listeners": 553,
+  "dom": 361,
+  "videos": 1,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 3,
+  "heapMB": 14,
+  "nodes": 841,
+  "listeners": 553,
+  "dom": 361,
+  "videos": 1,
+  "students": 28,
+  "ws": 28
+ },
+ {
+  "min": 4,
+  "heapMB": 15.7,
+  "nodes": 1487,
+  "listeners": 734,
+  "dom": 361,
+  "videos": 1,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 5,
+  "heapMB": 14.3,
+  "nodes": 1188,
+  "listeners": 587,
+  "dom": 361,
+  "videos": 1,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 6,
+  "heapMB": 13.2,
+  "nodes": 604,
+  "listeners": 397,
+  "dom": 361,
+  "videos": 1,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 7,
+  "heapMB": 13.7,
+  "nodes": 750,
+  "listeners": 464,
+  "dom": 361,
+  "videos": 2,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 8,
+  "heapMB": 13.3,
+  "nodes": 750,
+  "listeners": 430,
+  "dom": 361,
+  "videos": 2,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 9,
+  "heapMB": 13.7,
+  "nodes": 750,
+  "listeners": 465,
+  "dom": 361,
+  "videos": 2,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 10,
+  "heapMB": 13.4,
+  "nodes": 876,
+  "listeners": 423,
+  "dom": 361,
+  "videos": 2,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 11,
+  "heapMB": 13.3,
+  "nodes": 750,
+  "listeners": 423,
+  "dom": 361,
+  "videos": 2,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 12,
+  "heapMB": 13.5,
+  "nodes": 898,
+  "listeners": 462,
+  "dom": 361,
+  "videos": 3,
+  "students": 28,
+  "ws": 28
+ },
+ {
+  "min": 13,
+  "heapMB": 13.8,
+  "nodes": 898,
+  "listeners": 456,
+  "dom": 361,
+  "videos": 3,
+  "students": 27,
+  "ws": 27
+ },
+ {
+  "min": 14,
+  "heapMB": 13.5,
+  "nodes": 896,
+  "listeners": 452,
+  "dom": 361,
+  "videos": 3,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 15,
+  "heapMB": 13.6,
+  "nodes": 896,
+  "listeners": 452,
+  "dom": 361,
+  "videos": 3,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 16,
+  "heapMB": 14,
+  "nodes": 1062,
+  "listeners": 533,
+  "dom": 372,
+  "videos": 4,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 17,
+  "heapMB": 14.9,
+  "nodes": 1099,
+  "listeners": 514,
+  "dom": 385,
+  "videos": 4,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 18,
+  "heapMB": 13.8,
+  "nodes": 1041,
+  "listeners": 496,
+  "dom": 359,
+  "videos": 4,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 19,
+  "heapMB": 15.2,
+  "nodes": 1912,
+  "listeners": 728,
+  "dom": 372,
+  "videos": 4,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 20,
+  "heapMB": 14.2,
+  "nodes": 1038,
+  "listeners": 526,
+  "dom": 359,
+  "videos": 4,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 21,
+  "heapMB": 13.9,
+  "nodes": 1038,
+  "listeners": 493,
+  "dom": 359,
+  "videos": 4,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 22,
+  "heapMB": 13.9,
+  "nodes": 1168,
+  "listeners": 484,
+  "dom": 361,
+  "videos": 4,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 23,
+  "heapMB": 15.5,
+  "nodes": 1445,
+  "listeners": 529,
+  "dom": 354,
+  "videos": 3,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 24,
+  "heapMB": 13.8,
+  "nodes": 889,
+  "listeners": 454,
+  "dom": 354,
+  "videos": 3,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 25,
+  "heapMB": 13.9,
+  "nodes": 1017,
+  "listeners": 454,
+  "dom": 354,
+  "videos": 3,
+  "students": 28,
+  "ws": 28
+ },
+ {
+  "min": 26,
+  "heapMB": 14.1,
+  "nodes": 891,
+  "listeners": 464,
+  "dom": 354,
+  "videos": 3,
+  "students": 28,
+  "ws": 28
+ },
+ {
+  "min": 27,
+  "heapMB": 14.5,
+  "nodes": 892,
+  "listeners": 492,
+  "dom": 354,
+  "videos": 3,
+  "students": 28,
+  "ws": 28
+ },
+ {
+  "min": 28,
+  "heapMB": 13.9,
+  "nodes": 882,
+  "listeners": 456,
+  "dom": 347,
+  "videos": 3,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 29,
+  "heapMB": 14.5,
+  "nodes": 882,
+  "listeners": 469,
+  "dom": 347,
+  "videos": 3,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 30,
+  "heapMB": 14.1,
+  "nodes": 1010,
+  "listeners": 455,
+  "dom": 347,
+  "videos": 3,
+  "students": 28,
+  "ws": 28
+ },
+ {
+  "min": 31,
+  "heapMB": 14,
+  "nodes": 882,
+  "listeners": 456,
+  "dom": 347,
+  "videos": 3,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 32,
+  "heapMB": 14.4,
+  "nodes": 886,
+  "listeners": 455,
+  "dom": 347,
+  "videos": 2,
+  "students": 28,
+  "ws": 28
+ },
+ {
+  "min": 33,
+  "heapMB": 14.8,
+  "nodes": 780,
+  "listeners": 465,
+  "dom": 347,
+  "videos": 2,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 34,
+  "heapMB": 14.1,
+  "nodes": 738,
+  "listeners": 427,
+  "dom": 347,
+  "videos": 2,
+  "students": 28,
+  "ws": 28
+ },
+ {
+  "min": 35,
+  "heapMB": 14.1,
+  "nodes": 736,
+  "listeners": 428,
+  "dom": 347,
+  "videos": 2,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 36,
+  "heapMB": 14.1,
+  "nodes": 585,
+  "listeners": 398,
+  "dom": 340,
+  "videos": 1,
+  "students": 28,
+  "ws": 28
+ },
+ {
+  "min": 37,
+  "heapMB": 14.4,
+  "nodes": 583,
+  "listeners": 421,
+  "dom": 340,
+  "videos": 1,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 38,
+  "heapMB": 15.6,
+  "nodes": 1224,
+  "listeners": 579,
+  "dom": 340,
+  "videos": 1,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 39,
+  "heapMB": 14.2,
+  "nodes": 705,
+  "listeners": 405,
+  "dom": 338,
+  "videos": 1,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 40,
+  "heapMB": 15.3,
+  "nodes": 749,
+  "listeners": 469,
+  "dom": 351,
+  "videos": 2,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 41,
+  "heapMB": 14.2,
+  "nodes": 725,
+  "listeners": 428,
+  "dom": 338,
+  "videos": 2,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 42,
+  "heapMB": 14.4,
+  "nodes": 851,
+  "listeners": 436,
+  "dom": 331,
+  "videos": 2,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 43,
+  "heapMB": 16.2,
+  "nodes": 1085,
+  "listeners": 477,
+  "dom": 344,
+  "videos": 2,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 44,
+  "heapMB": 15.4,
+  "nodes": 1530,
+  "listeners": 655,
+  "dom": 333,
+  "videos": 2,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 45,
+  "heapMB": 14.2,
+  "nodes": 868,
+  "listeners": 458,
+  "dom": 333,
+  "videos": 3,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 46,
+  "heapMB": 15.1,
+  "nodes": 868,
+  "listeners": 471,
+  "dom": 333,
+  "videos": 3,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 47,
+  "heapMB": 15.2,
+  "nodes": 868,
+  "listeners": 505,
+  "dom": 333,
+  "videos": 3,
+  "students": 28,
+  "ws": 28
+ },
+ {
+  "min": 48,
+  "heapMB": 14.3,
+  "nodes": 868,
+  "listeners": 466,
+  "dom": 333,
+  "videos": 3,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 49,
+  "heapMB": 15.5,
+  "nodes": 1045,
+  "listeners": 530,
+  "dom": 353,
+  "videos": 4,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 50,
+  "heapMB": 15.8,
+  "nodes": 1021,
+  "listeners": 501,
+  "dom": 340,
+  "videos": 4,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 51,
+  "heapMB": 14.4,
+  "nodes": 1023,
+  "listeners": 498,
+  "dom": 340,
+  "videos": 4,
+  "students": 28,
+  "ws": 28
+ },
+ {
+  "min": 52,
+  "heapMB": 15.4,
+  "nodes": 1147,
+  "listeners": 532,
+  "dom": 340,
+  "videos": 4,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 53,
+  "heapMB": 14.3,
+  "nodes": 1021,
+  "listeners": 489,
+  "dom": 340,
+  "videos": 4,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 54,
+  "heapMB": 16.2,
+  "nodes": 1715,
+  "listeners": 545,
+  "dom": 379,
+  "videos": 4,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 55,
+  "heapMB": 14.3,
+  "nodes": 1021,
+  "listeners": 489,
+  "dom": 340,
+  "videos": 4,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 56,
+  "heapMB": 14.4,
+  "nodes": 1021,
+  "listeners": 499,
+  "dom": 340,
+  "videos": 4,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 57,
+  "heapMB": 14.3,
+  "nodes": 1021,
+  "listeners": 490,
+  "dom": 340,
+  "videos": 4,
+  "students": 29,
+  "ws": 29
+ },
+ {
+  "min": 58,
+  "heapMB": 14.9,
+  "nodes": 1023,
+  "listeners": 492,
+  "dom": 340,
+  "videos": 4,
+  "students": 28,
+  "ws": 28
+ },
+ {
+  "min": 59,
+  "heapMB": 14.3,
+  "nodes": 868,
+  "listeners": 459,
+  "dom": 333,
+  "videos": 3,
+  "students": 29,
+  "ws": 29
+ }
+]

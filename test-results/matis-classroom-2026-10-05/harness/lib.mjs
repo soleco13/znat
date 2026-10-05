@@ -167,6 +167,7 @@ export class Bot {
     ws.onclose = (e) => {
       if (ws !== this.ws) return;
       clearInterval(stale);
+      if (this.holdWs) { this.wsState = "reconnecting"; return; }
       this.wsState = "reconnecting";
       log({ kind: "bot.ws.closed", text: `s${this.i} code=${e.code}`, quiet: true });
       if (this.left || e.code === 4005) { this.wsState = "closed"; return; }
@@ -184,6 +185,12 @@ export class Bot {
       if (ws.readyState === 1 && Date.now() - last > 50000) { try { ws.close(4000); } catch {} }
       if (ws.readyState === 1) this.wsFails = 0;
     }, 5000);
+  }
+  /** Обрыв только канала урока на `ms` (медиа LiveKit живёт): как короткий разрыв сокета на мобильной сети. */
+  dropWs(ms) {
+    this.holdWs = true;
+    try { this.ws?.close(4000, "test-drop"); } catch {}
+    setTimeout(() => { this.holdWs = false; this.openWs(); }, ms);
   }
   /** Медиа: видео-файл (камера) и/или аудио-файл (говорит по расписанию файла). */
   startMedia({ video = false, audio = null, presence = false } = {}) {

@@ -1,0 +1,15 @@
+[
+  {
+    "name": "teacher api login",
+    "ok": false,
+    "detail": {
+      "status": 429
+    },
+    "rel": "00:00"
+  },
+  {
+    "name": "teacher in room",
+    "ok": true,
+    "rel": "00:07"
+  }
+]

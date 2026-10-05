@@ -1,0 +1,345 @@
+{
+  "setup": {
+    "lk": {
+      "total": 1,
+      "active": 1,
+      "dup": 0,
+      "tracks": 2
+    },
+    "grid": {
+      "head": "E2E: сетевая устойчивость (автотест)1 участник",
+      "grid": null
+    }
+  },
+  "c03": [
+    {
+      "label": "1 page-1 student speaks",
+      "samples": 31,
+      "chipChanges": 0,
+      "posChanges": 0,
+      "chips": [
+        null
+      ],
+      "more": [
+        "+19 ещё участников"
+      ],
+      "speaking": [
+        "Живой ученик A"
+      ]
+    },
+    {
+      "label": "2 page-2 student speaks",
+      "samples": 32,
+      "chipChanges": 1,
+      "posChanges": 0,
+      "chips": [
+        null,
+        "Говорит: Живой ученик B · стр. 2"
+      ],
+      "more": [
+        "+19 ещё участников",
+        "+19 Живой ученик B [ring]"
+      ],
+      "speaking": []
+    },
+    {
+      "label": "5 speaker stops (hold)",
+      "samples": 16,
+      "chipChanges": 1,
+      "posChanges": 0,
+      "chips": [
+        "Говорит: Живой ученик B · стр. 2",
+        null
+      ],
+      "more": [
+        "+19 Живой ученик B [ring]",
+        "+19 ещё участников"
+      ],
+      "speaking": []
+    },
+    {
+      "label": "3 page-3 student speaks",
+      "samples": 31,
+      "chipChanges": 1,
+      "posChanges": 0,
+      "chips": [
+        null,
+        "Говорит: Живой ученик C · стр. 3"
+      ],
+      "more": [
+        "+19 ещё участников",
+        "+19 Живой ученик C [ring]"
+      ],
+      "speaking": []
+    },
+    {
+      "label": "4 B and C together",
+      "samples": 31,
+      "chipChanges": 1,
+      "posChanges": 0,
+      "chips": [
+        "Говорит: Живой ученик C · стр. 3",
+        "Говорят: Живой ученик B и ещё 1 · стр. 2"
+      ],
+      "more": [
+        "+19 Живой ученик C [ring]",
+        "+19 Живой ученик B и ещё 1 [ring]"
+      ],
+      "speaking": []
+    },
+    {
+      "label": "6 fast speaker switching",
+      "samples": 39,
+      "chipChanges": 8,
+      "posChanges": 0,
+      "chips": [
+        null,
+        "Говорит: Живой ученик B · стр. 2",
+        "Говорят: Живой ученик B и ещё 1 · стр. 2",
+        "Говорит: Живой ученик C · стр. 3"
+      ],
+      "more": [
+        "+19 ещё участников",
+        "+19 Живой ученик B [ring]",
+        "+19 Живой ученик B и ещё 1 [ring]",
+        "+19 Живой ученик C [ring]"
+      ],
+      "speaking": [
+        "Живой ученик A"
+      ]
+    },
+    {
+      "label": "7a teacher on page 2, page-2 student speaks",
+      "samples": 20,
+      "chipChanges": 0,
+      "posChanges": 0,
+      "chips": [
+        null
+      ],
+      "more": [
+        "+8 ещё участников"
+      ],
+      "speaking": [
+        "Живой ученик B"
+      ]
+    },
+    {
+      "label": "7b teacher on page 2, page-3 student speaks",
+      "samples": 20,
+      "chipChanges": 1,
+      "posChanges": 0,
+      "chips": [
+        null,
+        "Говорит: Живой ученик C · стр. 3"
+      ],
+      "more": [
+        "+8 ещё участников",
+        "+8 Живой ученик C [ring]"
+      ],
+      "speaking": [
+        "Живой ученик B"
+      ]
+    },
+    {
+      "label": "7c teacher on page 3, page-1 student speaks",
+      "samples": 19,
+      "chipChanges": 1,
+      "posChanges": 0,
+      "chips": [
+        null,
+        "Говорит: Живой ученик A · стр. 1"
+      ],
+      "more": [
+        "null"
+      ],
+      "speaking": []
+    },
+    {
+      "label": "8 click chip → page with speaker",
+      "page": "30 участников · показаны 1–11",
+      "chip": null,
+      "speakingTiles": [
+        "Живой ученик A"
+      ]
+    }
+  ],
+  "c04": [
+    {
+      "label": "ws drop 1.5 s",
+      "firstBadgeMs": null,
+      "firstHiddenMs": null,
+      "endPresent": true,
+      "endReconnecting": false,
+      "headMin": 30,
+      "headEnd": 30,
+      "layoutChanged": 0,
+      "samples": 24
+    },
+    {
+      "label": "ws drop 5 s",
+      "firstBadgeMs": 3096,
+      "firstHiddenMs": null,
+      "endPresent": true,
+      "endReconnecting": false,
+      "headMin": 30,
+      "headEnd": 30,
+      "layoutChanged": 0,
+      "samples": 38
+    },
+    {
+      "label": "ws drop 10 s",
+      "firstBadgeMs": 3088,
+      "firstHiddenMs": null,
+      "endPresent": true,
+      "endReconnecting": false,
+      "headMin": 30,
+      "headEnd": 30,
+      "layoutChanged": 0,
+      "samples": 58
+    },
+    {
+      "label": "ws drop 20 s (> grace)",
+      "firstBadgeMs": 3364,
+      "firstHiddenMs": 15213,
+      "endPresent": true,
+      "endReconnecting": false,
+      "headMin": 29,
+      "headEnd": 30,
+      "layoutChanged": 2,
+      "samples": 100
+    },
+    {
+      "label": "long outage 60 s (ws + media) and return",
+      "firstBadgeMs": 3107,
+      "firstHiddenMs": 15348,
+      "endPresent": false,
+      "endReconnecting": false,
+      "headMin": 29,
+      "headEnd": 30,
+      "layoutChanged": 1,
+      "samples": 270
+    },
+    {
+      "label": "real leave",
+      "firstBadgeMs": null,
+      "firstHiddenMs": 193,
+      "endPresent": false,
+      "endReconnecting": false,
+      "headMin": 29,
+      "headEnd": 29,
+      "layoutChanged": 0,
+      "samples": 19
+    },
+    {
+      "label": "student F5 (header count)",
+      "before": 29,
+      "min": 29,
+      "end": 29,
+      "back": true
+    },
+    {
+      "label": "student closes tab (header count)",
+      "before": 29,
+      "droppedAtMs": 15685,
+      "end": 28
+    }
+  ],
+  "apiAll": {
+    "POST /auth/login": {
+      "n": 1,
+      "p50": 247,
+      "p95": 247,
+      "max": 247,
+      "errors": []
+    },
+    "GET /j/:token": {
+      "n": 26,
+      "p50": 14,
+      "p95": 97,
+      "max": 148,
+      "errors": []
+    },
+    "POST /auth/refresh": {
+      "n": 26,
+      "p50": 9,
+      "p95": 69,
+      "max": 89,
+      "errors": []
+    },
+    "POST /j/:token/enter": {
+      "n": 26,
+      "p50": 12,
+      "p95": 84,
+      "max": 144,
+      "errors": []
+    },
+    "POST /lessons/:id/join": {
+      "n": 27,
+      "p50": 46,
+      "p95": 129,
+      "max": 159,
+      "errors": []
+    },
+    "GET /lessons/:id/activities": {
+      "n": 26,
+      "p50": 27,
+      "p95": 89,
+      "max": 169,
+      "errors": []
+    },
+    "GET /lessons/:id/chat": {
+      "n": 26,
+      "p50": 29,
+      "p95": 147,
+      "max": 173,
+      "errors": []
+    },
+    "PATCH /lessons/:id/participants/:id/permissions": {
+      "n": 3,
+      "p50": 35,
+      "p95": 53,
+      "max": 53,
+      "errors": []
+    },
+    "POST /lessons/:id/leave": {
+      "n": 1,
+      "p50": 64,
+      "p95": 64,
+      "max": 64,
+      "errors": []
+    }
+  },
+  "checks": [
+    {
+      "name": "teacher api login",
+      "ok": true,
+      "detail": {
+        "status": 200
+      },
+      "rel": "00:01"
+    },
+    {
+      "name": "teacher in room",
+      "ok": true,
+      "rel": "00:09"
+    },
+    {
+      "name": "ux2: 30 in lesson, paged",
+      "ok": true,
+      "detail": {
+        "head": "E2E: сетевая устойчивость (автотест)30 участников",
+        "grid": "repeat(4, 345.5px)",
+        "cells": 12,
+        "tileW": 346,
+        "tileH": 194,
+        "areaW": 1412,
+        "areaH": 698,
+        "more": "+19ещё участников",
+        "page": "30 участников · показаны 1–11",
+        "scrollH": 768,
+        "clientH": 768
+      },
+      "rel": "00:54"
+    }
+  ]
+}

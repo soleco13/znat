@@ -1,0 +1,206 @@
+[
+ {
+  "name": "idle 120s",
+  "reps": 1,
+  "dNodes": 0,
+  "dListeners": 0,
+  "dHeapMB": 0.06,
+  "dLive": 0,
+  "perRepNodes": 0,
+  "perRepListeners": 0,
+  "after": {
+   "nodes": 1359,
+   "listeners": 662,
+   "docs": 2,
+   "heapMB": 8.56,
+   "live": 335
+  }
+ },
+ {
+  "name": "panel Участники",
+  "reps": 10,
+  "dNodes": 0,
+  "dListeners": 0,
+  "dHeapMB": 0.5,
+  "dLive": 0,
+  "perRepNodes": 0,
+  "perRepListeners": 0,
+  "after": {
+   "nodes": 1359,
+   "listeners": 662,
+   "docs": 2,
+   "heapMB": 9.06,
+   "live": 335
+  }
+ },
+ {
+  "name": "panel Чат",
+  "reps": 10,
+  "dNodes": 0,
+  "dListeners": 0,
+  "dHeapMB": 0.15,
+  "dLive": 0,
+  "perRepNodes": 0,
+  "perRepListeners": 0,
+  "after": {
+   "nodes": 1359,
+   "listeners": 662,
+   "docs": 2,
+   "heapMB": 9.19,
+   "live": 335
+  }
+ },
+ {
+  "name": "panel Материалы",
+  "reps": 10,
+  "dNodes": 0,
+  "dListeners": 0,
+  "dHeapMB": 0.04,
+  "dLive": 0,
+  "perRepNodes": 0,
+  "perRepListeners": 0,
+  "after": {
+   "nodes": 1359,
+   "listeners": 662,
+   "docs": 2,
+   "heapMB": 9.23,
+   "live": 335
+  }
+ },
+ {
+  "name": "layout grid↔speaker",
+  "reps": 8,
+  "dNodes": 3,
+  "dListeners": 34,
+  "dHeapMB": 0.24,
+  "dLive": 2,
+  "perRepNodes": 0.4,
+  "perRepListeners": 4.3,
+  "after": {
+   "nodes": 1362,
+   "listeners": 696,
+   "docs": 2,
+   "heapMB": 9.47,
+   "live": 337
+  }
+ },
+ {
+  "name": "teacher mic on/off",
+  "reps": 10,
+  "dNodes": -3,
+  "dListeners": -33,
+  "dHeapMB": 0.06,
+  "dLive": -2,
+  "perRepNodes": -0.3,
+  "perRepListeners": -3.3,
+  "after": {
+   "nodes": 1359,
+   "listeners": 663,
+   "docs": 2,
+   "heapMB": 9.53,
+   "live": 335
+  }
+ },
+ {
+  "name": "bot camera off/on",
+  "reps": 10,
+  "dNodes": 333,
+  "dListeners": 88,
+  "dHeapMB": 0.14,
+  "dLive": -71,
+  "perRepNodes": 33.3,
+  "perRepListeners": 8.8,
+  "after": {
+   "nodes": 1692,
+   "listeners": 751,
+   "docs": 2,
+   "heapMB": 9.68,
+   "live": 264
+  }
+ },
+ {
+  "name": "bot leave/rejoin",
+  "reps": 8,
+  "dNodes": 543,
+  "dListeners": 93,
+  "dHeapMB": 0.24,
+  "dLive": 71,
+  "perRepNodes": 67.9,
+  "perRepListeners": 11.6,
+  "after": {
+   "nodes": 2235,
+   "listeners": 844,
+   "docs": 2,
+   "heapMB": 9.91,
+   "live": 335
+  }
+ },
+ {
+  "name": "chat 40 msgs (closed)",
+  "reps": 40,
+  "dNodes": 4,
+  "dListeners": 0,
+  "dHeapMB": 0.03,
+  "dLive": 2,
+  "perRepNodes": 0.1,
+  "perRepListeners": 0,
+  "after": {
+   "nodes": 2239,
+   "listeners": 844,
+   "docs": 2,
+   "heapMB": 9.93,
+   "live": 337
+  }
+ },
+ {
+  "name": "board open/close",
+  "reps": 6,
+  "dNodes": 158,
+  "dListeners": 2,
+  "dHeapMB": 4.33,
+  "dLive": 11,
+  "perRepNodes": 26.3,
+  "perRepListeners": 0.3,
+  "after": {
+   "nodes": 2397,
+   "listeners": 846,
+   "docs": 6,
+   "heapMB": 14.26,
+   "live": 348
+  }
+ },
+ {
+  "name": "screen share start/stop",
+  "reps": 6,
+  "dNodes": -362,
+  "dListeners": -162,
+  "dHeapMB": -0.9,
+  "dLive": 0,
+  "perRepNodes": -60.3,
+  "perRepListeners": -27,
+  "after": {
+   "nodes": 2035,
+   "listeners": 684,
+   "docs": 5,
+   "heapMB": 13.36,
+   "live": 348
+  }
+ },
+ {
+  "name": "idle 120s (end)",
+  "reps": 1,
+  "dNodes": 0,
+  "dListeners": 0,
+  "dHeapMB": 0.01,
+  "dLive": 0,
+  "perRepNodes": 0,
+  "perRepListeners": 0,
+  "after": {
+   "nodes": 2035,
+   "listeners": 684,
+   "docs": 5,
+   "heapMB": 13.37,
+   "live": 348
+  }
+ }
+]

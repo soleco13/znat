@@ -20,3 +20,4 @@ harness/results/*.out
 harness/results/dry*/
 harness/results/probe/
 harness/results/smoke/
+harness/results/**/*.heapsnapshot

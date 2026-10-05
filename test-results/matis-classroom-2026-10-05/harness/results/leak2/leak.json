@@ -1,0 +1,121 @@
+[
+ {
+  "name": "board warmup",
+  "reps": 1,
+  "dNodes": 158,
+  "dListeners": 2,
+  "dHeapMB": 3.67,
+  "dLive": 11,
+  "perRepNodes": 158,
+  "perRepListeners": 2,
+  "after": {
+   "nodes": 1126,
+   "listeners": 472,
+   "docs": 5,
+   "heapMB": 10.95,
+   "live": 333
+  }
+ },
+ {
+  "name": "board ×5 (1)",
+  "reps": 5,
+  "dNodes": 0,
+  "dListeners": 0,
+  "dHeapMB": 1.19,
+  "dLive": 0,
+  "perRepNodes": 0,
+  "perRepListeners": 0,
+  "after": {
+   "nodes": 1126,
+   "listeners": 472,
+   "docs": 5,
+   "heapMB": 12.15,
+   "live": 333
+  }
+ },
+ {
+  "name": "board ×5 (2)",
+  "reps": 5,
+  "dNodes": 0,
+  "dListeners": 0,
+  "dHeapMB": 0.73,
+  "dLive": 0,
+  "perRepNodes": 0,
+  "perRepListeners": 0,
+  "after": {
+   "nodes": 1126,
+   "listeners": 472,
+   "docs": 5,
+   "heapMB": 12.88,
+   "live": 333
+  }
+ },
+ {
+  "name": "leave/rejoin ×8 (1)",
+  "reps": 8,
+  "dNodes": 750,
+  "dListeners": 180,
+  "dHeapMB": 0.18,
+  "dLive": 0,
+  "perRepNodes": 93.8,
+  "perRepListeners": 22.5,
+  "after": {
+   "nodes": 1876,
+   "listeners": 652,
+   "docs": 5,
+   "heapMB": 13.06,
+   "live": 333
+  }
+ },
+ {
+  "name": "leave/rejoin ×8 (2)",
+  "reps": 8,
+  "dNodes": 0,
+  "dListeners": 0,
+  "dHeapMB": 0.1,
+  "dLive": 0,
+  "perRepNodes": 0,
+  "perRepListeners": 0,
+  "after": {
+   "nodes": 1876,
+   "listeners": 652,
+   "docs": 5,
+   "heapMB": 13.15,
+   "live": 333
+  }
+ },
+ {
+  "name": "leave/rejoin ×8 (3)",
+  "reps": 8,
+  "dNodes": 0,
+  "dListeners": 0,
+  "dHeapMB": -0.41,
+  "dLive": 0,
+  "perRepNodes": 0,
+  "perRepListeners": 0,
+  "after": {
+   "nodes": 1876,
+   "listeners": 652,
+   "docs": 5,
+   "heapMB": 12.74,
+   "live": 333
+  }
+ },
+ {
+  "name": "screen share once",
+  "reps": 1,
+  "dNodes": 0,
+  "dListeners": 0,
+  "dHeapMB": -0.07,
+  "dLive": 0,
+  "perRepNodes": 0,
+  "perRepListeners": 0,
+  "after": {
+   "nodes": 1876,
+   "listeners": 652,
+   "docs": 5,
+   "heapMB": 12.68,
+   "live": 333
+  }
+ }
+]

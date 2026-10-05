@@ -1,0 +1,48 @@
+[
+  {
+    "name": "teacher api login",
+    "ok": true,
+    "detail": {
+      "status": 200
+    },
+    "rel": "00:00"
+  },
+  {
+    "name": "teacher in room",
+    "ok": true,
+    "rel": "00:09"
+  },
+  {
+    "name": "share: grid restored after stop",
+    "ok": true,
+    "detail": {
+      "before": {
+        "head": "E2E: сетевая устойчивость (автотест)31 участник",
+        "grid": "repeat(4, 345.5px)",
+        "cells": 12,
+        "tileW": 346,
+        "tileH": 194,
+        "areaW": 1412,
+        "areaH": 698,
+        "more": "+20ещё участников",
+        "page": "31 участник · показаны 1–11",
+        "scrollH": 768,
+        "clientH": 768
+      },
+      "after": {
+        "head": "E2E: сетевая устойчивость (автотест)31 участник",
+        "grid": "repeat(4, 345.5px)",
+        "cells": 12,
+        "tileW": 346,
+        "tileH": 194,
+        "areaW": 1412,
+        "areaH": 698,
+        "more": "+20ещё участников",
+        "page": "31 участник · показаны 1–11",
+        "scrollH": 768,
+        "clientH": 768
+      }
+    },
+    "rel": "11:00"
+  }
+]

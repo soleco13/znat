@@ -1,0 +1,81 @@
+[
+ {
+  "label": "ws drop 1.5 s",
+  "firstBadgeMs": null,
+  "firstHiddenMs": null,
+  "endPresent": true,
+  "endReconnecting": false,
+  "headMin": 30,
+  "headEnd": 30,
+  "layoutChanged": 0,
+  "samples": 24
+ },
+ {
+  "label": "ws drop 5 s",
+  "firstBadgeMs": 3096,
+  "firstHiddenMs": null,
+  "endPresent": true,
+  "endReconnecting": false,
+  "headMin": 30,
+  "headEnd": 30,
+  "layoutChanged": 0,
+  "samples": 38
+ },
+ {
+  "label": "ws drop 10 s",
+  "firstBadgeMs": 3088,
+  "firstHiddenMs": null,
+  "endPresent": true,
+  "endReconnecting": false,
+  "headMin": 30,
+  "headEnd": 30,
+  "layoutChanged": 0,
+  "samples": 58
+ },
+ {
+  "label": "ws drop 20 s (> grace)",
+  "firstBadgeMs": 3364,
+  "firstHiddenMs": 15213,
+  "endPresent": true,
+  "endReconnecting": false,
+  "headMin": 29,
+  "headEnd": 30,
+  "layoutChanged": 2,
+  "samples": 100
+ },
+ {
+  "label": "long outage 60 s (ws + media) and return",
+  "firstBadgeMs": 3107,
+  "firstHiddenMs": 15348,
+  "endPresent": false,
+  "endReconnecting": false,
+  "headMin": 29,
+  "headEnd": 30,
+  "layoutChanged": 1,
+  "samples": 270
+ },
+ {
+  "label": "real leave",
+  "firstBadgeMs": null,
+  "firstHiddenMs": 193,
+  "endPresent": false,
+  "endReconnecting": false,
+  "headMin": 29,
+  "headEnd": 29,
+  "layoutChanged": 0,
+  "samples": 19
+ },
+ {
+  "label": "student F5 (header count)",
+  "before": 29,
+  "min": 29,
+  "end": 29,
+  "back": true
+ },
+ {
+  "label": "student closes tab (header count)",
+  "before": 29,
+  "droppedAtMs": 15685,
+  "end": 28
+ }
+]

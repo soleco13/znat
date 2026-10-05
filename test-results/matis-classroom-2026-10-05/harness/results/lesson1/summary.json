@@ -1,0 +1,374 @@
+{
+  "setup": {
+    "lk": {
+      "total": 1,
+      "active": 1,
+      "dup": 0,
+      "tracks": 2
+    },
+    "grid": {
+      "head": "E2E: сетевая устойчивость (автотест)1 участник",
+      "grid": null
+    }
+  },
+  "lesson": [
+    {
+      "n": 1,
+      "label": "Учитель в уроке (до входа учеников)",
+      "ms": 8,
+      "head": "E2E: сетевая устойчивость (автотест)1 участник",
+      "err": null,
+      "videoMounts": 0,
+      "tileMoves": 0,
+      "longTaskMs": 0,
+      "slowestInputMs": 0
+    },
+    {
+      "n": 2,
+      "label": "Пригласить → ссылка скопирована",
+      "ms": 720,
+      "toasts": [
+        "Ссылка для учеников скопирована"
+      ],
+      "err": null,
+      "videoMounts": 0,
+      "tileMoves": 0,
+      "longTaskMs": 0,
+      "slowestInputMs": 24
+    },
+    {
+      "n": 3,
+      "label": "30 участников входят постепенно (камеры у всех)",
+      "ms": 86214,
+      "head": "E2E: сетевая устойчивость (автотест)30 участников",
+      "err": null,
+      "videoMounts": 11,
+      "tileMoves": 44,
+      "longTaskMs": 3682,
+      "slowestInputMs": 0
+    },
+    {
+      "n": 4,
+      "label": "Несколько учеников говорят",
+      "ms": 4281,
+      "speakerHint": "Говорят: Живой ученик A и ещё 1 · стр. 2",
+      "err": null,
+      "videoMounts": 0,
+      "tileMoves": 0,
+      "longTaskMs": 0,
+      "slowestInputMs": 0
+    },
+    {
+      "n": 5,
+      "label": "Открыть чат",
+      "ms": 395,
+      "visibleMs": 66,
+      "err": null,
+      "videoMounts": 0,
+      "tileMoves": 12,
+      "longTaskMs": 293,
+      "slowestInputMs": 0
+    },
+    {
+      "n": 6,
+      "label": "Открыть участников",
+      "ms": 320,
+      "visibleMs": 50,
+      "err": null,
+      "videoMounts": 0,
+      "tileMoves": 0,
+      "longTaskMs": 196,
+      "slowestInputMs": 72
+    },
+    {
+      "n": 7,
+      "label": "Открыть материалы",
+      "ms": 348,
+      "visibleMs": 84,
+      "err": null,
+      "videoMounts": 0,
+      "tileMoves": 0,
+      "longTaskMs": 197,
+      "slowestInputMs": 56
+    },
+    {
+      "n": 8,
+      "label": "Запустить задание (Витрина)",
+      "ms": 6916,
+      "issuedVisibleMs": 3540,
+      "studentsGotIt": 27,
+      "err": null,
+      "videoMounts": 5,
+      "tileMoves": 0,
+      "longTaskMs": 2564,
+      "slowestInputMs": 0
+    },
+    {
+      "n": 9,
+      "label": "Ученики отвечают и почти одновременно сдают",
+      "ms": 14390,
+      "submitted": 27,
+      "of": 27,
+      "wallMs": 14384,
+      "teacherPanel": "27 ответили",
+      "err": null,
+      "videoMounts": 0,
+      "tileMoves": 0,
+      "longTaskMs": 489,
+      "slowestInputMs": 144
+    },
+    {
+      "n": 10,
+      "label": "Ученик теряет интернет (30 с, канал и медиа)",
+      "ms": 6078,
+      "reconnectingTiles": [
+        "Ученик 01"
+      ],
+      "err": null,
+      "videoMounts": 0,
+      "tileMoves": 0,
+      "longTaskMs": 462,
+      "slowestInputMs": 0
+    },
+    {
+      "n": 11,
+      "label": "Другой ученик выключает камеру",
+      "ms": 5089,
+      "err": null,
+      "videoMounts": 0,
+      "tileMoves": 0,
+      "longTaskMs": 390,
+      "slowestInputMs": 0
+    },
+    {
+      "n": 12,
+      "label": "Третий включает камеру",
+      "ms": 6026,
+      "err": null,
+      "videoMounts": 1,
+      "tileMoves": 9,
+      "longTaskMs": 577,
+      "slowestInputMs": 0
+    },
+    {
+      "n": 13,
+      "label": "Потерявший интернет возвращается",
+      "ms": 33027,
+      "stillReconnecting": 0,
+      "head": "E2E: сетевая устойчивость (автотест)30 участников",
+      "err": null,
+      "videoMounts": 1,
+      "tileMoves": 9,
+      "longTaskMs": 437,
+      "slowestInputMs": 0
+    },
+    {
+      "n": 14,
+      "label": "Открыть доску",
+      "ms": 3049,
+      "visibleMs": 2830,
+      "err": null,
+      "videoMounts": 5,
+      "tileMoves": 0,
+      "longTaskMs": 1881,
+      "slowestInputMs": 0
+    },
+    {
+      "n": 15,
+      "label": "Нарисовать прямоугольник",
+      "ms": 1700,
+      "err": null,
+      "videoMounts": 0,
+      "tileMoves": 0,
+      "longTaskMs": 0,
+      "slowestInputMs": 56
+    },
+    {
+      "n": 16,
+      "label": "Закрыть доску",
+      "ms": 288,
+      "visibleMs": 158,
+      "err": null,
+      "videoMounts": 11,
+      "tileMoves": 0,
+      "longTaskMs": 87,
+      "slowestInputMs": 64
+    },
+    {
+      "n": 17,
+      "label": "Начать демонстрацию",
+      "ms": 5476,
+      "visibleMs": 4577,
+      "err": null,
+      "videoMounts": 16,
+      "tileMoves": 0,
+      "longTaskMs": 3662,
+      "slowestInputMs": 0
+    },
+    {
+      "n": 18,
+      "label": "Остановить демонстрацию",
+      "ms": 546,
+      "visibleMs": 139,
+      "err": null,
+      "videoMounts": 11,
+      "tileMoves": 0,
+      "longTaskMs": 188,
+      "slowestInputMs": 0
+    },
+    {
+      "n": 19,
+      "label": "Сменить режим урока (Обсуждение)",
+      "ms": 1383,
+      "visibleMs": 78,
+      "students": 27,
+      "err": null,
+      "videoMounts": 0,
+      "tileMoves": 0,
+      "longTaskMs": 118,
+      "slowestInputMs": 144
+    },
+    {
+      "n": 20,
+      "label": "Изменить размер окна 1440→1100→1440",
+      "ms": 3142,
+      "at1100": "repeat(4, 260.5px)",
+      "err": null,
+      "videoMounts": 0,
+      "tileMoves": 24,
+      "longTaskMs": 0,
+      "slowestInputMs": 0
+    },
+    {
+      "n": 21,
+      "label": "Ученик обновляет страницу (F5)",
+      "ms": 1433,
+      "backMs": 662,
+      "headBefore": 30,
+      "headAfter": 30,
+      "err": null,
+      "videoMounts": 0,
+      "tileMoves": 0,
+      "longTaskMs": 810,
+      "slowestInputMs": 0
+    },
+    {
+      "n": 22,
+      "label": "Ученик закрывает вкладку",
+      "ms": 18033,
+      "headBefore": 30,
+      "after4sReconnectingShown": false,
+      "headAfter18s": 29,
+      "err": null,
+      "videoMounts": 0,
+      "tileMoves": 0,
+      "longTaskMs": 556,
+      "slowestInputMs": 0
+    },
+    {
+      "n": 23,
+      "label": "Учитель выходит из урока",
+      "ms": 325,
+      "leftMs": 111,
+      "err": null,
+      "videoMounts": 0,
+      "tileMoves": 0,
+      "longTaskMs": 71,
+      "slowestInputMs": 200
+    }
+  ],
+  "apiAll": {
+    "POST /auth/login": {
+      "n": 1,
+      "p50": 271,
+      "p95": 271,
+      "max": 271,
+      "errors": []
+    },
+    "GET /j/:token": {
+      "n": 27,
+      "p50": 9,
+      "p95": 26,
+      "max": 29,
+      "errors": []
+    },
+    "POST /auth/refresh": {
+      "n": 27,
+      "p50": 5,
+      "p95": 13,
+      "max": 16,
+      "errors": []
+    },
+    "POST /j/:token/enter": {
+      "n": 27,
+      "p50": 8,
+      "p95": 27,
+      "max": 30,
+      "errors": []
+    },
+    "POST /lessons/:id/join": {
+      "n": 27,
+      "p50": 27,
+      "p95": 76,
+      "max": 159,
+      "errors": []
+    },
+    "GET /lessons/:id/activities": {
+      "n": 28,
+      "p50": 15,
+      "p95": 36,
+      "max": 105,
+      "errors": []
+    },
+    "GET /lessons/:id/chat": {
+      "n": 27,
+      "p50": 21,
+      "p95": 67,
+      "max": 106,
+      "errors": []
+    },
+    "PATCH /lessons/:id/participants/:id/permissions": {
+      "n": 2,
+      "p50": 49,
+      "p95": 49,
+      "max": 49,
+      "errors": []
+    },
+    "GET /activities/:id/my": {
+      "n": 27,
+      "p50": 575,
+      "p95": 1412,
+      "max": 1461,
+      "errors": []
+    },
+    "POST /activities/:id/responses": {
+      "n": 81,
+      "p50": 549,
+      "p95": 1067,
+      "max": 1550,
+      "errors": []
+    },
+    "POST /activities/:id/submit": {
+      "n": 27,
+      "p50": 3984,
+      "p95": 4966,
+      "max": 4970,
+      "errors": []
+    }
+  },
+  "checks": [
+    {
+      "name": "teacher api login",
+      "ok": true,
+      "detail": {
+        "status": 200
+      },
+      "rel": "00:01"
+    },
+    {
+      "name": "teacher in room",
+      "ok": true,
+      "rel": "00:08"
+    }
+  ]
+}

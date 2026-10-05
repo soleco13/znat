@@ -1,0 +1,19 @@
+{
+ "capacity": {
+  "samples": 16,
+  "loadAvg1": 4.8,
+  "livekitCpu": 14.1,
+  "livekitCpuMax": 20.9,
+  "appCpu": 3.3,
+  "appCpuMax": 18.8,
+  "pgCpuMax": 5.4,
+  "redisCpuMax": 4.0,
+  "teacherChromeCpu": 66.5,
+  "teacherChromeMemMB": 712.4,
+  "driverCpu": 23.4,
+  "studentChromeCpu": null,
+  "eventLoopP99ms": 34.8,
+  "pgConnMax": 14,
+  "hostMemUsedMB": 2560
+ }
+}

@@ -1,0 +1,1310 @@
+{
+  "setup": {
+    "lk": {
+      "total": 1,
+      "active": 1,
+      "dup": 0,
+      "tracks": 2
+    },
+    "grid": {
+      "head": "E2E: сетевая устойчивость (автотест)1 участник",
+      "grid": null
+    }
+  },
+  "dynamic": {
+    "grid": [
+      {
+        "dir": "down",
+        "total": 1,
+        "head": "E2E: сетевая устойчивость (автотест)1 участник",
+        "grid": null
+      },
+      {
+        "dir": "up",
+        "total": 2,
+        "head": "E2E: сетевая устойчивость (автотест)2 участника",
+        "grid": "repeat(2, 701px)",
+        "cells": 2,
+        "tileW": 701,
+        "tileH": 394,
+        "areaW": 1412,
+        "areaH": 740,
+        "more": null,
+        "page": null,
+        "scrollH": 768,
+        "clientH": 768
+      },
+      {
+        "dir": "up",
+        "total": 3,
+        "head": "E2E: сетевая устойчивость (автотест)3 участника",
+        "grid": "repeat(2, 648.889px)",
+        "cells": 3,
+        "tileW": 649,
+        "tileH": 365,
+        "areaW": 1412,
+        "areaH": 740,
+        "more": null,
+        "page": null,
+        "scrollH": 768,
+        "clientH": 768
+      },
+      {
+        "dir": "up",
+        "total": 4,
+        "head": "E2E: сетевая устойчивость (автотест)4 участника",
+        "grid": "repeat(2, 648.889px)",
+        "cells": 4,
+        "tileW": 649,
+        "tileH": 365,
+        "areaW": 1412,
+        "areaH": 740,
+        "more": null,
+        "page": null,
+        "scrollH": 768,
+        "clientH": 768
+      },
+      {
+        "dir": "up",
+        "total": 5,
+        "head": "E2E: сетевая устойчивость (автотест)5 участников",
+        "grid": "repeat(3, 464px)",
+        "cells": 5,
+        "tileW": 464,
+        "tileH": 261,
+        "areaW": 1412,
+        "areaH": 740,
+        "more": null,
+        "page": null,
+        "scrollH": 768,
+        "clientH": 768
+      },
+      {
+        "dir": "up",
+        "total": 6,
+        "head": "E2E: сетевая устойчивость (автотест)6 участников",
+        "grid": "repeat(3, 464px)",
+        "cells": 6,
+        "tileW": 464,
+        "tileH": 261,
+        "areaW": 1412,
+        "areaH": 740,
+        "more": null,
+        "page": null,
+        "scrollH": 768,
+        "clientH": 768
+      },
+      {
+        "dir": "up",
+        "total": 8,
+        "head": "E2E: сетевая устойчивость (автотест)8 участников",
+        "grid": "repeat(3, 426.667px)",
+        "cells": 8,
+        "tileW": 427,
+        "tileH": 240,
+        "areaW": 1412,
+        "areaH": 740,
+        "more": null,
+        "page": null,
+        "scrollH": 768,
+        "clientH": 768
+      },
+      {
+        "dir": "up",
+        "total": 10,
+        "head": "E2E: сетевая устойчивость (автотест)10 участников",
+        "grid": "repeat(4, 345.5px)",
+        "cells": 10,
+        "tileW": 346,
+        "tileH": 194,
+        "areaW": 1412,
+        "areaH": 740,
+        "more": null,
+        "page": null,
+        "scrollH": 768,
+        "clientH": 768
+      },
+      {
+        "dir": "up",
+        "total": 11,
+        "head": "E2E: сетевая устойчивость (автотест)11 участников",
+        "grid": "repeat(4, 345.5px)",
+        "cells": 11,
+        "tileW": 346,
+        "tileH": 194,
+        "areaW": 1412,
+        "areaH": 740,
+        "more": null,
+        "page": null,
+        "scrollH": 768,
+        "clientH": 768
+      },
+      {
+        "dir": "up",
+        "total": 12,
+        "head": "E2E: сетевая устойчивость (автотест)12 участников",
+        "grid": "repeat(4, 345.5px)",
+        "cells": 12,
+        "tileW": 346,
+        "tileH": 194,
+        "areaW": 1412,
+        "areaH": 740,
+        "more": null,
+        "page": null,
+        "scrollH": 768,
+        "clientH": 768
+      },
+      {
+        "dir": "up",
+        "total": 13,
+        "head": "E2E: сетевая устойчивость (автотест)13 участников",
+        "grid": "repeat(4, 345.5px)",
+        "cells": 12,
+        "tileW": 346,
+        "tileH": 194,
+        "areaW": 1412,
+        "areaH": 698,
+        "more": "+2ещё участников",
+        "page": "13 участников · показаны 1–11",
+        "scrollH": 768,
+        "clientH": 768
+      },
+      {
+        "dir": "up",
+        "total": 15,
+        "head": "E2E: сетевая устойчивость (автотест)15 участников",
+        "grid": "repeat(4, 345.5px)",
+        "cells": 12,
+        "tileW": 346,
+        "tileH": 194,
+        "areaW": 1412,
+        "areaH": 698,
+        "more": "+4ещё участников",
+        "page": "15 участников · показаны 1–11",
+        "scrollH": 768,
+        "clientH": 768
+      },
+      {
+        "dir": "up",
+        "total": 20,
+        "head": "E2E: сетевая устойчивость (автотест)20 участников",
+        "grid": "repeat(4, 345.5px)",
+        "cells": 12,
+        "tileW": 346,
+        "tileH": 194,
+        "areaW": 1412,
+        "areaH": 698,
+        "more": "+9ещё участников",
+        "page": "20 участников · показаны 1–11",
+        "scrollH": 768,
+        "clientH": 768
+      },
+      {
+        "dir": "up",
+        "total": 25,
+        "head": "E2E: сетевая устойчивость (автотест)25 участников",
+        "grid": "repeat(4, 345.5px)",
+        "cells": 12,
+        "tileW": 346,
+        "tileH": 194,
+        "areaW": 1412,
+        "areaH": 698,
+        "more": "+14ещё участников",
+        "page": "25 участников · показаны 1–11",
+        "scrollH": 768,
+        "clientH": 768
+      },
+      {
+        "dir": "up",
+        "total": 30,
+        "head": "E2E: сетевая устойчивость (автотест)30 участников",
+        "grid": "repeat(4, 345.5px)",
+        "cells": 12,
+        "tileW": 346,
+        "tileH": 194,
+        "areaW": 1412,
+        "areaH": 698,
+        "more": "+19ещё участников",
+        "page": "30 участников · показаны 1–11",
+        "scrollH": 768,
+        "clientH": 768
+      }
+    ],
+    "perChange": [
+      {
+        "label": "join 1→2",
+        "commits": 17,
+        "fnRenders": 282,
+        "videoMounts": 2,
+        "videoRenders": 14,
+        "tileMoves": 0,
+        "gridChanges": 1,
+        "longTaskMs": 0,
+        "mut": 23
+      },
+      {
+        "label": "join 2→3",
+        "commits": 12,
+        "fnRenders": 237,
+        "videoMounts": 1,
+        "videoRenders": 17,
+        "tileMoves": 2,
+        "gridChanges": 1,
+        "longTaskMs": 58,
+        "mut": 13
+      },
+      {
+        "label": "join 3→4",
+        "commits": 12,
+        "fnRenders": 236,
+        "videoMounts": 1,
+        "videoRenders": 24,
+        "tileMoves": 0,
+        "gridChanges": 1,
+        "longTaskMs": 0,
+        "mut": 11
+      },
+      {
+        "label": "join 4→5",
+        "commits": 14,
+        "fnRenders": 256,
+        "videoMounts": 1,
+        "videoRenders": 36,
+        "tileMoves": 4,
+        "gridChanges": 1,
+        "longTaskMs": 0,
+        "mut": 14
+      },
+      {
+        "label": "join 5→6",
+        "commits": 12,
+        "fnRenders": 236,
+        "videoMounts": 1,
+        "videoRenders": 38,
+        "tileMoves": 0,
+        "gridChanges": 1,
+        "longTaskMs": 53,
+        "mut": 11
+      },
+      {
+        "label": "join 6→7",
+        "commits": 13,
+        "fnRenders": 255,
+        "videoMounts": 1,
+        "videoRenders": 52,
+        "tileMoves": 6,
+        "gridChanges": 1,
+        "longTaskMs": 0,
+        "mut": 12
+      },
+      {
+        "label": "join 7→8",
+        "commits": 13,
+        "fnRenders": 256,
+        "videoMounts": 1,
+        "videoRenders": 60,
+        "tileMoves": 0,
+        "gridChanges": 1,
+        "longTaskMs": 110,
+        "mut": 12
+      },
+      {
+        "label": "join 8→9",
+        "commits": 13,
+        "fnRenders": 237,
+        "videoMounts": 1,
+        "videoRenders": 59,
+        "tileMoves": 0,
+        "gridChanges": 1,
+        "longTaskMs": 0,
+        "mut": 12
+      },
+      {
+        "label": "join 9→10",
+        "commits": 13,
+        "fnRenders": 249,
+        "videoMounts": 1,
+        "videoRenders": 75,
+        "tileMoves": 19,
+        "gridChanges": 2,
+        "longTaskMs": 0,
+        "mut": 13
+      },
+      {
+        "label": "join 10→11",
+        "commits": 12,
+        "fnRenders": 236,
+        "videoMounts": 1,
+        "videoRenders": 73,
+        "tileMoves": 0,
+        "gridChanges": 1,
+        "longTaskMs": 51,
+        "mut": 11
+      },
+      {
+        "label": "join 11→12",
+        "commits": 13,
+        "fnRenders": 237,
+        "videoMounts": 1,
+        "videoRenders": 80,
+        "tileMoves": 0,
+        "gridChanges": 1,
+        "longTaskMs": 91,
+        "mut": 12
+      },
+      {
+        "label": "join 12→13",
+        "commits": 10,
+        "fnRenders": 376,
+        "videoMounts": 0,
+        "videoRenders": 77,
+        "tileMoves": 11,
+        "gridChanges": 0,
+        "longTaskMs": 0,
+        "mut": 30
+      },
+      {
+        "label": "join 13→14",
+        "commits": 8,
+        "fnRenders": 229,
+        "videoMounts": 0,
+        "videoRenders": 66,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "longTaskMs": 0,
+        "mut": 6
+      },
+      {
+        "label": "join 14→15",
+        "commits": 9,
+        "fnRenders": 230,
+        "videoMounts": 0,
+        "videoRenders": 66,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "longTaskMs": 54,
+        "mut": 7
+      },
+      {
+        "label": "join 15→16",
+        "commits": 8,
+        "fnRenders": 217,
+        "videoMounts": 0,
+        "videoRenders": 55,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "longTaskMs": 0,
+        "mut": 7
+      },
+      {
+        "label": "join 16→17",
+        "commits": 8,
+        "fnRenders": 217,
+        "videoMounts": 0,
+        "videoRenders": 55,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "longTaskMs": 146,
+        "mut": 7
+      },
+      {
+        "label": "join 17→18",
+        "commits": 9,
+        "fnRenders": 230,
+        "videoMounts": 0,
+        "videoRenders": 66,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "longTaskMs": 0,
+        "mut": 7
+      },
+      {
+        "label": "join 18→19",
+        "commits": 7,
+        "fnRenders": 203,
+        "videoMounts": 0,
+        "videoRenders": 44,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "longTaskMs": 129,
+        "mut": 7
+      },
+      {
+        "label": "join 19→20",
+        "commits": 7,
+        "fnRenders": 216,
+        "videoMounts": 0,
+        "videoRenders": 55,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "longTaskMs": 0,
+        "mut": 6
+      },
+      {
+        "label": "join 20→21",
+        "commits": 8,
+        "fnRenders": 229,
+        "videoMounts": 0,
+        "videoRenders": 66,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "longTaskMs": 0,
+        "mut": 6
+      },
+      {
+        "label": "join 21→22",
+        "commits": 7,
+        "fnRenders": 216,
+        "videoMounts": 0,
+        "videoRenders": 55,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "longTaskMs": 72,
+        "mut": 7
+      },
+      {
+        "label": "join 22→23",
+        "commits": 8,
+        "fnRenders": 217,
+        "videoMounts": 0,
+        "videoRenders": 55,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "longTaskMs": 129,
+        "mut": 7
+      },
+      {
+        "label": "join 23→24",
+        "commits": 8,
+        "fnRenders": 217,
+        "videoMounts": 0,
+        "videoRenders": 55,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "longTaskMs": 173,
+        "mut": 7
+      },
+      {
+        "label": "join 24→25",
+        "commits": 8,
+        "fnRenders": 229,
+        "videoMounts": 0,
+        "videoRenders": 66,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "longTaskMs": 0,
+        "mut": 6
+      },
+      {
+        "label": "join 25→26",
+        "commits": 9,
+        "fnRenders": 230,
+        "videoMounts": 0,
+        "videoRenders": 66,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "longTaskMs": 85,
+        "mut": 7
+      },
+      {
+        "label": "join 26→27",
+        "commits": 8,
+        "fnRenders": 217,
+        "videoMounts": 0,
+        "videoRenders": 55,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "longTaskMs": 0,
+        "mut": 7
+      },
+      {
+        "label": "join 27→28",
+        "commits": 8,
+        "fnRenders": 217,
+        "videoMounts": 0,
+        "videoRenders": 55,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "longTaskMs": 217,
+        "mut": 7
+      },
+      {
+        "label": "join 28→29",
+        "commits": 7,
+        "fnRenders": 216,
+        "videoMounts": 0,
+        "videoRenders": 55,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "longTaskMs": 0,
+        "mut": 6
+      },
+      {
+        "label": "join 29→30",
+        "commits": 9,
+        "fnRenders": 230,
+        "videoMounts": 0,
+        "videoRenders": 66,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "longTaskMs": 93,
+        "mut": 7
+      },
+      {
+        "label": "join 30→31",
+        "commits": 9,
+        "fnRenders": 230,
+        "videoMounts": 0,
+        "videoRenders": 66,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "longTaskMs": 256,
+        "mut": 7
+      }
+    ],
+    "steps": [
+      {
+        "students": 1,
+        "window": {
+          "samples": 4,
+          "fpsAvg": 47.4,
+          "fpsMin": 45.1,
+          "longTaskPct": 0,
+          "taskPct": 6.3,
+          "commitsPerSec": 1.1,
+          "fnRendersPerSec": 5.3,
+          "videoRenders": 8,
+          "videoMounts": 0,
+          "tileMoves": 0,
+          "gridChanges": 0,
+          "decodedFps": 20.3,
+          "dropped": 0,
+          "layoutPerSec": 1.1,
+          "recalcMsPerSec": 2.3,
+          "videosVisible": 2,
+          "videosPlaying": 2,
+          "dom": 223,
+          "heapMB": 9.6,
+          "slowEventMax": 0
+        },
+        "lk": {
+          "total": 2,
+          "active": 2,
+          "dup": 0,
+          "tracks": 3
+        },
+        "rtc": {
+          "pcs": 1,
+          "inVideo": 1,
+          "inAudio": 0,
+          "lossPct": 0,
+          "jitterP95Ms": 2,
+          "rttMs": 0,
+          "freezes": 0,
+          "framesDropped": 0,
+          "framesDecoded": 12,
+          "bytesIn": 873950
+        },
+        "api": {}
+      },
+      {
+        "students": 5,
+        "window": {
+          "samples": 4,
+          "fpsAvg": 30,
+          "fpsMin": 29.9,
+          "longTaskPct": 0,
+          "taskPct": 5.7,
+          "commitsPerSec": 1,
+          "fnRendersPerSec": 1,
+          "videoRenders": 6,
+          "videoMounts": 0,
+          "tileMoves": 0,
+          "gridChanges": 0,
+          "decodedFps": 21.3,
+          "dropped": 1,
+          "layoutPerSec": 1.4,
+          "recalcMsPerSec": 0.3,
+          "videosVisible": 6,
+          "videosPlaying": 6,
+          "dom": 267,
+          "heapMB": 10.7,
+          "slowEventMax": 0
+        },
+        "lk": {
+          "total": 6,
+          "active": 6,
+          "dup": 0,
+          "tracks": 7
+        },
+        "rtc": {
+          "pcs": 1,
+          "inVideo": 5,
+          "inAudio": 0,
+          "lossPct": 0,
+          "jitterP95Ms": 1,
+          "rttMs": 1,
+          "freezes": 0,
+          "framesDropped": 0,
+          "framesDecoded": 93,
+          "bytesIn": 6866999
+        },
+        "api": {}
+      },
+      {
+        "students": 10,
+        "window": {
+          "samples": 5,
+          "fpsAvg": 30,
+          "fpsMin": 30,
+          "longTaskPct": 0.1,
+          "taskPct": 9,
+          "commitsPerSec": 1.3,
+          "fnRendersPerSec": 6,
+          "videoRenders": 96,
+          "videoMounts": 1,
+          "tileMoves": 0,
+          "gridChanges": 1,
+          "decodedFps": 22.5,
+          "dropped": 0,
+          "layoutPerSec": 1.1,
+          "recalcMsPerSec": 1,
+          "videosVisible": 11,
+          "videosPlaying": 11,
+          "dom": 322,
+          "heapMB": 11,
+          "slowEventMax": 0
+        },
+        "lk": {
+          "total": 11,
+          "active": 11,
+          "dup": 0,
+          "tracks": 12
+        },
+        "rtc": {
+          "pcs": 1,
+          "inVideo": 10,
+          "inAudio": 0,
+          "lossPct": 0,
+          "jitterP95Ms": 1,
+          "rttMs": 0,
+          "freezes": 0,
+          "framesDropped": 0,
+          "framesDecoded": 271,
+          "bytesIn": 20048350
+        },
+        "api": {}
+      },
+      {
+        "students": 15,
+        "window": {
+          "samples": 5,
+          "fpsAvg": 30,
+          "fpsMin": 29.7,
+          "longTaskPct": 0,
+          "taskPct": 7.8,
+          "commitsPerSec": 1.1,
+          "fnRendersPerSec": 5.6,
+          "videoRenders": 66,
+          "videoMounts": 0,
+          "tileMoves": 0,
+          "gridChanges": 0,
+          "decodedFps": 22.5,
+          "dropped": 1,
+          "layoutPerSec": 1,
+          "recalcMsPerSec": 0,
+          "videosVisible": 11,
+          "videosPlaying": 11,
+          "dom": 336,
+          "heapMB": 13.5,
+          "slowEventMax": 0
+        },
+        "lk": {
+          "total": 16,
+          "active": 16,
+          "dup": 0,
+          "tracks": 17
+        },
+        "rtc": {
+          "pcs": 1,
+          "inVideo": 15,
+          "inAudio": 0,
+          "lossPct": 0,
+          "jitterP95Ms": 4,
+          "rttMs": 1,
+          "freezes": 0,
+          "framesDropped": 0,
+          "framesDecoded": 525,
+          "bytesIn": 39050304
+        },
+        "api": {}
+      },
+      {
+        "students": 20,
+        "window": {
+          "samples": 4,
+          "fpsAvg": 30,
+          "fpsMin": 29.8,
+          "longTaskPct": 0.3,
+          "taskPct": 8.5,
+          "commitsPerSec": 1,
+          "fnRendersPerSec": 1,
+          "videoRenders": 0,
+          "videoMounts": 0,
+          "tileMoves": 0,
+          "gridChanges": 0,
+          "decodedFps": 22.5,
+          "dropped": 7,
+          "layoutPerSec": 1,
+          "recalcMsPerSec": 0,
+          "videosVisible": 11,
+          "videosPlaying": 11,
+          "dom": 336,
+          "heapMB": 11.7,
+          "slowEventMax": 0
+        },
+        "lk": {
+          "total": 21,
+          "active": 21,
+          "dup": 0,
+          "tracks": 22
+        },
+        "rtc": {
+          "pcs": 1,
+          "inVideo": 20,
+          "inAudio": 0,
+          "lossPct": 0,
+          "jitterP95Ms": 2,
+          "rttMs": 0,
+          "freezes": 0,
+          "framesDropped": 0,
+          "framesDecoded": 850,
+          "bytesIn": 63469090
+        },
+        "api": {}
+      },
+      {
+        "students": 25,
+        "window": {
+          "samples": 4,
+          "fpsAvg": 29.9,
+          "fpsMin": 29.4,
+          "longTaskPct": 0.2,
+          "taskPct": 10.8,
+          "commitsPerSec": 1.1,
+          "fnRendersPerSec": 6.8,
+          "videoRenders": 66,
+          "videoMounts": 0,
+          "tileMoves": 0,
+          "gridChanges": 0,
+          "decodedFps": 22.5,
+          "dropped": 2,
+          "layoutPerSec": 1,
+          "recalcMsPerSec": 0,
+          "videosVisible": 11,
+          "videosPlaying": 11,
+          "dom": 336,
+          "heapMB": 11.2,
+          "slowEventMax": 0
+        },
+        "lk": {
+          "total": 26,
+          "active": 26,
+          "dup": 0,
+          "tracks": 27
+        },
+        "rtc": {
+          "pcs": 1,
+          "inVideo": 25,
+          "inAudio": 0,
+          "lossPct": 0,
+          "jitterP95Ms": 1,
+          "rttMs": 0,
+          "freezes": 0,
+          "framesDropped": 0,
+          "framesDecoded": 1279,
+          "bytesIn": 95652969
+        },
+        "api": {}
+      },
+      {
+        "students": 29,
+        "window": {
+          "samples": 4,
+          "fpsAvg": 30,
+          "fpsMin": 29.9,
+          "longTaskPct": 0.1,
+          "taskPct": 11,
+          "commitsPerSec": 1,
+          "fnRendersPerSec": 1,
+          "videoRenders": 0,
+          "videoMounts": 0,
+          "tileMoves": 0,
+          "gridChanges": 0,
+          "decodedFps": 22.5,
+          "dropped": 4,
+          "layoutPerSec": 1,
+          "recalcMsPerSec": 0,
+          "videosVisible": 11,
+          "videosPlaying": 11,
+          "dom": 336,
+          "heapMB": 11.1,
+          "slowEventMax": 0
+        },
+        "lk": {
+          "total": 30,
+          "active": 30,
+          "dup": 0,
+          "tracks": 31
+        },
+        "rtc": {
+          "pcs": 1,
+          "inVideo": 29,
+          "inAudio": 0,
+          "lossPct": 0,
+          "jitterP95Ms": 2,
+          "rttMs": 1,
+          "freezes": 0,
+          "framesDropped": 0,
+          "framesDecoded": 1741,
+          "bytesIn": 130279932
+        },
+        "api": {}
+      },
+      {
+        "students": 30,
+        "window": {
+          "samples": 5,
+          "fpsAvg": 29.8,
+          "fpsMin": 29.4,
+          "longTaskPct": 0.6,
+          "taskPct": 13.5,
+          "commitsPerSec": 1.1,
+          "fnRendersPerSec": 5.6,
+          "videoRenders": 66,
+          "videoMounts": 0,
+          "tileMoves": 0,
+          "gridChanges": 0,
+          "decodedFps": 22.6,
+          "dropped": 2,
+          "layoutPerSec": 1,
+          "recalcMsPerSec": 0,
+          "videosVisible": 11,
+          "videosPlaying": 11,
+          "dom": 336,
+          "heapMB": 10.8,
+          "slowEventMax": 0
+        },
+        "lk": {
+          "total": 31,
+          "active": 31,
+          "dup": 0,
+          "tracks": 32
+        },
+        "rtc": {
+          "pcs": 1,
+          "inVideo": 30,
+          "inAudio": 0,
+          "lossPct": 0,
+          "jitterP95Ms": 3,
+          "rttMs": 1,
+          "freezes": 0,
+          "framesDropped": 0,
+          "framesDecoded": 2088,
+          "bytesIn": 156409653
+        },
+        "api": {}
+      }
+    ]
+  },
+  "cams": {
+    "changes": [
+      {
+        "action": "5 cams off",
+        "videoMounts": 0,
+        "videoRenders": 30,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "commits": 11,
+        "fnRenders": 65,
+        "longTaskMs": 349,
+        "visible": 6,
+        "playing": 6
+      },
+      {
+        "action": "5 cams on",
+        "videoMounts": 5,
+        "videoRenders": 155,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "commits": 31,
+        "fnRenders": 432,
+        "longTaskMs": 685,
+        "visible": 11,
+        "playing": 11
+      },
+      {
+        "action": "7 cams off",
+        "videoMounts": 0,
+        "videoRenders": 66,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "commits": 16,
+        "fnRenders": 122,
+        "longTaskMs": 150,
+        "visible": 6,
+        "playing": 6
+      },
+      {
+        "action": "4 cams on",
+        "videoMounts": 4,
+        "videoRenders": 120,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "commits": 24,
+        "fnRenders": 337,
+        "longTaskMs": 372,
+        "visible": 10,
+        "playing": 10
+      },
+      {
+        "action": "3 leave + return",
+        "videoMounts": 0,
+        "tileMoves": 0,
+        "gridChanges": 0,
+        "commits": 30
+      }
+    ],
+    "window": {
+      "samples": 5,
+      "fpsAvg": 31.9,
+      "fpsMin": 26.1,
+      "longTaskPct": 5.2,
+      "taskPct": 31.2,
+      "commitsPerSec": 2.3,
+      "fnRendersPerSec": 41,
+      "videoRenders": 531,
+      "videoMounts": 9,
+      "tileMoves": 0,
+      "gridChanges": 0,
+      "decodedFps": -1,
+      "dropped": -27,
+      "layoutPerSec": 5.7,
+      "recalcMsPerSec": 7.6,
+      "videosVisible": 10,
+      "videosPlaying": 10,
+      "dom": 329,
+      "heapMB": 16.5,
+      "slowEventMax": 0
+    }
+  },
+  "share": {
+    "start": {
+      "label": "start share",
+      "ok": true,
+      "ms": 2581
+    },
+    "during": {
+      "railTiles": 6,
+      "railText": " 02\nУченик 03\nУченик 04\nещё 26"
+    },
+    "window": {
+      "samples": 4,
+      "fpsAvg": 29.9,
+      "fpsMin": 29.6,
+      "longTaskPct": 0,
+      "taskPct": 15.3,
+      "commitsPerSec": 1,
+      "fnRendersPerSec": 1,
+      "videoRenders": 0,
+      "videoMounts": 0,
+      "tileMoves": 0,
+      "gridChanges": 0,
+      "decodedFps": 41,
+      "dropped": 1,
+      "layoutPerSec": 1,
+      "recalcMsPerSec": 0,
+      "videosVisible": 6,
+      "videosPlaying": 6,
+      "dom": 273,
+      "heapMB": 10.6,
+      "slowEventMax": 0
+    },
+    "stop": {
+      "label": "stop share",
+      "ok": true,
+      "ms": 302
+    },
+    "gridBefore": {
+      "head": "E2E: сетевая устойчивость (автотест)31 участник",
+      "grid": "repeat(4, 345.5px)",
+      "cells": 12,
+      "tileW": 346,
+      "tileH": 194,
+      "areaW": 1412,
+      "areaH": 698,
+      "more": "+20ещё участников",
+      "page": "31 участник · показаны 1–11",
+      "scrollH": 768,
+      "clientH": 768
+    },
+    "gridAfter": {
+      "head": "E2E: сетевая устойчивость (автотест)31 участник",
+      "grid": "repeat(4, 345.5px)",
+      "cells": 12,
+      "tileW": 346,
+      "tileH": 194,
+      "areaW": 1412,
+      "areaH": 698,
+      "more": "+20ещё участников",
+      "page": "31 участник · показаны 1–11",
+      "scrollH": 768,
+      "clientH": 768
+    },
+    "restored": true
+  },
+  "resize": {
+    "rows": [
+      {
+        "size": "1920x1080",
+        "head": "E2E: сетевая устойчивость (автотест)31 участник",
+        "grid": "repeat(4, 465.5px)",
+        "cells": 12,
+        "tileW": 466,
+        "tileH": 262,
+        "areaW": 1892,
+        "areaH": 878,
+        "more": "+20ещё участников",
+        "page": "31 участник · показаны 1–11",
+        "scrollH": 948,
+        "clientH": 948,
+        "longTaskMs": 0,
+        "videoMounts": 0,
+        "fps": 36.4
+      },
+      {
+        "size": "1440x900",
+        "head": "E2E: сетевая устойчивость (автотест)31 участник",
+        "grid": "repeat(4, 345.5px)",
+        "cells": 12,
+        "tileW": 346,
+        "tileH": 194,
+        "areaW": 1412,
+        "areaH": 698,
+        "more": "+20ещё участников",
+        "page": "31 участник · показаны 1–11",
+        "scrollH": 768,
+        "clientH": 768,
+        "longTaskMs": 0,
+        "videoMounts": 0,
+        "fps": 34.5
+      },
+      {
+        "size": "1280x720",
+        "head": "E2E: сетевая устойчивость (автотест)31 участник",
+        "grid": "repeat(4, 295.111px)",
+        "cells": 12,
+        "tileW": 295,
+        "tileH": 166,
+        "areaW": 1252,
+        "areaH": 518,
+        "more": "+20ещё участников",
+        "page": "31 участник · показаны 1–11",
+        "scrollH": 588,
+        "clientH": 588,
+        "longTaskMs": 0,
+        "videoMounts": 0,
+        "fps": 33
+      },
+      {
+        "size": "1024x768",
+        "head": "E2E: сетевая устойчивость (автотест)31 участник",
+        "grid": "repeat(4, 241.5px)",
+        "cells": 12,
+        "tileW": 242,
+        "tileH": 136,
+        "areaW": 996,
+        "areaH": 566,
+        "more": "+20ещё участников",
+        "page": "31 участник · показаны 1–11",
+        "scrollH": 636,
+        "clientH": 636,
+        "longTaskMs": 0,
+        "videoMounts": 0,
+        "fps": 30.1
+      },
+      {
+        "size": "drag 1920→1020→1920",
+        "longTaskMs": 70,
+        "longTasks": 1,
+        "videoMounts": 0,
+        "videoRenders": 319,
+        "fps": 28.3,
+        "gridChanges": 12,
+        "layoutPerSec": 7.2
+      }
+    ],
+    "fullscreen": {
+      "opened": true,
+      "menu": {
+        "label": "fullscreen",
+        "ok": true,
+        "ms": 617
+      },
+      "after": {
+        "head": "E2E: сетевая устойчивость (автотест)31 участник",
+        "grid": "repeat(4, 345.5px)",
+        "cells": 12,
+        "tileW": 346,
+        "tileH": 194,
+        "areaW": 1412,
+        "areaH": 698,
+        "more": "+20ещё участников",
+        "page": "31 участник · показаны 1–11",
+        "scrollH": 768,
+        "clientH": 768
+      }
+    }
+  },
+  "panels": [
+    {
+      "label": "Участники",
+      "openMs": 432,
+      "closeMs": 128,
+      "gridWithPanel": "repeat(3, 296.889px)",
+      "tileW": 297,
+      "videoMounts": 0,
+      "videoRenders": 55,
+      "longTaskMs": 278,
+      "tileMoves": 36
+    },
+    {
+      "label": "Чат",
+      "openMs": 163,
+      "closeMs": 86,
+      "gridWithPanel": "repeat(3, 296.889px)",
+      "tileW": 297,
+      "videoMounts": 0,
+      "videoRenders": 55,
+      "longTaskMs": 109,
+      "tileMoves": 36
+    },
+    {
+      "label": "Материалы урока",
+      "openMs": 132,
+      "closeMs": 84,
+      "gridWithPanel": "repeat(3, 296.889px)",
+      "tileW": 297,
+      "videoMounts": 0,
+      "videoRenders": 55,
+      "longTaskMs": 0,
+      "tileMoves": 24
+    }
+  ],
+  "apiAll": {
+    "POST /auth/login": {
+      "n": 1,
+      "p50": 213,
+      "p95": 213,
+      "max": 213,
+      "errors": []
+    },
+    "GET /j/:token": {
+      "n": 30,
+      "p50": 8,
+      "p95": 16,
+      "max": 22,
+      "errors": []
+    },
+    "POST /auth/refresh": {
+      "n": 30,
+      "p50": 7,
+      "p95": 24,
+      "max": 26,
+      "errors": []
+    },
+    "POST /j/:token/enter": {
+      "n": 30,
+      "p50": 7,
+      "p95": 11,
+      "max": 19,
+      "errors": []
+    },
+    "POST /lessons/:id/join": {
+      "n": 33,
+      "p50": 21,
+      "p95": 120,
+      "max": 120,
+      "errors": []
+    },
+    "GET /lessons/:id/activities": {
+      "n": 33,
+      "p50": 17,
+      "p95": 71,
+      "max": 73,
+      "errors": []
+    },
+    "GET /lessons/:id/chat": {
+      "n": 33,
+      "p50": 25,
+      "p95": 77,
+      "max": 82,
+      "errors": []
+    },
+    "POST /lessons/:id/leave": {
+      "n": 3,
+      "p50": 47,
+      "p95": 54,
+      "max": 54,
+      "errors": []
+    }
+  },
+  "checks": [
+    {
+      "name": "teacher api login",
+      "ok": true,
+      "detail": {
+        "status": 200
+      },
+      "rel": "00:00"
+    },
+    {
+      "name": "teacher in room",
+      "ok": true,
+      "rel": "00:09"
+    },
+    {
+      "name": "share: grid restored after stop",
+      "ok": true,
+      "detail": {
+        "before": {
+          "head": "E2E: сетевая устойчивость (автотест)31 участник",
+          "grid": "repeat(4, 345.5px)",
+          "cells": 12,
+          "tileW": 346,
+          "tileH": 194,
+          "areaW": 1412,
+          "areaH": 698,
+          "more": "+20ещё участников",
+          "page": "31 участник · показаны 1–11",
+          "scrollH": 768,
+          "clientH": 768
+        },
+        "after": {
+          "head": "E2E: сетевая устойчивость (автотест)31 участник",
+          "grid": "repeat(4, 345.5px)",
+          "cells": 12,
+          "tileW": 346,
+          "tileH": 194,
+          "areaW": 1412,
+          "areaH": 698,
+          "more": "+20ещё участников",
+          "page": "31 участник · показаны 1–11",
+          "scrollH": 768,
+          "clientH": 768
+        }
+      },
+      "rel": "11:00"
+    }
+  ]
+}
