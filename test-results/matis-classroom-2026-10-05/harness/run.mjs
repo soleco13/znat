@@ -440,6 +440,22 @@ try {
   }
 
   // ── ЧАСТЬ 15. «Все отвечаем»: массовая сдача ────────────────────────────
+  // ── G-06: переподключения и циклы выхода перед сдачей задания ──────────
+  if (PHASES.includes("g06")) {
+    setPhase("g06");
+    const reconn = active().slice(0, 5), hundred = active()[5], cyclers = active().slice(6, 11);
+    const st = [];
+    await Promise.all(reconn.map(async (b) => { for (let i = 0; i < 20; i++) { st.push((await b.http.req("POST", `/lessons/${LID}/join`)).status); await sleep(300); } }));
+    for (let i = 0; i < 100; i++) { st.push((await hundred.http.req("POST", `/lessons/${LID}/join`)).status); await sleep(250); }
+    for (const b of cyclers) for (let i = 0; i < 6; i++) { await b.leave(); const r = await botIn(b); st.push(r.ok ? 200 : r.err); }
+    summary.g06 = {
+      reconnect20: reconn.map((b) => b.identity), reconnect100: hundred.identity, leaveRejoin6: cyclers.map((b) => b.identity),
+      statuses: st.reduce((m, s) => ((m[s] = (m[s] || 0) + 1), m), {}),
+    };
+    check("g06: all reconnects/rejoins accepted", st.every((s) => s === 200), summary.g06.statuses);
+    saveSummary();
+  }
+
   if (PHASES.includes("answers")) {
     setPhase("answers");
     // «Все отвечаем»: ученики отвечают на первые 4 вопроса материала и сдают.
