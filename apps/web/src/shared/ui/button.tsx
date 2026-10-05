@@ -59,7 +59,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
-        disabled={asChild ? disabled : (disabled ?? loading)}
+        // Не `disabled ?? loading`: при `disabled={false}` (форма заполнена)
+        // кнопка в загрузке оставалась нажимаемой, и двойной клик «Выдать
+        // классу» или «Продолжить» на входе ученика отправлял запрос дважды.
+        disabled={asChild ? disabled : Boolean(disabled) || loading}
         aria-busy={loading || undefined}
         {...props}
       >
