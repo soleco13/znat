@@ -19,15 +19,15 @@ describe("mediaTokenTtlSeconds (Э12: урок постоянный)", () => {
     expect(mediaTokenTtlSeconds("staff")).toBe(12 * 60 * 60);
   });
 
-  it("гостю — до конца его сессии (GUEST_SESSION_TTL_HOURS, по умолчанию 6 ч)", () => {
-    expect(mediaTokenTtlSeconds("guest")).toBe(6 * 60 * 60);
+  it("гостю — короткий 15 минут (аудит 2026-10-05): продлевает LiveKit, после обрыва — /join", () => {
+    expect(mediaTokenTtlSeconds("guest")).toBe(15 * 60);
   });
 
   it("не схлопывается в минуту для урока, чей starts_at давно в прошлом", () => {
     // регресс Э12: старая формула (starts_at + duration + грейс) отдавала бы
     // здесь 60 с, и токен протухал через минуту после входа.
     expect(mediaTokenTtlSeconds("staff")).toBeGreaterThan(60 * 60);
-    expect(mediaTokenTtlSeconds("guest")).toBeGreaterThan(60 * 60);
+    expect(mediaTokenTtlSeconds("guest")).toBeGreaterThanOrEqual(10 * 60);
   });
 });
 
@@ -53,10 +53,28 @@ describe("createParticipantConnection: источники трека по рол
     return { grant: payload.video!, attributes: payload.attributes, exp: payload.exp };
   }
 
-  it("токен не протухает через минуту — exp минимум через час от выдачи (регресс Э12)", async () => {
+  it("токен не протухает через минуту: персоналу ≥ 1 ч, гостю 15 мин (регресс Э12)", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     expect((await grantOf(false, "staff")).exp!).toBeGreaterThan(nowSec + 60 * 60);
-    expect((await grantOf(false, "guest")).exp!).toBeGreaterThan(nowSec + 60 * 60);
+    const guestExp = (await grantOf(false, "guest")).exp!;
+    expect(guestExp).toBeGreaterThanOrEqual(nowSec + 15 * 60 - 5);
+    expect(guestExp).toBeLessThanOrEqual(nowSec + 15 * 60 + 5);
+  });
+
+  it("гостевой токен привязан к комнате и identity, без админских прав", async () => {
+    const media = await createParticipantConnection({
+      livekitRoom: "lesson-test-room",
+      userId: "guest-identity",
+      fullName: "Ученик",
+      kind: "guest",
+      permissions: { canDraw: false, canSpeak: false, canShareScreen: false, canPublishVideo: false },
+    });
+    const payload = decodeJwt(media.token) as { sub?: string; video?: Record<string, unknown> };
+    expect(payload.sub).toBe("guest-identity");
+    expect(payload.video).toMatchObject({ roomJoin: true, room: "lesson-test-room" });
+    for (const admin of ["roomAdmin", "roomCreate", "roomList", "roomRecord", "canUpdateOwnMetadata", "canPublishData"]) {
+      expect(payload.video![admin] ?? false).toBe(false);
+    }
   });
 
   it("canPublish повторяет право canSpeak участника-ученика", async () => {

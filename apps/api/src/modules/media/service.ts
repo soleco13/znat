@@ -18,19 +18,21 @@ const roomService = new RoomServiceClient(env.LIVEKIT_URL, env.LIVEKIT_API_KEY, 
  * `starts_at` = момент создания и почти всегда в прошлом, поэтому старая
  * формула схлопывалась в минимум (60 с) — токен жил минуту после входа.
  *
- * §Безопасность ТЗ (обновлено под Э12): «TTL токена соответствует TTL
- * сессии (гость) или живёт до выхода (персонал)»:
- *  - гость — до конца его сессии (`GUEST_SESSION_TTL_HOURS`); истекла сессия
- *    — перезаход по ссылке, новый токен;
+ *  - гость — 15 минут (аудит гостевого доступа 2026-10-05, раздел 7): раньше токен жил
+ *    всю гостевую сессию (6 ч), и выданный однажды пропуск в медиакомнату
+ *    работал долго после выхода. Короткий TTL урок не рвёт: подключённому
+ *    клиенту LiveKit сам присылает продлённый токен (`refreshToken` в
+ *    сигнальном канале, им клиент и переподключается), а после долгого
+ *    обрыва, F5 и «Продолжить здесь» клиент входит заново через `/join`
+ *    (`MediaRecovery`) и получает новый;
  *  - персонал — refresh медиа-токена не предусмотрен, поэтому один щедрый
  *    TTL, покрывающий любой реальный урок «до выхода».
  */
 const STAFF_MEDIA_TOKEN_TTL_SECONDS = 12 * 60 * 60;
+const GUEST_MEDIA_TOKEN_TTL_SECONDS = 15 * 60;
 
 export function mediaTokenTtlSeconds(kind: ParticipantKind): number {
-  return kind === "staff"
-    ? STAFF_MEDIA_TOKEN_TTL_SECONDS
-    : env.GUEST_SESSION_TTL_HOURS * 60 * 60;
+  return kind === "staff" ? STAFF_MEDIA_TOKEN_TTL_SECONDS : GUEST_MEDIA_TOKEN_TTL_SECONDS;
 }
 
 /**
