@@ -1,3 +1,7 @@
+import { useEffect } from "react";
+import { useRoomContext } from "@livekit/components-react";
+import { RoomEvent } from "livekit-client";
+
 import { errorFields, track } from "@/shared/telemetry";
 import { toast } from "@/shared/ui/sonner";
 
@@ -31,5 +35,32 @@ function deviceErrorMessage(kind: DeviceKind, err: unknown): string {
  */
 export function reportMediaDeviceError(kind: DeviceKind, err: unknown): void {
   track("media_device_failed", { kind, ...errorFields(err) });
+  showMediaDeviceError(kind, err);
+}
+
+function showMediaDeviceError(kind: DeviceKind, err: unknown): void {
   toast.error(deviceErrorMessage(kind, err), { position: "top-center", duration: 8000, id: `media-device-${kind}` });
+}
+
+/**
+ * Микрофон или камера не включились при подключении к уроку (их включает сам
+ * `<LiveKitRoom>` по выбору с экрана проверки): устройство заняла другая
+ * программа, его отключили, браузер отозвал доступ. Раньше это уходило
+ * только в телеметрию — человек входил с выключенным микрофоном и не знал
+ * почему. Плашка та же, что у кнопок (один id — не дублируется); в лог эти
+ * ошибки пишет `MediaTelemetry`.
+ */
+export function MediaDeviceErrorNotice(): null {
+  const room = useRoomContext();
+  useEffect(() => {
+    const onError = (err: Error, kind?: MediaDeviceKind) => {
+      if (kind === "audioinput") showMediaDeviceError("microphone", err);
+      else if (kind === "videoinput") showMediaDeviceError("camera", err);
+    };
+    room.on(RoomEvent.MediaDevicesError, onError);
+    return () => {
+      room.off(RoomEvent.MediaDevicesError, onError);
+    };
+  }, [room]);
+  return null;
 }
