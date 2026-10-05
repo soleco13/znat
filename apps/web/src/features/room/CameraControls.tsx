@@ -49,7 +49,10 @@ export function SelfCameraButton({
       // LiveKit — включение/выключение выглядит мгновенным по клику, даже
       // пока getUserMedia/публикация/остановка трека ещё идут под капотом.
       active={desiredOn}
-      loading={desiredOn && !frameReady}
+      // Кадр отмечает своя плитка; когда её не видно (вторая страница сетки,
+      // окно учителя поверх задания), спиннер на кнопке крутился бы вечно —
+      // поэтому хватает и подтверждения от LiveKit.
+      loading={desiredOn && !frameReady && !isCameraEnabled}
       activeIcon={Video}
       inactiveIcon={VideoOff}
       activeLabel="Камера"
