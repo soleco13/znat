@@ -117,6 +117,7 @@ import { ScreenShareStatusBar, SelfScreenShareButton } from "./ScreenShareContro
 import { RoomVideoGrid } from "./RoomVideoGrid.js";
 import { ScreenShareTile } from "./ScreenShareTile.js";
 import { useRoomSocket } from "./useRoomSocket.js";
+import { usePresenceGrace } from "./use-presence-grace.js";
 import { notifyAnnotationsUpdated } from "../materials/annotations-events.js";
 import { VideoSubscriptionManager } from "./VideoSubscriptions.js";
 import { Loader } from "@/shared/ui/loader";
@@ -845,7 +846,10 @@ export function RoomPage() {
     setActiveTool("recording");
   };
 
-  const connectedCount = participants.filter((p) => p.connected).length;
+  // Короткий разрыв канала урока у ученика не убирает его из шапки, сетки и
+  // списка — см. `usePresenceGrace`.
+  const presence = usePresenceGrace(participants);
+  const connectedCount = presence.participants.filter((p) => p.connected).length;
   const aloneOnStage = media !== null && stageView === "people" && connectedCount <= 1;
   const raisedHands = participants.filter((p) => p.handRaised && p.connected && p.userId !== selfId);
 
@@ -885,7 +889,8 @@ export function RoomPage() {
 
   // ── Панель «Участники» ────────────────────────────────────────────────
   const peopleListProps: PeopleListProps = {
-    participants,
+    participants: presence.participants,
+    reconnectingIds: presence.reconnectingIds,
     selfId,
     isTeacher,
     hasMedia: media !== null,
@@ -1307,7 +1312,8 @@ export function RoomPage() {
         <StageContent
           view={stageView}
           activityId={activeActivityId}
-          participants={participants}
+          participants={presence.participants}
+          reconnectingIds={presence.reconnectingIds}
           selfId={selfId}
           mode={lessonMode}
           lessonId={lessonId}
@@ -2150,6 +2156,7 @@ type PeopleListProps = {
   hasMedia: boolean;
   query: string;
   micOffIds?: Set<string>;
+  reconnectingIds?: ReadonlySet<string>;
   weakIds?: Set<string>;
   onTogglePermission: (userId: string, key: PermissionKey, value: boolean) => void;
   onMute: (userId: string) => void;
@@ -2182,6 +2189,7 @@ function PeopleList({
   hasMedia,
   query,
   micOffIds,
+  reconnectingIds,
   weakIds,
   onTogglePermission,
   onMute,
@@ -2215,7 +2223,9 @@ function PeopleList({
             : "вы"
           : !p.connected
             ? "не в уроке"
-            : p.handRaised
+            : reconnectingIds?.has(p.userId)
+              ? "переподключается…"
+              : p.handRaised
               ? "поднял(а) руку"
               : weak
                 ? "плохая связь"
@@ -2278,6 +2288,7 @@ function StageContent({
   view,
   activityId,
   participants,
+  reconnectingIds,
   selfId,
   mode,
   lessonId,
@@ -2296,6 +2307,7 @@ function StageContent({
   view: "people" | "board" | "activity";
   activityId: string | null;
   participants: ParticipantSnapshot[];
+  reconnectingIds: ReadonlySet<string>;
   selfId: string | undefined;
   mode: LessonMode;
   lessonId: string | undefined;
@@ -2338,6 +2350,7 @@ function StageContent({
     ) : (
       <RoomVideoGrid
         participants={participants}
+        reconnectingIds={reconnectingIds}
         selfId={selfId}
         mode={mode}
         layout={videoLayout}
@@ -2356,11 +2369,11 @@ function StageContent({
         <div className="relative min-h-0 min-w-0 flex-1">
           {main}
           {studentRail ? null : (
-            <RoomVideoGrid participants={participants} selfId={selfId} variant="pip" />
+            <RoomVideoGrid participants={participants} reconnectingIds={reconnectingIds} selfId={selfId} variant="pip" />
           )}
         </div>
         {studentRail ? (
-          <RoomVideoGrid participants={participants} selfId={selfId} mode={mode} variant="rail" onShowAll={onShowAll} />
+          <RoomVideoGrid participants={participants} reconnectingIds={reconnectingIds} selfId={selfId} mode={mode} variant="rail" onShowAll={onShowAll} />
         ) : null}
       </div>
     );
@@ -2384,7 +2397,7 @@ function StageContent({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2 md:flex-row md:gap-3">
       <div className="min-h-0 min-w-0 flex-1">{main}</div>
-      <RoomVideoGrid participants={participants} selfId={selfId} mode={mode} variant="rail" onShowAll={onShowAll} />
+      <RoomVideoGrid participants={participants} reconnectingIds={reconnectingIds} selfId={selfId} mode={mode} variant="rail" onShowAll={onShowAll} />
     </div>
   );
 }

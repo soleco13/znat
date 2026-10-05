@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   useParticipants,
   useSpeakingParticipants,
@@ -12,6 +12,7 @@ import {
   ChevronRight,
   ChevronUp,
   Hand,
+  AudioLines,
   Maximize2,
   MicOff,
   Minimize2,
@@ -23,6 +24,7 @@ import type { LessonMode, ParticipantSnapshot } from "@school/shared";
 import { cn } from "@/lib/utils";
 import { initialsOf } from "@/shared/ui/avatar";
 import { MediaLoader } from "@/shared/ui/media-loader";
+import { Loader } from "@/shared/ui/loader";
 import { participantsCount } from "./format.js";
 import { useSelfCameraUiStore } from "./self-camera-ui-store.js";
 import { isStreamPaused, useStreamStateUpdates } from "./use-stream-state.js";
@@ -55,6 +57,7 @@ type TileSize = "lg" | "md" | "sm" | "xs";
  */
 export function RoomVideoGrid({
   participants,
+  reconnectingIds,
   selfId,
   variant = "grid",
   layout = "grid",
@@ -62,6 +65,8 @@ export function RoomVideoGrid({
   onShowAll,
 }: {
   participants: ParticipantSnapshot[];
+  /** Связь участника с уроком прервалась недавно — плитка на месте с пометкой (`usePresenceGrace`). */
+  reconnectingIds?: ReadonlySet<string>;
   selfId: string | undefined;
   /** Режим урока — оставлен для §6.4, на форму сетки пока не влияет. */
   mode?: LessonMode;
@@ -88,6 +93,9 @@ export function RoomVideoGrid({
   const markCameraLoaded = (sid: string) =>
     setLoadedCameraSids((prev) => (prev.has(sid) ? prev : new Set(prev).add(sid)));
   const speakingIds = new Set(useSpeakingParticipants().map((p) => p.identity));
+  // Для подсказки «говорит» вне экрана: речь прерывается паузами, и метка без
+  // удержания мигала бы на каждом вдохе.
+  const heldSpeakers = useHeldIds(speakingIds, SPEAKER_HOLD_MS);
   const roomParticipants = useParticipants();
   const micOffIds = new Set(
     roomParticipants.filter((p) => !p.isMicrophoneEnabled).map((p) => p.identity),
@@ -141,6 +149,13 @@ export function RoomVideoGrid({
   const pageTiles = paged ? tiles.slice(start, isLastPage ? undefined : start + perPage) : tiles;
   const moreCount = isLastPage ? 0 : tiles.length - start - pageTiles.length;
   const gridCells = desktopGrid ? pageTiles.length + (moreCount > 0 ? 1 : 0) : 0;
+  // Говорят участники, которых на этой странице не видно: подсказка в строке
+  // страниц и на плитке «+N» вместо перестановки плиток — сетка не прыгает.
+  const shownIds = new Set(pageTiles.map((p) => p.userId));
+  const offPageSpeakers = paged ? tiles.filter((p) => heldSpeakers.has(p.userId) && !shownIds.has(p.userId)) : [];
+  const pageOf = (p: ParticipantSnapshot) => Math.min(Math.floor(tiles.indexOf(p) / perPage), pages - 1);
+  const firstOffPage = offPageSpeakers[0];
+  const speakersAfter = offPageSpeakers.filter((p) => pageOf(p) > safePage);
 
   const gridRef = useRef<HTMLDivElement>(null);
   const { cols, tile } = useAdaptiveGrid(gridRef, gridCells, GAP, 16 / 9);
@@ -157,6 +172,7 @@ export function RoomVideoGrid({
       : cameraOnIds.has(p.userId) &&
         (!remoteSid || !loadedCameraSids.has(remoteSid) || isStreamPaused(videoTrack?.publication));
     const speaking = speakingIds.has(p.userId);
+    const reconnecting = reconnectingIds?.has(p.userId) ?? false;
     const micOff = micOffIds.has(p.userId);
     const weak = weakIds.has(p.userId);
     const roleSuffix = p.kind === "staff" && p.role ? ROLE_SUFFIX[p.role] : undefined;
@@ -197,7 +213,22 @@ export function RoomVideoGrid({
           </span>
         ) : null}
 
-        {showLoader ? <MediaLoader label="Камера загружается" size={small ? "sm" : "md"} /> : null}
+        {showLoader && !reconnecting ? <MediaLoader label="Камера загружается" size={small ? "sm" : "md"} /> : null}
+
+        {reconnecting ? (
+          <span
+            role="status"
+            className={cn(
+              "pointer-events-none absolute inset-0 flex items-center justify-center bg-[rgba(16,24,40,.55)] text-white",
+              small ? "text-[11px]" : "text-[13px]",
+            )}
+          >
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[rgba(16,24,40,.72)] px-2.5 py-1 font-medium">
+              <Loader className="size-3.5" />
+              {size === "xs" ? null : "Переподключение…"}
+            </span>
+          </span>
+        ) : null}
 
         {speaking ? (
           <span
@@ -330,6 +361,7 @@ export function RoomVideoGrid({
   if (variant === "rail") {
     if (narrow) return strip(tiles);
     const shown = railExpanded ? tiles : tiles.slice(0, RAIL_VISIBLE);
+    const railHiddenSpeaker = railExpanded ? undefined : tiles.slice(RAIL_VISIBLE).find((p) => heldSpeakers.has(p.userId));
     return (
       <div className="flex w-[190px] shrink-0 flex-col gap-2 overflow-y-auto">
         {shown.map((p) => renderTile(p, "sm", "aspect-video w-full shrink-0"))}
@@ -337,9 +369,21 @@ export function RoomVideoGrid({
           <button
             type="button"
             onClick={() => setRailExpanded((v) => !v)}
-            className="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-full border border-border bg-card text-xs font-semibold text-text-2 transition-colors hover:bg-surface-2"
+            className={cn(
+              "flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-full border px-2 text-xs font-semibold transition-colors",
+              railHiddenSpeaker
+                ? "border-primary-muted bg-primary-light text-primary"
+                : "border-border bg-card text-text-2 hover:bg-surface-2",
+            )}
           >
-            {railExpanded ? "свернуть" : `ещё ${tiles.length - RAIL_VISIBLE}`}
+            {railHiddenSpeaker ? <AudioLines className="size-3.5 shrink-0" aria-hidden /> : null}
+            <span className="truncate">
+              {railExpanded
+                ? "свернуть"
+                : railHiddenSpeaker
+                  ? `${railHiddenSpeaker.fullName} · ещё ${tiles.length - RAIL_VISIBLE}`
+                  : `ещё ${tiles.length - RAIL_VISIBLE}`}
+            </span>
             {railExpanded ? <ChevronUp className="size-3.5" aria-hidden /> : <ChevronDown className="size-3.5" aria-hidden />}
           </button>
         ) : null}
@@ -382,6 +426,22 @@ export function RoomVideoGrid({
           <span className="truncate text-[13px] text-muted-foreground">
             {participantsCount(tiles.length)} · показаны {start + 1}–{start + pageTiles.length}
           </span>
+          {firstOffPage ? (
+            <button
+              type="button"
+              onClick={() => setPage(pageOf(firstOffPage))}
+              title="Показать страницу с говорящим"
+              className="inline-flex h-[30px] min-w-0 shrink items-center gap-1.5 rounded-full bg-primary-light px-3 text-[12.5px] font-semibold text-primary transition-colors hover:bg-primary-light/80"
+            >
+              <AudioLines className="size-3.5 shrink-0" aria-hidden />
+              <span className="truncate">
+                {offPageSpeakers.length > 1 ? "Говорят: " : "Говорит: "}
+                {firstOffPage.fullName}
+                {offPageSpeakers.length > 1 ? ` и ещё ${offPageSpeakers.length - 1}` : ""}
+              </span>
+              <span className="shrink-0 font-medium text-primary/70">· стр. {pageOf(firstOffPage) + 1}</span>
+            </button>
+          ) : null}
           {onLayoutChange ? (
             <span className="ml-auto inline-flex shrink-0 overflow-hidden rounded-full border border-border bg-card">
               {(["grid", "speaker"] as const).map((v) => (
@@ -432,13 +492,58 @@ export function RoomVideoGrid({
           <button
             type="button"
             onClick={() => setPage(safePage + 1)}
-            className="flex aspect-video w-full flex-col items-center justify-center gap-1 rounded-xl bg-[#101828] text-white"
+            className={cn(
+              "relative flex aspect-video w-full flex-col items-center justify-center gap-1 rounded-xl bg-[#101828] px-2 text-white",
+              speakersAfter.length > 0 && "ring-2 ring-inset ring-primary",
+            )}
           >
             <span className="text-[22px] font-black tracking-[-.025em]">+{moreCount}</span>
-            <span className="text-xs text-white/70">ещё участников</span>
+            {speakersAfter.length > 0 ? (
+              <span className="inline-flex max-w-full items-center gap-1 text-xs font-semibold text-white">
+                <AudioLines className="size-3.5 shrink-0" aria-hidden />
+                <span className="truncate">
+                  {speakersAfter[0]!.fullName}
+                  {speakersAfter.length > 1 ? ` и ещё ${speakersAfter.length - 1}` : ""}
+                </span>
+              </span>
+            ) : (
+              <span className="text-xs text-white/70">ещё участников</span>
+            )}
           </button>
         ) : null}
       </div>
     </div>
   );
+}
+
+/** Столько метка «говорит» держится после паузы в речи. */
+const SPEAKER_HOLD_MS = 2_000;
+
+/**
+ * Множество id, расширенное «хвостом»: id остаётся ещё `holdMs` после того,
+ * как пропал из `ids`. Для подсказок о речи за пределами экрана — не мигают
+ * между словами; на сами плитки (рамка «говорит») не влияет.
+ */
+function useHeldIds(ids: ReadonlySet<string>, holdMs: number): ReadonlySet<string> {
+  const lastSeen = useRef(new Map<string, number>());
+  const [, tick] = useState(0);
+  const now = Date.now();
+  for (const id of ids) lastSeen.current.set(id, now);
+  const held = new Set<string>();
+  let nextExpiry = Infinity;
+  for (const [id, at] of lastSeen.current) {
+    const until = at + holdMs;
+    if (ids.has(id) || until > now) {
+      held.add(id);
+      if (!ids.has(id)) nextExpiry = Math.min(nextExpiry, until);
+    } else {
+      lastSeen.current.delete(id);
+    }
+  }
+  useEffect(() => {
+    if (nextExpiry === Infinity) return;
+    const timer = setTimeout(() => tick((n) => n + 1), nextExpiry - Date.now() + 20);
+    return () => clearTimeout(timer);
+  }, [nextExpiry]);
+  return held;
 }
