@@ -21,6 +21,7 @@ import { genRequestId, logEvent, logger, loggerOptions, setRootLogger } from "./
 import requestContextPlugin from "./plugins/request-context.js";
 import { UPLOAD_LIMITS } from "./plugins/uploads.js";
 import { checkHealth } from "./plugins/health.js";
+import { resolveTrustProxy } from "./plugins/trust-proxy.js";
 import { initErrorReporting } from "./plugins/sentry.js";
 import authRoutes from "./modules/auth/routes.js";
 import usersRoutes from "./modules/users/routes.js";
@@ -74,7 +75,8 @@ export function buildServer() {
     requestIdLogLabel: "requestId",
     // Строку на запрос пишет plugins/request-context.ts (с длительностью и контекстом).
     disableRequestLogging: true,
-    trustProxy: true,
+    // G-11: X-Forwarded-* — только от Caddy (соседа по docker-сети), не от любого.
+    trustProxy: resolveTrustProxy(env.TRUSTED_PROXIES),
   });
   setRootLogger(app.log);
   app.register(requestContextPlugin);

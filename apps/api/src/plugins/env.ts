@@ -28,6 +28,11 @@ const envSchema = z.object({
    * за одним роутером — один IP; школа побольше или нагрузочный тест (все
    * запросы с одной машины) упирается в них раньше, чем в сам сервер.
    */
+  /**
+   * G-11: прокси, чьим X-Forwarded-* верить (IP/CIDR через запятую). Не задано —
+   * соседи app по docker-сети, кроме шлюза (plugins/trust-proxy.ts).
+   */
+  TRUSTED_PROXIES: z.string().min(1).optional(),
   /** Уровень логов (по умолчанию info в production, debug в разработке). */
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).optional(),
   /**
