@@ -1925,7 +1925,15 @@ export function RoomPage() {
             onTakenOver={() => setMediaTakenOver(true)}
             resumeSignal={mediaResumeSignal}
             initialWanted={rejoin ? { camera: rejoin.cam, microphone: rejoin.mic } : undefined}
-            onWantedChange={(w) => writeRejoinState({ cam: w.camera, mic: w.microphone })}
+            onWantedChange={(w) => {
+              writeRejoinState({ cam: w.camera, mic: w.microphone });
+              // `audio`/`video` у `<LiveKitRoom>` применяются при каждом новом
+              // подключении (вход заново в `MediaRecovery`, «Продолжить
+              // здесь»). С выбором экрана проверки там выключенный за урок
+              // микрофон или камера включались сами.
+              setJoinMicEnabled(w.microphone);
+              setJoinCamEnabled(w.camera);
+            }}
           />
         ) : null}
         {clientMediaSettings?.pipEnabled !== false ? (
