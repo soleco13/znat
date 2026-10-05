@@ -832,10 +832,14 @@ export function RoomPage() {
         // и его отправляли ещё раз.
         setChat((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]));
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         // Текст возвращаем в поле, если человек ещё не начал новое сообщение.
         setChatDraft((draft) => draft || body);
-        showRoomError("Сообщение не отправлено");
+        showRoomError(
+          err instanceof ApiError && err.code === "chat_rate_limited"
+            ? "Слишком много сообщений подряд — подождите несколько секунд"
+            : "Сообщение не отправлено",
+        );
       })
       .finally(() => setChatPending((prev) => prev.filter((m) => m.id !== clientMessageId)));
   }

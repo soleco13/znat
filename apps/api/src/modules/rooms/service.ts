@@ -1100,6 +1100,29 @@ export async function handleScreenShareStoppedWebhook(livekitRoom: string, userI
 const CHAT_IDEMPOTENCY_WAIT_MS = 5000;
 const CHAT_IDEMPOTENCY_POLL_MS = 100;
 
+/**
+ * G-05: потолок чата. Каждое сообщение — INSERT и рассылка всем сокетам
+ * урока, а отдельного лимита не было (только общий 300 запросов в минуту на
+ * личность). Ученик в активном чате пишет раз в несколько секунд; 8 сообщений
+ * за 10 с — уже вставка подряд. Класс на 30 человек, где все разом отвечают в
+ * чат, — 30 сообщений за 10 с при потолке урока 120. Учителю — только
+ * потолок урока: он может вставить несколько строк подряд.
+ */
+export const CHAT_RATE_WINDOW_MS = 10_000;
+export const CHAT_MESSAGES_PER_PARTICIPANT_WINDOW = 8;
+export const CHAT_MESSAGES_PER_LESSON_WINDOW = 120;
+
+async function assertChatRate(actor: LessonActor, lessonId: string): Promise<void> {
+  const counts = await presence.hitChatRate(
+    lessonId,
+    actor.kind === "staff" ? null : actor.participantId,
+    CHAT_RATE_WINDOW_MS,
+  );
+  if (counts.participant > CHAT_MESSAGES_PER_PARTICIPANT_WINDOW || counts.lesson > CHAT_MESSAGES_PER_LESSON_WINDOW) {
+    throw new AppError(429, "chat_rate_limited", "Слишком много сообщений подряд — подождите несколько секунд");
+  }
+}
+
 export async function sendChatMessage(
   actor: LessonActor,
   lessonId: string,
@@ -1110,6 +1133,11 @@ export async function sendChatMessage(
   const entry = await presence.getParticipant(lessonId, actor.participantId);
   if (!entry) {
     throw new AppError(409, "not_in_room", "Сначала войдите в урок");
+  }
+  // Повтор того же сообщения (ключ идемпотентности уже занят) лимит не тратит:
+  // переотправка после обрыва не должна упираться в 429.
+  if (!clientMessageId || !(await presence.getChatIdempotencyResult(lessonId, actor.participantId, clientMessageId))) {
+    await assertChatRate(actor, lessonId);
   }
   if (clientMessageId && !(await presence.claimChatIdempotency(lessonId, actor.participantId, clientMessageId))) {
     // Повтор того же сообщения: отдаём созданное, второе не пишем и не рассылаем.

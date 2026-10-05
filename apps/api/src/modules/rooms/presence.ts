@@ -428,3 +428,26 @@ export async function setChatIdempotencyResult(lessonId: string, participantId: 
 export async function releaseChatIdempotency(lessonId: string, participantId: string, clientMessageId: string): Promise<void> {
   await redis.del(chatIdempotencyKey(lessonId, participantId, clientMessageId));
 }
+
+/**
+ * G-05: частота чата. Окна фиксированные (INCR + PEXPIRE): на участника и на
+ * урок целиком — второе держит БД и рассылку, когда спамят многие личности
+ * сразу. Счётчик растёт и на отказанные попытки — флуд не «копит» право на
+ * следующее окно, честному ученику это не мешает (до предела он не доходит).
+ */
+export async function hitChatRate(
+  lessonId: string,
+  participantId: string | null,
+  windowMs: number,
+  now = Date.now(),
+): Promise<{ participant: number; lesson: number }> {
+  const window = Math.floor(now / windowMs);
+  const lessonKey = `room:${lessonId}:chat-rate:${window}`;
+  const multi = redis.multi().incr(lessonKey).pexpire(lessonKey, windowMs * 2);
+  const participantKey = participantId ? `room:${lessonId}:chat-rate:${participantId}:${window}` : null;
+  if (participantKey) multi.incr(participantKey).pexpire(participantKey, windowMs * 2);
+  const results = await multi.exec();
+  const lesson = Number(results?.[0]?.[1] ?? 0);
+  const participant = participantKey ? Number(results?.[2]?.[1] ?? 0) : 0;
+  return { participant, lesson };
+}

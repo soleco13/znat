@@ -93,6 +93,7 @@ vi.mock("./presence.js", async () => {
   const grants = new Map<string, unknown>();
   const entryLocks = new Set<string>();
   const chatIdem = new Map<string, string>();
+  const chatRate = new Map<string, number>();
   const leftMarks = new Set<string>();
   const roomMap = (lessonId: string) => {
     let m = rooms.get(lessonId);
@@ -203,6 +204,17 @@ vi.mock("./presence.js", async () => {
       if (screenShareLocks.get(lessonId) === participantId) screenShareLocks.delete(lessonId);
     }),
     // Идемпотентность чата — тот же in-memory приём, что и лок демонстрации.
+    hitChatRate: vi.fn(async (lessonId: string, participantId: string | null, windowMs: number, now = Date.now()) => {
+      const window = Math.floor(now / windowMs);
+      const bump = (key: string) => {
+        const next = (chatRate.get(key) ?? 0) + 1;
+        chatRate.set(key, next);
+        return next;
+      };
+      const lesson = bump(`${lessonId}:${window}`);
+      const participant = participantId ? bump(`${lessonId}:${participantId}:${window}`) : 0;
+      return { participant, lesson };
+    }),
     claimChatIdempotency: vi.fn(async (lessonId: string, participantId: string, key: string) => {
       const k = `${lessonId}:${participantId}:${key}`;
       if (chatIdem.has(k)) return false;
@@ -625,6 +637,80 @@ describe("Э12.4: гость на уроке — журнал, presence, чат,
 
     expect(message.id).toBe("m-retry");
     expect(repoMock.insertChatMessage).toHaveBeenCalledTimes(2);
+  });
+
+  describe("G-05: частота чата", () => {
+    let clock = Date.UTC(2030, 0, 1);
+    beforeEach(() => {
+      // Каждый тест — в своём окне, счётчики прошлых не мешают.
+      clock += 3_600_000;
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(clock);
+      repoMock.insertChatMessage.mockClear();
+      repoMock.insertChatMessage.mockImplementation(async (input: { body: string }) => ({
+        id: `m-${Math.random()}`,
+        lessonId: LESSON_ID,
+        userId: null,
+        body: input.body,
+        createdAt: new Date(),
+      }));
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("спам одного гостя: сотня сообщений подряд — в БД попадают первые 8, остальным 429", async () => {
+      await roomsService.join(guestActor("spammer"), LESSON_ID);
+      const results = await Promise.allSettled(
+        Array.from({ length: 100 }, (_, i) => roomsService.sendChatMessage(guestActor("spammer"), LESSON_ID, `спам ${i}`)),
+      );
+      const rejected = results.filter((r) => r.status === "rejected");
+      expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(roomsService.CHAT_MESSAGES_PER_PARTICIPANT_WINDOW);
+      expect(repoMock.insertChatMessage).toHaveBeenCalledTimes(roomsService.CHAT_MESSAGES_PER_PARTICIPANT_WINDOW);
+      expect((rejected[0] as PromiseRejectedResult).reason).toMatchObject({ statusCode: 429, code: "chat_rate_limited" });
+
+      // Через окно гость снова пишет.
+      vi.setSystemTime(Date.now() + roomsService.CHAT_RATE_WINDOW_MS);
+      await expect(roomsService.sendChatMessage(guestActor("spammer"), LESSON_ID, "снова можно")).resolves.toMatchObject({
+        body: "снова можно",
+      });
+    });
+
+    it("активный класс на 30 человек: каждый пишет по 3 сообщения за 10 с — отказов нет", async () => {
+      const students = Array.from({ length: 30 }, (_, i) => `student-${i}`);
+      for (const id of students) await roomsService.join(guestActor(id), LESSON_ID);
+      await roomsService.join(staffActor(), LESSON_ID);
+      const sends = [];
+      for (let round = 0; round < 3; round += 1) {
+        for (const id of students) sends.push(roomsService.sendChatMessage(guestActor(id), LESSON_ID, `ответ ${round}`));
+      }
+      // Учитель в тот же момент вставляет 10 строк подряд.
+      for (let i = 0; i < 10; i += 1) sends.push(roomsService.sendChatMessage(staffActor(), LESSON_ID, `строка ${i}`));
+      const results = await Promise.allSettled(sends);
+      expect(results.filter((r) => r.status === "rejected")).toHaveLength(0);
+      expect(repoMock.insertChatMessage).toHaveBeenCalledTimes(100);
+    });
+
+    it("потолок урока: много личностей разом не пробивают его", async () => {
+      const students = Array.from({ length: 50 }, (_, i) => `flood-${i}`);
+      for (const id of students) await roomsService.join(guestActor(id), LESSON_ID);
+      const sends = [];
+      for (let round = 0; round < 8; round += 1) {
+        for (const id of students) sends.push(roomsService.sendChatMessage(guestActor(id), LESSON_ID, `флуд ${round}`));
+      }
+      await Promise.allSettled(sends);
+      expect(repoMock.insertChatMessage).toHaveBeenCalledTimes(roomsService.CHAT_MESSAGES_PER_LESSON_WINDOW);
+    });
+
+    it("переотправка уже записанного сообщения (тот же ключ) лимит не тратит", async () => {
+      await roomsService.join(guestActor("retry-guest"), LESSON_ID);
+      const key = "4a1b8c2d-3e4f-4a5b-8c6d-7e8f9a0b1c2d";
+      const first = await roomsService.sendChatMessage(guestActor("retry-guest"), LESSON_ID, "дошло?", key);
+      for (let i = 0; i < 20; i += 1) {
+        await expect(roomsService.sendChatMessage(guestActor("retry-guest"), LESSON_ID, "дошло?", key)).resolves.toEqual(first);
+      }
+      await expect(roomsService.sendChatMessage(guestActor("retry-guest"), LESSON_ID, "новое")).resolves.toBeDefined();
+    });
   });
 
   it("явный выход гостя закрывает сессию журнала по participantId", async () => {
