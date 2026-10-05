@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocalParticipant, useTracks } from "@livekit/components-react";
-import { Track, VideoPreset } from "livekit-client";
+import { Track, VideoPreset, type LocalTrack } from "livekit-client";
 import type { ClaimScreenShareResponse } from "@school/shared";
 import { MonitorUp, MonitorX } from "lucide-react";
 
@@ -50,6 +50,47 @@ function screenShareExtraLayers(encoding: VideoPreset): VideoPreset[] {
     layers.push(new VideoPreset(mid.w, mid.h, midBitrate, 15, "medium"));
   }
   return layers;
+}
+
+/** Сколько ждать публикации демонстрации, прежде чем считать её зависшей. */
+const PUBLISH_TIMEOUT_MS = 6000;
+/** Сколько ещё ждать, пока зависшая публикация завершится сама. */
+const PUBLISH_SETTLE_MS = 15_000;
+
+async function settleWithin(promise: Promise<unknown>, ms: number): Promise<"ok" | "failed" | "timeout"> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<"timeout">((resolve) => {
+    timer = setTimeout(() => resolve("timeout"), ms);
+  });
+  try {
+    return await Promise.race([
+      promise.then(
+        () => "ok" as const,
+        () => "failed" as const,
+      ),
+      timeout,
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Человек закрыл окно выбора экрана. «…by system» — другое: macOS не
+ * разрешил браузеру запись экрана, об этом надо сказать.
+ */
+function isPickerCancel(err: unknown): boolean {
+  return err instanceof Error && err.name === "NotAllowedError" && !/system/i.test(err.message);
+}
+
+function captureErrorMessage(err: unknown): string {
+  if (err instanceof Error && err.name === "NotAllowedError") {
+    return "Компьютер не разрешает браузеру показывать экран — разрешите запись экрана для браузера в настройках системы";
+  }
+  if (err instanceof Error && err.name === "DeviceUnsupportedError") {
+    return "Этот браузер не умеет показывать экран — откройте урок в Chrome, Edge или Firefox на компьютере";
+  }
+  return "Не удалось начать демонстрацию — попробуйте ещё раз";
 }
 
 function releaseScreenShare(lessonId: string) {
@@ -146,66 +187,52 @@ export function SelfScreenShareButton({
    * кбит/с сервер её либо не отдавал вовсе, либо отдавал рывками — а сам
    * пережать поток не умеет. С облегчённым слоем сервер отдаёт каждому то,
    * что пролезет в его канал; у остальных качество прежнее.
+   *
+   * Без слоёв — запасной путь: параметры школы сделали разрешение/fps
+   * настраиваемыми, и при 720p/30fps публикация со слоями однажды зависла
+   * («publish time out» в логах LiveKit); одним слоем она проходит.
    */
-  async function publishOnce(withLowLayer: boolean): Promise<void> {
-    if (withLowLayer) {
-      await localParticipant.setScreenShareEnabled(
-        true,
-        { audio: false, resolution: encoding.resolution, contentHint: "detail" },
-        {
-          screenShareEncoding: encoding.encoding,
-          screenShareSimulcastLayers: screenShareExtraLayers(encoding),
-          simulcast: true,
-        },
-      );
-      return;
-    }
-    await localParticipant.setScreenShareEnabled(
-      true,
-      {
-        audio: false,
-        resolution: encoding.resolution,
-        contentHint: "detail",
-      },
-      {
-        screenShareEncoding: encoding.encoding,
-        // Параметры школы (запрос 2026-09-14) сделали разрешение/fps
-        // демонстрации настраиваемыми — админ задаёт ОДНО фиксированное
-        // качество на школу, адаптивные слои (simulcast) под него не
-        // нужны, а комплексный расчёт нескольких слоёв под нестандартную
-        // пару resolution/fps — источник тихого зависания публикации
-        // (баг, пойманный по факту: «publish time out» в логах LiveKit
-        // при 720p/30fps, у дефолтного 1080p/5fps не проявлялся). Один
-        // слой — надёжный путь публикации независимо от выбранных цифр.
-        simulcast: false,
-      },
+  function publish(track: LocalTrack, withLowLayer: boolean): Promise<unknown> {
+    return localParticipant.publishTrack(
+      track,
+      withLowLayer
+        ? {
+            screenShareEncoding: encoding.encoding,
+            screenShareSimulcastLayers: screenShareExtraLayers(encoding),
+            simulcast: true,
+          }
+        : { screenShareEncoding: encoding.encoding, simulcast: false },
     );
   }
 
   /**
-   * `setScreenShareEnabled` иногда НЕ отклоняется, а зависает без ответа
-   * (сервер LiveKit видит это как «publish time out», ~10с — пойманное по
-   * логам поведение, первопричина внутри WebRTC-негоциации клиента не
-   * установлена точно, что-то похожее на гонку/коллизию рядом с моментом
-   * входа в комнату). Обычный try/catch тут бессилен — нечему бросить
-   * исключение, промис просто не резолвится. Оборачиваем в таймаут и, если
-   * не успели за 6с, гасим зависшую попытку и пробуем ОДИН раз ещё —
-   * эмпирически вторая попытка стабильно проходит быстро (собственно то,
-   * что и обходил пользователь руками — «включить второй раз»).
+   * Публикация иногда не отклоняется, а зависает (LiveKit: «publish time
+   * out»); вторая попытка эмпирически проходит быстро. Окно выбора экрана
+   * сюда НЕ входит: раньше таймер 6 с шёл и пока человек выбирал окно — кто
+   * выбирал дольше, получал второе окно выбора, а выбранная демонстрация
+   * снималась. Теперь сначала экран выбран (`createScreenTracks`), потом
+   * публикация того же трека, повтор — без нового окна выбора.
    */
-  async function publishWithTimeout(withLowLayer: boolean): Promise<"ok" | "timeout"> {
-    const timeout = new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), 6000));
-    const result = await Promise.race([publishOnce(withLowLayer).then(() => "ok" as const), timeout]);
-    return result;
+  async function publishScreen(track: LocalTrack): Promise<boolean> {
+    const first = publish(track, true);
+    let outcome = await settleWithin(first, PUBLISH_TIMEOUT_MS);
+    // Зависшая публикация завершится сама (у LiveKit свой предел) — ждём её,
+    // а не начинаем вторую параллельно с ней.
+    if (outcome === "timeout") outcome = await settleWithin(first, PUBLISH_SETTLE_MS);
+    if (outcome === "ok") return true;
+    if (outcome === "failed") {
+      const second = publish(track, false);
+      outcome = await settleWithin(second, PUBLISH_TIMEOUT_MS + PUBLISH_SETTLE_MS);
+      if (outcome === "ok") return true;
+      if (outcome === "timeout") void second.then(() => localParticipant.unpublishTrack(track)).catch(() => undefined);
+    } else {
+      void first.then(() => localParticipant.unpublishTrack(track)).catch(() => undefined);
+    }
+    track.stop();
+    return false;
   }
 
-  async function toggle() {
-    if (isScreenShareEnabled) {
-      onScreenShareStopped?.();
-      await localParticipant.setScreenShareEnabled(false);
-      releaseScreenShare(lessonId);
-      return;
-    }
+  async function start() {
     const claimResult = await claim().catch(
       (): ClaimScreenShareResponse => ({ granted: true, holderName: null }), // сеть легла — не блокируем демонстрацию из-за этого, старый вебхук-гейт подстрахует
     );
@@ -217,25 +244,58 @@ export function SelfScreenShareButton({
       );
       return;
     }
+    let track: LocalTrack | undefined;
     try {
-      let outcome = await publishWithTimeout(true).catch(() => "timeout" as const);
-      if (outcome === "timeout") {
-        // Зависшая попытка публикации сама трек не остановит — гасим явно
-        // перед повтором, иначе второй вызов будет конкурировать с первым.
-        // Повтор — прежним проверенным путём, одним слоем: если зависание
-        // связано со слоями, демонстрация всё равно начнётся.
-        await localParticipant.setScreenShareEnabled(false).catch(() => undefined);
-        outcome = await publishWithTimeout(false);
-      }
-      if (outcome === "timeout") {
-        toast.error("Не удалось начать демонстрацию — попробуйте ещё раз");
-        releaseScreenShare(lessonId);
-        return;
-      }
-      onScreenShareStarted?.();
+      [track] = await localParticipant.createScreenTracks({
+        audio: false,
+        resolution: encoding.resolution,
+        contentHint: "detail",
+      });
     } catch (e) {
       releaseScreenShare(lessonId);
-      toast.error(e instanceof Error ? `Не удалось начать демонстрацию: ${e.message}` : "Не удалось начать демонстрацию экрана");
+      // Закрыл окно выбора — передумал, это не ошибка.
+      if (!isPickerCancel(e)) toast.error(captureErrorMessage(e));
+      return;
+    }
+    if (!track) {
+      releaseScreenShare(lessonId);
+      return;
+    }
+    if (await publishScreen(track)) {
+      onScreenShareStarted?.();
+      return;
+    }
+    releaseScreenShare(lessonId);
+    toast.error("Не удалось начать демонстрацию — попробуйте ещё раз");
+  }
+
+  async function stop() {
+    onScreenShareStopped?.();
+    // Как в `ScreenShareStatusBar`: остановка могла упасть на плохой связи,
+    // блокировку на сервере освобождаем всё равно.
+    try {
+      await localParticipant.setScreenShareEnabled(false);
+    } catch {
+      // трек всё равно снимается при переподключении
+    } finally {
+      releaseScreenShare(lessonId);
+    }
+  }
+
+  // Пока идёт запуск (окно выбора, публикация) — повторные нажатия не
+  // запускают вторую демонстрацию поверх первой.
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  async function toggle() {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    try {
+      if (isScreenShareEnabled) await stop();
+      else await start();
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
     }
   }
 
@@ -247,7 +307,8 @@ export function SelfScreenShareButton({
       inactiveIcon={MonitorUp}
       activeLabel="Остановить демонстрацию"
       inactiveLabel="Демонстрация"
-      onToggle={toggle}
+      onToggle={() => void toggle()}
+      loading={busy}
       disabled={blocked}
       title={blocked ? "Кто-то уже демонстрирует экран" : undefined}
       caption="Экран"
