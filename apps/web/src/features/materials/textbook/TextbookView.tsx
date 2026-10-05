@@ -54,6 +54,7 @@ export function TextbookView({
   onResponseChange,
   disabled = false,
   meta,
+  barAlert,
   showHead = true,
   submit,
   overlay,
@@ -73,6 +74,11 @@ export function TextbookView({
   disabled?: boolean;
   /** Строка под заголовком: дедлайн, таймер, сохранение. */
   meta?: React.ReactNode;
+  /**
+   * Важное из `meta` для узкой панели (телефон), где строка `meta` не
+   * помещается и скрыта: «ответы не сохранились» ученик должен видеть всегда.
+   */
+  barAlert?: string;
   showHead?: boolean;
   submit?: TextbookSubmit;
   overlay?: React.ReactNode;
@@ -328,6 +334,11 @@ export function TextbookView({
           <span className="tb-bar-grow" />
           {/* Без шапки (на уроке) дедлайн и сохранение — в панели. */}
           {!showHead && meta ? <span className="tb-bar-meta">{meta}</span> : null}
+          {!showHead && barAlert ? (
+            <span className="tb-bar-alert" role="status">
+              {barAlert}
+            </span>
+          ) : null}
           {totalTasks > 0 ? (
             <span
               className={cn("tb-dots", totalTasks > MAX_DOTS && "tb-dots--count")}

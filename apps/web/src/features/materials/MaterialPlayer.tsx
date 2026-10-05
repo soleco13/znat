@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { MyActivity, QuestionResponse, SubmitActivityResult } from "@school/shared";
 
+import { ApiError } from "@/shared/api-client";
 import { submitActivity } from "./activity-api.js";
 import { useActivityAutosave, type AutosaveStatus } from "./useActivityAutosave.js";
 import { TextbookView } from "./textbook/TextbookView.js";
@@ -65,15 +66,26 @@ export function MaterialPlayer({
       const result = await submitActivity(autosaveActivityId);
       setSubmitResult(result);
       setSubmittedAt(new Date().toISOString());
-    } catch {
-      setSubmitError("Не удалось сдать работу. Попробуйте ещё раз");
+    } catch (err) {
+      // Отказ сервера по делу (дедлайн прошёл) повтором не исправить — его
+      // текст и показываем; «попробуйте ещё раз» — только на сбой связи.
+      setSubmitError(
+        err instanceof ApiError && err.status >= 400 && err.status < 500 && err.status !== 408 && err.status !== 429
+          ? err.message
+          : "Не удалось сдать работу. Проверьте интернет и попробуйте ещё раз",
+      );
     } finally {
       setSubmitting(false);
     }
   }
 
   const locked = disabled || submittedAt !== null;
-  const meta = useMaterialMeta(activity, submittedAt === null, autosaveActivityId ? autosave.status : null);
+  const saveLabel = autosaveActivityId ? autosaveLabel(autosave.status, autosave.rejection) : null;
+  const meta = useMaterialMeta(activity, submittedAt === null, saveLabel);
+  const barAlert =
+    saveLabel && submittedAt === null && (autosave.status === "error" || autosave.status === "rejected")
+      ? saveLabel
+      : undefined;
 
   return (
     <TextbookView
@@ -82,6 +94,7 @@ export function MaterialPlayer({
       onResponseChange={handleChange}
       disabled={locked}
       meta={meta}
+      barAlert={barAlert}
       submit={
         autosaveActivityId
           ? {
@@ -103,11 +116,7 @@ export function MaterialPlayer({
 }
 
 /** Дедлайн, остаток времени и состояние сохранения — одной строкой под заголовком. */
-function useMaterialMeta(
-  activity: MyActivity,
-  running: boolean,
-  autosaveStatus: AutosaveStatus | null,
-): string | undefined {
+function useMaterialMeta(activity: MyActivity, running: boolean, saveLabel: string | null): string | undefined {
   const { deadline, timerSeconds, startedAt } = activity;
   const [, tick] = useState(0);
   useEffect(() => {
@@ -119,12 +128,14 @@ function useMaterialMeta(
   const parts: string[] = [];
   if (deadline) parts.push(`сдать до ${new Date(deadline).toLocaleString("ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}`);
   if (timerSeconds != null && running) parts.push(formatTimer(startedAt, timerSeconds));
-  if (autosaveStatus && running) parts.push(autosaveLabel(autosaveStatus));
+  if (saveLabel && running) parts.push(saveLabel);
   return parts.length > 0 ? parts.join(" · ") : undefined;
 }
 
-function autosaveLabel(status: AutosaveStatus): string {
+function autosaveLabel(status: AutosaveStatus, rejection: string | null): string {
   switch (status) {
+    case "rejected":
+      return rejection ?? "ответы больше не принимаются";
     case "saving":
       return "сохраняем ответы…";
     case "saved":

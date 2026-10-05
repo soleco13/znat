@@ -122,9 +122,21 @@
   font-size: 12.5px;
   color: var(--tb-ink-2);
 }
+.tb-bar-alert {
+  display: none;
+}
 @container (max-width: 759px) {
   .tb-bar-meta {
     display: none;
+  }
+  .tb-bar-alert {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12.5px;
+    color: var(--tb-warn-ink);
   }
 }
 

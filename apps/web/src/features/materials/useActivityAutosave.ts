@@ -1,8 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { QuestionResponse } from "@school/shared";
+import { ApiError } from "@/shared/api-client";
 import { saveResponse } from "./activity-api.js";
 
-export type AutosaveStatus = "idle" | "saving" | "saved" | "error";
+/** `rejected` — сервер больше не примет ответы (время вышло, дедлайн, работа сдана). */
+export type AutosaveStatus = "idle" | "saving" | "saved" | "error" | "rejected";
+
+/**
+ * Отказ, который повтором не исправить: 409 (время вышло, дедлайн прошёл,
+ * работа уже сдана), 400/404 (вопроса нет в материале). Сеть, 5xx, 408/429
+ * и 401/403 (сессия) — временное, повторяем.
+ */
+function isFinalRejection(err: unknown): err is ApiError {
+  return err instanceof ApiError && (err.status === 409 || err.status === 400 || err.status === 404);
+}
 
 /** Пауза после последнего изменения перед автосохранением (§8 ТЗ: «каждые 5 сек»). */
 const DEBOUNCE_MS = 5_000;
@@ -28,6 +39,8 @@ export function useActivityAutosave(activityId: string | null) {
   const pending = useRef<Map<string, QuestionResponse>>(new Map());
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [status, setStatus] = useState<AutosaveStatus>("idle");
+  /** Текст сервера при `rejected` («Время на задание вышло — сдайте работу»). */
+  const [rejection, setRejection] = useState<string | null>(null);
 
   const clearTimer = () => {
     if (timer.current) {
@@ -61,7 +74,16 @@ export function useActivityAutosave(activityId: string | null) {
           );
           setStatus((s) => (pending.current.size === 0 && s === "saving" ? "saved" : s));
           return true;
-        } catch {
+        } catch (err) {
+          // Время вышло: раньше отказ возвращал ответы в очередь, повтор шёл
+          // каждые 10 с вечно, а «Сдать работу» упиралась в несохранённое и
+          // просила проверить интернет — сдать работу было нельзя. Сохранять
+          // больше нечего: сдача решит сервер (после таймера она разрешена).
+          if (isFinalRejection(err)) {
+            setRejection(err.message);
+            setStatus("rejected");
+            return true;
+          }
           for (const [q, r] of batch) if (!pending.current.has(q)) pending.current.set(q, r);
           setStatus("error");
           // Ученик может больше ничего не менять — без повтора ответ жил бы
@@ -104,5 +126,5 @@ export function useActivityAutosave(activityId: string | null) {
     };
   }, [flush]);
 
-  return { queue, flush, status };
+  return { queue, flush, status, rejection };
 }
