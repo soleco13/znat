@@ -689,13 +689,17 @@ export function RoomPage() {
 
   const self = participants.find((p) => p.userId === selfId);
 
-  async function leaveRoom() {
+  function leaveRoom() {
     if (!lessonId) return;
     // До запроса: пока /leave идёт, сервер может закрыть соединение урока, и
     // повторный вход (`rejoinAfterEviction`) не должен успеть сработать.
     leftRef.current = true;
     clearRejoinState();
-    await apiFetch(`/lessons/${lessonId}/leave`, { method: "POST" }).catch(() => undefined);
+    // Не ждём ответа: на плохой связи (и в оверлее «Связь прервалась», где
+    // сети нет вовсе) кнопка «Выйти» до 30 с ничего не делала. `keepalive`
+    // доносит запрос и после ухода со страницы; не дошёл — сервер сам
+    // уберёт участника по молчанию.
+    void apiFetch(`/lessons/${lessonId}/leave`, { method: "POST", keepalive: true }).catch(() => undefined);
     if (isGuest) {
       // У гостя нет /lessons и личного кабинета — показываем экран выхода.
       // Гостевую сессию в памяти НЕ очищаем: `RequireRoomAccess` видел
