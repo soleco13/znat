@@ -65,12 +65,19 @@ export function mediaTokenTtlSeconds(kind: ParticipantKind): number {
 function buildPublishGrant(permissions: ParticipantPermissions, kind: ParticipantKind) {
   const isStaff = kind === "staff";
   const canPublishCamera = isStaff || permissions.canPublishVideo;
-  const sources = [TrackSource.MICROPHONE];
+  // Микрофон — только с правом говорить (персонал говорит всегда). Раньше
+  // источник был в гранте всегда, и при разрешённой камере (`canPublish`
+  // true) LiveKit принял бы и микрофон ученика без права говорить — запрет
+  // держался лишь на интерфейсе (аудит 2026-10-05, G-07).
+  const sources: TrackSource[] = [];
+  if (isStaff || permissions.canSpeak) sources.push(TrackSource.MICROPHONE);
   if (canPublishCamera) sources.push(TrackSource.CAMERA);
   if (permissions.canShareScreen) sources.push(TrackSource.SCREEN_SHARE);
+  // Пустой `canPublishSources` в LiveKit значит «любые источники» — поэтому
+  // `canPublish` включается только вместе хотя бы с одним источником выше.
   return {
     canSubscribe: true,
-    canPublish: permissions.canSpeak || canPublishCamera || permissions.canShareScreen,
+    canPublish: isStaff || permissions.canSpeak || canPublishCamera || permissions.canShareScreen,
     canPublishSources: sources,
     canPublishData: false,
     hidden: false,

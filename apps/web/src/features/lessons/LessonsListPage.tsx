@@ -21,6 +21,7 @@ import type {
   MaterialSummary,
   UserResponse,
 } from "@school/shared";
+import { defaultLessonSettings } from "@school/shared";
 
 import { useAuthStore } from "@/shared/auth-store";
 import { useAsync } from "@/shared/hooks/use-async";
@@ -106,6 +107,8 @@ function formatSchedule(iso: string | null): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+const DEFAULT_SETTINGS = defaultLessonSettings();
 
 const SETTINGS_FIELDS: { key: keyof LessonSettings; label: string; hint: string }[] = [
   { key: "autoRecord", label: "Автозапись урока", hint: "Начинать запись при первом входе персонала" },
@@ -277,7 +280,10 @@ function LessonFormDialog({
               <label key={key} className="flex items-start gap-2.5">
                 <Checkbox
                   className="mt-0.5"
-                  checked={Boolean(value.settings[key])}
+                  // Действующее значение: несохранённое поле = умолчание схемы.
+                  // Раньше пустое поле показывалось «выкл», а сервер применял
+                  // умолчание «вкл» (камера, демонстрация).
+                  checked={Boolean(value.settings[key] ?? DEFAULT_SETTINGS[key])}
                   onCheckedChange={(c) =>
                     setValue((v) => ({ ...v, settings: { ...v.settings, [key]: c === true } }))
                   }

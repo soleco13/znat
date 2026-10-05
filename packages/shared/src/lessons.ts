@@ -40,8 +40,13 @@ export const lessonSettingsSchema = z.object({
   studentsCanSpeak: z.boolean().default(false),
   /** Ученики могут публиковать камеру (максимум 360p, §5.2 ТЗ) без индивидуального гранта. */
   studentsCanPublishVideo: z.boolean().default(true),
-  /** Ученики могут демонстрировать экран без индивидуального гранта. */
-  studentsCanShareScreen: z.boolean().default(true),
+  /**
+   * Ученики могут демонстрировать экран без индивидуального гранта. По
+   * умолчанию ВЫКЛ (аудит гостевого доступа 2026-10-05): демонстрация — самый
+   * тяжёлый поток, и его получает весь класс; ученику учитель разрешает её
+   * в уроке («Разрешить демонстрацию» в меню участника).
+   */
+  studentsCanShareScreen: z.boolean().default(false),
 });
 export type LessonSettings = z.infer<typeof lessonSettingsSchema>;
 
