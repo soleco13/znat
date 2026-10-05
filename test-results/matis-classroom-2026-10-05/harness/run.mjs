@@ -775,6 +775,85 @@ try {
     log({ kind: "sec", text: "result", extra: R });
   }
 
+  // ── G-04/G-05: лишние сокеты урока и чат-спам одной гостевой личностью ──
+  if (PHASES.includes("abuse")) {
+    setPhase("abuse");
+    const R = {};
+    const b = bots[0];
+    await b.enter();
+    await b.join();
+    const url = `${ORIGIN.replace("https", "wss")}/ws?lessonId=${LID}&cs=abuse&attempt=0`;
+    const socks = [];
+    const codes = {};
+    for (let i = 0; i < 20; i++) {
+      const ws = new WebSocket(url, { headers: { Cookie: b.http.cookieHeader(), Origin: ORIGIN } });
+      ws.onclose = (e) => { codes[e.code] = (codes[e.code] || 0) + 1; };
+      ws.onerror = () => {};
+      socks.push(ws);
+      await sleep(150);
+    }
+    await sleep(3000);
+    R.ws = { opened: socks.length, stillOpen: socks.filter((w) => w.readyState === 1).length, closeCodes: codes };
+    check("abuse: one guest keeps ≤3 lesson sockets", R.ws.stillOpen <= 3 && R.ws.stillOpen >= 1, R.ws);
+    // Участник остаётся на связи — у учителя он в списке.
+    R.presentForTeacher = (await teacherApi.req("GET", `/lessons/presence-counts?ids=${LID}`)).json;
+    const chat = [];
+    for (let i = 0; i < 15; i++) chat.push((await b.chat(`abuse ${i}`)).status);
+    R.chat = { sent: 15, ok: chat.filter((x) => x === 201).length, limited: chat.filter((x) => x === 429).length, other: chat.filter((x) => x !== 201 && x !== 429) };
+    check("abuse: chat spam limited (8 ok, rest 429)", R.chat.ok === 8 && R.chat.limited === 7, R.chat);
+    await sleep(10500);
+    R.chatAfterWindow = (await b.chat("снова можно")).status;
+    check("abuse: chat allowed after window", R.chatAfterWindow === 201, { s: R.chatAfterWindow });
+    for (const w of socks) { try { w.close(); } catch {} }
+    await b.leave();
+    summary.abuse = R; saveSummary();
+    log({ kind: "abuse", text: "result", extra: R });
+  }
+
+  // ── Обрывы сети живого ученика 5/10/20/30/60 с, F5, закрытие вкладки ──
+  if (PHASES.includes("outages")) {
+    setPhase("outages");
+    const p = SB[0];
+    check("outages: student in", await sbEnter(p));
+    const identity = await sbIdentity(p);
+    const flowing = async () => {
+      const a = await rtcSummary(p); await sleep(4000); const b = await rtcSummary(p);
+      const pill = await p.eval(`/Восстанавливаем звук|Подключаем звук|Связь прервалась/.test(document.body.innerText)`).catch(() => true);
+      return b.bytesIn > a.bytesIn + 20000 && !pill;
+    };
+    const teacherSees = async () => {
+      const r = await teacherApi.req("GET", `/lessons/presence-counts?ids=${LID}`);
+      return r.json;
+    };
+    const R = { identity, baseline: (await waitFor(flowing, 60000, 1000)).ok, cuts: [] };
+    for (const sec of (process.env.OUTAGES || "5,10,20,30,60").split(",").map(Number)) {
+      fs.rmSync(`${OUT}/ctl.cut.done`, { force: true });
+      fs.writeFileSync(`${OUT}/ctl.cut`, `${Date.now()} ${sec}\n`);
+      await waitFor(() => fs.existsSync(`${OUT}/ctl.cut.done`), (sec + 30) * 1000, 500);
+      const tUp = Date.now();
+      const back = await waitFor(flowing, 180000, 1000);
+      const inRoom = await p.eval(`!!${byLabel("Чат")}`).catch(() => false);
+      const r = { cutSec: sec, mediaBackMs: back.ok ? Date.now() - tUp : null, stillInRoomWithoutF5: inRoom, presence: await teacherSees() };
+      R.cuts.push(r);
+      check(`outages: ${sec}s — media back without F5`, back.ok && inRoom, r);
+      await sleep(15000);
+    }
+    const tF5 = Date.now(); await p.reload();
+    const f5 = await waitFor(async () => (await p.eval(`!!${byLabel("Чат")}`).catch(() => false)) && (await flowing()), 120000, 1000);
+    R.f5 = { ok: f5.ok, ms: f5.ok ? Date.now() - tF5 : null };
+    check("outages: F5 back in lesson", f5.ok, R.f5);
+    await sleep(5000);
+    // Закрытие вкладки: страница уходит (pagehide → выход), участник пропадает из LiveKit и presence.
+    const lkHas = () => (spawnSync("lk", ["--url", process.env.LK_URL, "--api-key", process.env.LK_KEY, "--api-secret", process.env.LK_SECRET, "room", "participants", "list", `lesson-${LID}`], { encoding: "utf8", timeout: 15000 }).stdout || "").includes(identity);
+    const tClose = Date.now();
+    await p.goto("about:blank");
+    const goneLk = await waitFor(() => !lkHas(), 90000, 1000);
+    R.tabClose = { goneFromLiveKitMs: goneLk.ok ? Date.now() - tClose : null };
+    check("outages: tab close removes participant from LiveKit", goneLk.ok, R.tabClose);
+    summary.outages = R; saveSummary();
+    log({ kind: "outages", text: "result", extra: R });
+  }
+
   // ── Выдача права говорить: включается ли микрофон сам? ─────────────────
   if (PHASES.includes("grant")) {
     setPhase("grant");
