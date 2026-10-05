@@ -119,14 +119,18 @@ export function buildServer() {
   // `?link=poor|ok&who=<участник>` — клиент сообщает о смене режима связи
   // (редко, только при переключении): в логе видно каждое переключение,
   // независимо от доски (она сообщает свой режим, только пока открыта).
+  // `?link=repath` — клиент перевыбирает сетевой путь медиа (PoorLinkMedia.tsx).
   app.get<{ Querystring: { link?: string; who?: string } }>(
     "/ping",
     { config: { rateLimit: false }, logLevel: "silent" },
     async (request, reply) => {
       const { link, who } = request.query;
       // Маршрут вне лимита запросов — запись в лог идёт из общего бюджета телеметрии (G-08).
-      if ((link === "poor" || link === "ok") && who && /^[0-9a-f-]{36}$/.test(who) && admitClientEvent()) {
+      const validWho = !!who && /^[0-9a-f-]{36}$/.test(who);
+      if ((link === "poor" || link === "ok") && validWho && admitClientEvent()) {
         logEvent("client_event", { clientEvent: "link_quality_changed", poorLink: link === "poor", participantId: who });
+      } else if (link === "repath" && validWho && admitClientEvent()) {
+        logEvent("client_event", { clientEvent: "media_path_refresh", participantId: who });
       }
       return reply.header("Cache-Control", "no-store").status(204).send();
     },

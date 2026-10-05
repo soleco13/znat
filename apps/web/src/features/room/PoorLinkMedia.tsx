@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useRoomContext } from "@livekit/components-react";
 import {
   ConnectionQuality,
+  ConnectionState,
   RemoteTrackPublication,
   RoomEvent,
   Track,
@@ -57,9 +58,71 @@ function useReportLiveKitQuality(): void {
   }, [room]);
 }
 
+/** Плохая оценка LiveKit держится столько — пробуем перевыбрать сетевой путь медиа. */
+const STUCK_PATH_MS = 20_000;
+/** Пауза между попытками: удваивается, пока связь не наладится. */
+const PATH_RETRY_MIN_MS = 60_000;
+const PATH_RETRY_MAX_MS = 8 * 60_000;
+/** Связь хорошая столько подряд — прошлые попытки не в счёт. */
+const PATH_GOOD_RESET_MS = 60_000;
+
+/**
+ * Медиа застревает на старой сети. Ученик вошёл с мобильного интернета и
+ * включил Wi-Fi: страница работает через Wi-Fi, а WebRTC iPhone держит уже
+ * выбранную пару ICE на сотовой сети, пока та хоть как-то жива, — камера и
+ * звук так и идут через мобильную сеть с потерями (2026-10-05, МегаФон:
+ * трафик шёл с IPv6 сотовой сети после перехода на Wi-Fi, потери каждые
+ * 5–15 с). Сам LiveKit переподключается только при обрыве.
+ *
+ * Поэтому: плохая оценка держится `STUCK_PATH_MS` — делаем то же
+ * переподключение, что LiveKit делает при обрыве сигнального канала
+ * (resume: новый сигнал и ICE restart, треки и публикации сохраняются).
+ * Браузер заново собирает кандидаты и выбирает лучшую сеть — Wi-Fi.
+ * Если сеть не менялась, это короткая пауза на уже плохой связи; повторы
+ * с нарастающей паузой. Молча, в интерфейсе ничего.
+ */
+function useMediaPathRefresh(): void {
+  const room = useRoomContext();
+  useEffect(() => {
+    let badSince = 0;
+    let goodSince = 0;
+    let retryMs = PATH_RETRY_MIN_MS;
+    let lastAttemptAt = 0;
+    const tick = () => {
+      const now = Date.now();
+      if (room.state !== ConnectionState.Connected || document.hidden) {
+        badSince = 0;
+        return;
+      }
+      const quality = room.localParticipant.connectionQuality;
+      if (!isBad(quality)) {
+        badSince = 0;
+        const good = quality === ConnectionQuality.Good || quality === ConnectionQuality.Excellent;
+        if (!good) goodSince = 0;
+        else if (!goodSince) goodSince = now;
+        else if (now - goodSince >= PATH_GOOD_RESET_MS) retryMs = PATH_RETRY_MIN_MS;
+        return;
+      }
+      goodSince = 0;
+      if (!badSince) badSince = now;
+      if (now - badSince < STUCK_PATH_MS) return;
+      if (lastAttemptAt && now - lastAttemptAt < retryMs) return;
+      if (lastAttemptAt) retryMs = Math.min(retryMs * 2, PATH_RETRY_MAX_MS);
+      lastAttemptAt = now;
+      badSince = 0;
+      const who = room.localParticipant.identity;
+      void fetch(`/ping?link=repath&who=${encodeURIComponent(who)}`, { cache: "no-store" }).catch(() => undefined);
+      void room.simulateScenario("signal-reconnect").catch(() => undefined);
+    };
+    const interval = setInterval(tick, 2000);
+    return () => clearInterval(interval);
+  }, [room]);
+}
+
 export function PoorLinkMediaAdapter() {
   const room = useRoomContext();
   useReportLiveKitQuality();
+  useMediaPathRefresh();
   useLinkProbe();
   const poor = useLinkPoor();
 
