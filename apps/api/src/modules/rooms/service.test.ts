@@ -52,6 +52,8 @@ const {
     muteScreenShare: vi.fn(),
     removeParticipant: vi.fn(),
     listConnectedIdentities: vi.fn().mockResolvedValue(new Set()),
+    ensureRoom: vi.fn().mockResolvedValue(undefined),
+    mediaTokenTtlSeconds: vi.fn().mockReturnValue(900),
   },
   schoolSettingsServiceMock: {
     // Параметры школы (запрос 2026-09-14) — `join()` подмешивает мягкие
@@ -91,6 +93,7 @@ vi.mock("./presence.js", async () => {
   const grants = new Map<string, unknown>();
   const entryLocks = new Set<string>();
   const chatIdem = new Map<string, string>();
+  const leftMarks = new Set<string>();
   const roomMap = (lessonId: string) => {
     let m = rooms.get(lessonId);
     if (!m) {
@@ -141,6 +144,22 @@ vi.mock("./presence.js", async () => {
     clearGrantedPermissions: vi.fn(async (lessonId: string, userId: string) => {
       grants.delete(`${lessonId}:${userId}`);
     }),
+    // Тот же контракт, что у Lua-скрипта ADMIT_GUEST_SCRIPT: проверка и запись одним шагом.
+    admitGuest: vi.fn(async (lessonId: string, userId: string, entry: unknown, maxGuests: number) => {
+      const m = roomMap(lessonId);
+      if (m.has(userId)) return "exists";
+      const guests = [...m.values()].filter((e) => (e as { kind: string }).kind === "guest").length;
+      if (guests >= maxGuests) return "full";
+      m.set(userId, entry);
+      return "admitted";
+    }),
+    markLeft: vi.fn(async (lessonId: string, userId: string) => {
+      leftMarks.add(`${lessonId}:${userId}`);
+    }),
+    clearLeft: vi.fn(async (lessonId: string, userId: string) => {
+      leftMarks.delete(`${lessonId}:${userId}`);
+    }),
+    hasLeft: vi.fn(async (lessonId: string, userId: string) => leftMarks.has(`${lessonId}:${userId}`)),
     countGuests: vi.fn(
       async (lessonId: string) =>
         [...roomMap(lessonId).values()].filter((e) => (e as { kind: string }).kind === "guest").length,
@@ -202,6 +221,7 @@ vi.mock("./presence.js", async () => {
     }),
     __clear: () => {
       chatIdem.clear();
+      leftMarks.clear();
       rooms.clear();
       modes.clear();
       modesBeforeShare.clear();
@@ -352,6 +372,74 @@ describe("защита от утёкшей ссылки: лимит, закры�
     await expect(
       roomsService.setEntryLocked(SCHOOL_ID, LESSON_ID, studentToken(), true),
     ).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("одновременные входы сверх LESSON_MAX_GUESTS: пускаем ровно до потолка (G-03)", async () => {
+    const { env } = await import("../../plugins/env.js");
+    for (let i = 0; i < env.LESSON_MAX_GUESTS - 1; i++) {
+      await roomsService.join(guestActor(`seat-${i}`), LESSON_ID);
+    }
+    const results = await Promise.allSettled(
+      Array.from({ length: 10 }, (_, i) => roomsService.join(guestActor(`rush-${i}`), LESSON_ID)),
+    );
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const rejected = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+    expect(rejected).toHaveLength(9);
+    for (const r of rejected) expect(r.reason).toMatchObject({ statusCode: 403, code: "lesson_full" });
+  });
+
+  it("комната LiveKit создаётся с пределом: ученики + места персонала (G-01)", async () => {
+    const { env } = await import("../../plugins/env.js");
+    mediaServiceMock.ensureRoom.mockClear();
+    await roomsService.join(guestActor("limit-check"), LESSON_ID);
+    expect(mediaServiceMock.ensureRoom).toHaveBeenCalledWith(
+      expect.any(String),
+      env.LESSON_MAX_GUESTS + env.LIVEKIT_ROOM_EXTRA_SLOTS,
+    );
+  });
+
+  it("сбой создания комнаты LiveKit не блокирует вход", async () => {
+    mediaServiceMock.ensureRoom.mockRejectedValueOnce(new Error("livekit down"));
+    await expect(roomsService.join(guestActor("lk-down"), LESSON_ID)).resolves.toBeTruthy();
+  });
+
+  it("выход убирает из LiveKit; старый токен после выхода выкидывается вебхуком, после /join — нет (G-01)", async () => {
+    lessonsServiceMock.findLivekitRoom.mockResolvedValue("lesson-room");
+    lessonsServiceMock.getLessonByLivekitRoom.mockResolvedValue({ id: LESSON_ID, schoolId: SCHOOL_ID, settings: {} });
+    repoMock.findCanonicalParticipant.mockResolvedValue({ id: "row", displayName: "Аня" });
+    const guest = guestActor("leaver");
+    await roomsService.join(guest, LESSON_ID);
+
+    mediaServiceMock.removeParticipant.mockClear();
+    await roomsService.leave(guest, LESSON_ID);
+    expect(mediaServiceMock.removeParticipant).toHaveBeenCalledWith("lesson-room", "leaver");
+
+    // Подключился к медиа снова старым токеном, минуя /join, — выкинут.
+    mediaServiceMock.removeParticipant.mockClear();
+    mediaServiceMock.updateLivePermissions.mockClear();
+    await roomsService.handleParticipantJoinedWebhook("lesson-room", "leaver");
+    expect(mediaServiceMock.removeParticipant).toHaveBeenCalledWith("lesson-room", "leaver");
+    expect(mediaServiceMock.updateLivePermissions).not.toHaveBeenCalled();
+
+    // Вернулся по-честному через /join — медиа не трогаем.
+    await roomsService.join(guest, LESSON_ID);
+    mediaServiceMock.removeParticipant.mockClear();
+    await roomsService.handleParticipantJoinedWebhook("lesson-room", "leaver");
+    expect(mediaServiceMock.removeParticipant).not.toHaveBeenCalled();
+
+    lessonsServiceMock.findLivekitRoom.mockResolvedValue(null);
+    repoMock.findCanonicalParticipant.mockResolvedValue(null);
+  });
+
+  it("гость, снятый зачисткой (не выход), при возврате в медиа не выкидывается", async () => {
+    lessonsServiceMock.getLessonByLivekitRoom.mockResolvedValue({ id: LESSON_ID, schoolId: SCHOOL_ID, settings: {} });
+    repoMock.findCanonicalParticipant.mockResolvedValue({ id: "row", displayName: "Боря" });
+    mediaServiceMock.removeParticipant.mockClear();
+    mediaServiceMock.updateLivePermissions.mockClear();
+    await roomsService.handleParticipantJoinedWebhook("lesson-room", "swept-guest");
+    expect(mediaServiceMock.removeParticipant).not.toHaveBeenCalled();
+    expect(mediaServiceMock.updateLivePermissions).toHaveBeenCalled();
+    repoMock.findCanonicalParticipant.mockResolvedValue(null);
   });
 
   it("новый гость сверх LESSON_MAX_GUESTS получает 403, персонал входит", async () => {

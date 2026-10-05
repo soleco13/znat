@@ -348,18 +348,12 @@ export async function assertGuestNotLockedOut(lessonId: string, guestId: string)
 }
 
 /**
- * Новый гость (его нет в presence) — два гейта от утёкшей ссылки:
- *  - учитель закрыл вход → пускаем только того, кто уже был на этом уроке
- *    (заснувший телефон, перезагрузка страницы), а не нового человека;
- *  - потолок учеников в уроке (`LESSON_MAX_GUESTS`).
- * Гонка двух одновременных входов может превысить потолок на единицы — это
- * защита от сотен фейковых гостей, а не точный счётчик.
+ * Потолок учеников в уроке (`LESSON_MAX_GUESTS`) — защита от утёкшей ссылки.
+ * Проверяется атомарно вместе с записью в presence (`presence.admitGuest`);
+ * закрытый вход — отдельно (`assertGuestNotLockedOut`).
  */
-async function assertGuestCanEnter(lessonId: string, guestId: string): Promise<void> {
-  await assertGuestNotLockedOut(lessonId, guestId);
-  if ((await presence.countGuests(lessonId)) >= env.LESSON_MAX_GUESTS) {
-    throw new AppError(403, "lesson_full", `В уроке уже ${env.LESSON_MAX_GUESTS} учеников — это максимум`);
-  }
+function lessonFullError(): AppError {
+  return new AppError(403, "lesson_full", `В уроке уже ${env.LESSON_MAX_GUESTS} учеников — это максимум`);
 }
 
 export async function join(actor: LessonActor, lessonId: string): Promise<JoinLessonResponse> {
@@ -382,7 +376,7 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
   const existing = (
     await presence.patchParticipant(lessonId, participantId, { connected: true, lastSeenAt: Date.now() })
   )?.after;
-  if (!existing && !isStaff) await assertGuestCanEnter(lessonId, participantId);
+  if (!existing && !isStaff) await assertGuestNotLockedOut(lessonId, participantId);
   const granted = existing || isStaff ? null : await presence.getGrantedPermissions(lessonId, participantId);
   const entry: PresenceEntry = existing
     ? existing
@@ -407,12 +401,24 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
         joinedAt: new Date().toISOString(),
         lastSeenAt: Date.now(),
       };
-  if (!existing) await presence.setParticipant(lessonId, participantId, entry);
+  // Новый участник: персонал — просто запись; гость — атомарно с проверкой
+  // потолка (`admitGuest`), чтобы одновременные входы его не обходили.
+  let isNew = !existing;
+  if (isNew && isStaff) {
+    await presence.setParticipant(lessonId, participantId, entry);
+  } else if (isNew) {
+    const admitted = await presence.admitGuest(lessonId, participantId, entry, env.LESSON_MAX_GUESTS);
+    if (admitted === "full") throw lessonFullError();
+    // Тот же гость параллельным запросом уже записан — дальше как повторный вход.
+    if (admitted === "exists") isNew = false;
+  }
+  // Вход через `/join` — законный: снимаем отметку прошлого выхода (см. `leave`).
+  await presence.clearLeft(lessonId, participantId);
   // Без явного пуша доска знает только дефолт по роли (гость — read-only), а
   // presence гостя берёт canDraw из настроек урока или сохранённого гранта —
   // клиент рисует, а сервер доски молча отбрасывает штрихи.
   canvasService.setDrawPermission(lessonId, participantId, entry.permissions.canDraw);
-  if (!existing) {
+  if (isNew) {
     await repo.insertJoin({
       lessonId,
       kind: actor.kind,
@@ -437,13 +443,21 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
   }
 
   const snapshot = toSnapshot(participantId, entry);
-  if (existing) {
+  if (!isNew) {
     emitRoomEvent(lessonId, { type: "participant_updated", participant: snapshot });
   } else {
     emitRoomEvent(lessonId, { type: "participant_joined", participant: snapshot });
   }
 
   const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
+  // Предел комнаты LiveKit = ученики + места персонала и записи. Сбой не
+  // блокирует вход: медиа поднимется в комнате, созданной LiveKit, а лимит
+  // учеников по-прежнему держит presence.
+  try {
+    await mediaService.ensureRoom(livekitRoom, env.LESSON_MAX_GUESTS + env.LIVEKIT_ROOM_EXTRA_SLOTS);
+  } catch (err) {
+    logTaskFailure("rooms.ensure_livekit_room", err, { lessonId });
+  }
   const media = await mediaService.createParticipantConnection({
     livekitRoom,
     userId: participantId,
@@ -473,11 +487,30 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
 /** Явный выход (кнопка «Выйти»/POST leave) — без grace-периода на переподключение. */
 export async function leave(actor: LessonActor, lessonId: string): Promise<void> {
   await presence.removeParticipant(lessonId, actor.participantId);
+  // Выход — и из медиа тоже: раньше участник оставался в комнате LiveKit, а
+  // его токен позволял вернуться в неё в обход урока, невидимым для сетки
+  // учителя (аудит 2026-10-05, G-01). Отметка живёт дольше любого токена,
+  // который у него мог остаться; новый `/join` её снимает.
+  await presence.markLeft(lessonId, actor.participantId, mediaService.mediaTokenTtlSeconds(actor.kind) + LEFT_MARK_MARGIN_SECONDS);
   await repo.closeOpenSession(lessonId, actor.participantId);
   await presence.releaseScreenShare(lessonId, actor.participantId);
   emitRoomEvent(lessonId, { type: "participant_left", userId: actor.participantId });
+  const livekitRoom = await lessonsService.findLivekitRoom(lessonId);
+  if (livekitRoom) {
+    try {
+      await mediaService.removeParticipant(livekitRoom, actor.participantId);
+    } catch (err) {
+      logTaskFailure("rooms.leave_livekit", err, { lessonId, participantId: actor.participantId });
+    }
+  }
   await scheduleAutoEndIfEmpty(lessonId);
 }
+
+/**
+ * Запас отметки выхода сверх TTL токена приложения: LiveKit сам продлевает
+ * токен подключённому клиенту, и у вышедшего мог остаться продлённый.
+ */
+const LEFT_MARK_MARGIN_SECONDS = 30 * 60;
 
 /**
  * Пользовательский баг (2026-09-14): «2 демонстрации разом ломают сетку камер».
@@ -924,8 +957,15 @@ export async function handleParticipantJoinedWebhook(livekitRoom: string, userId
     await mediaService.updateLivePermissions(livekitRoom, userId, entry.permissions, entry.kind);
     return;
   }
-  // Presence уже снят (вышел и вернулся после grace) — права как у входящего
-  // заново гостя: сохранённый грант учителя или настройки урока.
+  // Сам вышел из урока и подключился к медиа снова не через `/join` (старым
+  // токеном) — в уроке его нет, и учитель его не видит: выкидываем (G-01).
+  if (await presence.hasLeft(lesson.id, userId)) {
+    logger().warn({ lessonId: lesson.id, participantId: userId }, "livekit: участник вне урока подключился к медиа — удалён");
+    await mediaService.removeParticipant(livekitRoom, userId);
+    return;
+  }
+  // Presence уже снят зачисткой (связь пропала дольше grace) — права как у
+  // входящего заново гостя: сохранённый грант учителя или настройки урока.
   const wasGuest = await repo.findCanonicalParticipant(lesson.id, { userId: null, guestId: userId });
   if (!wasGuest) return;
   const permissions =

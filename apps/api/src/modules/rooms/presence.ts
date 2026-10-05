@@ -197,6 +197,57 @@ export async function clearGrantedPermissions(lessonId: string, userId: string):
   await redis.hdel(grantsKey(lessonId), userId);
 }
 
+const ADMIT_GUEST_SCRIPT = `
+if redis.call("HEXISTS", KEYS[1], ARGV[1]) == 1 then return 2 end
+local guests = 0
+for _, raw in ipairs(redis.call("HVALS", KEYS[1])) do
+  local ok, entry = pcall(cjson.decode, raw)
+  if ok and entry.kind == "guest" then guests = guests + 1 end
+end
+if guests >= tonumber(ARGV[3]) then return 0 end
+redis.call("HSET", KEYS[1], ARGV[1], ARGV[2])
+return 1
+`;
+
+export type AdmitGuestResult = "admitted" | "exists" | "full";
+
+/**
+ * Новый гость в presence — одной атомарной операцией «посчитать гостей и
+ * записать». Раньше подсчёт и запись шли двумя командами, и одновременные
+ * входы при 49/50 проходили все (аудит 2026-10-05, G-03). Скрипт —
+ * миллисекунды на ≤ сотню записей, обычный вход он не задерживает.
+ */
+export async function admitGuest(
+  lessonId: string,
+  userId: string,
+  entry: PresenceEntry,
+  maxGuests: number,
+): Promise<AdmitGuestResult> {
+  const result = await redis.eval(ADMIT_GUEST_SCRIPT, 1, key(lessonId), userId, JSON.stringify(entry), maxGuests);
+  return result === 1 ? "admitted" : result === 2 ? "exists" : "full";
+}
+
+function leftKey(lessonId: string, userId: string): string {
+  return `room:${lessonId}:left:${userId}`;
+}
+
+/**
+ * Участник сам вышел из урока («Выйти»). Пока жив его медиатокен, отметка
+ * велит вебхуку LiveKit выкинуть его, если он подключится к комнате снова в
+ * обход `/join` (аудит 2026-10-05, G-01). Новый `/join` её снимает.
+ */
+export async function markLeft(lessonId: string, userId: string, ttlSeconds: number): Promise<void> {
+  await redis.set(leftKey(lessonId, userId), "1", "EX", ttlSeconds);
+}
+
+export async function clearLeft(lessonId: string, userId: string): Promise<void> {
+  await redis.del(leftKey(lessonId, userId));
+}
+
+export async function hasLeft(lessonId: string, userId: string): Promise<boolean> {
+  return (await redis.exists(leftKey(lessonId, userId))) === 1;
+}
+
 export async function countGuests(lessonId: string): Promise<number> {
   const all = await listParticipants(lessonId);
   let n = 0;

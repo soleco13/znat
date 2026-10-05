@@ -111,6 +111,16 @@ export async function createParticipantConnection(params: {
   return { token, url: env.LIVEKIT_PUBLIC_URL };
 }
 
+/**
+ * Комната урока с пределом участников. LiveKit создаёт комнату сам при первом
+ * подключении — без предела, и `LESSON_MAX_GUESTS` ограничивал только список
+ * урока, а не медиа (аудит 2026-10-05, G-01). Зовётся на каждом `/join` до
+ * выдачи токена: уже открытую комнату `createRoom` возвращает как есть.
+ */
+export async function ensureRoom(livekitRoom: string, maxParticipants: number): Promise<void> {
+  await roomService.createRoom({ name: livekitRoom, maxParticipants });
+}
+
 function isNotFoundError(err: unknown): boolean {
   return err instanceof Error && "status" in err && (err as { status: unknown }).status === 404;
 }
