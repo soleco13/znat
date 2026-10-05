@@ -42,6 +42,15 @@ export type DeviceCheckResult = {
   camEnabled: boolean;
 };
 
+/**
+ * Устройство есть и доступ разрешён, но его держит другая программа (Zoom,
+ * второй браузер). Раньше это выглядело как «нет доступа — разрешите в
+ * браузере», и человек искал настройку, которая уже включена.
+ */
+function isDeviceBusy(err: unknown): boolean {
+  return err instanceof DOMException && (err.name === "NotReadableError" || err.name === "AbortError");
+}
+
 /** Короткий синус-бип 440 Гц для теста динамиков (WAV data-URI, без сети). */
 const BEEP_SRC = makeBeep();
 function makeBeep(): string {
@@ -254,6 +263,9 @@ export function DeviceCheckScreen({
       ) {
         setMicPermission("unavailable");
         setMicError("Микрофон не найден.");
+      } else if (isDeviceBusy(err)) {
+        setMicPermission("denied");
+        setMicError("Микрофон занят другой программой. Закройте её и нажмите «Ещё раз».");
       } else {
         setMicPermission("denied");
         setMicError("Нет доступа к микрофону. Разрешите его в браузере и попробуйте снова.");
@@ -284,6 +296,9 @@ export function DeviceCheckScreen({
       ) {
         setCamPermission("unavailable");
         setCamError("Камера не найдена.");
+      } else if (isDeviceBusy(err)) {
+        setCamPermission("denied");
+        setCamError("Камера занята другой программой. Закройте её и нажмите «Ещё раз».");
       } else {
         setCamPermission("denied");
         setCamError("Нет доступа к камере. Разрешите её в браузере и попробуйте снова.");
