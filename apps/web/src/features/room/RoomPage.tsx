@@ -379,16 +379,13 @@ export function RoomPage() {
   }
 
   // Таймер именно ЭТОЙ сессии подключения (не `scheduledAt` урока — демо-уроки
-  // датированы в прошлом), сбрасывается при переприсоединении.
-  const [elapsedSec, setElapsedSec] = useState(0);
+  // датированы в прошлом), сбрасывается при переприсоединении. Сами секунды
+  // тикают в `ElapsedClock`: раньше счётчик жил здесь, и вся страница урока со
+  // всеми плитками перерисовывалась раз в секунду.
+  const [sessionStartedAt, setSessionStartedAt] = useState(() => Date.now());
   useEffect(() => {
-    if (!media) return;
-    const startedAt = Date.now();
-    setElapsedSec(0);
-    const id = setInterval(() => setElapsedSec(Math.floor((Date.now() - startedAt) / 1000)), 1000);
-    return () => clearInterval(id);
+    if (media) setSessionStartedAt(Date.now());
   }, [media]);
-  const elapsedLabel = `${Math.floor(elapsedSec / 60)}:${String(elapsedSec % 60).padStart(2, "0")}`;
 
   const isTeacher = identity?.role === "teacher" || identity?.role === "admin";
 
@@ -1027,7 +1024,7 @@ export function RoomPage() {
     key: "board" | "deck" | "activity" | "recording" | "class";
     icon: LucideIcon;
     label: string;
-    hint?: string;
+    hint?: ReactNode;
     show: boolean;
     onClick: () => void;
     on?: boolean;
@@ -1075,7 +1072,13 @@ export function RoomPage() {
       key: "recording",
       icon: Disc,
       label: "Запись урока",
-      hint: recordingActive ? `идёт запись · ${elapsedLabel}` : "начать запись",
+      hint: recordingActive ? (
+        <>
+          идёт запись · <ElapsedClock since={sessionStartedAt} />
+        </>
+      ) : (
+        "начать запись"
+      ),
       show: Boolean(lessonId && isTeacher),
       onClick: () => setActiveTool("recording"),
       on: recordingActive,
@@ -1691,7 +1694,7 @@ export function RoomPage() {
           <div className="hidden items-center gap-2.5 xl:flex">
             <span className="inline-flex h-8 shrink-0 items-center gap-[7px] rounded-full bg-surface-2 px-3 text-[12.5px] font-semibold tabular-nums text-text-2">
               <Clock className="size-3.5" aria-hidden />
-              {elapsedLabel}
+              <ElapsedClock since={sessionStartedAt} />
             </span>
             <span className="truncate text-[12.5px] text-text-3">
               Режим: {LESSON_MODE_LABEL[lessonMode].toLowerCase()}
@@ -2074,6 +2077,18 @@ function MediaLinkPill({ hidden, compact = false }: { hidden: boolean; compact?:
       {down === "connecting" ? "Подключаем звук и видео…" : "Восстанавливаем звук и видео…"}
     </span>
   );
+}
+
+/** Минуты:секунды с `since`; тикает сам, не перерисовывая страницу урока. */
+function ElapsedClock({ since }: { since: number }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [since]);
+  const sec = Math.max(0, Math.floor((now - since) / 1000));
+  return <>{`${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`}</>;
 }
 
 /** Идёт запись: спокойная иконка в стиле проекта вместо красной пилюли. */
