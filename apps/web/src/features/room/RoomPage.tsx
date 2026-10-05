@@ -1900,12 +1900,16 @@ export function RoomPage() {
         }
         // Э5.1/Э5.4/Э6.1 — см. историю в git; логика неизменна. joinCamEnabled —
         // Э11: с каким состоянием камеры участник нажал «Присоединиться».
+        // Ученику — если учитель разрешил камеру (настройка урока): включённая
+        // на экране проверки камера раньше молча оставалась выключенной.
         video={
-          isTeacher && joinCamEnabled
+          joinCamEnabled && (isTeacher || self?.permissions.canPublishVideo)
             ? {
-                resolution: clientMediaSettings
-                  ? toVideoResolution(clientMediaSettings.cameraResolution, clientMediaSettings.cameraFps)
-                  : VideoPresets.h720.resolution,
+                resolution: !isTeacher
+                  ? VideoPresets.h360.resolution
+                  : clientMediaSettings
+                    ? toVideoResolution(clientMediaSettings.cameraResolution, clientMediaSettings.cameraFps)
+                    : VideoPresets.h720.resolution,
                 deviceId: camDeviceId ?? undefined,
               }
             : false
