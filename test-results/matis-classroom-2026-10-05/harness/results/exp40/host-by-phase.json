@@ -1,0 +1,36 @@
+{
+ "storm": {
+  "samples": 3,
+  "loadAvg1": 4.1,
+  "livekitCpu": 22.8,
+  "livekitCpuMax": 30.6,
+  "appCpu": 9.0,
+  "appCpuMax": 26.0,
+  "pgCpuMax": 3.1,
+  "redisCpuMax": 3.3,
+  "teacherChromeCpu": 68.2,
+  "teacherChromeMemMB": 502.1,
+  "driverCpu": 44.3,
+  "studentChromeCpu": null,
+  "eventLoopP99ms": 105.5,
+  "pgConnMax": 16,
+  "hostMemUsedMB": 2313
+ },
+ "scenarioB": {
+  "samples": 10,
+  "loadAvg1": 3.8,
+  "livekitCpu": 17.2,
+  "livekitCpuMax": 21.0,
+  "appCpu": 1.4,
+  "appCpuMax": 6.8,
+  "pgCpuMax": 4.9,
+  "redisCpuMax": 2.1,
+  "teacherChromeCpu": 61.6,
+  "teacherChromeMemMB": 552.6,
+  "driverCpu": 26.7,
+  "studentChromeCpu": null,
+  "eventLoopP99ms": 41.7,
+  "pgConnMax": 3,
+  "hostMemUsedMB": 2496
+ }
+}

@@ -1,0 +1,1187 @@
+{
+  "setup": {
+    "lk": {
+      "total": 1,
+      "active": 1,
+      "dup": 0,
+      "tracks": 2
+    },
+    "grid": {
+      "head": "E2E: сетевая устойчивость (автотест)1 участник",
+      "grid": null
+    }
+  },
+  "storm": {
+    "joined": 29,
+    "of": 29,
+    "failed": [],
+    "ttiMs": {
+      "n": 29,
+      "p50": 2255,
+      "p95": 3562,
+      "max": 3667
+    },
+    "teacherSees30Ms": 7643,
+    "teacherGrid": {
+      "head": "E2E: сетевая устойчивость (автотест)30 участников",
+      "grid": null
+    },
+    "api": {
+      "GET /j/:token": {
+        "n": 29,
+        "p50": 162,
+        "p95": 503,
+        "max": 649,
+        "errors": []
+      },
+      "POST /auth/refresh": {
+        "n": 29,
+        "p50": 99,
+        "p95": 953,
+        "max": 1062,
+        "errors": []
+      },
+      "POST /j/:token/enter": {
+        "n": 29,
+        "p50": 145,
+        "p95": 927,
+        "max": 1038,
+        "errors": []
+      },
+      "POST /lessons/:id/join": {
+        "n": 29,
+        "p50": 425,
+        "p95": 1442,
+        "max": 1679,
+        "errors": []
+      },
+      "GET /lessons/:id/chat": {
+        "n": 29,
+        "p50": 536,
+        "p95": 1589,
+        "max": 1602,
+        "errors": []
+      },
+      "GET /lessons/:id/activities": {
+        "n": 29,
+        "p50": 459,
+        "p95": 1370,
+        "max": 1629,
+        "errors": []
+      }
+    },
+    "timelines": {
+      "enter": {
+        "n": 29,
+        "p50": 477,
+        "p95": 1925,
+        "max": 1926
+      },
+      "join": {
+        "n": 29,
+        "p50": 425,
+        "p95": 1442,
+        "max": 1679
+      },
+      "wsOpen": {
+        "n": 29,
+        "p50": 198,
+        "p95": 714,
+        "max": 763
+      }
+    },
+    "lk": {
+      "total": 30,
+      "active": 30,
+      "dup": 0,
+      "tracks": 10
+    }
+  },
+  "scenarioB": {
+    "window": {
+      "samples": 9,
+      "fpsAvg": 45,
+      "fpsMin": 42,
+      "longTaskPct": 0,
+      "taskPct": 2.5,
+      "commitsPerSec": 1,
+      "fnRendersPerSec": 1,
+      "videoRenders": 0,
+      "videoMounts": 0,
+      "tileMoves": 0,
+      "gridChanges": 0,
+      "decodedFps": 20.3,
+      "dropped": 0,
+      "layoutPerSec": 1,
+      "recalcMsPerSec": 0,
+      "videosVisible": 2,
+      "videosPlaying": 2,
+      "dom": 531,
+      "heapMB": 17.7,
+      "slowEventMax": 0
+    },
+    "lk": {
+      "total": 30,
+      "active": 30,
+      "dup": 0,
+      "tracks": 10
+    },
+    "grid": {
+      "head": "E2E: сетевая устойчивость (автотест)30 участников",
+      "grid": null
+    },
+    "rtc": {
+      "pcs": 1,
+      "inVideo": 8,
+      "inAudio": 0,
+      "lossPct": 0,
+      "jitterP95Ms": 2,
+      "rttMs": 0,
+      "freezes": 0,
+      "framesDropped": 0,
+      "framesDecoded": 213,
+      "bytesIn": 15764394
+    },
+    "studentBrowsers": []
+  },
+  "realtime": {
+    "teacher chat": {
+      "delivered": 29,
+      "of": 29,
+      "latencyMs": {
+        "n": 29,
+        "p50": 110,
+        "p95": 119,
+        "max": 119
+      },
+      "botsWithDuplicates": 0
+    },
+    "student chat → teacher": {
+      "ok": true,
+      "ms": 71
+    },
+    "10 students chat at once → teacher": {
+      "ok": true,
+      "ms": 334
+    },
+    "lesson mode": {
+      "delivered": 29,
+      "of": 29,
+      "latencyMs": {
+        "n": 29,
+        "p50": 15,
+        "p95": 19,
+        "max": 20
+      },
+      "botsWithDuplicates": 0
+    },
+    "board open (stage)": {
+      "delivered": 29,
+      "of": 29,
+      "latencyMs": {
+        "n": 29,
+        "p50": 49,
+        "p95": 52,
+        "max": 52
+      },
+      "botsWithDuplicates": 0
+    },
+    "board close (stage)": {
+      "delivered": 29,
+      "of": 29,
+      "latencyMs": {
+        "n": 29,
+        "p50": 11,
+        "p95": 11,
+        "max": 11
+      },
+      "botsWithDuplicates": 0
+    }
+  },
+  "answers": {
+    "material": "Витрина конструкций редактора",
+    "activityId": "6ca03674-3e0d-4778-bc85-33d68ed96fc9",
+    "questionsAnswered": 4,
+    "deliveredActivityStarted": "29/29",
+    "saves": {
+      "total": 116,
+      "failed": 0,
+      "latency": {
+        "n": 116,
+        "p50": 718,
+        "p95": 3087,
+        "max": 3112
+      }
+    },
+    "submits": {
+      "ok": 29,
+      "failed": [],
+      "latency": {
+        "n": 29,
+        "p50": 2998,
+        "p95": 4627,
+        "max": 4642
+      },
+      "repeatSubmit": [
+        200,
+        200,
+        200,
+        200,
+        200,
+        200
+      ]
+    },
+    "wallMs": 5907,
+    "teacherProgressStatus": 200,
+    "submittedPerTeacher": 29,
+    "progressSample": "{\"activityId\":\"6ca03674-3e0d-4778-bc85-33d68ed96fc9\",\"total\":139,\"students\":[{\"participantId\":\"6f9e7433-ae6d-4b0d-b1ed-88aeeaf1cd35\",\"displayName\":\"Ученик 20\",\"status\":\"submitted\",\"answered\":4,\"total\":139,\"lastActivityAt\":\"2026-10-05T05:30:24.425Z\",\"currentBlockId\":null},{\"participantId\":\"154d9963-aaa8-4a69-8ca9-8f5def3cdb4d\",\"displayName\":\"Ученик 18\",\"status\":\"submitted\",\"answered\":4,\"total\":139,",
+    "openStage": {
+      "label": "teacher opens activity stage",
+      "ok": true,
+      "ms": 29
+    }
+  },
+  "reconnect": {
+    "cutSec": 30,
+    "before": {
+      "lk": {
+        "total": 30,
+        "active": 30,
+        "dup": 0,
+        "tracks": 10
+      },
+      "ws": 29
+    },
+    "allWsMs": 78,
+    "allLkMs": 3174,
+    "teacherHeadOkMs": 78,
+    "trace": [
+      {
+        "s": 0,
+        "ws": 29,
+        "lkActive": 1,
+        "lkDup": 0,
+        "teacherHead": "E2E: сетевая устойчивость (автотест)30 участников",
+        "playing": 1
+      },
+      {
+        "s": 3,
+        "ws": 29,
+        "lkActive": 30,
+        "lkDup": 0,
+        "teacherHead": "E2E: сетевая устойчивость (автотест)30 участников",
+        "playing": 1
+      },
+      {
+        "s": 6,
+        "ws": 29,
+        "lkActive": 30,
+        "lkDup": 0,
+        "teacherHead": "E2E: сетевая устойчивость (автотест)30 участников",
+        "playing": 1
+      },
+      {
+        "s": 9,
+        "ws": 29,
+        "lkActive": 30,
+        "lkDup": 0,
+        "teacherHead": "E2E: сетевая устойчивость (автотест)30 участников",
+        "playing": 1
+      },
+      {
+        "s": 13,
+        "ws": 29,
+        "lkActive": 30,
+        "lkDup": 0,
+        "teacherHead": "E2E: сетевая устойчивость (автотест)30 участников",
+        "playing": 1
+      },
+      {
+        "s": 16,
+        "ws": 29,
+        "lkActive": 30,
+        "lkDup": 0,
+        "teacherHead": "E2E: сетевая устойчивость (автотест)30 участников",
+        "playing": 1
+      },
+      {
+        "s": 19,
+        "ws": 29,
+        "lkActive": 30,
+        "lkDup": 0,
+        "teacherHead": "E2E: сетевая устойчивость (автотест)30 участников",
+        "playing": 1
+      },
+      {
+        "s": 22,
+        "ws": 29,
+        "lkActive": 30,
+        "lkDup": 0,
+        "teacherHead": "E2E: сетевая устойчивость (автотест)30 участников",
+        "playing": 1
+      }
+    ],
+    "wsReconnects": 0,
+    "lkRestarts": 0,
+    "api": {},
+    "window": {
+      "samples": 6,
+      "fpsAvg": 58.3,
+      "fpsMin": 49.8,
+      "longTaskPct": 0.2,
+      "taskPct": 9.2,
+      "commitsPerSec": 2.2,
+      "fnRendersPerSec": 53.7,
+      "videoRenders": 115,
+      "videoMounts": 3,
+      "tileMoves": 24,
+      "gridChanges": 3,
+      "decodedFps": 3.3,
+      "dropped": 1,
+      "layoutPerSec": 26.1,
+      "recalcMsPerSec": 8.5,
+      "videosVisible": 1,
+      "videosPlaying": 1,
+      "dom": 432,
+      "heapMB": 21.3,
+      "slowEventMax": 208
+    },
+    "lkExitsDuring": "см. events bot.lk.exit"
+  },
+  "soak": {
+    "minutes": 60,
+    "mem": [
+      {
+        "min": 0,
+        "heapMB": 14,
+        "nodes": 1091,
+        "listeners": 589,
+        "dom": 432,
+        "videos": 1,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 1,
+        "heapMB": 14.1,
+        "nodes": 1097,
+        "listeners": 589,
+        "dom": 435,
+        "videos": 1,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 2,
+        "heapMB": 14.2,
+        "nodes": 1003,
+        "listeners": 585,
+        "dom": 358,
+        "videos": 1,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 3,
+        "heapMB": 14.2,
+        "nodes": 1007,
+        "listeners": 579,
+        "dom": 360,
+        "videos": 1,
+        "students": 28,
+        "ws": 28
+      },
+      {
+        "min": 4,
+        "heapMB": 14.6,
+        "nodes": 1007,
+        "listeners": 617,
+        "dom": 360,
+        "videos": 1,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 5,
+        "heapMB": 15.9,
+        "nodes": 1654,
+        "listeners": 761,
+        "dom": 360,
+        "videos": 1,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 6,
+        "heapMB": 13.5,
+        "nodes": 735,
+        "listeners": 454,
+        "dom": 360,
+        "videos": 1,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 7,
+        "heapMB": 13.2,
+        "nodes": 731,
+        "listeners": 422,
+        "dom": 358,
+        "videos": 1,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 8,
+        "heapMB": 13.2,
+        "nodes": 733,
+        "listeners": 416,
+        "dom": 358,
+        "videos": 1,
+        "students": 28,
+        "ws": 28
+      },
+      {
+        "min": 9,
+        "heapMB": 13.3,
+        "nodes": 731,
+        "listeners": 422,
+        "dom": 358,
+        "videos": 1,
+        "students": 28,
+        "ws": 28
+      },
+      {
+        "min": 10,
+        "heapMB": 13.2,
+        "nodes": 731,
+        "listeners": 417,
+        "dom": 358,
+        "videos": 1,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 11,
+        "heapMB": 14.1,
+        "nodes": 742,
+        "listeners": 445,
+        "dom": 358,
+        "videos": 1,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 12,
+        "heapMB": 14,
+        "nodes": 731,
+        "listeners": 448,
+        "dom": 358,
+        "videos": 1,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 13,
+        "heapMB": 13.2,
+        "nodes": 731,
+        "listeners": 418,
+        "dom": 358,
+        "videos": 1,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 14,
+        "heapMB": 13.3,
+        "nodes": 731,
+        "listeners": 419,
+        "dom": 358,
+        "videos": 1,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 15,
+        "heapMB": 13.7,
+        "nodes": 731,
+        "listeners": 430,
+        "dom": 358,
+        "videos": 1,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 16,
+        "heapMB": 13.4,
+        "nodes": 735,
+        "listeners": 424,
+        "dom": 360,
+        "videos": 1,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 17,
+        "heapMB": 15,
+        "nodes": 1382,
+        "listeners": 599,
+        "dom": 360,
+        "videos": 1,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 18,
+        "heapMB": 14.2,
+        "nodes": 863,
+        "listeners": 422,
+        "dom": 360,
+        "videos": 1,
+        "students": 28,
+        "ws": 28
+      },
+      {
+        "min": 19,
+        "heapMB": 15.1,
+        "nodes": 1382,
+        "listeners": 599,
+        "dom": 360,
+        "videos": 1,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 20,
+        "heapMB": 14.8,
+        "nodes": 970,
+        "listeners": 431,
+        "dom": 360,
+        "videos": 1,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 21,
+        "heapMB": 14,
+        "nodes": 735,
+        "listeners": 442,
+        "dom": 360,
+        "videos": 1,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 22,
+        "heapMB": 14.6,
+        "nodes": 746,
+        "listeners": 448,
+        "dom": 360,
+        "videos": 1,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 23,
+        "heapMB": 13.8,
+        "nodes": 881,
+        "listeners": 456,
+        "dom": 360,
+        "videos": 2,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 24,
+        "heapMB": 13.8,
+        "nodes": 881,
+        "listeners": 449,
+        "dom": 360,
+        "videos": 2,
+        "students": 28,
+        "ws": 28
+      },
+      {
+        "min": 25,
+        "heapMB": 14.3,
+        "nodes": 1027,
+        "listeners": 527,
+        "dom": 360,
+        "videos": 3,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 26,
+        "heapMB": 13.8,
+        "nodes": 1027,
+        "listeners": 488,
+        "dom": 360,
+        "videos": 3,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 27,
+        "heapMB": 15.3,
+        "nodes": 1582,
+        "listeners": 747,
+        "dom": 386,
+        "videos": 3,
+        "students": 28,
+        "ws": 28
+      },
+      {
+        "min": 28,
+        "heapMB": 15.3,
+        "nodes": 1872,
+        "listeners": 713,
+        "dom": 373,
+        "videos": 3,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 29,
+        "heapMB": 14,
+        "nodes": 1029,
+        "listeners": 480,
+        "dom": 360,
+        "videos": 3,
+        "students": 28,
+        "ws": 28
+      },
+      {
+        "min": 30,
+        "heapMB": 14.2,
+        "nodes": 1153,
+        "listeners": 489,
+        "dom": 360,
+        "videos": 3,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 31,
+        "heapMB": 14,
+        "nodes": 1027,
+        "listeners": 481,
+        "dom": 360,
+        "videos": 3,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 32,
+        "heapMB": 15.3,
+        "nodes": 1868,
+        "listeners": 702,
+        "dom": 386,
+        "videos": 3,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 33,
+        "heapMB": 14.2,
+        "nodes": 1042,
+        "listeners": 489,
+        "dom": 360,
+        "videos": 3,
+        "students": 28,
+        "ws": 28
+      },
+      {
+        "min": 34,
+        "heapMB": 14,
+        "nodes": 1027,
+        "listeners": 480,
+        "dom": 360,
+        "videos": 3,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 35,
+        "heapMB": 14,
+        "nodes": 1294,
+        "listeners": 536,
+        "dom": 352,
+        "videos": 4,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 36,
+        "heapMB": 14.1,
+        "nodes": 1027,
+        "listeners": 480,
+        "dom": 360,
+        "videos": 3,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 37,
+        "heapMB": 14.1,
+        "nodes": 1022,
+        "listeners": 480,
+        "dom": 353,
+        "videos": 3,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 38,
+        "heapMB": 14.2,
+        "nodes": 1013,
+        "listeners": 488,
+        "dom": 346,
+        "videos": 3,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 39,
+        "heapMB": 14.3,
+        "nodes": 1009,
+        "listeners": 488,
+        "dom": 344,
+        "videos": 3,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 40,
+        "heapMB": 14.3,
+        "nodes": 1155,
+        "listeners": 518,
+        "dom": 344,
+        "videos": 4,
+        "students": 28,
+        "ws": 28
+      },
+      {
+        "min": 41,
+        "heapMB": 14.8,
+        "nodes": 1159,
+        "listeners": 509,
+        "dom": 344,
+        "videos": 3,
+        "students": 28,
+        "ws": 28
+      },
+      {
+        "min": 42,
+        "heapMB": 14.4,
+        "nodes": 1139,
+        "listeners": 481,
+        "dom": 346,
+        "videos": 3,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 43,
+        "heapMB": 15.4,
+        "nodes": 1159,
+        "listeners": 564,
+        "dom": 346,
+        "videos": 4,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 44,
+        "heapMB": 14.4,
+        "nodes": 1159,
+        "listeners": 512,
+        "dom": 346,
+        "videos": 4,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 45,
+        "heapMB": 14.5,
+        "nodes": 1159,
+        "listeners": 521,
+        "dom": 346,
+        "videos": 4,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 46,
+        "heapMB": 14.4,
+        "nodes": 1159,
+        "listeners": 513,
+        "dom": 346,
+        "videos": 4,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 47,
+        "heapMB": 14.5,
+        "nodes": 1170,
+        "listeners": 523,
+        "dom": 344,
+        "videos": 4,
+        "students": 28,
+        "ws": 28
+      },
+      {
+        "min": 48,
+        "heapMB": 15.7,
+        "nodes": 2013,
+        "listeners": 743,
+        "dom": 383,
+        "videos": 4,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 49,
+        "heapMB": 14.6,
+        "nodes": 1281,
+        "listeners": 523,
+        "dom": 344,
+        "videos": 4,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 50,
+        "heapMB": 15.8,
+        "nodes": 2017,
+        "listeners": 748,
+        "dom": 370,
+        "videos": 4,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 51,
+        "heapMB": 14.9,
+        "nodes": 1329,
+        "listeners": 599,
+        "dom": 359,
+        "videos": 5,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 52,
+        "heapMB": 14.6,
+        "nodes": 1305,
+        "listeners": 553,
+        "dom": 346,
+        "videos": 5,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 53,
+        "heapMB": 14.8,
+        "nodes": 1305,
+        "listeners": 570,
+        "dom": 346,
+        "videos": 5,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 54,
+        "heapMB": 15.8,
+        "nodes": 2333,
+        "listeners": 805,
+        "dom": 398,
+        "videos": 5,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 55,
+        "heapMB": 16.1,
+        "nodes": 2337,
+        "listeners": 816,
+        "dom": 385,
+        "videos": 5,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 56,
+        "heapMB": 15.1,
+        "nodes": 1307,
+        "listeners": 569,
+        "dom": 346,
+        "videos": 5,
+        "students": 28,
+        "ws": 28
+      },
+      {
+        "min": 57,
+        "heapMB": 16.5,
+        "nodes": 1301,
+        "listeners": 558,
+        "dom": 344,
+        "videos": 5,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 58,
+        "heapMB": 16.2,
+        "nodes": 2333,
+        "listeners": 819,
+        "dom": 383,
+        "videos": 5,
+        "students": 29,
+        "ws": 29
+      },
+      {
+        "min": 59,
+        "heapMB": 16.2,
+        "nodes": 2333,
+        "listeners": 814,
+        "dom": 383,
+        "videos": 5,
+        "students": 29,
+        "ws": 29
+      }
+    ],
+    "window": {
+      "samples": 360,
+      "fpsAvg": 44,
+      "fpsMin": 29.1,
+      "longTaskPct": 0.1,
+      "taskPct": 3.3,
+      "commitsPerSec": 1.3,
+      "fnRendersPerSec": 16.7,
+      "videoRenders": 1829,
+      "videoMounts": 126,
+      "tileMoves": 1066,
+      "gridChanges": 120,
+      "decodedFps": -0.2,
+      "dropped": 1,
+      "layoutPerSec": 2.3,
+      "recalcMsPerSec": 0.7,
+      "videosVisible": 5,
+      "videosPlaying": 5,
+      "dom": 344,
+      "heapMB": 20.7,
+      "slowEventMax": 128
+    }
+  },
+  "apiAll": {
+    "POST /auth/login": {
+      "n": 3,
+      "p50": 184,
+      "p95": 202,
+      "max": 202,
+      "errors": []
+    },
+    "GET /j/:token": {
+      "n": 29,
+      "p50": 162,
+      "p95": 503,
+      "max": 649,
+      "errors": []
+    },
+    "POST /auth/refresh": {
+      "n": 29,
+      "p50": 99,
+      "p95": 953,
+      "max": 1062,
+      "errors": []
+    },
+    "POST /j/:token/enter": {
+      "n": 29,
+      "p50": 145,
+      "p95": 927,
+      "max": 1038,
+      "errors": []
+    },
+    "POST /lessons/:id/join": {
+      "n": 42,
+      "p50": 291,
+      "p95": 1078,
+      "max": 1679,
+      "errors": []
+    },
+    "GET /lessons/:id/chat": {
+      "n": 42,
+      "p50": 333,
+      "p95": 1353,
+      "max": 1602,
+      "errors": []
+    },
+    "GET /lessons/:id/activities": {
+      "n": 42,
+      "p50": 311,
+      "p95": 990,
+      "max": 1629,
+      "errors": []
+    },
+    "POST /lessons/:id/chat": {
+      "n": 27,
+      "p50": 21,
+      "p95": 221,
+      "max": 221,
+      "errors": []
+    },
+    "PATCH /lessons/:id/mode": {
+      "n": 13,
+      "p50": 11,
+      "p95": 24,
+      "max": 24,
+      "errors": [
+        401,
+        401
+      ]
+    },
+    "PATCH /lessons/:id/stage": {
+      "n": 1,
+      "p50": 10,
+      "p95": 10,
+      "max": 10,
+      "errors": []
+    },
+    "GET /materials": {
+      "n": 1,
+      "p50": 13,
+      "p95": 13,
+      "max": 13,
+      "errors": []
+    },
+    "POST /lessons/:id/activities": {
+      "n": 1,
+      "p50": 110,
+      "p95": 110,
+      "max": 110,
+      "errors": []
+    },
+    "GET /activities/:id/my": {
+      "n": 29,
+      "p50": 865,
+      "p95": 878,
+      "max": 879,
+      "errors": []
+    },
+    "POST /activities/:id/responses": {
+      "n": 116,
+      "p50": 718,
+      "p95": 3087,
+      "max": 3112,
+      "errors": []
+    },
+    "POST /activities/:id/submit": {
+      "n": 35,
+      "p50": 2880,
+      "p95": 4627,
+      "max": 4642,
+      "errors": []
+    },
+    "GET /activities/:id/progress": {
+      "n": 1,
+      "p50": 24,
+      "p95": 24,
+      "max": 24,
+      "errors": []
+    },
+    "POST /lessons/:id/leave": {
+      "n": 13,
+      "p50": 30,
+      "p95": 81,
+      "max": 81,
+      "errors": []
+    }
+  },
+  "checks": [
+    {
+      "name": "teacher api login",
+      "ok": true,
+      "detail": {
+        "status": 200
+      },
+      "rel": "00:00"
+    },
+    {
+      "name": "teacher in room",
+      "ok": true,
+      "rel": "00:08"
+    },
+    {
+      "name": "storm: live student browsers in 0/0",
+      "ok": true,
+      "rel": "00:15"
+    },
+    {
+      "name": "storm: 29/29 students in",
+      "ok": true,
+      "detail": [],
+      "rel": "00:16"
+    },
+    {
+      "name": "storm: teacher sees all",
+      "ok": true,
+      "detail": {
+        "ms": 7643,
+        "grid": {
+          "head": "E2E: сетевая устойчивость (автотест)30 участников",
+          "grid": null
+        }
+      },
+      "rel": "00:16"
+    },
+    {
+      "name": "answers: 29/29 submitted",
+      "ok": true,
+      "detail": {
+        "ok": 29,
+        "failed": [],
+        "latency": {
+          "n": 29,
+          "p50": 2998,
+          "p95": 4627,
+          "max": 4642
+        },
+        "repeatSubmit": [
+          200,
+          200,
+          200,
+          200,
+          200,
+          200
+        ]
+      },
+      "rel": "03:02"
+    },
+    {
+      "name": "reconnect: all WS back",
+      "ok": true,
+      "detail": {
+        "allWs": 78
+      },
+      "rel": "03:57"
+    },
+    {
+      "name": "reconnect: all media back",
+      "ok": true,
+      "detail": {
+        "allLk": 3174,
+        "last": {
+          "s": 22,
+          "ws": 29,
+          "lkActive": 30,
+          "lkDup": 0,
+          "teacherHead": "E2E: сетевая устойчивость (автотест)30 участников",
+          "playing": 1
+        }
+      },
+      "rel": "03:57"
+    }
+  ]
+}

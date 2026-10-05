@@ -1,0 +1,85 @@
+[
+  {
+    "name": "teacher api login",
+    "ok": true,
+    "detail": {
+      "status": 200
+    },
+    "rel": "00:00"
+  },
+  {
+    "name": "teacher in room",
+    "ok": true,
+    "rel": "00:08"
+  },
+  {
+    "name": "storm: live student browsers in 0/0",
+    "ok": true,
+    "rel": "00:15"
+  },
+  {
+    "name": "storm: 29/29 students in",
+    "ok": true,
+    "detail": [],
+    "rel": "00:16"
+  },
+  {
+    "name": "storm: teacher sees all",
+    "ok": true,
+    "detail": {
+      "ms": 7643,
+      "grid": {
+        "head": "E2E: сетевая устойчивость (автотест)30 участников",
+        "grid": null
+      }
+    },
+    "rel": "00:16"
+  },
+  {
+    "name": "answers: 29/29 submitted",
+    "ok": true,
+    "detail": {
+      "ok": 29,
+      "failed": [],
+      "latency": {
+        "n": 29,
+        "p50": 2998,
+        "p95": 4627,
+        "max": 4642
+      },
+      "repeatSubmit": [
+        200,
+        200,
+        200,
+        200,
+        200,
+        200
+      ]
+    },
+    "rel": "03:02"
+  },
+  {
+    "name": "reconnect: all WS back",
+    "ok": true,
+    "detail": {
+      "allWs": 78
+    },
+    "rel": "03:57"
+  },
+  {
+    "name": "reconnect: all media back",
+    "ok": true,
+    "detail": {
+      "allLk": 3174,
+      "last": {
+        "s": 22,
+        "ws": 29,
+        "lkActive": 30,
+        "lkDup": 0,
+        "teacherHead": "E2E: сетевая устойчивость (автотест)30 участников",
+        "playing": 1
+      }
+    },
+    "rel": "03:57"
+  }
+]

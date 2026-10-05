@@ -1,0 +1,158 @@
+[
+  {
+    "name": "teacher api login",
+    "ok": true,
+    "detail": {
+      "status": 200
+    },
+    "rel": "00:01"
+  },
+  {
+    "name": "teacher in room",
+    "ok": true,
+    "rel": "00:09"
+  },
+  {
+    "name": "storm: live student browsers in 2/2",
+    "ok": true,
+    "rel": "00:23"
+  },
+  {
+    "name": "storm: 27/27 students in",
+    "ok": true,
+    "detail": [],
+    "rel": "00:23"
+  },
+  {
+    "name": "storm: teacher sees all",
+    "ok": true,
+    "detail": {
+      "ms": 14536,
+      "grid": {
+        "head": "E2E: сетевая устойчивость (автотест)30 участников",
+        "grid": "repeat(4, 345.5px)",
+        "cells": 12,
+        "tileW": 346,
+        "tileH": 194,
+        "areaW": 1412,
+        "areaH": 698,
+        "more": "+19ещё участников",
+        "page": "30 участников · показаны 1–11",
+        "scrollH": 768,
+        "clientH": 768
+      }
+    },
+    "rel": "00:23"
+  },
+  {
+    "name": "share: grid restored after stop",
+    "ok": true,
+    "detail": {
+      "before": {
+        "head": "E2E: сетевая устойчивость (автотест)31 участник",
+        "grid": "repeat(4, 345.5px)",
+        "cells": 12,
+        "tileW": 346,
+        "tileH": 194,
+        "areaW": 1412,
+        "areaH": 698,
+        "more": "+20ещё участников",
+        "page": "31 участник · показаны 1–11",
+        "scrollH": 768,
+        "clientH": 768
+      },
+      "after": {
+        "head": "E2E: сетевая устойчивость (автотест)31 участник",
+        "grid": "repeat(4, 345.5px)",
+        "cells": 12,
+        "tileW": 346,
+        "tileH": 194,
+        "areaW": 1412,
+        "areaH": 698,
+        "more": "+20ещё участников",
+        "page": "31 участник · показаны 1–11",
+        "scrollH": 768,
+        "clientH": 768
+      }
+    },
+    "rel": "18:50"
+  },
+  {
+    "name": "answers: 0/30 submitted",
+    "ok": false,
+    "detail": {
+      "ok": 0,
+      "failed": [
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400,
+        400
+      ],
+      "latency": {
+        "n": 30,
+        "p50": 7,
+        "p95": 14,
+        "max": 14
+      },
+      "repeatSubmit": [
+        400,
+        400,
+        400,
+        400,
+        400,
+        400
+      ]
+    },
+    "rel": "20:23"
+  },
+  {
+    "name": "reconnect: all WS back",
+    "ok": true,
+    "detail": {
+      "allWs": 1281
+    },
+    "rel": "23:19"
+  },
+  {
+    "name": "reconnect: all media back",
+    "ok": true,
+    "detail": {
+      "allLk": 4380,
+      "last": {
+        "s": 23,
+        "ws": 30,
+        "lkActive": 31,
+        "lkDup": 0,
+        "teacherHead": "E2E: сетевая устойчивость (автотест)30 участников",
+        "playing": 1
+      }
+    },
+    "rel": "23:19"
+  }
+]

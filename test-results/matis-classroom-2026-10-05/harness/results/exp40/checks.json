@@ -1,0 +1,47 @@
+[
+  {
+    "name": "teacher api login",
+    "ok": true,
+    "detail": {
+      "status": 200
+    },
+    "rel": "00:00"
+  },
+  {
+    "name": "teacher in room",
+    "ok": true,
+    "rel": "00:08"
+  },
+  {
+    "name": "storm: live student browsers in 0/0",
+    "ok": true,
+    "rel": "00:18"
+  },
+  {
+    "name": "storm: 39/39 students in",
+    "ok": true,
+    "detail": [],
+    "rel": "00:21"
+  },
+  {
+    "name": "storm: teacher sees all",
+    "ok": true,
+    "detail": {
+      "ms": 12703,
+      "grid": {
+        "head": "E2E: сетевая устойчивость (автотест)40 участников",
+        "grid": "repeat(4, 345.5px)",
+        "cells": 12,
+        "tileW": 346,
+        "tileH": 194,
+        "areaW": 1412,
+        "areaH": 698,
+        "more": "+29ещё участников",
+        "page": "40 участников · показаны 1–11",
+        "scrollH": 768,
+        "clientH": 768
+      }
+    },
+    "rel": "00:21"
+  }
+]

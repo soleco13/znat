@@ -1,0 +1,22 @@
+# Медиа ботов генерируется gen.sh (214 МБ видео).
+media/*.h264
+media/*.ogg
+media/*.wav
+media/gen.log
+# Сырые журналы прогонов: идентификаторы сессий, логи сервера.
+harness/results/**/events.jsonl
+harness/results/**/driver.log
+harness/results/**/app.log
+harness/results/**/livekit.log
+harness/results/**/api.json
+harness/results/**/perf.json
+harness/results/**/host.jsonl
+harness/results/**/host.jsonl.stop
+harness/results/**/ctl.*
+harness/results/**/netcut.log
+harness/results/**/done
+harness/results/**/start_utc
+harness/results/*.out
+harness/results/dry*/
+harness/results/probe/
+harness/results/smoke/

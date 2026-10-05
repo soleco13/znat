@@ -1,0 +1,263 @@
+{
+  "setup": {
+    "lk": {
+      "total": 1,
+      "active": 1,
+      "dup": 0,
+      "tracks": 2
+    },
+    "grid": {
+      "head": "E2E: сетевая устойчивость (автотест)1 участник",
+      "grid": null
+    }
+  },
+  "storm": {
+    "joined": 39,
+    "of": 39,
+    "failed": [],
+    "ttiMs": {
+      "n": 39,
+      "p50": 4151,
+      "p95": 7329,
+      "max": 7621
+    },
+    "teacherSees30Ms": 12703,
+    "teacherGrid": {
+      "head": "E2E: сетевая устойчивость (автотест)40 участников",
+      "grid": "repeat(4, 345.5px)",
+      "cells": 12,
+      "tileW": 346,
+      "tileH": 194,
+      "areaW": 1412,
+      "areaH": 698,
+      "more": "+29ещё участников",
+      "page": "40 участников · показаны 1–11",
+      "scrollH": 768,
+      "clientH": 768
+    },
+    "api": {
+      "GET /j/:token": {
+        "n": 39,
+        "p50": 268,
+        "p95": 662,
+        "max": 666,
+        "errors": []
+      },
+      "POST /auth/refresh": {
+        "n": 39,
+        "p50": 319,
+        "p95": 631,
+        "max": 748,
+        "errors": []
+      },
+      "POST /j/:token/enter": {
+        "n": 39,
+        "p50": 465,
+        "p95": 1080,
+        "max": 1136,
+        "errors": []
+      },
+      "POST /lessons/:id/join": {
+        "n": 39,
+        "p50": 1128,
+        "p95": 2620,
+        "max": 2810,
+        "errors": []
+      },
+      "GET /lessons/:id/activities": {
+        "n": 39,
+        "p50": 1024,
+        "p95": 2176,
+        "max": 2200,
+        "errors": []
+      },
+      "GET /lessons/:id/chat": {
+        "n": 39,
+        "p50": 1202,
+        "p95": 2567,
+        "max": 2706,
+        "errors": []
+      }
+    },
+    "timelines": {
+      "enter": {
+        "n": 39,
+        "p50": 961,
+        "p95": 2320,
+        "max": 2433
+      },
+      "join": {
+        "n": 39,
+        "p50": 1128,
+        "p95": 2620,
+        "max": 2810
+      },
+      "wsOpen": {
+        "n": 39,
+        "p50": 438,
+        "p95": 1372,
+        "max": 1429
+      }
+    },
+    "lk": {
+      "total": 40,
+      "active": 40,
+      "dup": 0,
+      "tracks": 41
+    }
+  },
+  "scenarioB": {
+    "window": {
+      "samples": 9,
+      "fpsAvg": 30,
+      "fpsMin": 30,
+      "longTaskPct": 0,
+      "taskPct": 3.4,
+      "commitsPerSec": 1,
+      "fnRendersPerSec": 1.1,
+      "videoRenders": 11,
+      "videoMounts": 0,
+      "tileMoves": 0,
+      "gridChanges": 0,
+      "decodedFps": 22.5,
+      "dropped": 0,
+      "layoutPerSec": 1,
+      "recalcMsPerSec": 0,
+      "videosVisible": 11,
+      "videosPlaying": 11,
+      "dom": 335,
+      "heapMB": 11,
+      "slowEventMax": 0
+    },
+    "lk": {
+      "total": 40,
+      "active": 40,
+      "dup": 0,
+      "tracks": 41
+    },
+    "grid": {
+      "head": "E2E: сетевая устойчивость (автотест)40 участников",
+      "grid": "repeat(4, 345.5px)",
+      "cells": 12,
+      "tileW": 346,
+      "tileH": 194,
+      "areaW": 1412,
+      "areaH": 698,
+      "more": "+29ещё участников",
+      "page": "40 участников · показаны 1–11",
+      "scrollH": 768,
+      "clientH": 768
+    },
+    "rtc": {
+      "pcs": 1,
+      "inVideo": 39,
+      "inAudio": 0,
+      "lossPct": 0,
+      "jitterP95Ms": 3,
+      "rttMs": 1,
+      "freezes": 0,
+      "framesDropped": 0,
+      "framesDecoded": 1062,
+      "bytesIn": 78942140
+    },
+    "studentBrowsers": []
+  },
+  "apiAll": {
+    "POST /auth/login": {
+      "n": 1,
+      "p50": 198,
+      "p95": 198,
+      "max": 198,
+      "errors": []
+    },
+    "GET /j/:token": {
+      "n": 39,
+      "p50": 268,
+      "p95": 662,
+      "max": 666,
+      "errors": []
+    },
+    "POST /auth/refresh": {
+      "n": 39,
+      "p50": 319,
+      "p95": 631,
+      "max": 748,
+      "errors": []
+    },
+    "POST /j/:token/enter": {
+      "n": 39,
+      "p50": 465,
+      "p95": 1080,
+      "max": 1136,
+      "errors": []
+    },
+    "POST /lessons/:id/join": {
+      "n": 39,
+      "p50": 1128,
+      "p95": 2620,
+      "max": 2810,
+      "errors": []
+    },
+    "GET /lessons/:id/activities": {
+      "n": 39,
+      "p50": 1024,
+      "p95": 2176,
+      "max": 2200,
+      "errors": []
+    },
+    "GET /lessons/:id/chat": {
+      "n": 39,
+      "p50": 1202,
+      "p95": 2567,
+      "max": 2706,
+      "errors": []
+    }
+  },
+  "checks": [
+    {
+      "name": "teacher api login",
+      "ok": true,
+      "detail": {
+        "status": 200
+      },
+      "rel": "00:00"
+    },
+    {
+      "name": "teacher in room",
+      "ok": true,
+      "rel": "00:08"
+    },
+    {
+      "name": "storm: live student browsers in 0/0",
+      "ok": true,
+      "rel": "00:18"
+    },
+    {
+      "name": "storm: 39/39 students in",
+      "ok": true,
+      "detail": [],
+      "rel": "00:21"
+    },
+    {
+      "name": "storm: teacher sees all",
+      "ok": true,
+      "detail": {
+        "ms": 12703,
+        "grid": {
+          "head": "E2E: сетевая устойчивость (автотест)40 участников",
+          "grid": "repeat(4, 345.5px)",
+          "cells": 12,
+          "tileW": 346,
+          "tileH": 194,
+          "areaW": 1412,
+          "areaH": 698,
+          "more": "+29ещё участников",
+          "page": "40 участников · показаны 1–11",
+          "scrollH": 768,
+          "clientH": 768
+        }
+      },
+      "rel": "00:21"
+    }
+  ]
+}
