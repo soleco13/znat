@@ -316,6 +316,8 @@ export function RoomPage() {
   const [chatDraft, setChatDraft] = useState("");
   /** Ключ идемпотентности последнего отправляемого текста (`sendChat`). */
   const chatSendRef = useRef<{ body: string; id: string } | null>(null);
+  /** Отправленные, но ещё не подтверждённые сервером сообщения — видны бледными. */
+  const [chatPending, setChatPending] = useState<{ id: string; body: string }[]>([]);
   const [chatSeen, setChatSeen] = useState(0);
   const [peopleQuery, setPeopleQuery] = useState("");
   const [deckStatuses, setDeckStatuses] = useState<Record<string, DeckProgressEvent>>({});
@@ -619,7 +621,7 @@ export function RoomPage() {
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat, drawer]);
+  }, [chat, chatPending.length, drawer]);
 
   useEffect(() => {
     if (drawer === "chat") setChatSeen(chat.length);
@@ -812,18 +814,24 @@ export function RoomPage() {
     const pending = chatSendRef.current;
     const clientMessageId = pending && pending.body === body ? pending.id : crypto.randomUUID();
     chatSendRef.current = { body, id: clientMessageId };
-    await apiFetch(`/lessons/${lessonId}/chat`, {
+    setChatPending((prev) => (prev.some((m) => m.id === clientMessageId) ? prev : [...prev, { id: clientMessageId, body }]));
+    await apiFetch<ChatMessage>(`/lessons/${lessonId}/chat`, {
       method: "POST",
       body: JSON.stringify({ body, clientMessageId }),
     })
-      .then(() => {
+      .then((message) => {
         if (chatSendRef.current?.id === clientMessageId) chatSendRef.current = null;
+        // Своё сообщение — из ответа, не дожидаясь эха по каналу урока: пока
+        // тот переподключается, текст пропадал из поля и нигде не появлялся,
+        // и его отправляли ещё раз.
+        setChat((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]));
       })
       .catch(() => {
-      // Текст возвращаем в поле, если человек ещё не начал новое сообщение.
-      setChatDraft((draft) => draft || body);
-      showRoomError("Сообщение не отправлено");
-    });
+        // Текст возвращаем в поле, если человек ещё не начал новое сообщение.
+        setChatDraft((draft) => draft || body);
+        showRoomError("Сообщение не отправлено");
+      })
+      .finally(() => setChatPending((prev) => prev.filter((m) => m.id !== clientMessageId)));
   }
 
   const openSettings = () => setSettingsOpen(true);
@@ -923,7 +931,7 @@ export function RoomPage() {
   // ── Панель «Чат» ──────────────────────────────────────────────────────
   const chatPanel = (sheet: boolean) => (
     <div className="flex h-full min-h-0 flex-col">
-      {chat.length === 0 ? (
+      {chat.length === 0 && chatPending.length === 0 ? (
         <Empty className="min-h-0 px-7 py-8 md:px-7 md:py-8">
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -960,6 +968,19 @@ export function RoomPage() {
                 </div>
               );
             })}
+            {chatPending.map((m) => (
+              <div key={m.id} className="flex flex-col items-start gap-[3px]">
+                <span
+                  className={cn(
+                    "whitespace-pre-wrap break-words bg-surface-2 text-sm text-foreground opacity-60 [text-wrap:pretty]",
+                    sheet ? "rounded-xl px-[11px] py-[9px]" : "rounded-[10px] px-2.5 py-2",
+                  )}
+                >
+                  {m.body}
+                </span>
+                <span className="text-[11.5px] text-text-3">Отправляется…</span>
+              </div>
+            ))}
             <div ref={chatEndRef} />
           </div>
         </ScrollArea>
