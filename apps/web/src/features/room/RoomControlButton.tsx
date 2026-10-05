@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Toggle } from "@/shared/ui/toggle";
 import { SimpleTooltip } from "@/shared/ui/tooltip";
 import { Loader } from "@/shared/ui/loader";
+import { toast } from "@/shared/ui/sonner";
 
 export type RoomControlVariant = "circle" | "pill" | "tile";
 
@@ -65,17 +66,28 @@ export function RoomControlButton({
       : "border-border bg-card text-foreground";
   const hover = alarm ? "hover:bg-black/10" : highlighted ? "hover:bg-black/[.04]" : "hover:bg-surface-2";
   const iconNode = loading ? <Loader /> : <Icon aria-hidden />;
+  // Недоступна, но с причиной («Микрофон выключил учитель — поднимите руку»):
+  // не блокируем, а по нажатию объясняем. У настоящей disabled-кнопки
+  // подсказка не всплывает ни на телефоне, ни на десктопе (нет событий
+  // указателя), и ученик видел просто серую кнопку, которая не жмётся.
+  const explain = disabled && title ? title : null;
+  const handleToggle = explain
+    ? () => toast(explain, { position: "top-center", duration: 5000, id: "room-control-hint" })
+    : onToggle;
+  const blocked = disabled && !explain;
 
   if (variant === "tile") {
     return (
       <button
         type="button"
-        onClick={onToggle}
-        disabled={disabled}
+        onClick={handleToggle}
+        disabled={blocked}
+        aria-disabled={explain ? true : undefined}
         aria-pressed={active}
         aria-label={label}
         title={label}
         className={cn(
+          explain && "opacity-50",
           "relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-[3px] rounded-2xl border text-[11.5px] font-semibold leading-none transition-colors disabled:opacity-50 [&_svg]:size-[21px] [&_svg]:shrink-0",
           surface,
           alarm ? "" : hover,
@@ -105,11 +117,13 @@ export function RoomControlButton({
         <SimpleTooltip content={label} side="top">
           <button
             type="button"
-            onClick={onToggle}
-            disabled={disabled}
+            onClick={handleToggle}
+            disabled={blocked}
+            aria-disabled={explain ? true : undefined}
             aria-pressed={active}
             aria-label={label}
             className={cn(
+              explain && "opacity-50",
               "inline-flex h-12 items-center gap-2 px-3.5 text-[15px] font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50 lg:px-[18px] [&_svg]:size-5 [&_svg]:shrink-0",
               hover,
             )}
@@ -163,10 +177,11 @@ export function RoomControlButton({
           variant={tone === "media" ? "media" : "outline"}
           size="circle"
           pressed={active}
-          onPressedChange={onToggle}
-          disabled={disabled}
+          onPressedChange={handleToggle}
+          disabled={blocked}
+          aria-disabled={explain ? true : undefined}
           aria-label={label}
-          className={cn("relative size-11", speaking && "ring-2 ring-success ring-offset-1")}
+          className={cn("relative size-11", explain && "opacity-50", speaking && "ring-2 ring-success ring-offset-1")}
         >
           {iconNode}
         </Toggle>
