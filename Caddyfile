@@ -74,12 +74,21 @@
 	import app_proxy
 }
 
-# Тестовый доступ по IP без домена: самоподписанный сертификат Caddy (internal CA).
-# Браузеры и Web API (Clipboard, crypto.randomUUID) требуют secure context —
-# без HTTPS они молча не работают даже на http://<ip>. Сертификат недоверенный,
-# браузер один раз попросит подтвердить исключение.
+# Тестовый доступ по IP без домена. Браузеры и Web API (Clipboard,
+# crypto.randomUUID) требуют secure context — без HTTPS они молча не работают
+# даже на http://<ip>.
+# Сертификат — Let's Encrypt на IP-адрес (профиль shortlived, ~6 дней, Caddy
+# продлевает сам; challenge по :80/:443). Самоподписанный (internal) оставлен
+# только запасным issuer'ом: его нельзя подтвердить во встроенных браузерах
+# (Telegram и т.п. на iPhone) — клиент молча рвёт TLS после сертификата,
+# урок по ссылке не открывается (2026-10-05, мобильный МегаФон).
 https://213.21.241.28 {
-	tls internal
+	tls {
+		issuer acme {
+			profile shortlived
+		}
+		issuer internal
+	}
 
 	# /metrics — только для Prometheus внутри docker-сети (app:3000/metrics
 	# напрямую, минуя Caddy); наружу закрыт, как в Caddyfile.prod.
