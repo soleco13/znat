@@ -2,6 +2,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AccessTokenPayload } from "@school/shared";
 import type { LessonActor } from "../guests/service.js";
 
+/** Журнал посещений в памяти — та же логика, что у repo.ts (G-06). */
+const { journal } = vi.hoisted(() => ({
+  journal: [] as {
+    id: string;
+    lessonId: string;
+    userId: string | null;
+    guestId: string | null;
+    joinedAt: number;
+    leftAt: number | null;
+  }[],
+}));
+
 const {
   lessonsServiceMock,
   usersServiceMock,
@@ -34,8 +46,34 @@ const {
     getUserForAuth: vi.fn(),
   },
   repoMock: {
-    insertJoin: vi.fn(),
-    closeOpenSession: vi.fn(),
+    insertJoin: vi.fn(async (input: { lessonId: string; userId: string | null; guestId: string | null }) => {
+      const row = { id: `row-${journal.length + 1}`, ...input, joinedAt: Date.now() + journal.length, leftAt: null };
+      journal.push(row);
+      return row;
+    }),
+    closeOpenSession: vi.fn(async (lessonId: string, participantId: string) => {
+      for (const r of journal) {
+        if (r.lessonId === lessonId && (r.userId === participantId || r.guestId === participantId) && r.leftAt === null) {
+          r.leftAt = Date.now();
+        }
+      }
+    }),
+    findSessionHistory: vi.fn(
+      async (lessonId: string, identity: { userId: string | null; guestId: string | null }, since: Date) => {
+        const mine = journal
+          .filter((r) => r.lessonId === lessonId && (identity.guestId ? r.guestId === identity.guestId : r.userId === identity.userId))
+          .sort((a, b) => b.joinedAt - a.joinedAt);
+        const latest = mine[0];
+        return {
+          latest: latest ? { id: latest.id, leftAt: latest.leftAt === null ? null : new Date(latest.leftAt) } : null,
+          recent: mine.filter((r) => r.joinedAt >= since.getTime()).length,
+        };
+      },
+    ),
+    reopenSession: vi.fn(async (id: string) => {
+      const row = journal.find((r) => r.id === id);
+      if (row) row.leftAt = null;
+    }),
     insertChatMessage: vi.fn(),
     listChatMessages: vi.fn(),
     softDeleteChatMessage: vi.fn(),
@@ -95,6 +133,7 @@ vi.mock("./presence.js", async () => {
   const chatIdem = new Map<string, string>();
   const chatRate = new Map<string, number>();
   const leftMarks = new Set<string>();
+  const newGuests = new Map<string, number[]>();
   const roomMap = (lessonId: string) => {
     let m = rooms.get(lessonId);
     if (!m) {
@@ -146,14 +185,28 @@ vi.mock("./presence.js", async () => {
       grants.delete(`${lessonId}:${userId}`);
     }),
     // Тот же контракт, что у Lua-скрипта ADMIT_GUEST_SCRIPT: проверка и запись одним шагом.
-    admitGuest: vi.fn(async (lessonId: string, userId: string, entry: unknown, maxGuests: number) => {
-      const m = roomMap(lessonId);
-      if (m.has(userId)) return "exists";
-      const guests = [...m.values()].filter((e) => (e as { kind: string }).kind === "guest").length;
-      if (guests >= maxGuests) return "full";
-      m.set(userId, entry);
-      return "admitted";
-    }),
+    admitGuest: vi.fn(
+      async (
+        lessonId: string,
+        userId: string,
+        entry: unknown,
+        maxGuests: number,
+        newGuestLimit?: { max: number; windowMs: number; now?: number },
+      ) => {
+        const m = roomMap(lessonId);
+        if (m.has(userId)) return "exists";
+        const guests = [...m.values()].filter((e) => (e as { kind: string }).kind === "guest").length;
+        if (guests >= maxGuests) return "full";
+        if (newGuestLimit) {
+          const now = newGuestLimit.now ?? Date.now();
+          const recent = (newGuests.get(lessonId) ?? []).filter((t) => t > now - newGuestLimit.windowMs);
+          if (recent.length >= newGuestLimit.max) return "throttled";
+          newGuests.set(lessonId, [...recent, now]);
+        }
+        m.set(userId, entry);
+        return "admitted";
+      },
+    ),
     markLeft: vi.fn(async (lessonId: string, userId: string) => {
       leftMarks.add(`${lessonId}:${userId}`);
     }),
@@ -241,6 +294,7 @@ vi.mock("./presence.js", async () => {
       screenShareLocks.clear();
       grants.clear();
       entryLocks.clear();
+      newGuests.clear();
     },
   };
 });
@@ -309,6 +363,7 @@ function guestActor(participantId = STUDENT_ID, lessonId = LESSON_ID): LessonAct
 
 beforeEach(() => {
   vi.clearAllMocks();
+  journal.length = 0;
   presence.__clear();
   lessonsServiceMock.ensureLivekitRoom.mockResolvedValue(`lesson-${LESSON_ID}`);
 });
@@ -719,6 +774,102 @@ describe("Э12.4: гость на уроке — журнал, presence, чат,
     await roomsService.leave(guestActor("guest-1"), LESSON_ID);
 
     expect(repoMock.closeOpenSession).toHaveBeenCalledWith(LESSON_ID, "guest-1");
+  });
+});
+
+describe("G-06: журнал посещений не растёт от повторных входов", () => {
+  const rowsOf = (id: string) => journal.filter((r) => r.guestId === id || r.userId === id);
+
+  it("20 и 100 переподключений (F5, обрыв, MediaRecovery) — одна строка, открыта", async () => {
+    for (const n of [20, 100]) {
+      const id = `reconnect-${n}`;
+      for (let i = 0; i < n; i++) await roomsService.join(guestActor(id), LESSON_ID);
+      expect(rowsOf(id)).toHaveLength(1);
+      expect(rowsOf(id)[0]!.leftAt).toBeNull();
+    }
+  });
+
+  it("выйти → войти: первые сессии пишутся, дальше продолжается последняя; ответы остаются на первой строке", async () => {
+    const id = "cycler";
+    await roomsService.join(guestActor(id), LESSON_ID);
+    const canonical = rowsOf(id)[0]!.id;
+    for (let i = 0; i < 100; i++) {
+      await roomsService.leave(guestActor(id), LESSON_ID);
+      await roomsService.join(guestActor(id), LESSON_ID);
+    }
+    // 5 сессий за окно, больше строк нет — сколько бы циклов ни было.
+    expect(rowsOf(id)).toHaveLength(5);
+    // В уроке — значит в журнале открытая сессия (посещаемость не потеряна).
+    expect(rowsOf(id).filter((r) => r.leftAt === null)).toHaveLength(1);
+    // Самая ранняя строка (к ней привязаны ответы) не менялась.
+    expect([...journal].sort((a, b) => a.joinedAt - b.joinedAt).find((r) => r.guestId === id)!.id).toBe(canonical);
+    // Выход по-прежнему закрывает сессию.
+    await roomsService.leave(guestActor(id), LESSON_ID);
+    expect(rowsOf(id).filter((r) => r.leftAt === null)).toHaveLength(0);
+  });
+
+  it("обычный ученик: вышел и вернулся пару раз — каждая сессия в журнале, как раньше", async () => {
+    const id = "regular";
+    for (let i = 0; i < 3; i++) {
+      await roomsService.join(guestActor(id), LESSON_ID);
+      await roomsService.leave(guestActor(id), LESSON_ID);
+    }
+    expect(rowsOf(id)).toHaveLength(3);
+  });
+
+  it("поток новых гостевых личностей: сверх потолка за окно — 429, строк не прибавляется", async () => {
+    const limit = 2 * 50; // LESSON_MAX_GUESTS по умолчанию — 50
+    const statuses: (number | "ok")[] = [];
+    for (let i = 0; i < limit + 20; i++) {
+      const id = `fresh-${i}`;
+      try {
+        await roomsService.join(guestActor(id), LESSON_ID);
+        await roomsService.leave(guestActor(id), LESSON_ID);
+        statuses.push("ok");
+      } catch (err) {
+        statuses.push((err as { statusCode: number }).statusCode);
+      }
+    }
+    expect(statuses.filter((x) => x === "ok")).toHaveLength(limit);
+    expect(statuses.filter((x) => x === 429)).toHaveLength(20);
+    expect(journal.filter((r) => r.guestId?.startsWith("fresh-"))).toHaveLength(limit);
+  });
+
+  it("вернувшийся ученик в потолок новых не считается и входит, даже когда потолок исчерпан", async () => {
+    await roomsService.join(guestActor("old-student"), LESSON_ID);
+    await roomsService.leave(guestActor("old-student"), LESSON_ID);
+    // Вместе со «старым» учеником — ровно 100 новых личностей: потолок исчерпан.
+    for (let i = 0; i < 99; i++) {
+      await roomsService.join(guestActor(`burst-${i}`), LESSON_ID);
+      await roomsService.leave(guestActor(`burst-${i}`), LESSON_ID);
+    }
+    await expect(roomsService.join(guestActor("brand-new"), LESSON_ID)).rejects.toMatchObject({ statusCode: 429 });
+    await expect(roomsService.join(guestActor("old-student"), LESSON_ID)).resolves.toBeDefined();
+  });
+
+  it("класс 30 + одновременный шторм входов: у каждого одна строка", async () => {
+    const ids = Array.from({ length: 30 }, (_, i) => `class-${i}`);
+    await Promise.all(ids.map((id) => roomsService.join(guestActor(id), LESSON_ID)));
+    await Promise.all(ids.map((id) => roomsService.join(guestActor(id), LESSON_ID)));
+    for (const id of ids) expect(rowsOf(id)).toHaveLength(1);
+  });
+
+  it("ensureParticipant (ответы) после 20 переподключений и циклов выхода — та же каноническая строка", async () => {
+    const id = "answerer";
+    await roomsService.join(guestActor(id), LESSON_ID);
+    repoMock.findCanonicalParticipant.mockImplementation(async (_l: string, ident: { guestId: string | null }) => {
+      const first = [...journal].sort((a, b) => a.joinedAt - b.joinedAt).find((r) => r.guestId === ident.guestId);
+      return first ? { id: first.id, kind: "guest", displayName: "Ученик" } : null;
+    });
+    const before = await roomsService.ensureParticipant(guestActor(id), LESSON_ID);
+    for (let i = 0; i < 20; i++) await roomsService.join(guestActor(id), LESSON_ID);
+    for (let i = 0; i < 10; i++) {
+      await roomsService.leave(guestActor(id), LESSON_ID);
+      await roomsService.join(guestActor(id), LESSON_ID);
+    }
+    const after = await roomsService.ensureParticipant(guestActor(id), LESSON_ID);
+    expect(after.id).toBe(before.id);
+    repoMock.findCanonicalParticipant.mockResolvedValue(null);
   });
 });
 

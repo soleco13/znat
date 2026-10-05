@@ -205,11 +205,35 @@ for _, raw in ipairs(redis.call("HVALS", KEYS[1])) do
   if ok and entry.kind == "guest" then guests = guests + 1 end
 end
 if guests >= tonumber(ARGV[3]) then return 0 end
+if ARGV[4] == "1" then
+  local now = tonumber(ARGV[5])
+  local window = tonumber(ARGV[6])
+  redis.call("ZREMRANGEBYSCORE", KEYS[2], "-inf", now - window)
+  if redis.call("ZCARD", KEYS[2]) >= tonumber(ARGV[7]) then return 3 end
+  redis.call("ZADD", KEYS[2], now, ARGV[1])
+  redis.call("PEXPIRE", KEYS[2], window)
+end
 redis.call("HSET", KEYS[1], ARGV[1], ARGV[2])
 return 1
 `;
 
-export type AdmitGuestResult = "admitted" | "exists" | "full";
+export type AdmitGuestResult = "admitted" | "exists" | "full" | "throttled";
+
+/**
+ * G-06: потолок НОВЫХ гостевых личностей урока за окно. Каждая новая
+ * личность — строка журнала посещений навсегда (к ней привязываются ответы,
+ * удалять нельзя), а `/enter` выдаёт новую личность на каждый запрос.
+ * Вернувшийся ученик (у него уже есть строка) сюда не считается.
+ */
+export interface NewGuestLimit {
+  max: number;
+  windowMs: number;
+  now?: number;
+}
+
+function newGuestsKey(lessonId: string): string {
+  return `room:${lessonId}:new-guests`;
+}
 
 /**
  * Новый гость в presence — одной атомарной операцией «посчитать гостей и
@@ -222,9 +246,22 @@ export async function admitGuest(
   userId: string,
   entry: PresenceEntry,
   maxGuests: number,
+  newGuestLimit?: NewGuestLimit,
 ): Promise<AdmitGuestResult> {
-  const result = await redis.eval(ADMIT_GUEST_SCRIPT, 1, key(lessonId), userId, JSON.stringify(entry), maxGuests);
-  return result === 1 ? "admitted" : result === 2 ? "exists" : "full";
+  const result = await redis.eval(
+    ADMIT_GUEST_SCRIPT,
+    2,
+    key(lessonId),
+    newGuestsKey(lessonId),
+    userId,
+    JSON.stringify(entry),
+    maxGuests,
+    newGuestLimit ? "1" : "0",
+    newGuestLimit?.now ?? Date.now(),
+    newGuestLimit?.windowMs ?? 0,
+    newGuestLimit?.max ?? 0,
+  );
+  return result === 1 ? "admitted" : result === 2 ? "exists" : result === 3 ? "throttled" : "full";
 }
 
 function leftKey(lessonId: string, userId: string): string {

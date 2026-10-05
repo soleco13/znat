@@ -404,11 +404,26 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
   // Новый участник: персонал — просто запись; гость — атомарно с проверкой
   // потолка (`admitGuest`), чтобы одновременные входы его не обходили.
   let isNew = !existing;
+  // G-06: журнал посещений личности — до записи в presence: новую гостевую
+  // личность считаем в потолок новых входов (атомарно в `admitGuest`).
+  const identity = { userId: isStaff ? participantId : null, guestId: isStaff ? null : participantId };
+  const history = isNew
+    ? await repo.findSessionHistory(lessonId, identity, new Date(Date.now() - SESSION_HISTORY_WINDOW_MS))
+    : null;
   if (isNew && isStaff) {
     await presence.setParticipant(lessonId, participantId, entry);
   } else if (isNew) {
-    const admitted = await presence.admitGuest(lessonId, participantId, entry, env.LESSON_MAX_GUESTS);
+    const admitted = await presence.admitGuest(
+      lessonId,
+      participantId,
+      entry,
+      env.LESSON_MAX_GUESTS,
+      history?.latest ? undefined : { max: newGuestsPerWindow(), windowMs: NEW_GUESTS_WINDOW_MS },
+    );
     if (admitted === "full") throw lessonFullError();
+    if (admitted === "throttled") {
+      throw new AppError(429, "lesson_entry_busy", "Сейчас в урок входит слишком много новых участников — попробуйте через минуту");
+    }
     // Тот же гость параллельным запросом уже записан — дальше как повторный вход.
     if (admitted === "exists") isNew = false;
   }
@@ -419,13 +434,7 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
   // клиент рисует, а сервер доски молча отбрасывает штрихи.
   canvasService.setDrawPermission(lessonId, participantId, entry.permissions.canDraw);
   if (isNew) {
-    await repo.insertJoin({
-      lessonId,
-      kind: actor.kind,
-      userId: isStaff ? participantId : null,
-      guestId: isStaff ? null : participantId,
-      displayName: isStaff ? null : actor.displayName,
-    });
+    await recordSession(actor, lessonId, identity, history);
   }
 
   if (roomWasEmpty && isStaff && actor.role !== "methodist") {
@@ -482,6 +491,51 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
     clientMediaSettings,
     entryLocked,
   };
+}
+
+/**
+ * G-06: строка журнала посещений на вход в урок. Раньше — новая строка на
+ * каждый вход без записи в presence: после «Выйти» или зачистки за долгий
+ * обрыв. Цикл «вошёл → вышел» одной личностью растил таблицу без предела
+ * (замер: 20 циклов → 20 строк), а строки не удаляются — к самой ранней
+ * привязаны ответы (`responses.participant_id`, ON DELETE CASCADE).
+ *
+ * Теперь новая сессия — не чаще SESSIONS_PER_IDENTITY_WINDOW раз за окно на
+ * личность; сверх того продолжается последняя (left_at снова пуст):
+ * посещаемость остаётся непрерывной от первого входа до последнего выхода,
+ * самая ранняя строка (ответы) не меняется. Вход при этом не блокируется.
+ */
+const SESSION_HISTORY_WINDOW_MS = 60 * 60 * 1000;
+const SESSIONS_PER_IDENTITY_WINDOW = 5;
+/** Окно потолка новых гостевых личностей урока (`presence.admitGuest`). */
+const NEW_GUESTS_WINDOW_MS = 10 * 60 * 1000;
+/**
+ * Новых гостевых личностей на урок за окно: вдвое больше мест — весь класс
+ * входит разом, плюс вторые устройства и вход заново после истёкшей сессии.
+ */
+function newGuestsPerWindow(): number {
+  return env.LESSON_MAX_GUESTS * 2;
+}
+
+async function recordSession(
+  actor: LessonActor,
+  lessonId: string,
+  identity: { userId: string | null; guestId: string | null },
+  history: Awaited<ReturnType<typeof repo.findSessionHistory>> | null,
+): Promise<void> {
+  const latest = history?.latest ?? null;
+  if (latest && latest.leftAt === null) return;
+  if (latest && (history?.recent ?? 0) >= SESSIONS_PER_IDENTITY_WINDOW) {
+    await repo.reopenSession(latest.id);
+    return;
+  }
+  await repo.insertJoin({
+    lessonId,
+    kind: actor.kind,
+    userId: identity.userId,
+    guestId: identity.guestId,
+    displayName: actor.kind === "staff" ? null : actor.displayName,
+  });
 }
 
 /** Явный выход (кнопка «Выйти»/POST leave) — без grace-периода на переподключение. */

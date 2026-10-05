@@ -38,6 +38,41 @@ export async function closeOpenSession(lessonId: string, participantId: string) 
     );
 }
 
+function identityMatch(identity: { userId: string | null; guestId: string | null }) {
+  return identity.guestId
+    ? eq(lessonParticipants.guestId, identity.guestId)
+    : eq(lessonParticipants.userId, identity.userId!);
+}
+
+/**
+ * G-06: последняя сессия личности в уроке и сколько сессий она открыла с
+ * `since` — решить, писать ли новую строку журнала или продолжить последнюю.
+ */
+export async function findSessionHistory(
+  lessonId: string,
+  identity: { userId: string | null; guestId: string | null },
+  since: Date,
+): Promise<{ latest: { id: string; leftAt: Date | null } | null; recent: number }> {
+  const rows = await db
+    .select({ id: lessonParticipants.id, leftAt: lessonParticipants.leftAt, joinedAt: lessonParticipants.joinedAt })
+    .from(lessonParticipants)
+    .where(and(eq(lessonParticipants.lessonId, lessonId), identityMatch(identity), gte(lessonParticipants.joinedAt, since)))
+    .orderBy(desc(lessonParticipants.joinedAt));
+  if (rows.length > 0) return { latest: { id: rows[0]!.id, leftAt: rows[0]!.leftAt }, recent: rows.length };
+  const [older] = await db
+    .select({ id: lessonParticipants.id, leftAt: lessonParticipants.leftAt })
+    .from(lessonParticipants)
+    .where(and(eq(lessonParticipants.lessonId, lessonId), identityMatch(identity)))
+    .orderBy(desc(lessonParticipants.joinedAt))
+    .limit(1);
+  return { latest: older ?? null, recent: 0 };
+}
+
+/** G-06: продолжить закрытую сессию (снова «в уроке») вместо новой строки журнала. */
+export async function reopenSession(id: string): Promise<void> {
+  await db.update(lessonParticipants).set({ leftAt: null }).where(eq(lessonParticipants.id, id));
+}
+
 /**
  * Э12.5 — «каноническая» строка участника урока: самая ранняя (`joined_at ASC`)
  * из строк одного `guestId`/`userId` в уроке. Строки `lesson_participants`
