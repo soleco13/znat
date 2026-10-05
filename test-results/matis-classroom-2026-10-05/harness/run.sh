@@ -35,7 +35,7 @@ START_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ); echo "$START_UTC" > "$OUT/start_utc"
   while [ ! -f "$OUT/done" ]; do
     if [ -f "$OUT/ctl.cut" ] && [ ! -f "$OUT/ctl.cut.done" ]; then
       read -r _ sec < "$OUT/ctl.cut"
-      DPID=$(docker inspect -f '{{.State.Pid}}' cls-driver)
+      DPID=$(docker inspect -f "{{.State.Pid}}" ${CUT_TARGET:-cls-driver})
       nsenter -t "$DPID" -n sh -c "iptables -N CLSCUT 2>/dev/null; iptables -F CLSCUT; iptables -A CLSCUT -d 213.21.241.28 -j DROP; iptables -A CLSCUT -s 213.21.241.28 -j DROP; iptables -A CLSCUT -d $GW -p tcp --dport 7880 -j DROP; iptables -A CLSCUT -s $GW -p tcp --sport 7880 -j DROP; iptables -I OUTPUT 1 -j CLSCUT; iptables -I INPUT 1 -j CLSCUT"
       echo "$(date -u +%T) CUT $sec" >> "$OUT/netcut.log"
       sleep "$sec"

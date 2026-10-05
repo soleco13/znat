@@ -698,6 +698,83 @@ try {
     log({ kind: "capacity", text: `N=${N}`, extra: { joined: cap.joined, refused: cap.refused.length, tti: cap.tti, fps: cap.window.fpsAvg, longTaskPct: cap.window.longTaskPct, chat: cap.chat, reconnect: cap.reconnect.ms } });
   }
 
+  // ── Короткий медиатокен гостя: переподключение после его истечения ──────
+  if (PHASES.includes("ttl")) {
+    setPhase("ttl");
+    const p = SB[0];
+    check("ttl: student in", await sbEnter(p));
+    const t0 = Date.now();
+    const flowing = async () => {
+      const a = await rtcSummary(p); await sleep(4000); const b = await rtcSummary(p);
+      const pill = await p.eval(`/Восстанавливаем звук|Подключаем звук|Связь прервалась/.test(document.body.innerText)`).catch(() => true);
+      return b.bytesIn > a.bytesIn + 20000 && !pill;
+    };
+    const cut = async (sec) => {
+      fs.rmSync(`${OUT}/ctl.cut.done`, { force: true });
+      fs.writeFileSync(`${OUT}/ctl.cut`, `${Date.now()} ${sec}\n`);
+      await waitFor(() => fs.existsSync(`${OUT}/ctl.cut.done`), (sec + 30) * 1000, 500);
+      const tUp = Date.now();
+      const back = await waitFor(flowing, 180000, 1000);
+      const inRoom = await p.eval(`!!${byLabel("Чат")}`).catch(() => false);
+      return { cutSec: sec, mediaBackMs: back.ok ? Date.now() - tUp : null, stillInRoomWithoutF5: inRoom };
+    };
+    const R = { baseline: await waitFor(flowing, 60000, 1000).then((r) => r.ok) };
+    R.cutAt2min = await cut(30);
+    const waitUntil = t0 + Number(process.env.TTL_WAIT_MIN || 16) * 60000;
+    while (Date.now() < waitUntil) await sleep(10000);
+    R.minutesConnected = Math.round((Date.now() - t0) / 60000);
+    R.cut30afterExpiry = await cut(30);
+    R.cut70afterExpiry = await cut(70);
+    const tF5 = Date.now(); await p.reload();
+    const back = await waitFor(async () => (await p.eval(`!!${byLabel("Чат")}`).catch(() => false)) && (await flowing()), 120000, 1000);
+    R.f5 = { ok: back.ok, ms: back.ok ? Date.now() - tF5 : null };
+    summary.ttl = R; saveSummary();
+    log({ kind: "ttl", text: "result", extra: R });
+  }
+
+  // ── Проверка исправлений гостевого доступа (G-01, G-03, TTL, гранты) ──────
+  if (PHASES.includes("sec")) {
+    setPhase("sec");
+    const R = {};
+    const lkRaw = (args) => spawnSync("lk", ["--url", process.env.LK_URL, "--api-key", process.env.LK_KEY, "--api-secret", process.env.LK_SECRET, ...args], { encoding: "utf8", timeout: 15000 });
+    const inRoom = (id) => (lkRaw(["room", "participants", "list", `lesson-${LID}`]).stdout || "").includes(id);
+    const b0 = bots[0];
+    await b0.enter();
+    const j = await b0.join();
+    const tok = JSON.parse(Buffer.from(j.media.token.split(".")[1], "base64url").toString());
+    R.token = { ttlSec: tok.exp - (tok.nbf ?? tok.iat), room: tok.video?.room, sub: tok.sub, grant: tok.video };
+    R.roomList = (lkRaw(["room", "list"]).stdout || "").split("\n").filter((l) => l.includes(LID)).join(" | ").slice(0, 300);
+    // Выход убирает из LiveKit (клиент «забыл» отключиться — процесс lk живёт).
+    b0.startMedia({ presence: true });
+    await waitFor(() => inRoom(b0.identity), 15000, 500);
+    R.beforeLeaveInLk = inRoom(b0.identity);
+    await b0.http.req("POST", `/lessons/${LID}/leave`);
+    const gone = await waitFor(() => !inRoom(b0.identity), 15000, 500);
+    R.leaveRemovedFromLk = { ok: gone.ok, ms: gone.ms };
+    // Подключение к медиа той же личностью в обход /join — вебхук выкидывает.
+    b0.startMedia({ presence: true });
+    await sleep(2000);
+    const kicked = await waitFor(() => !inRoom(b0.identity), 20000, 500);
+    R.bypassKicked = { ok: kicked.ok, ms: kicked.ms };
+    // Честный возврат через /join — остаётся.
+    b0.stopMedia();
+    await b0.join();
+    b0.startMedia({ presence: true });
+    await sleep(8000);
+    R.rejoinStays = inRoom(b0.identity);
+    b0.stopMedia();
+    await b0.leave();
+    // Одновременные входы сверх потолка.
+    const max = Number(process.env.EXPECT_MAX || 50);
+    const rush = bots.slice(1, 1 + max + 10);
+    await Promise.all(rush.map((b) => b.enter()));
+    const statuses = await Promise.all(rush.map((b) => b.http.req("POST", `/lessons/${LID}/join`).then((r) => ({ s: r.status, code: r.json?.error }))));
+    R.rush = { attempts: rush.length, ok: statuses.filter((x) => x.s === 200).length, full: statuses.filter((x) => x.code === "lesson_full").length, other: statuses.filter((x) => x.s !== 200 && x.code !== "lesson_full").map((x) => x.s) };
+    await Promise.all(rush.map((b) => b.http.req("POST", `/lessons/${LID}/leave`)));
+    summary.sec = R; saveSummary();
+    log({ kind: "sec", text: "result", extra: R });
+  }
+
   // ── Выдача права говорить: включается ли микрофон сам? ─────────────────
   if (PHASES.includes("grant")) {
     setPhase("grant");
