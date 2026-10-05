@@ -37,6 +37,8 @@ function disconnectReasonName(value: number | undefined): string | number | null
   return DISCONNECT_REASONS[value] ?? value;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const receiver = new WebhookReceiver(env.LIVEKIT_API_KEY, env.LIVEKIT_API_SECRET);
 
 export default async function livekitWebhookRoutes(app: FastifyInstance) {
@@ -77,9 +79,14 @@ export default async function livekitWebhookRoutes(app: FastifyInstance) {
         logEvent("livekit_room_finished", { livekitRoom: roomName ?? null }, "info", request.log);
       }
 
-      if (event.event === "participant_joined" && roomName && userId) {
+      // Участники урока в LiveKit — по id участника (uuid). Запись урока
+      // (egress, identity «EG_…») и прочие служебные подключения — нет: их id
+      // уходил в запросы к uuid-колонкам, вебхук отвечал 500, и LiveKit
+      // повторял его — на каждой записи урока (нагрузочный тест 2026-10-05).
+      const isLessonParticipant = userId !== undefined && UUID_RE.test(userId);
+      if (event.event === "participant_joined" && roomName && userId && isLessonParticipant) {
         await roomsService.handleParticipantJoinedWebhook(roomName, userId);
-      } else if (event.event === "participant_left" && roomName && userId) {
+      } else if (event.event === "participant_left" && roomName && userId && isLessonParticipant) {
         await roomsService.handleParticipantLeftWebhook(roomName, userId);
       } else if (event.event === "room_finished" && roomName) {
         await roomsService.handleRoomFinishedWebhook(roomName);
