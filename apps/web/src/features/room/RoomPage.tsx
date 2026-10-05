@@ -668,10 +668,18 @@ export function RoomPage() {
     loadWithRetry(() => listLessonActivities(lessonId), "activities")
       .then((data) => {
         const latest = data.items[0];
-        if (latest) setActiveActivityId((prev) => prev ?? latest.id);
+        if (!latest) return;
+        setActiveActivityId((prev) => prev ?? latest.id);
+        // F5 посреди задания: раньше ученик оказывался на сетке камер и
+        // искал задание в «Материалах». Ответы при этом не терялись.
+        if (rejoin?.act) setStageView("activity");
       })
       .catch(() => undefined);
-  }, [lessonId, joined]);
+  }, [lessonId, joined, rejoin]);
+
+  useEffect(() => {
+    if (joined) writeRejoinState({ act: stageView === "activity" });
+  }, [joined, stageView]);
 
   const refetchedDecksRef = useRef<Set<string>>(new Set());
   useEffect(() => {

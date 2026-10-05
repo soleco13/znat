@@ -13,13 +13,15 @@
 export interface RejoinState {
   mic: boolean;
   cam: boolean;
+  /** На стейдже было задание — после перезагрузки вернуть его, а не сетку камер. */
+  act: boolean;
   micId: string | null;
   camId: string | null;
   spkId: string | null;
 }
 
 const IN_ROOM = "in";
-const FLAGS = ["mic", "cam"] as const;
+const FLAGS = ["mic", "cam", "act"] as const;
 const IDS = ["micId", "camId", "spkId"] as const;
 
 function isReload(): boolean {
@@ -34,6 +36,7 @@ export function readRejoinState(): RejoinState | null {
   return {
     mic: q.get("mic") === "1",
     cam: q.get("cam") === "1",
+    act: q.get("act") === "1",
     micId: q.get("micId"),
     camId: q.get("camId"),
     spkId: q.get("spkId"),
