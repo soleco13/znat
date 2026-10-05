@@ -1982,18 +1982,23 @@ function StatusPill({ status, compact = false }: { status: SocketStatusLike; com
 
 /** Сколько медиа должно быть без связи, чтобы показать метку (короткий джиттер — не повод). */
 const MEDIA_PILL_DELAY_MS = 4000;
+/** Первое подключение медиа на нормальной сети — 1–3 с; дольше — пора сказать. */
+const MEDIA_FIRST_CONNECT_PILL_DELAY_MS = 12_000;
 
 /**
  * Звук и видео сейчас не идут: LiveKit переподключается или отключился, а
  * канал урока при этом жив. Раньше в этом состоянии не было видно ничего —
  * кнопка «Микрофон» горела, а собеседника не было слышно до ~50 с
  * (E2E 2026-10-04, профиль 64 кбит/с). Метка — только по фактическому
- * состоянию комнаты LiveKit и только после первого подключения; когда канал
- * урока тоже рвётся, место занимает `StatusPill`.
+ * состоянию комнаты LiveKit; когда канал урока тоже рвётся, место занимает
+ * `StatusPill`. Если медиа не подключилось с самого входа (UDP закрыт,
+ * медленная сеть), метка появляется позже и говорит «подключаем», а не
+ * «восстанавливаем» — плитки с аватарами без звука иначе выглядели как урок,
+ * в котором просто все молчат.
  */
 function MediaLinkPill({ hidden, compact = false }: { hidden: boolean; compact?: boolean }) {
   const room = useMaybeRoomContext();
-  const [down, setDown] = useState(false);
+  const [down, setDown] = useState<null | "connecting" | "restoring">(null);
   useEffect(() => {
     if (!room) return;
     let everConnected = room.state === ConnectionState.Connected;
@@ -2003,11 +2008,15 @@ function MediaLinkPill({ hidden, compact = false }: { hidden: boolean; compact?:
         everConnected = true;
         if (timer) clearTimeout(timer);
         timer = null;
-        setDown(false);
+        setDown(null);
         return;
       }
-      if (!everConnected || timer) return;
-      timer = setTimeout(() => setDown(true), MEDIA_PILL_DELAY_MS);
+      if (timer) return;
+      const kind = everConnected ? "restoring" : "connecting";
+      timer = setTimeout(
+        () => setDown(kind),
+        everConnected ? MEDIA_PILL_DELAY_MS : MEDIA_FIRST_CONNECT_PILL_DELAY_MS,
+      );
     };
     room.on(RoomEvent.ConnectionStateChanged, update);
     update();
@@ -2027,7 +2036,7 @@ function MediaLinkPill({ hidden, compact = false }: { hidden: boolean; compact?:
       )}
     >
       <span className={cn("rounded-full bg-current", compact ? "size-[5px]" : "size-1.5")} />
-      Восстанавливаем звук и видео…
+      {down === "connecting" ? "Подключаем звук и видео…" : "Восстанавливаем звук и видео…"}
     </span>
   );
 }
