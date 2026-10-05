@@ -184,6 +184,31 @@ const GUEST_CANVAS_BYTES_PER_MINUTE = 20 * 1024 * 1024;
 const CANVAS_RATE_WINDOW_MS = 60_000;
 const canvasInboundBudget = new Map<string, { windowStart: number; bytes: number }>();
 let rateLimitedCanvasMessages = 0;
+let lastBudgetPruneAt = 0;
+
+/**
+ * G-12: окна бюджета чистятся и при выгрузке документа, но урок постоянный —
+ * доска с учителем может не выгружаться весь день, а каждая новая гостевая
+ * личность оставляла своё окно (и отметку лога отказов) до выгрузки. Раз в
+ * окно выбрасываем истёкшие: размер карт — не больше рисовавших за минуту.
+ */
+function pruneExpiredCanvasBudgets(now: number): void {
+  if (now - lastBudgetPruneAt < CANVAS_RATE_WINDOW_MS) return;
+  lastBudgetPruneAt = now;
+  for (const [key, budget] of canvasInboundBudget) {
+    if (now - budget.windowStart >= CANVAS_RATE_WINDOW_MS) canvasInboundBudget.delete(key);
+  }
+  for (const [documentName, byUser] of lastRejectionLogAt) {
+    for (const [userId, loggedAt] of byUser) {
+      if (now - loggedAt >= REJECTION_LOG_INTERVAL_MS) byUser.delete(userId);
+    }
+    if (byUser.size === 0) lastRejectionLogAt.delete(documentName);
+  }
+}
+
+export function getCanvasInboundBudgetSize(): number {
+  return canvasInboundBudget.size;
+}
 
 export async function limitGuestCanvasInbound(
   payload: Pick<beforeHandleMessagePayload, "update" | "documentName" | "context">,
@@ -191,6 +216,7 @@ export async function limitGuestCanvasInbound(
 ): Promise<void> {
   const ctx = payload.context as { userId?: string; role?: string } | undefined;
   if (!ctx?.userId || ctx.role !== "guest") return;
+  pruneExpiredCanvasBudgets(now);
   const key = `${payload.documentName}:${ctx.userId}`;
   let budget = canvasInboundBudget.get(key);
   if (!budget || now - budget.windowStart >= CANVAS_RATE_WINDOW_MS) {

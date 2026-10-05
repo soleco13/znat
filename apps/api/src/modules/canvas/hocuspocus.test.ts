@@ -80,6 +80,7 @@ const {
   hocuspocus,
   trackReadOnlyRejection,
   limitGuestCanvasInbound,
+  getCanvasInboundBudgetSize,
   getRejectedReadOnlyUpdatesCount,
   getCanvasDocumentsWithPendingUpdatesCount,
 } = await import("./hocuspocus.js");
@@ -747,6 +748,29 @@ describe("видимость отброшенных и застрявших пр
 describe("limitGuestCanvasInbound", () => {
   const doc = "77777777-7777-7777-7777-777777777777";
   const MB = 1024 * 1024;
+
+  it("G-12: окна сотен сменившихся гостей не копятся, пока документ загружен", async () => {
+    const t0 = 50_000_000;
+    // Подчищаем окна прошлых тестов: первый вызов в новом окне чистит истёкшие.
+    await limitGuestCanvasInbound({ update: new Uint8Array(1), documentName: doc, context: { userId: "warmup", role: "guest" } }, t0);
+    for (let i = 0; i < 500; i += 1) {
+      const ctx = { userId: `guest-${i}`, role: "guest" };
+      await limitGuestCanvasInbound({ update: new Uint8Array(10), documentName: doc, context: ctx }, t0 + i);
+    }
+    expect(getCanvasInboundBudgetSize()).toBeGreaterThanOrEqual(500);
+
+    // Минута спустя рисует один — устаревшие окна ушли, без выгрузки документа.
+    const ctx = { userId: STUDENT_ID, role: "guest" };
+    await limitGuestCanvasInbound({ update: new Uint8Array(10), documentName: doc, context: ctx }, t0 + 61_000);
+    expect(getCanvasInboundBudgetSize()).toBeLessThanOrEqual(2);
+
+    // Живой бюджет очистка не сбрасывает: лимит всё так же срабатывает.
+    await limitGuestCanvasInbound({ update: new Uint8Array(15 * MB), documentName: doc, context: ctx }, t0 + 62_000);
+    await expect(
+      limitGuestCanvasInbound({ update: new Uint8Array(6 * MB), documentName: doc, context: ctx }, t0 + 63_000),
+    ).rejects.toMatchObject({ code: 4429 });
+    await clearDrawPermissionOverrides({ documentName: doc });
+  });
 
   it("гость сверх 20 МБ в минуту — соединение закрывается, через минуту бюджет новый", async () => {
     const ctx = { userId: STUDENT_ID, role: "guest" };
