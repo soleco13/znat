@@ -22,7 +22,8 @@ import {
 import type { LessonMode, ParticipantSnapshot } from "@school/shared";
 
 import { cn } from "@/lib/utils";
-import { initialsOf } from "@/shared/ui/avatar";
+import { UserAvatar } from "@/shared/ui/avatar";
+import { markRoleOf } from "@/shared/ui/role-mark";
 import { ParticipantPlaceholder } from "./ParticipantPlaceholder.js";
 import { MediaLoader } from "@/shared/ui/media-loader";
 import { Loader } from "@/shared/ui/loader";
@@ -290,13 +291,13 @@ export function RoomVideoGrid({
     const shown = overflow ? list.slice(0, STRIP_VISIBLE - 1) : list;
     return (
       <div className="flex shrink-0 gap-2 overflow-hidden">
-        {shown.map((p) => renderTile(p, "xs", "aspect-[3/4] w-[84px] shrink-0"))}
+        {shown.map((p) => renderTile(p, "xs", "aspect-[3/4] min-w-0 max-w-[84px] flex-1"))}
         {overflow ? (
           <button
             type="button"
             onClick={onShowAll}
             aria-label="Все участники"
-            className="flex aspect-[3/4] w-[84px] shrink-0 items-center justify-center rounded-xl bg-[#101828] text-base font-black text-white"
+            className="flex aspect-[3/4] min-w-0 max-w-[84px] flex-1 items-center justify-center rounded-xl bg-[#101828] text-base font-black text-white"
           >
             +{list.length - shown.length}
           </button>
@@ -339,8 +340,8 @@ export function RoomVideoGrid({
             aria-label={`Показать видео: ${label}`}
             className="flex h-11 items-center gap-2 whitespace-nowrap rounded-full border border-border bg-card py-0 pl-1.5 pr-3.5 text-[13.5px] font-semibold text-foreground shadow-[0_8px_20px_rgba(16,24,40,.14)]"
           >
-            <span className="relative flex size-8 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#eff4ff,#effcf9)] text-xs font-bold text-primary">
-              {initialsOf(teacher.fullName)}
+            <span className="relative shrink-0">
+              <UserAvatar id={teacher.userId} role={markRoleOf(teacher.kind, teacher.role)} size={32} />
               <span className="absolute -bottom-px -right-px size-2.5 rounded-full border-2 border-card bg-success" />
             </span>
             {label}

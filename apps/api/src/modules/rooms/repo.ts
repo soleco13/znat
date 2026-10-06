@@ -120,7 +120,7 @@ export async function listCanonicalParticipants(
   lessonId: string,
   around: Date,
   engagedIds: string[],
-): Promise<{ id: string; kind: "staff" | "guest"; displayName: string }[]> {
+): Promise<{ id: string; kind: "staff" | "guest"; displayName: string; identityId: string }[]> {
   const present = and(
     gte(lessonParticipants.joinedAt, new Date(around.getTime() - ROSTER_WINDOW_MS)),
     lte(lessonParticipants.joinedAt, new Date(around.getTime() + ROSTER_WINDOW_MS)),
@@ -158,12 +158,12 @@ export async function listCanonicalParticipants(
     .orderBy(asc(lessonParticipants.joinedAt));
 
   const seen = new Set<string>();
-  const canonical: { id: string; kind: "staff" | "guest"; displayName: string }[] = [];
+  const canonical: { id: string; kind: "staff" | "guest"; displayName: string; identityId: string }[] = [];
   for (const r of rows) {
     const key = r.guestId ?? r.userId ?? r.id;
     if (seen.has(key)) continue;
     seen.add(key);
-    canonical.push({ id: r.id, kind: r.kind, displayName: r.displayName });
+    canonical.push({ id: r.id, kind: r.kind, displayName: r.displayName, identityId: key });
   }
   return canonical;
 }

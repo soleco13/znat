@@ -492,6 +492,7 @@ async function computeActivityProgress(activity: ActivityRow): Promise<ActivityP
 
     return {
       participantId: p.id,
+      identityId: p.identityId,
       displayName: p.displayName,
       status,
       answered,

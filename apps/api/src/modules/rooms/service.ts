@@ -115,7 +115,7 @@ export async function getPresenceId(lessonParticipantId: string): Promise<string
 export async function listLessonParticipants(
   lessonId: string,
   scope: { around: Date; engagedIds: string[] },
-): Promise<{ id: string; kind: "staff" | "guest"; displayName: string }[]> {
+): Promise<{ id: string; kind: "staff" | "guest"; displayName: string; identityId: string }[]> {
   return repo.listCanonicalParticipants(lessonId, scope.around, scope.engagedIds);
 }
 

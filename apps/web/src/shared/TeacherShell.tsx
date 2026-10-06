@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { apiFetch } from "@/shared/api-client";
 import { useAuthStore } from "@/shared/auth-store";
 import { UserAvatar } from "@/shared/ui/avatar";
+import { markRoleOf } from "@/shared/ui/role-mark";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -158,7 +159,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
                   aria-label="Аккаунт"
                   className="flex w-full items-center justify-center gap-2.5 rounded-md p-1.5 text-left transition-colors duration-150 ease-ds hover:bg-secondary lg:justify-start"
                 >
-                  <UserAvatar name={user.fullName} size={36} />
+                  <UserAvatar id={user.id} role={markRoleOf("staff", user.role)} size={36} />
                   <span className="hidden min-w-0 flex-1 flex-col leading-tight lg:flex">
                     <span className="truncate text-sm font-semibold text-foreground">{user.fullName}</span>
                     <span className="text-xs text-muted-foreground">Учитель</span>
@@ -180,7 +181,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
           {user ? (
             <AccountMenu onLogout={() => void logout()} side="bottom">
               <button type="button" className="rounded-full" aria-label="Аккаунт">
-                <UserAvatar name={user.fullName} size={34} />
+                <UserAvatar id={user.id} role={markRoleOf("staff", user.role)} size={34} />
               </button>
             </AccountMenu>
           ) : null}

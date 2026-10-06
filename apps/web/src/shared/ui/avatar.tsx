@@ -2,6 +2,7 @@ import * as React from "react";
 import * as AvatarPrimitive from "@radix-ui/react-avatar";
 
 import { cn } from "@/lib/utils";
+import { RoleMark, tintOf, type MarkRole } from "@/shared/ui/role-mark";
 
 const Avatar = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Root>,
@@ -39,34 +40,33 @@ const AvatarFallback = React.forwardRef<
 ));
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName;
 
-function initialsOf(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .map((w) => w[0] ?? "")
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
-
-/** Готовый аватар по имени: инициалы в фирменном градиенте, опционально фото. */
+/**
+ * Аватар участника: его цвет и знак «Матис» по роли — тот же алгоритм, что у
+ * плитки урока без камеры (features/room/ParticipantPlaceholder). Имя всегда
+ * подписано рядом, поэтому аватар декоративный.
+ */
 function UserAvatar({
-  name,
-  src,
+  id,
+  role,
   size = 40,
   className,
 }: {
-  name: string;
-  src?: string | null;
+  /** id пользователя или гостя урока — по нему выбирается цвет. */
+  id: string;
+  role: MarkRole;
   size?: number;
   className?: string;
 }) {
+  const tint = tintOf(id);
   return (
-    <Avatar className={className} style={{ width: size, height: size }}>
-      {src ? <AvatarImage src={src} alt={name} /> : null}
-      <AvatarFallback style={{ fontSize: Math.round(size * 0.38) }}>{initialsOf(name)}</AvatarFallback>
-    </Avatar>
+    <span
+      aria-hidden
+      className={cn("inline-flex shrink-0 items-center justify-center rounded-full", className)}
+      style={{ width: size, height: size, backgroundColor: tint.bg, color: tint.fg }}
+    >
+      <RoleMark role={role} disc={Math.round(size * (role === "student" ? 0.42 : 0.5))} />
+    </span>
   );
 }
 
-export { Avatar, AvatarImage, AvatarFallback, UserAvatar, initialsOf };
+export { Avatar, AvatarImage, AvatarFallback, UserAvatar };

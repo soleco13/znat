@@ -106,6 +106,8 @@ export type StudentProgressStatus = "not_started" | "in_progress" | "stuck" | "s
 export interface StudentProgress {
   /** Э12.5: id строки участника урока (`lesson_participants.id`), не `users.id`. */
   participantId: string;
+  /** Идентичность ученика на уроке (`guestId`) — совпадает с `ParticipantSnapshot.userId`, по ней цвет аватара. */
+  identityId: string;
   /** Введённое учеником имя при входе по ссылке (Э12.5). */
   displayName: string;
   status: StudentProgressStatus;

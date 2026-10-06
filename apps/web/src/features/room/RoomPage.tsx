@@ -94,6 +94,7 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
 import { UserAvatar } from "@/shared/ui/avatar";
+import { markRoleOf } from "@/shared/ui/role-mark";
 import { SimpleTooltip, TooltipProvider } from "@/shared/ui/tooltip";
 import { DeckPanel } from "../decks/DeckPanel.js";
 import { listLessonActivities } from "../materials/activity-api.js";
@@ -2242,7 +2243,7 @@ function PeopleList({
               !p.connected && "opacity-60",
             )}
           >
-            <UserAvatar name={p.fullName} size={32} />
+            <UserAvatar id={p.userId} role={markRoleOf(p.kind, p.role)} size={32} />
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="flex min-w-0 items-center gap-1.5">
                 <span className="truncate text-sm font-medium text-foreground">{p.fullName}</span>

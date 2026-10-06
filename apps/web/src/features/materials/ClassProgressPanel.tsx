@@ -105,7 +105,7 @@ export function ClassProgressPanel({
                 >
                   <TableCell>
                     <span className="flex items-center gap-2 font-medium">
-                      <UserAvatar name={s.displayName} size={24} />
+                      <UserAvatar id={s.identityId} role="student" size={24} />
                       {s.displayName}
                     </span>
                   </TableCell>

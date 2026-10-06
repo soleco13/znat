@@ -12,6 +12,7 @@ import {
 import type { ParticipantSnapshot } from "@school/shared";
 
 import { UserAvatar } from "@/shared/ui/avatar";
+import { markRoleOf } from "@/shared/ui/role-mark";
 import { Button } from "@/shared/ui/button";
 import {
   DropdownMenu,
@@ -65,7 +66,7 @@ export function ParticipantMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[264px] rounded-lg p-1.5 shadow-lg">
         <DropdownMenuLabel className="mb-1 flex items-center gap-2 border-b border-border px-2.5 pb-2 pt-2.5 font-normal">
-          <UserAvatar name={p.fullName} size={28} />
+          <UserAvatar id={p.userId} role={markRoleOf(p.kind, p.role)} size={28} />
           <span className="truncate text-sm font-semibold">{p.fullName}</span>
         </DropdownMenuLabel>
         {hasMedia && p.kind === "guest" ? (

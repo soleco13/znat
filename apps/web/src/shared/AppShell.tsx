@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { apiFetch } from "@/shared/api-client";
 import { useAuthStore } from "@/shared/auth-store";
 import { UserAvatar } from "@/shared/ui/avatar";
+import { markRoleOf } from "@/shared/ui/role-mark";
 import { Button } from "@/shared/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/shared/ui/sheet";
 import { SimpleTooltip, TooltipProvider } from "@/shared/ui/tooltip";
@@ -233,7 +234,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <div className="text-sm font-semibold text-foreground">{user.fullName}</div>
                 <div className="text-xs text-muted-foreground">{ROLE_LABEL[user.role]}</div>
               </div>
-              <UserAvatar name={user.fullName} size={38} />
+              <UserAvatar id={user.id} role={markRoleOf("staff", user.role)} size={38} />
               <SimpleTooltip content="Сменить пароль">
                 <Button variant="ghost" size="icon" asChild aria-label="Сменить пароль">
                   <Link to="/account/password">
