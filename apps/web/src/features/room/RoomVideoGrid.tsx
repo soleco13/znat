@@ -23,6 +23,7 @@ import type { LessonMode, ParticipantSnapshot } from "@school/shared";
 
 import { cn } from "@/lib/utils";
 import { initialsOf } from "@/shared/ui/avatar";
+import { ParticipantPlaceholder } from "./ParticipantPlaceholder.js";
 import { MediaLoader } from "@/shared/ui/media-loader";
 import { Loader } from "@/shared/ui/loader";
 import { participantsCount } from "./format.js";
@@ -165,6 +166,9 @@ export function RoomVideoGrid({
     const isSelf = p.userId === selfId;
     const videoTrack = isSelf && !selfDesiredOn ? undefined : track;
     const remoteSid = videoTrack?.publication?.trackSid;
+    // Выключенная чужая камера остаётся подписанным треком с `isMuted` —
+    // без этой проверки плитка показывала пустое видео вместо заглушки.
+    const videoOn = !!videoTrack && (isSelf || cameraOnIds.has(p.userId));
     // Чужая камера: до первого кадра и пока сервер держит её на паузе
     // (входящему каналу не хватает полосы) — иначе тёмная плитка без лоадера.
     const showLoader = isSelf
@@ -182,7 +186,7 @@ export function RoomVideoGrid({
       <div
         key={p.userId}
         className={cn(
-          "relative flex items-center justify-center overflow-hidden bg-slate-900",
+          "relative flex items-center justify-center overflow-hidden bg-[#101828]",
           size === "lg" ? "rounded-2xl" : "rounded-xl",
           className,
         )}
@@ -196,22 +200,11 @@ export function RoomVideoGrid({
             className={cn(
               "absolute inset-0 size-full object-cover transition-opacity",
               isSelf && "-scale-x-100",
-              showLoader && "opacity-0",
+              (showLoader || !videoOn) && "opacity-0",
             )}
           />
-        ) : !showLoader ? (
-          <span
-            className={cn(
-              "flex items-center justify-center rounded-full bg-white/10 font-bold text-white",
-              size === "lg" && "size-14 text-lg",
-              size === "md" && "size-11 text-[15px]",
-              size === "sm" && "size-[34px] text-xs",
-              size === "xs" && "size-[30px] text-[11px]",
-            )}
-          >
-            {initialsOf(p.fullName)}
-          </span>
         ) : null}
+        {!videoOn && !showLoader ? <ParticipantPlaceholder participant={p} size={size} /> : null}
 
         {showLoader && !reconnecting ? <MediaLoader label="Камера загружается" size={small ? "sm" : "md"} /> : null}
 
