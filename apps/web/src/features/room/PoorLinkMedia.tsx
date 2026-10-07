@@ -12,6 +12,7 @@ import {
 
 import { linkQuality, useLinkPoor, useLinkProbe } from "@/shared/link-quality";
 import { requestLessonPrecache } from "@/shared/service-worker";
+import { useIsNarrowViewport, useIsPhoneLandscape } from "./use-narrow-viewport.js";
 
 /**
  * Видео уступает канал звуку и доске, когда у ЭТОГО участника плохая связь.
@@ -119,12 +120,35 @@ function useMediaPathRefresh(): void {
   }, [room]);
 }
 
+/**
+ * Потолок чужих камер на телефоне — 360p. Без него крупная плитка телефона
+ * (около 370×480 CSS px при DPR 3) запрашивала 720p: 1,7 Мбит/с на одну
+ * камеру, а с потолком — 640×360 и 0,45 Мбит/с при той же плитке (замер
+ * 2026-10-07, `test-results/matis-media-adaptation-2026-10-07/`). Мелкие
+ * плитки adaptiveStream по-прежнему опускает ниже.
+ *
+ * Именно `setVideoDimensions`, не `setVideoQuality(MEDIUM)`: livekit-client
+ * сравнивает размер плитки со слоем по площади, портретная 370×480 «меньше»
+ * 640×360 — потолок не срабатывал, а сервер по высоте 480 отдавал 720p.
+ * Квадрат 360×360 больше любой мелкой плитки и меньше крупной по площади,
+ * а по каждой стороне — ровно слой 640×360.
+ */
+const PHONE_CAMERA_MAX = { width: 360, height: 360 };
+
+function useIsPhone(): boolean {
+  const narrow = useIsNarrowViewport();
+  const landscape = useIsPhoneLandscape();
+  const coarse = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+  return coarse && (narrow || landscape);
+}
+
 export function PoorLinkMediaAdapter() {
   const room = useRoomContext();
   useReportLiveKitQuality();
   useMediaPathRefresh();
   useLinkProbe();
   const poor = useLinkPoor();
+  const phone = useIsPhone();
 
   // Смена режима — в лог сервера (не в интерфейс): так видно, что режим
   // включился и выключился, даже когда доска закрыта.
@@ -153,14 +177,18 @@ export function PoorLinkMediaAdapter() {
   // Чужие камеры и демонстрация: нижний слой при плохой связи (у демонстрации
   // он есть с 2026-09-26 — 360p/5 кадр/с), иначе — как решит adaptiveStream.
   // Без этого сервер периодически пробовал поднять качество, полный поток в
-  // канал не пролезал — каждая проба давала рывок.
+  // канал не пролезал — каждая проба давала рывок. На телефоне камеры ещё и
+  // не выше 360p (`PHONE_CAMERA_MAX`); оба ограничения — здесь, в одном
+  // месте: `setVideoQuality` и `setVideoDimensions` сбрасывают друг друга.
   useEffect(() => {
     const quality = poor ? VideoQuality.LOW : VideoQuality.HIGH;
     const apply = (pub: RemoteTrackPublication) => {
       const video = pub.source === Track.Source.Camera || pub.source === Track.Source.ScreenShare;
       // Только у потоков со слоями: у однослойного (например, демонстрация
       // со старой версии страницы) нижнего слоя нет, просить его нечего.
-      if (video && pub.isSubscribed && pub.simulcasted) pub.setVideoQuality(quality);
+      if (!video || !pub.isSubscribed || !pub.simulcasted) return;
+      if (phone && !poor && pub.source === Track.Source.Camera) pub.setVideoDimensions(PHONE_CAMERA_MAX);
+      else pub.setVideoQuality(quality);
     };
     for (const participant of room.remoteParticipants.values()) {
       for (const pub of participant.trackPublications.values()) apply(pub);
@@ -170,7 +198,7 @@ export function PoorLinkMediaAdapter() {
     return () => {
       room.off(RoomEvent.TrackSubscribed, onSubscribed);
     };
-  }, [room, poor]);
+  }, [room, poor, phone]);
 
   return null;
 }

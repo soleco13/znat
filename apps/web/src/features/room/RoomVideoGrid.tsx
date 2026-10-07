@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   useParticipants,
@@ -35,7 +35,16 @@ import { useAdaptiveGrid } from "./use-adaptive-grid.js";
 import { useIsNarrowViewport } from "./use-narrow-viewport.js";
 
 const GAP = 10;
-const PAGE_SIZE = 12;
+/**
+ * Страница сетки — сколько плиток не уже этой ширины помещается в контейнер
+ * (16:9), но не больше `MAX_PAGE`; на слабых машинах (≤ 4 ядер) — `WEAK_MAX_PAGE`,
+ * чтобы не декодировать 25 видео разом.
+ */
+const MIN_TILE_W = 240;
+const MAX_PAGE = 25;
+const WEAK_MAX_PAGE = 16;
+const PAGE_CAP =
+  typeof navigator !== "undefined" && (navigator.hardwareConcurrency ?? 8) <= 4 ? WEAK_MAX_PAGE : MAX_PAGE;
 const RAIL_VISIBLE = 5;
 const STRIP_VISIBLE = 4;
 
@@ -49,8 +58,9 @@ type TileSize = "lg" | "md" | "sm" | "xs";
 
 /**
  * Плитки участников урока.
- *  - `variant="grid"` — на весь стейдж: 16:9, размер подбирает `useAdaptiveGrid`;
- *    больше 12 — постранично с плиткой «+N». На телефоне — говорящий во всю
+ *  - `variant="grid"` — на весь стейдж: 16:9 (дотягивается до краёв), размер и
+ *    вместимость страницы подбирает `useAdaptiveGrid`; не влезли — постранично
+ *    с плиткой «+N». На телефоне — говорящий во всю
  *    высоту и лента 3:4 под ним.
  *  - `variant="rail"` — узкая колонка 190px рядом с доской/демонстрацией
  *    (на телефоне — та же лента 3:4 под главным блоком).
@@ -155,14 +165,19 @@ export function RoomVideoGrid({
     tiles.find((p) => p.userId !== selfId) ??
     tiles[0];
 
+  // Вместимость страницы приходит из `useAdaptiveGrid` ниже (зависит только от
+  // размера контейнера) — держим последнюю измеренную.
+  const [capacity, setCapacity] = useState(12);
   const desktopGrid = variant === "grid" && !narrow && !(layout === "speaker" && tiles.length > 1);
-  const paged = desktopGrid && tiles.length > PAGE_SIZE;
-  const perPage = PAGE_SIZE - 1;
-  const pages = paged ? Math.ceil((tiles.length - PAGE_SIZE) / perPage) + 1 : 1;
+  const paged = desktopGrid && tiles.length > capacity;
+  const perPage = capacity - 1;
+  const pages = paged ? Math.ceil((tiles.length - capacity) / perPage) + 1 : 1;
   const safePage = Math.min(page, pages - 1);
-  const start = paged ? safePage * perPage : 0;
-  const isLastPage = !paged || tiles.length - start <= PAGE_SIZE;
-  const pageTiles = paged ? tiles.slice(start, isLastPage ? undefined : start + perPage) : tiles;
+  const isLastPage = !paged || safePage === pages - 1;
+  // Последняя страница всегда полная (с перекрытием предыдущей), чтобы плитки
+  // не становились огромными на «хвосте» из двух учеников.
+  const start = !paged ? 0 : isLastPage ? tiles.length - capacity : safePage * perPage;
+  const pageTiles = paged ? tiles.slice(start, start + (isLastPage ? capacity : perPage)) : tiles;
   const moreCount = isLastPage ? 0 : tiles.length - start - pageTiles.length;
   const gridCells = desktopGrid ? pageTiles.length + (moreCount > 0 ? 1 : 0) : 0;
   // Говорят участники, которых на этой странице не видно: подсказка в строке
@@ -172,9 +187,20 @@ export function RoomVideoGrid({
   const pageOf = (p: ParticipantSnapshot) => Math.min(Math.floor(tiles.indexOf(p) / perPage), pages - 1);
   const firstOffPage = offPageSpeakers[0];
   const speakersAfter = offPageSpeakers.filter((p) => pageOf(p) > safePage);
+  // Поднятые руки вне страницы — по очереди подъёма; учитель иначе их не видит.
+  const offPageHands = paged
+    ? tiles
+        .filter((p) => p.handRaised && !shownIds.has(p.userId))
+        .sort((a, b) => (a.handRaisedAt ?? "").localeCompare(b.handRaisedAt ?? ""))
+    : [];
+  const firstOffPageHand = offPageHands[0];
+  const handsAfter = offPageHands.filter((p) => pageOf(p) > safePage);
 
   const gridRef = useRef<HTMLDivElement>(null);
-  const { cols, tile } = useAdaptiveGrid(gridRef, gridCells, GAP, 16 / 9);
+  const grid = useAdaptiveGrid(gridRef, gridCells, { gap: GAP, aspect: 16 / 9, minTileW: MIN_TILE_W, maxCapacity: PAGE_CAP });
+  useLayoutEffect(() => {
+    if (desktopGrid && grid.capacity !== capacity) setCapacity(grid.capacity);
+  }, [desktopGrid, grid.capacity, capacity]);
 
   // Плитки, где камера включена, а кадра нет (или поток на паузе): ключи для
   // предела лоадера `TILE_LOADER_MAX_MS`. Собираются при отрисовке, в стор —
@@ -225,13 +251,13 @@ export function RoomVideoGrid({
             или стоит на паузе, плитка не пустеет и не превращается в спиннер. */}
         <ParticipantPlaceholder participant={p} colorKey={participantColorKey(p, lessonId)} size={size} />
         {videoTrack ? (
-          <VideoTrack
+          <TileVideo
             trackRef={videoTrack}
             onLoadedData={
               isSelf ? () => setSelfFrameReady(true) : remoteSid ? () => markCameraLoaded(remoteSid) : undefined
             }
             className={cn(
-              "absolute inset-0 size-full object-cover transition-opacity duration-200 motion-reduce:transition-none",
+              "absolute inset-0 size-full transition-opacity duration-200 motion-reduce:transition-none",
               isSelf && "-scale-x-100",
               !videoVisible && "opacity-0",
             )}
@@ -530,6 +556,21 @@ export function RoomVideoGrid({
               <span className="shrink-0 font-medium text-primary/70">· стр. {pageOf(firstOffPage) + 1}</span>
             </button>
           ) : null}
+          {firstOffPageHand ? (
+            <button
+              type="button"
+              onClick={() => setPage(pageOf(firstOffPageHand))}
+              title="Показать страницу с поднятой рукой"
+              className="inline-flex h-[30px] min-w-0 shrink items-center gap-1.5 rounded-full bg-warning px-3 text-[12.5px] font-semibold text-warning-foreground transition-opacity hover:opacity-90"
+            >
+              <Hand className="size-3.5 shrink-0" aria-hidden />
+              <span className="truncate">
+                {firstOffPageHand.fullName}
+                {offPageHands.length > 1 ? ` и ещё ${offPageHands.length - 1}` : ""}
+              </span>
+              <span className="shrink-0 font-medium opacity-70">· стр. {pageOf(firstOffPageHand) + 1}</span>
+            </button>
+          ) : null}
           {onLayoutChange ? (
             <span className="ml-auto inline-flex shrink-0 overflow-hidden rounded-full border border-border bg-card">
               {(["grid", "speaker"] as const).map((v) => (
@@ -572,19 +613,26 @@ export function RoomVideoGrid({
         className="grid min-h-0 flex-1 place-content-center"
         style={{
           gap: GAP,
-          gridTemplateColumns: tile > 0 ? `repeat(${cols}, ${tile}px)` : `repeat(${cols}, minmax(0, 1fr))`,
+          gridTemplateColumns: grid.tileW > 0 ? `repeat(${grid.cols}, ${grid.tileW}px)` : `repeat(${grid.cols}, minmax(0, 1fr))`,
+          gridAutoRows: grid.tileH > 0 ? `${grid.tileH}px` : undefined,
         }}
       >
-        {pageTiles.map((p) => renderTile(p, paged ? "md" : "lg", "aspect-video w-full"))}
+        {pageTiles.map((p) => renderTile(p, paged ? "md" : "lg", grid.tileH > 0 ? "size-full" : "aspect-video w-full"))}
         {moreCount > 0 ? (
           <button
             type="button"
             onClick={() => setPage(safePage + 1)}
             className={cn(
-              "relative flex aspect-video w-full flex-col items-center justify-center gap-1 rounded-xl bg-[#101828] px-2 text-white",
+              "relative flex w-full flex-col items-center justify-center gap-1 rounded-xl bg-[#101828] px-2 text-white",
+              grid.tileH > 0 ? "h-full" : "aspect-video",
               speakersAfter.length > 0 && "ring-2 ring-inset ring-primary",
             )}
           >
+            {handsAfter.length > 0 ? (
+              <span className="absolute right-2.5 top-2.5 flex size-[26px] items-center justify-center rounded-full bg-warning text-warning-foreground">
+                <Hand className="size-3.5" aria-label={`Подняли руку: ${handsAfter.length}`} />
+              </span>
+            ) : null}
             <span className="text-[22px] font-black tracking-[-.025em]">+{moreCount}</span>
             {speakersAfter.length > 0 ? (
               <span className="inline-flex max-w-full items-center gap-1 text-xs font-semibold text-white">
@@ -601,6 +649,57 @@ export function RoomVideoGrid({
         ) : null}
       </div>
     </div>
+  );
+}
+
+/**
+ * Сколько плитки может остаться пустым, чтобы видео ещё обрезалось по ней
+ * (`cover`); больше — показываем кадр целиком (`contain`) поверх заглушки.
+ * Портретная камера телефона в плитке 16:9 иначе теряет лоб и подбородок.
+ * Порог как в Толке (§5.4 разбора сетки).
+ */
+const COVER_MAX_EMPTY = 0.3;
+
+/** Видео плитки: `cover` или `contain` по пропорции кадра и плитки. */
+function TileVideo({
+  trackRef,
+  className,
+  onLoadedData,
+}: {
+  trackRef: React.ComponentProps<typeof VideoTrack>["trackRef"];
+  className?: string;
+  onLoadedData?: () => void;
+}) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [contain, setContain] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => {
+      const { videoWidth: vw, videoHeight: vh, clientWidth: bw, clientHeight: bh } = el;
+      if (!vw || !vh || !bw || !bh) return;
+      const vr = vw / vh;
+      const br = bw / bh;
+      setContain(1 - Math.min(vr / br, br / vr) > COVER_MAX_EMPTY);
+    };
+    update();
+    el.addEventListener("resize", update);
+    el.addEventListener("loadedmetadata", update);
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("resize", update);
+      el.removeEventListener("loadedmetadata", update);
+      ro.disconnect();
+    };
+  }, []);
+  return (
+    <VideoTrack
+      ref={ref}
+      trackRef={trackRef}
+      onLoadedData={onLoadedData}
+      className={cn(className, contain ? "object-contain" : "object-cover")}
+    />
   );
 }
 
