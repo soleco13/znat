@@ -16,7 +16,12 @@ export function sanitizeClientFields(
 }
 
 function levelFor(event: ClientEvent["event"]): "info" | "warn" {
-  return event.endsWith("_failed") || event === "client_error" || event === "livekit_reconnecting" ? "warn" : "info";
+  return event.endsWith("_failed") ||
+    event === "client_error" ||
+    event === "livekit_reconnecting" ||
+    event === "livekit_connect_slow"
+    ? "warn"
+    : "info";
 }
 
 /**

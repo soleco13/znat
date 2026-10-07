@@ -14,6 +14,12 @@ export const CLIENT_EVENT_NAMES = [
   "livekit_reconnecting",
   "livekit_reconnected",
   "livekit_disconnected",
+  /** Подключение к LiveKit висит дольше 15 с (ICE/DTLS не сошлись) — до ошибки или успеха. */
+  "livekit_connect_slow",
+  /** Выбранная пара ICE: host/srflx/relay, udp/tcp/tls — при подключении и при смене. */
+  "media_path",
+  /** Раз в минуту: отправка своей камеры (fps/высота/ограничение) и заморозки приёма. */
+  "media_quality",
   "websocket_disconnected",
   "websocket_reconnect",
   "whiteboard_sync_started",

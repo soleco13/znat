@@ -54,7 +54,7 @@
     "dompurify": "^3.2.3",
     "embla-carousel-react": "^8.6.0",
     "katex": "^0.18.5",
-    "livekit-client": "^2.22.0",
+    "livekit-client": "^2.22.3",
     "lucide-react": "^1.41.0",
     "mathlive": "^0.110.0",
     "pdfjs-dist": "^4.10.38",
