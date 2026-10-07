@@ -184,7 +184,14 @@ export function buildServer() {
       preCompressed: true,
       setHeaders(res, filePath) {
         const immutable = filePath.startsWith(path.join(webDistDir, "assets") + path.sep);
-        res.setHeader("Cache-Control", immutable ? "public, max-age=31536000, immutable" : "no-cache");
+        // Шрифты Excalidraw (`public/fonts`) меняются только с версией
+        // Excalidraw, но часть имён без хеша (Virgil-Regular.woff2) — поэтому
+        // не immutable, а сутки: без перепроверки (304) каждого файла в каждом заходе.
+        const font = filePath.startsWith(path.join(webDistDir, "fonts") + path.sep);
+        res.setHeader(
+          "Cache-Control",
+          immutable ? "public, max-age=31536000, immutable" : font ? "public, max-age=86400" : "no-cache",
+        );
         // Один адрес — разные тела (brotli / без сжатия): кэши должны это различать.
         res.setHeader("Vary", "Accept-Encoding");
       },

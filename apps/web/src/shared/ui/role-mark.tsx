@@ -5,8 +5,8 @@ import { useId, type CSSProperties } from "react";
  * бирюзового и сланцевого: тёмные (--c-primary-hover, --c-teal и их ступени,
  * --c-text-2) с белым знаком и пастельные (--c-primary-light,
  * --c-primary-muted, --c-teal-light, --c-surface-3) со знаком в тон. Цвет
- * закреплён за id: у человека он одинаков везде — в плитке урока, списке
- * участников, шапке.
+ * закреплён за ключом участника (`participantColorKey`): у человека он
+ * одинаков везде — в плитке урока, списке участников, шапке.
  */
 const TINTS: ReadonlyArray<{ bg: string; fg: string }> = [
   { bg: "#1e40af", fg: "#ffffff" },
@@ -21,10 +21,31 @@ const TINTS: ReadonlyArray<{ bg: string; fg: string }> = [
   { bg: "#f0f2f5", fg: "#475467" },
 ];
 
-export function tintOf(id: string) {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-  return TINTS[Math.abs(h) % TINTS.length]!;
+/** Цвет по ключу участника (`participantColorKey`). FNV-1a: ровнее раскладывает короткие ключи с общим префиксом. */
+export function tintOf(key: string) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return TINTS[(h >>> 0) % TINTS.length]!;
+}
+
+function normalizeName(name: string): string {
+  return name.trim().toLowerCase().replace(/ё/g, "е").replace(/\s+/g, " ");
+}
+
+/**
+ * Устойчивый ключ цвета участника. У гостя `guestId` новый при каждом входе
+ * по ссылке (другое устройство, потерянная кука), поэтому ключ — урок и
+ * введённое имя: после повторного входа цвет тот же. У сотрудника — id
+ * аккаунта. Один ключ везде: плитка, список участников, прогресс класса.
+ */
+export function participantColorKey(
+  p: { kind: "staff" | "guest"; userId: string; fullName: string },
+  lessonId: string | undefined,
+): string {
+  return p.kind === "guest" ? `guest:${lessonId ?? ""}:${normalizeName(p.fullName)}` : p.userId;
 }
 
 export type MarkRole = "student" | "teacher" | "admin";

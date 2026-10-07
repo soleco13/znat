@@ -38,6 +38,7 @@ export function SelfMicButton({
         });
       }}
       caption="Микрофон"
+      hotkey="M"
       disabled={disabled}
       title={disabled ? disabledReason : undefined}
       variant={variant}

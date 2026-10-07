@@ -12,7 +12,6 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/
 import { StatusScreen } from "@/shared/ui/status-screen";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
-import { prefetchLessonStage } from "@/features/room/lazy-stage";
 import { warmChunk } from "@/shared/chunk-warmup";
 import { enterGuestLesson, fetchGuestLessonInfo } from "./guest-api.js";
 import { useGuestSessionStore } from "./guest-session-store.js";
@@ -95,11 +94,13 @@ export function GuestJoinPage() {
     };
   }, [token, navigate]);
 
-  // Пока ученик вводит имя, в фоне качаем урок, а за ним — доску и задания.
-  // Именно по очереди: параллельно доска (~725 КБ) делила бы медленный канал
-  // с уроком (~350 КБ), и урок открывался бы позже.
+  // Пока ученик вводит имя, в фоне качаем только сам урок (страница урока,
+  // LiveKit). Доску и задания — уже в уроке, после подключения звука и видео
+  // (`RoomPage`): на медленной сети их ~575 КБ делили канал со входом и
+  // стартом медиа — на 3G вход по «Войти» шёл 4–6 с вместо ~2 с (замер
+  // 2026-10-05). Если доска или задание уже на экране, их кусок грузится сразу.
   useEffect(() => {
-    void prefetchRoom().finally(() => prefetchLessonStage());
+    void prefetchRoom();
   }, []);
 
   const [name, setName] = useState("");

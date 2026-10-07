@@ -1,9 +1,46 @@
+import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { defineConfig } from "vite";
+import { brotliCompressSync, constants as zlibConstants } from "node:zlib";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 
+/**
+ * Brotli-копии рядом с файлами сборки (`*.br`) — Caddy отдаёт их браузерам с
+ * brotli (`file_server { precompressed br }`, корневой Caddyfile): сам Caddy
+ * сжимает на лету только gzip/zstd. Тот же приём, что у приложения
+ * (`apps/web/vite.config.ts`).
+ */
+function brotliAssets(): Plugin {
+  let outDir = "";
+  return {
+    name: "brotli-assets",
+    apply: "build",
+    configResolved(config) {
+      outDir = config.build.outDir;
+    },
+    closeBundle() {
+      const walk = (dir: string) => {
+        for (const name of readdirSync(dir)) {
+          const file = join(dir, name);
+          if (statSync(file).isDirectory()) {
+            walk(file);
+            continue;
+          }
+          if (!/\.(js|css|html|json|svg|mjs)$/.test(name) || statSync(file).size < 1024) continue;
+          const compressed = brotliCompressSync(readFileSync(file), {
+            params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 11 },
+          });
+          writeFileSync(`${file}.br`, compressed);
+        }
+      };
+      walk(outDir);
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), brotliAssets()],
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },

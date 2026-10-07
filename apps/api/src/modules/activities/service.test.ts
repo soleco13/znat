@@ -16,6 +16,7 @@ const {
     listActivitiesByLesson: vi.fn(),
     maxAttemptNumber: vi.fn(),
     findResponsesByAttempt: vi.fn(),
+    findManualGradesByAttempt: vi.fn(),
     upsertDraftResponse: vi.fn(),
     answeredStatsByActivity: vi.fn(),
     listResponsesByActivity: vi.fn(),
@@ -178,6 +179,7 @@ beforeEach(() => {
   repoMock.findActivityById.mockResolvedValue(activityRow);
   repoMock.maxAttemptNumber.mockResolvedValue(0);
   repoMock.findResponsesByAttempt.mockResolvedValue([]);
+  repoMock.findManualGradesByAttempt.mockResolvedValue([]);
   repoMock.upsertDraftResponse.mockResolvedValue(new Date("2026-09-04T09:31:00.000Z"));
   repoMock.answeredStatsByActivity.mockResolvedValue([]);
   repoMock.listResponsesByActivity.mockResolvedValue([]);
@@ -243,6 +245,34 @@ describe("createActivity (Э8.6 → Э12.5)", () => {
       statusCode: 403,
     });
     expect(repoMock.insertActivity).not.toHaveBeenCalled();
+  });
+});
+
+describe("getMyActivity — итог ручной проверки", () => {
+  const grade = { questionId: "q1", score: 1, comment: "Молодец, но проверь единицы", gradedAt: new Date("2026-09-04T10:00:00.000Z") };
+
+  it("после сдачи отдаёт баллы и комментарий учителя по вопросу", async () => {
+    repoMock.attemptSubmittedAt.mockResolvedValue(new Date("2026-09-04T09:45:00.000Z"));
+    repoMock.findManualGradesByAttempt.mockResolvedValue([grade]);
+    const my = await getMyActivity(guestA, ACTIVITY);
+    expect(my.teacherFeedback).toEqual([
+      { questionId: "q1", score: 1, maxScore: 1, comment: "Молодец, но проверь единицы", gradedAt: "2026-09-04T10:00:00.000Z" },
+    ]);
+  });
+
+  it("до сдачи не запрашивает и не отдаёт", async () => {
+    repoMock.findManualGradesByAttempt.mockResolvedValue([grade]);
+    const my = await getMyActivity(guestA, ACTIVITY);
+    expect(my.teacherFeedback).toEqual([]);
+    expect(repoMock.findManualGradesByAttempt).not.toHaveBeenCalled();
+  });
+
+  it("результаты скрыты учителем (revealResults: false) — не отдаёт", async () => {
+    repoMock.findActivityById.mockResolvedValue({ ...activityRow, revealResults: false });
+    repoMock.attemptSubmittedAt.mockResolvedValue(new Date("2026-09-04T09:45:00.000Z"));
+    repoMock.findManualGradesByAttempt.mockResolvedValue([grade]);
+    const my = await getMyActivity(guestA, ACTIVITY);
+    expect(my.teacherFeedback).toEqual([]);
   });
 });
 
@@ -1038,6 +1068,8 @@ describe("getGradingQueue (Э8.12, §8 ТЗ: GET /grading/queue)", () => {
 describe("gradeManualResponse (Э8.12, §8 ТЗ: POST /grading/:responseId)", () => {
   const target = {
     id: "resp-1",
+    activityId: ACTIVITY,
+    lessonId: LESSON,
     assignedBy: TEACHER,
     schoolId: SCHOOL,
     materialVersionId: VERSION,
@@ -1070,6 +1102,11 @@ describe("gradeManualResponse (Э8.12, §8 ТЗ: POST /grading/:responseId)", ()
       gradedBy: TEACHER,
     });
     expect(result).toEqual({ responseId: "resp-1", score: 1.5, maxScore: 2, gradedAt: "2026-09-04T09:50:00.000Z" });
+    // Ученику — только сигнал перечитать задание, без баллов и текста в канале урока.
+    expect(roomsServiceMock.broadcastToLesson).toHaveBeenCalledWith(LESSON, {
+      type: "activity_graded",
+      activityId: ACTIVITY,
+    });
   });
 
   it("не учитель/админ — 403", async () => {
@@ -1080,6 +1117,14 @@ describe("gradeManualResponse (Э8.12, §8 ТЗ: POST /grading/:responseId)", ()
       }),
     ).rejects.toMatchObject({ statusCode: 403 });
     expect(repoMock.persistManualGrade).not.toHaveBeenCalled();
+  });
+
+  it("проверка не прошла (уже проверен параллельно) — сигнала нет", async () => {
+    repoMock.persistManualGrade.mockResolvedValue(null);
+    await expect(
+      gradeManualResponse(teacher, "resp-1", { score: 1, rubricScores: {} }),
+    ).rejects.toMatchObject({ statusCode: 409 });
+    expect(roomsServiceMock.broadcastToLesson).not.toHaveBeenCalled();
   });
 
   it("ответ не найден / чужая школа — 404", async () => {

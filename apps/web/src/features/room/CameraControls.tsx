@@ -67,6 +67,8 @@ export function SelfCameraButton({
         });
       }}
       caption="Камера"
+      tone="quiet"
+      hotkey="V"
       disabled={disabled}
       title={disabled ? disabledReason : undefined}
       variant={variant}

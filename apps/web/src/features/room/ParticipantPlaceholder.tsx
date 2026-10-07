@@ -17,12 +17,15 @@ const PAD: Record<Size, string> = { lg: "py-9", md: "py-8", sm: "py-7", xs: "py-
 /** Плитка участника с выключенной камерой: его цвет и знак «Матис» по роли. */
 export function ParticipantPlaceholder({
   participant,
+  colorKey,
   size,
 }: {
-  participant: Pick<ParticipantSnapshot, "userId" | "kind" | "role">;
+  participant: Pick<ParticipantSnapshot, "kind" | "role">;
+  /** `participantColorKey` — цвет не меняется после повторного входа гостя. */
+  colorKey: string;
   size: Size;
 }) {
-  const tint = tintOf(participant.userId);
+  const tint = tintOf(colorKey);
   return (
     <span
       className={cn(

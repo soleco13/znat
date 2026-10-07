@@ -1,0 +1,47 @@
+[
+ {
+  "label": "classroom",
+  "url": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room",
+  "profile": "3g",
+  "m": {
+   "dcl": 2217,
+   "load": 2219,
+   "fcp": 2280,
+   "lcp": 7088,
+   "tbt": 15,
+   "longtasks": 1,
+   "ttiApprox": 7060,
+   "heap": 9
+  },
+  "n": 117,
+  "extra": {
+   "prejoinMs": 7219,
+   "inRoom": true,
+   "roomMs": 901,
+   "boardMs": null,
+   "wall": 24656
+  }
+ },
+ {
+  "label": "student-fastjoin",
+  "url": "/j/<token>",
+  "profile": "3g",
+  "m": {
+   "dcl": 2287,
+   "load": 2289,
+   "fcp": 2392,
+   "lcp": 2796,
+   "tbt": 12,
+   "longtasks": 2,
+   "ttiApprox": 2783,
+   "heap": 3
+  },
+  "n": 116,
+  "extra": {
+   "formMs": 2906,
+   "inRoom": true,
+   "roomMs": 4311,
+   "wall": 19877
+  }
+ }
+]

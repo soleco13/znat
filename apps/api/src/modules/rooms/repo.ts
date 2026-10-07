@@ -210,6 +210,7 @@ export async function listChatMessages(lessonId: string, before: Date | undefine
       id: chatMessages.id,
       lessonId: chatMessages.lessonId,
       userId: chatMessages.userId,
+      guestId: chatMessages.guestId,
       body: chatMessages.body,
       createdAt: chatMessages.createdAt,
       // Э12.4: имя автора — денормализованное `author_name` (обязательно у

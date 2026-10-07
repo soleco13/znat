@@ -30,6 +30,21 @@
 	header @user_files Content-Security-Policy "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'; sandbox"
 }
 
+# Политика статики (аудит веса страниц 2026-10-05):
+#  - карты исходников (*.map) наружу не отдаются: в них весь исходник
+#    фронтенда с комментариями. Новые сборки их и не публикуют (Dockerfile),
+#    правило закрывает и карты прошлых сборок в архиве /assets/.
+#  - лендинг: ассеты с хешем в имени — навсегда (immutable), сама страница —
+#    всегда перепроверять (иначе после выкладки браузер держал бы старую).
+(static_policy) {
+	@sourcemaps path *.map
+	respond @sourcemaps 404
+	@landing_assets path /landing/assets/*
+	header @landing_assets Cache-Control "public, max-age=31536000, immutable"
+	@landing_page path /
+	header @landing_page Cache-Control "no-cache"
+}
+
 # Файлы /files/* (слайды, картинки, MP4 записей) отдаёт Caddy, а не Node:
 # приложение проверяет HMAC-подпись ссылки и отвечает пустым телом с
 # заголовком X-Accel-Redirect (FILES_VIA_PROXY=true), Caddy берёт файл с
@@ -38,6 +53,7 @@
 # upstream, а не запрос.
 (app_proxy) {
 	import security_headers
+	import static_policy
 
 	reverse_proxy app:3000 {
 		@accel header X-Accel-Redirect *
@@ -47,7 +63,10 @@
 			file_server
 		}
 	}
-	encode gzip
+	# zstd — браузерам, которые его понимают (Chrome, Edge, Firefox), gzip —
+	# остальным. Brotli на лету штатный Caddy не умеет; статика приложения и
+	# лендинга уже лежит brotli-копиями и сюда не пережимается.
+	encode zstd gzip
 
 	@files path /files/*
 	header @files Cache-Control "private, max-age=3600"
@@ -64,11 +83,17 @@
 	# Лендинг — см. подробный комментарий в https-блоке ниже, тот же приём.
 	handle / {
 		root * /srv/landing
-		file_server
+		# Рядом с файлами лендинга — brotli-копии (*.br, сборка landing/).
+		file_server {
+			precompressed br
+		}
 	}
 	handle_path /landing/* {
 		root * /srv/landing
-		file_server
+		# Рядом с файлами лендинга — brotli-копии (*.br, сборка landing/).
+		file_server {
+			precompressed br
+		}
 	}
 
 	import app_proxy
@@ -121,11 +146,17 @@ https://213.21.241.28 {
 	# их с base "/landing/"), чтобы не столкнуться с /assets/* приложения.
 	handle / {
 		root * /srv/landing
-		file_server
+		# Рядом с файлами лендинга — brotli-копии (*.br, сборка landing/).
+		file_server {
+			precompressed br
+		}
 	}
 	handle_path /landing/* {
 		root * /srv/landing
-		file_server
+		# Рядом с файлами лендинга — brotli-копии (*.br, сборка landing/).
+		file_server {
+			precompressed br
+		}
 	}
 
 	import app_proxy

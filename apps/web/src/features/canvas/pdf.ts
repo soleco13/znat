@@ -8,10 +8,28 @@
  * и отдаём pdf.js как `data`: наш `/files/*` не поддерживает Range-запросы,
  * а pdf.js по URL пытается качать диапазонами.
  */
-import * as pdfjs from "pdfjs-dist";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?worker";
+import { warmChunk } from "../../shared/chunk-warmup.js";
 import { errorFields, track } from "../../shared/telemetry.js";
+
+/**
+ * Сам pdf.js (~360 КБ) — отдельным куском, только когда на уроке есть
+ * PDF-презентация: раньше он входил в кусок доски и качался в каждый урок.
+ * Перед `import()` файлы докачиваются с повторами (`warmChunk`): оборванный
+ * `import()` браузер запоминает до перезагрузки страницы. Неудачная загрузка
+ * не кэшируется — следующий слайд попробует снова.
+ */
+let pdfjsModule: Promise<typeof import("pdfjs-dist")> | null = null;
+function loadPdfjs(): Promise<typeof import("pdfjs-dist")> {
+  pdfjsModule ??= warmChunk("pdfjs-dist/build/pdf.mjs")
+    .then(() => import("pdfjs-dist"))
+    .catch((err: unknown) => {
+      pdfjsModule = null;
+      throw err;
+    });
+  return pdfjsModule;
+}
 
 /** Одна презентация парсится один раз — миниатюры и полноразмерный слайд делят документ. */
 const docCache = new Map<string, Promise<PDFDocumentProxy>>();
@@ -19,13 +37,13 @@ const docCache = new Map<string, Promise<PDFDocumentProxy>>();
 function loadPdf(url: string): Promise<PDFDocumentProxy> {
   let doc = docCache.get(url);
   if (!doc) {
-    // Воркер (1,3 МБ) — только при первом PDF, а не при каждом открытии доски:
-    // модуль входит в кусок доски, а PDF-презентации на уроке бывают редко.
-    pdfjs.GlobalWorkerOptions.workerPort ??= new PdfWorker();
     // В событие — только имя файла: подпись ссылки (`sig`) — пропуск к файлу.
     const file = url.split("?")[0]?.split("/").pop() ?? null;
     const started = Date.now();
     track("pdf_load_started", { file });
+    // pdf.js качается параллельно с самим файлом, а не после него.
+    const pdfjsReady = loadPdfjs();
+    void pdfjsReady.catch(() => undefined);
     doc = (async () => {
       let stage = "fetch";
       let status: number | null = null;
@@ -34,6 +52,10 @@ function loadPdf(url: string): Promise<PDFDocumentProxy> {
         status = res.status;
         if (!res.ok) throw new Error(`PDF ${res.status}`);
         const buf = await res.arrayBuffer();
+        stage = "pdfjs";
+        const pdfjs = await pdfjsReady;
+        // Воркер (1,3 МБ) — только при первом PDF, а не при каждом открытии доски.
+        pdfjs.GlobalWorkerOptions.workerPort ??= new PdfWorker();
         stage = "parse";
         const pdf = await pdfjs.getDocument({ data: new Uint8Array(buf) }).promise;
         track("pdf_loaded", { file, durationMs: Date.now() - started, pages: pdf.numPages, bytes: buf.byteLength });

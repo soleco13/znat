@@ -37,11 +37,14 @@ export function ActivityPlayer({
   annotationOverlay,
   showHead,
   barEnd,
+  gradedSignal = 0,
 }: {
   activityId: string;
   annotationOverlay?: React.ReactNode;
   showHead?: boolean;
   barEnd?: React.ReactNode;
+  /** Учитель вручную проверил ответ (`activity_graded`) — перечитать итог проверки. */
+  gradedSignal?: number;
 }) {
   const [activity, setActivity] = useState<MyActivity | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -77,6 +80,21 @@ export function ActivityPlayer({
       if (retryTimer) clearTimeout(retryTimer);
     };
   }, [activityId, loadKey]);
+
+  // Итог ручной проверки — тихо, без перезагрузки плеера: ответы и позиция
+  // ученика не трогаются, обновляются только баллы и комментарий учителя.
+  useEffect(() => {
+    if (gradedSignal === 0) return;
+    let cancelled = false;
+    getMyActivity(activityId)
+      .then((data) => {
+        if (!cancelled) setActivity((prev) => (prev ? { ...prev, teacherFeedback: data.teacherFeedback } : prev));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [activityId, gradedSignal]);
 
   // Сеть вернулась — попробовать снова, не дожидаясь клика.
   useEffect(() => {

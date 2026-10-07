@@ -22,6 +22,13 @@ const STALE_AFTER_MS = 50_000;
 const CONNECT_TIMEOUT_MS = 20_000;
 const CONNECT_TIMEOUT_MAX_MS = 60_000;
 const STALE_CHECK_MS = 5_000;
+/**
+ * Браузер сообщил о возврате сети (`online`): не ждём остаток бэкоффа (до
+ * 16 с), подключаемся сразу — но не чаще раза в этот срок, чтобы мигающая
+ * сеть не устроила шторм подключений. `online` не гарантирует рабочий
+ * интернет: неудачная попытка просто вернёт обычный бэкофф.
+ */
+const ONLINE_RETRY_MIN_GAP_MS = 5_000;
 /** Сервер закрывает так сокет участника, которого нет в комнате (`rooms/ws.ts`). */
 const NOT_JOINED_CLOSE_CODE = 4003;
 /** Учитель удалил участника из урока — переподключаться незачем. */
@@ -76,12 +83,31 @@ export function useRoomSocket(
     let connectingSince = 0;
     /** Сколько подключений подряд брошено по таймауту — от этого растёт срок. */
     let connectTimeouts = 0;
+    let lastCloseCode = 0;
+    let wentOffline = false;
+    let lastOnlineRetryAt = 0;
+    /** Идёт получение токена перед подключением — второй `connect` не начинаем. */
+    let tokenInFlight = false;
+    /**
+     * Соединение уже открывалось — дальше это переподключение, а не первое
+     * подключение, даже если счётчик попыток сброшен (`online`, зависшая
+     * попытка). Иначе метка показывала «Подключение…», а оверлей «Связь
+     * прервалась» (только для переподключения) не появлялся вовсе.
+     */
+    let everOpened = false;
     const report = mode !== "recorder";
 
     const connect = async () => {
+      // Уже есть живое или подключающееся соединение (например, `online`
+      // переподключил раньше отложенного таймера) — второе не открываем:
+      // сервер держит ограниченное число сокетов на личность.
+      if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
+      if (tokenInFlight) return;
       let tokenParam = "";
       if (mode === "staff") {
+        tokenInFlight = true;
         const token = await getFreshAccessToken().catch(() => null);
+        tokenInFlight = false;
         if (stopped) return;
         if (!token) {
           setStatus("reconnecting");
@@ -100,7 +126,7 @@ export function useRoomSocket(
       const protocol = location.protocol === "https:" ? "wss:" : "ws:";
       const correlation = `&cs=${encodeURIComponent(clientSessionId)}&attempt=${connects}`;
       const url = `${protocol}//${location.host}/ws?lessonId=${encodeURIComponent(lessonId)}${tokenParam}${correlation}`;
-      setStatus(attempt === 0 ? "connecting" : "reconnecting");
+      setStatus(attempt === 0 && !everOpened ? "connecting" : "reconnecting");
       connects += 1;
       openedAt = 0;
       const current = new WebSocket(url);
@@ -108,6 +134,7 @@ export function useRoomSocket(
       connectingSince = Date.now();
 
       current.onopen = () => {
+        everOpened = true;
         connectTimeouts = 0;
         openedAt = Date.now();
         lastMessageAt = Date.now();
@@ -129,6 +156,7 @@ export function useRoomSocket(
       };
       current.onclose = (event) => {
         if (stopped || current !== socket) return;
+        lastCloseCode = event.code;
         if (report) {
           track("websocket_disconnected", {
             channel: "room",
@@ -199,8 +227,39 @@ export function useRoomSocket(
       reconnectTimer = setTimeout(connect, 0);
     }, STALE_CHECK_MS);
 
+    const onOffline = () => {
+      wentOffline = true;
+    };
+    const onOnline = () => {
+      const offlineBefore = wentOffline;
+      wentOffline = false;
+      if (stopped || Date.now() - lastOnlineRetryAt < ONLINE_RETRY_MIN_GAP_MS) return;
+      // Вытеснены другой вкладкой — ждём, как и раньше, иначе вкладки выбивают друг друга.
+      if (lastCloseCode === SUPERSEDED_CLOSE_CODE && !socket) return;
+      const current = socket;
+      const waiting = !current || current.readyState === WebSocket.CLOSED || current.readyState === WebSocket.CLOSING;
+      // Сокет «открыт», но сеть пропадала, а сообщений давно не было, — TCP,
+      // скорее всего, уже мёртв; не ждём 50 с тишины.
+      const suspect =
+        offlineBefore && current?.readyState === WebSocket.OPEN && Date.now() - lastMessageAt > STALE_CHECK_MS;
+      if (!waiting && !suspect) return;
+      lastOnlineRetryAt = Date.now();
+      if (suspect && current) {
+        socket = null;
+        current.close(4000, "online");
+      }
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      attempt = 0;
+      setStatus("reconnecting");
+      reconnectTimer = setTimeout(connect, 0);
+    };
+    window.addEventListener("offline", onOffline);
+    window.addEventListener("online", onOnline);
+
     return () => {
       stopped = true;
+      window.removeEventListener("offline", onOffline);
+      window.removeEventListener("online", onOnline);
       clearInterval(staleTimer);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       socket?.close();

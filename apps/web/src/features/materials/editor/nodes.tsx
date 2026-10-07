@@ -29,7 +29,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { SimpleTooltip } from "@/shared/ui/tooltip";
 import { CONTENT_BLOCK_LABELS } from "../block-factories.js";
-import { FormulaEditor } from "../FormulaEditor.js";
+import { FormulaEditor } from "../LazyFormulaEditor.js";
 import { ContentBlockFields } from "./block-fields.js";
 import { QuestionView } from "./question-view.js";
 

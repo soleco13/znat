@@ -1043,6 +1043,76 @@ describe("мьют микрофонов учителем (Э2.5)", () => {
   });
 });
 
+describe("очередь поднятых рук", () => {
+  async function events(run: () => Promise<void>): Promise<unknown[]> {
+    const got: unknown[] = [];
+    const listener = (m: unknown) => got.push(m);
+    roomEvents.on(LESSON_ID, listener);
+    try {
+      await run();
+    } finally {
+      roomEvents.off(LESSON_ID, listener);
+    }
+    return got;
+  }
+
+  it("время подъёма уходит в снимок и событие; повторный подъём не сдвигает в конец", async () => {
+    await roomsService.join(guestActor(STUDENT_ID), LESSON_ID);
+    await roomsService.setHandRaised(guestActor(STUDENT_ID), LESSON_ID, true);
+    const first = (await roomsService.listParticipantsSnapshot(LESSON_ID)).find((p) => p.userId === STUDENT_ID)!;
+    expect(first.handRaisedAt).toEqual(expect.any(String));
+
+    const got = await events(() => roomsService.setHandRaised(guestActor(STUDENT_ID), LESSON_ID, true));
+    expect(got).toContainEqual({ type: "hand_raised", userId: STUDENT_ID, raised: true, raisedAt: first.handRaisedAt });
+
+    await roomsService.setHandRaised(guestActor(STUDENT_ID), LESSON_ID, false);
+    const lowered = (await roomsService.listParticipantsSnapshot(LESSON_ID)).find((p) => p.userId === STUDENT_ID)!;
+    expect(lowered.handRaisedAt).toBeNull();
+  });
+
+  it("учитель опускает все руки; ученик так не может", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    await roomsService.join(guestActor(STUDENT_ID), LESSON_ID);
+    await roomsService.join(guestActor(OTHER_STUDENT_ID), LESSON_ID);
+    await roomsService.setHandRaised(guestActor(STUDENT_ID), LESSON_ID, true);
+    await roomsService.setHandRaised(guestActor(OTHER_STUDENT_ID), LESSON_ID, true);
+
+    await expect(roomsService.lowerHands(SCHOOL_ID, LESSON_ID, studentToken())).rejects.toMatchObject({ statusCode: 403 });
+
+    const got = await events(() => roomsService.lowerHands(SCHOOL_ID, LESSON_ID, teacherToken()));
+    expect(got).toContainEqual({ type: "hand_raised", userId: STUDENT_ID, raised: false, raisedAt: null });
+    expect(got).toContainEqual({ type: "hand_raised", userId: OTHER_STUDENT_ID, raised: false, raisedAt: null });
+    const snapshot = await roomsService.listParticipantsSnapshot(LESSON_ID);
+    expect(snapshot.every((p) => !p.handRaised)).toBe(true);
+  });
+
+  it("учитель опускает руку одному ученику — у другого остаётся", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    await roomsService.join(guestActor(STUDENT_ID), LESSON_ID);
+    await roomsService.join(guestActor(OTHER_STUDENT_ID), LESSON_ID);
+    await roomsService.setHandRaised(guestActor(STUDENT_ID), LESSON_ID, true);
+    await roomsService.setHandRaised(guestActor(OTHER_STUDENT_ID), LESSON_ID, true);
+
+    await roomsService.lowerHands(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID);
+    const snapshot = await roomsService.listParticipantsSnapshot(LESSON_ID);
+    expect(snapshot.find((p) => p.userId === STUDENT_ID)?.handRaised).toBe(false);
+    expect(snapshot.find((p) => p.userId === OTHER_STUDENT_ID)?.handRaised).toBe(true);
+  });
+
+  it("мьют учителем сообщает заглушённым, что это сделал учитель", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    await roomsService.join(guestActor(STUDENT_ID), LESSON_ID);
+    await roomsService.join(guestActor(OTHER_STUDENT_ID), LESSON_ID);
+
+    const one = await events(() => roomsService.muteParticipantNow(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID));
+    expect(one).toContainEqual({ type: "microphones_muted", userIds: [STUDENT_ID] });
+
+    const all = await events(() => roomsService.muteAllNow(SCHOOL_ID, LESSON_ID, teacherToken()));
+    const msg = all.find((m) => (m as { type: string }).type === "microphones_muted") as { userIds: string[] };
+    expect(new Set(msg.userIds)).toEqual(new Set([STUDENT_ID, OTHER_STUDENT_ID]));
+  });
+});
+
 describe("закрепление в сетке видео (Э6.3)", () => {
   it("только учитель этого урока (или админ) может закреплять участников", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());

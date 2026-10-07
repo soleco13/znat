@@ -159,7 +159,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
                   aria-label="Аккаунт"
                   className="flex w-full items-center justify-center gap-2.5 rounded-md p-1.5 text-left transition-colors duration-150 ease-ds hover:bg-secondary lg:justify-start"
                 >
-                  <UserAvatar id={user.id} role={markRoleOf("staff", user.role)} size={36} />
+                  <UserAvatar colorKey={user.id} role={markRoleOf("staff", user.role)} size={36} />
                   <span className="hidden min-w-0 flex-1 flex-col leading-tight lg:flex">
                     <span className="truncate text-sm font-semibold text-foreground">{user.fullName}</span>
                     <span className="text-xs text-muted-foreground">Учитель</span>
@@ -181,7 +181,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
           {user ? (
             <AccountMenu onLogout={() => void logout()} side="bottom">
               <button type="button" className="rounded-full" aria-label="Аккаунт">
-                <UserAvatar id={user.id} role={markRoleOf("staff", user.role)} size={34} />
+                <UserAvatar colorKey={user.id} role={markRoleOf("staff", user.role)} size={34} />
               </button>
             </AccountMenu>
           ) : null}

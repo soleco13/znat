@@ -16,7 +16,6 @@ import type {
   MaterialValidationIssue,
   MaterialVersionSummary,
   QuestionResponse,
-  ShowFeedback,
 } from "@school/shared";
 import { paginateMaterial, stripMaterialAnswerKeys } from "@school/shared";
 import { cn } from "@/lib/utils";
@@ -35,7 +34,6 @@ import {
 } from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
-import { Switch } from "@/shared/ui/switch";
 import {
   Select,
   SelectContent,
@@ -839,13 +837,6 @@ function ValidationButton({
   );
 }
 
-const SHOW_FEEDBACK_LABELS: Record<ShowFeedback, string> = {
-  never: "Не показывать",
-  immediate: "Сразу после ответа",
-  after_submit: "После сдачи работы",
-  after_deadline: "После дедлайна",
-};
-
 const LAYOUT_LABELS: Record<MaterialLayout, string> = {
   slides: "Слайдами",
   scroll: "Одной страницей",
@@ -887,40 +878,11 @@ function SettingsMenu({
             </SelectContent>
           </Select>
         </label>
-        <label className="flex items-center justify-between gap-2 text-sm">
-          Перемешивать блоки
-          <Switch
-            checked={settings.shuffleBlocks}
-            onCheckedChange={(checked) => onChange({ shuffleBlocks: checked })}
-          />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <FieldLabel>Показ обратной связи</FieldLabel>
-          <Select
-            value={settings.showFeedback}
-            onValueChange={(v) => onChange({ showFeedback: v as ShowFeedback })}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(SHOW_FEEDBACK_LABELS) as ShowFeedback[]).map((k) => (
-                <SelectItem key={k} value={k}>
-                  {SHOW_FEEDBACK_LABELS[k]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <FieldLabel>Число попыток</FieldLabel>
-          <Input
-            type="number"
-            min={1}
-            value={settings.attemptsAllowed}
-            onChange={(e) => onChange({ attemptsAllowed: Math.max(1, Number(e.target.value) || 1) })}
-          />
-        </label>
+        {/* «Перемешивать блоки», «Показ обратной связи» и «Число попыток» скрыты:
+            поля есть в схеме материала (settings.shuffleBlocks / showFeedback /
+            attemptsAllowed) и сохраняются, но задание их пока не применяет —
+            сдача одна, порядок блоков и обратная связь общие. Вернуть
+            переключатели вместе с реализацией в activities/service.ts. */}
       </PopoverContent>
     </Popover>
   );

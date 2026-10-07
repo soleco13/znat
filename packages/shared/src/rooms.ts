@@ -33,6 +33,8 @@ export const participantSnapshotSchema = z.object({
   role: roleSchema.nullable(),
   connected: z.boolean(),
   handRaised: z.boolean(),
+  /** Когда поднята рука (ISO) — порядок очереди рук у учителя. Нет у записей до 2026-10-07. */
+  handRaisedAt: z.string().nullable().optional(),
   /** Э6.3, §5.3 ТЗ: закреплено учителем в видимой сетке видео — ephemeral-состояние, не право (см. participantPermissionsSchema). */
   pinned: z.boolean(),
   permissions: participantPermissionsSchema,
@@ -82,6 +84,8 @@ export const chatMessageSchema = z.object({
   lessonId: z.string().uuid(),
   /** Э12.4: `null` у сообщения гостя-ученика (аккаунта нет) — имя в `authorName`. */
   userId: z.string().uuid().nullable(),
+  /** Идентичность автора на уроке (как `ParticipantSnapshot.userId`): у гостя — `guestId`. Нет у старых клиентов/сообщений. */
+  authorId: z.string().uuid().nullable().optional(),
   authorName: z.string(),
   body: z.string(),
   createdAt: z.string(),
@@ -107,6 +111,10 @@ export type ListChatQuery = z.infer<typeof listChatQuerySchema>;
 
 export const handRaiseRequestSchema = z.object({ raised: z.boolean() });
 export type HandRaiseRequest = z.infer<typeof handRaiseRequestSchema>;
+
+/** Учитель опускает руку одному ученику (`userId`) или всем сразу (без `userId`). */
+export const lowerHandsRequestSchema = z.object({ userId: z.string().uuid().optional() });
+export type LowerHandsRequest = z.infer<typeof lowerHandsRequestSchema>;
 
 /** Э6.3, §5.3 ТЗ: учитель закрепляет ученика в видимой сетке видео. */
 export const pinParticipantRequestSchema = z.object({ pinned: z.boolean() });
@@ -145,7 +153,15 @@ export const serverRoomMessageSchema = z.discriminatedUnion("type", [
     userId: z.string().uuid(),
     permissions: participantPermissionsSchema,
   }),
-  z.object({ type: z.literal("hand_raised"), userId: z.string().uuid(), raised: z.boolean() }),
+  z.object({
+    type: z.literal("hand_raised"),
+    userId: z.string().uuid(),
+    raised: z.boolean(),
+    /** Момент подъёма (ISO) — для порядка очереди; у опущенной руки нет. */
+    raisedAt: z.string().nullable().optional(),
+  }),
+  /** Учитель заглушил микрофоны (одного или всех учеников) — заглушённый узнаёт, что это сделал учитель. */
+  z.object({ type: z.literal("microphones_muted"), userIds: z.array(z.string().uuid()) }),
   z.object({ type: z.literal("participant_pinned"), userId: z.string().uuid(), pinned: z.boolean() }),
   z.object({ type: z.literal("chat_message"), message: chatMessageSchema }),
   z.object({ type: z.literal("lesson_mode"), mode: lessonModeSchema }),
@@ -162,6 +178,9 @@ export const serverRoomMessageSchema = z.discriminatedUnion("type", [
   // материал (с правильными ответами) идёт отдельным HTTP-запросом
   // (`GET /activities/:id/review`), не через этот канал.
   z.object({ type: z.literal("activity_reviewed"), activityId: z.string().uuid() }),
+  // Учитель вручную проверил ответ по заданию — только СИГНАЛ: ученик
+  // перечитывает свою копию (`GET /activities/:id/my`, там баллы и комментарий).
+  z.object({ type: z.literal("activity_graded"), activityId: z.string().uuid() }),
   // Э10.3, §7.9/§10.10 ТЗ (152-ФЗ): идёт ли запись урока прямо сейчас.
   // Сигнал для баннера согласия — его видят ВСЕ участники, включая
   // учеников (которым сам список записей недоступен). Шлётся при

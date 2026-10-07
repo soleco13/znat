@@ -205,6 +205,31 @@ function MediaWait({ what, error, onRetry }: { what: string; error: boolean; onR
   );
 }
 
+/**
+ * PNG из медиатеки — WebP-вариантом того же файла (`v=web`, сервер уже делает
+ * его для доски: `storage/image-variants.ts`): в том же разрешении, на
+ * схемах и скриншотах в 1,5–3 раза легче. Подпись ссылки та же, доступ не
+ * меняется. JPEG — как есть: перекодированный в WebP q90 фотоснимок
+ * выходил тяжелее исходника (замер 2026-10-05). Не вышло с вариантом —
+ * один раз берём исходный файл.
+ */
+function FigureImage({ url, alt, className }: { url: string; alt: string; className?: string }) {
+  const optimized = /\.png\?/i.test(url) ? `${url}&v=web` : url;
+  const [src, setSrc] = useState(optimized);
+  useEffect(() => setSrc(optimized), [optimized]);
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      decoding="async"
+      onError={() => {
+        if (src !== url) setSrc(url);
+      }}
+    />
+  );
+}
+
 function Figure({
   block,
   number,
@@ -228,7 +253,7 @@ function Figure({
                 onClick={() => setZoomed(true)}
                 aria-label={`${label}: открыть крупно`}
               >
-                <img src={url} alt={block.caption ?? ""} />
+                <FigureImage url={url} alt={block.caption ?? ""} />
               </button>
               <span className="tb-zoom-badge" aria-hidden>
                 <Maximize2 />
@@ -237,8 +262,8 @@ function Figure({
             <Dialog open={zoomed} onOpenChange={setZoomed}>
               <DialogContent className="max-w-[min(96vw,1200px)] gap-2 p-3 pt-12">
                 <DialogTitle className="sr-only">{block.caption ?? label}</DialogTitle>
-                <img
-                  src={url}
+                <FigureImage
+                  url={url}
                   alt={block.caption ?? ""}
                   className="mx-auto max-h-[82vh] w-auto max-w-full"
                 />
@@ -250,7 +275,7 @@ function Figure({
           </>
         ) : (
           <div className="tb-figure-frame">
-            <img src={url} alt={block.caption ?? ""} />
+            <FigureImage url={url} alt={block.caption ?? ""} />
           </div>
         )
       ) : (

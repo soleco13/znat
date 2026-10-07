@@ -234,7 +234,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <div className="text-sm font-semibold text-foreground">{user.fullName}</div>
                 <div className="text-xs text-muted-foreground">{ROLE_LABEL[user.role]}</div>
               </div>
-              <UserAvatar id={user.id} role={markRoleOf("staff", user.role)} size={38} />
+              <UserAvatar colorKey={user.id} role={markRoleOf("staff", user.role)} size={38} />
               <SimpleTooltip content="Сменить пароль">
                 <Button variant="ghost" size="icon" asChild aria-label="Сменить пароль">
                   <Link to="/account/password">

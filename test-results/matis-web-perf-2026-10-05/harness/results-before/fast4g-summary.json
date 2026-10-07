@@ -1,0 +1,128 @@
+[
+ {
+  "label": "landing",
+  "url": "/",
+  "profile": "fast4g",
+  "m": {
+   "dcl": 387,
+   "load": 387,
+   "fcp": 660,
+   "lcp": 660,
+   "tbt": 0,
+   "longtasks": 3,
+   "ttiApprox": 619,
+   "heap": 5
+  },
+  "n": 6,
+  "extra": {
+   "wall": 3916
+  }
+ },
+ {
+  "label": "login",
+  "url": "/login",
+  "profile": "fast4g",
+  "m": {
+   "dcl": 323,
+   "load": 324,
+   "fcp": 400,
+   "lcp": 708,
+   "tbt": 56,
+   "longtasks": 1,
+   "ttiApprox": 849,
+   "heap": 4
+  },
+  "n": 14,
+  "extra": {
+   "formVisibleMs": 906,
+   "wall": 3916
+  }
+ },
+ {
+  "label": "classroom",
+  "url": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room",
+  "profile": "fast4g",
+  "m": {
+   "dcl": 321,
+   "load": 322,
+   "fcp": 380,
+   "lcp": 1472,
+   "tbt": 7,
+   "longtasks": 1,
+   "ttiApprox": 1447,
+   "heap": 8
+  },
+  "n": 135,
+  "extra": {
+   "prejoinMs": 1462,
+   "inRoom": true,
+   "roomMs": 883,
+   "boardMs": 644,
+   "wall": 22050
+  }
+ },
+ {
+  "label": "student",
+  "url": "/j/<token>",
+  "profile": "fast4g",
+  "m": {
+   "dcl": 332,
+   "load": 333,
+   "fcp": 408,
+   "lcp": 584,
+   "tbt": 4,
+   "longtasks": 1,
+   "ttiApprox": 543,
+   "heap": 7
+  },
+  "n": 118,
+  "extra": {
+   "formMs": 654,
+   "inRoom": true,
+   "roomMs": 1444,
+   "wall": 16980
+  }
+ },
+ {
+  "label": "material",
+  "url": "(in-lesson activity)",
+  "profile": "fast4g",
+  "m": {
+   "dcl": 332,
+   "load": 333,
+   "fcp": 408,
+   "lcp": 584,
+   "tbt": 245,
+   "longtasks": 5,
+   "ttiApprox": 17728,
+   "heap": 12
+  },
+  "n": 33,
+  "extra": {
+   "activity": 201,
+   "shown": true,
+   "shownMs": 881
+  }
+ },
+ {
+  "label": "editor",
+  "url": "/materials/edit/<id>",
+  "profile": "fast4g",
+  "m": {
+   "dcl": 339,
+   "load": 340,
+   "fcp": 416,
+   "lcp": 1540,
+   "tbt": 130,
+   "longtasks": 3,
+   "ttiApprox": 1508,
+   "heap": 11
+  },
+  "n": 51,
+  "extra": {
+   "editorVisible": true,
+   "editorMs": 1686,
+   "wall": 6448
+  }
+ }
+]

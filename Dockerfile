@@ -18,10 +18,14 @@ COPY packages/shared packages/shared
 COPY apps/api apps/api
 COPY apps/web apps/web
 ENV NODE_OPTIONS="--max-old-space-size=6144"
+# Карты исходников (sourcemap: "hidden") — вне раздаваемой папки dist: для
+# разбора ошибок они в образе есть (apps/web/sourcemaps), наружу не отдаются.
 RUN pnpm --filter @school/shared run build \
     && pnpm --filter @school/shared exec tsc -p tsconfig.json \
     && pnpm --filter @school/web run build \
-    && pnpm --filter @school/api run build
+    && pnpm --filter @school/api run build \
+    && mkdir -p apps/web/sourcemaps \
+    && find apps/web/dist -name '*.map' -exec mv -t apps/web/sourcemaps {} +
 
 FROM deps AS prod-deps
 RUN pnpm install --frozen-lockfile --prod
@@ -41,6 +45,7 @@ COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/api/drizzle ./apps/api/drizzle
 COPY --from=build /app/packages/shared ./packages/shared
 COPY --from=build /app/apps/web/dist ./apps/web/dist
+COPY --from=build /app/apps/web/sourcemaps ./apps/web/sourcemaps
 COPY apps/api/package.json ./apps/api/package.json
 
 # @school/shared ships main:"./src/index.ts" for tsx/vite (dev, bundler resolution).

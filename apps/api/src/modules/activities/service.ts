@@ -47,6 +47,7 @@ import {
   type PushAnswerToBoardRequest,
   type SubmitActivityResult,
   type SubmitFeedbackItem,
+  type TeacherFeedbackItem,
   type GradingQueueItem,
   type GradeManualResponseRequest,
   type GradeManualResponseResult,
@@ -265,6 +266,23 @@ export async function getMyActivity(actor: LessonActor, activityId: string): Pro
     redis.get(attemptPositionKey(attemptId)),
   ]);
 
+  // Итог ручной проверки — после сдачи и только если результаты открыты,
+  // как и баллы сабмита (`revealResults`).
+  const teacherFeedback: TeacherFeedbackItem[] = [];
+  if (submittedAt && activity.revealResults) {
+    for (const g of await repo.findManualGradesByAttempt(attemptId)) {
+      const question = findQuestion(loaded.material, g.questionId);
+      if (!question) continue;
+      teacherFeedback.push({
+        questionId: g.questionId,
+        score: g.score,
+        maxScore: question.points,
+        comment: g.comment,
+        gradedAt: g.gradedAt.toISOString(),
+      });
+    }
+  }
+
   return {
     activityId,
     attemptId,
@@ -276,6 +294,7 @@ export async function getMyActivity(actor: LessonActor, activityId: string): Pro
     savedResponses,
     submittedAt: submittedAt ? submittedAt.toISOString() : null,
     currentBlockId: currentBlockId ?? null,
+    teacherFeedback,
   };
 }
 
@@ -1116,6 +1135,8 @@ export async function gradeManualResponse(
   if (!gradedAt) {
     throw new AppError(409, "already_graded", "Этот ответ уже проверен");
   }
+  // Сигнал ученику перечитать свою копию задания: там появятся баллы и комментарий.
+  roomsService.broadcastToLesson(target.lessonId, { type: "activity_graded", activityId: target.activityId });
 
   return { responseId, score: input.score, maxScore: question.points, gradedAt: gradedAt.toISOString() };
 }

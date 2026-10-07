@@ -1,0 +1,17 @@
+import { connectBrowser, sleep } from "./cdp.mjs";
+const ORIGIN="https://213.21.241.28"; const B=await connectBrowser(process.env.CDP);
+const r=await fetch(ORIGIN+"/api/v1/auth/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:"methodist@school.dev",password:"password123"})}); const cookie=r.headers.get("set-cookie");
+const { browserContextId } = await B.call("Target.createBrowserContext", {}); const { targetId } = await B.call("Target.createTarget", { url: "about:blank", browserContextId }); const { sessionId } = await B.call("Target.attachToTarget", { targetId, flatten: true });
+const send=(m,p)=>B.call(m,p,sessionId); const reqs=[]; B.listeners.set(sessionId,(m,p)=>{ if(m==="Network.requestWillBeSent" && p.request.method!=="GET") reqs.push(p.request.method+" "+p.request.url.slice(-60)); if(m==="Runtime.consoleAPICalled"&&p.type==="error") console.log("console.error", p.args.map(a=>a.value??a.description).join(" ").slice(0,200)); });
+await send("Network.enable"); await send("Runtime.enable"); await send("Page.enable");
+await send("Network.setCookie",{name:"refresh_token",value:cookie.match(/refresh_token=([^;]+)/)[1],url:ORIGIN+"/api/v1/auth",path:"/api/v1/auth",secure:true,httpOnly:true,sameSite:"Lax"});
+const ev=async e=>{const x=await send("Runtime.evaluate",{expression:e,returnByValue:true,awaitPromise:true}); return x.result.value ?? x.exceptionDetails?.text;};
+await send("Page.navigate",{url:`${ORIGIN}/materials/edit/${process.env.MAT}`}); await sleep(6000);
+const wait=async (fn,ms)=>{const t0=Date.now(); while(Date.now()-t0<ms){ const v=await fn(); if(v) return v; await sleep(300);} return null;};
+console.log("katex text", await wait(()=>ev(`document.querySelector('.katex-mathml')?.textContent`), 20000));
+console.log("FormulaEditor chunk before edit", await ev(`performance.getEntriesByType('resource').filter(e=>/FormulaEditor-/.test(e.name)).length`));
+await wait(()=>ev(`!!document.querySelector('button[aria-label="Изменить формулу"]')`), 10000);
+const pt=await ev(`(()=>{const b=document.querySelector('button[aria-label="Изменить формулу"]').getBoundingClientRect(); return {x:b.x+b.width/2,y:b.y+b.height/2}})()`);
+for (const type of ["mouseMoved","mousePressed","mouseReleased"]) await send("Input.dispatchMouseEvent",{type,x:pt.x,y:pt.y,button:"left",clickCount:1});
+console.log("math-field value", await wait(()=>ev(`document.querySelector('math-field')?.value`), 20000));
+process.exit(0);

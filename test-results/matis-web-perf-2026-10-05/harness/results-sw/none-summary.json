@@ -1,0 +1,46 @@
+[
+ {
+  "label": "classroom",
+  "url": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room",
+  "profile": "none",
+  "m": {
+   "dcl": 123,
+   "load": 125,
+   "fcp": 192,
+   "lcp": 840,
+   "tbt": 11,
+   "longtasks": 1,
+   "ttiApprox": 809,
+   "heap": 9
+  },
+  "n": 139,
+  "extra": {
+   "prejoinMs": 870,
+   "inRoom": true,
+   "roomMs": 952,
+   "boardMs": 767,
+   "wall": 26707
+  }
+ },
+ {
+  "label": "editor",
+  "url": "/materials/edit/<id>",
+  "profile": "none",
+  "m": {
+   "dcl": 116,
+   "load": 119,
+   "fcp": 212,
+   "lcp": 1108,
+   "tbt": 103,
+   "longtasks": 4,
+   "ttiApprox": 1034,
+   "heap": 11
+  },
+  "n": 50,
+  "extra": {
+   "editorVisible": true,
+   "editorMs": 1220,
+   "wall": 5228
+  }
+ }
+]

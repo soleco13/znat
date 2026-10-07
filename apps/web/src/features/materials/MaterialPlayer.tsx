@@ -108,6 +108,7 @@ export function MaterialPlayer({
       }
       overlay={slideOverlay}
       initialBlockId={initialSlideBlockId}
+      teacherFeedback={activity.teacherFeedback}
       onPositionChange={onPositionChange}
       showHead={showHead}
       barEnd={barEnd}

@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import {
   activities,
@@ -156,6 +156,24 @@ export async function findResponsesByAttempt(attemptId: string): Promise<SavedRe
     .from(responses)
     .where(eq(responses.attemptId, attemptId));
   return rows.map((r) => ({ questionId: r.questionId, response: r.response as QuestionResponse }));
+}
+
+/** Уже проверенные учителем вручную ответы попытки (Э8.12) — баллы и комментарий для ученика. */
+export async function findManualGradesByAttempt(
+  attemptId: string,
+): Promise<{ questionId: string; score: number; comment: string | null; gradedAt: Date }[]> {
+  const rows = await db
+    .select({
+      questionId: responses.questionId,
+      score: responses.score,
+      comment: responses.comment,
+      gradedAt: responses.gradedAt,
+    })
+    .from(responses)
+    .where(and(eq(responses.attemptId, attemptId), isNotNull(responses.gradedBy)));
+  return rows
+    .filter((r) => r.gradedAt !== null)
+    .map((r) => ({ questionId: r.questionId, score: Number(r.score ?? 0), comment: r.comment, gradedAt: r.gradedAt! }));
 }
 
 /**
@@ -412,6 +430,8 @@ export async function listPendingManualGrading(
 
 export interface ManualGradingTargetRow {
   id: string;
+  activityId: string;
+  lessonId: string;
   assignedBy: string;
   schoolId: string;
   materialVersionId: string;
@@ -426,6 +446,8 @@ export async function findResponseForGrading(responseId: string): Promise<Manual
   const rows = await db
     .select({
       id: responses.id,
+      activityId: activities.id,
+      lessonId: activities.lessonId,
       assignedBy: activities.assignedBy,
       schoolId: lessons.schoolId,
       materialVersionId: activities.materialVersionId,

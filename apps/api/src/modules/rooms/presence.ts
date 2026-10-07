@@ -15,6 +15,8 @@ export interface PresenceEntry {
   role: Role | null;
   connected: boolean;
   handRaised: boolean;
+  /** Когда поднята рука (ISO) — порядок очереди у учителя; `null`/нет — опущена или запись старше поля. */
+  handRaisedAt?: string | null;
   /** Э6.3, §5.3 ТЗ: закреплено учителем в видимой сетке видео — не право, обычное ephemeral-состояние, как handRaised. */
   pinned: boolean;
   permissions: ParticipantPermissions;

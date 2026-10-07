@@ -1,0 +1,61 @@
+{
+ "results": [
+  {
+   "n": "material created",
+   "p": true,
+   "d": "{\"materialId\":\"7644cc09-822a-4606-91d6-202c5106b8ee\"}"
+  },
+  {
+   "n": "material published",
+   "p": true,
+   "d": "200 {\"version\":1,\"versionId\":\"8fb46ae9-f4c4-49cb-a99f-61ff6b3aba1b\"}"
+  },
+  {
+   "n": "activity started",
+   "p": true,
+   "d": "201"
+  },
+  {
+   "n": "guest sees the task on stage",
+   "p": true,
+   "d": ""
+  },
+  {
+   "n": "guest saved answer",
+   "p": true,
+   "d": "200"
+  },
+  {
+   "n": "guest submitted",
+   "p": true,
+   "d": "200 {\"attemptId\":\"d74ae131-2b4e-5e1c-9a50-34283bf367bb\",\"revealed\":true,\"score\":0,\"maxScore\":2,\"feedback\":[{\"questionId\":\"q-"
+  },
+  {
+   "n": "no teacher feedback before grading",
+   "p": true,
+   "d": ""
+  },
+  {
+   "n": "answer in grading queue",
+   "p": true,
+   "d": "709b7e0a-df54-4ecd-bdc1-8593dcbbfda6"
+  },
+  {
+   "n": "teacher graded",
+   "p": true,
+   "d": "200"
+  },
+  {
+   "n": "comment appears for student without reload (activity_graded)",
+   "p": true,
+   "d": ""
+  },
+  {
+   "n": "comment persists after F5",
+   "p": true,
+   "d": ""
+  }
+ ],
+ "materialId": "7644cc09-822a-4606-91d6-202c5106b8ee",
+ "activityId": "12611a97-da3f-4b60-b0e9-3c04b68d8151"
+}

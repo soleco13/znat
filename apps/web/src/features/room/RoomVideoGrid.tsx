@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import {
   useParticipants,
   useSpeakingParticipants,
@@ -23,12 +24,12 @@ import type { LessonMode, ParticipantSnapshot } from "@school/shared";
 
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/shared/ui/avatar";
-import { markRoleOf } from "@/shared/ui/role-mark";
+import { markRoleOf, participantColorKey } from "@/shared/ui/role-mark";
 import { ParticipantPlaceholder } from "./ParticipantPlaceholder.js";
-import { MediaLoader } from "@/shared/ui/media-loader";
 import { Loader } from "@/shared/ui/loader";
 import { participantsCount } from "./format.js";
 import { useSelfCameraUiStore } from "./self-camera-ui-store.js";
+import { TILE_LOADER_MAX_MS, useTileMediaStore } from "./tile-media-store.js";
 import { isStreamPaused, useStreamStateUpdates } from "./use-stream-state.js";
 import { useAdaptiveGrid } from "./use-adaptive-grid.js";
 import { useIsNarrowViewport } from "./use-narrow-viewport.js";
@@ -65,6 +66,7 @@ export function RoomVideoGrid({
   layout = "grid",
   onLayoutChange,
   onShowAll,
+  bubbles,
 }: {
   participants: ParticipantSnapshot[];
   /** Связь участника с уроком прервалась недавно — плитка на месте с пометкой (`usePresenceGrace`). */
@@ -78,8 +80,11 @@ export function RoomVideoGrid({
   onLayoutChange?: (layout: "grid" | "speaker") => void;
   /** Плитка «+N» в мобильной ленте — открыть список участников. */
   onShowAll?: () => void;
+  /** Свежие сообщения чата по автору — пузырь на его плитке (только учителю, см. RoomPage). */
+  bubbles?: ReadonlyMap<string, string>;
 }) {
   const narrow = useIsNarrowViewport();
+  const { id: lessonId } = useParams<{ id: string }>();
   const cameraTracks = useTracks([Track.Source.Camera], { onlySubscribed: true });
   const trackByIdentity = new Map(cameraTracks.map((t) => [t.participant.identity, t]));
   // Камера включена (опубликована и не выключена), но первый кадр ещё не
@@ -91,9 +96,15 @@ export function RoomVideoGrid({
       .map((t) => t.participant.identity),
   );
   useStreamStateUpdates();
-  const [loadedCameraSids, setLoadedCameraSids] = useState<ReadonlySet<string>>(() => new Set());
-  const markCameraLoaded = (sid: string) =>
-    setLoadedCameraSids((prev) => (prev.has(sid) ? prev : new Set(prev).add(sid)));
+  // Кадры и «кто говорил» — в сторе, а не в состоянии сетки: сетка
+  // перемонтируется при каждой смене сцены (см. `tile-media-store.ts`).
+  const loadedCameraSids = useTileMediaStore((s) => s.loadedSids);
+  const markCameraLoaded = useTileMediaStore((s) => s.markLoaded);
+  const waitingSince = useTileMediaStore((s) => s.waitingSince);
+  const noteWaiting = useTileMediaStore((s) => s.noteWaiting);
+  const clearWaiting = useTileMediaStore((s) => s.clearWaiting);
+  const lastSpeakerId = useTileMediaStore((s) => s.lastSpeakerId);
+  const setLastSpeaker = useTileMediaStore((s) => s.setLastSpeaker);
   const speakingIds = new Set(useSpeakingParticipants().map((p) => p.identity));
   // Для подсказки «говорит» вне экрана: речь прерывается паузами, и метка без
   // удержания мигала бы на каждом вдохе.
@@ -131,12 +142,15 @@ export function RoomVideoGrid({
 
   // Кого показывать крупно (телефон, «докладчик»): закреплённый → последний
   // говоривший (не сбрасывается в тишине, чтобы не прыгало) → учитель → первый.
-  const lastSpeakerRef = useRef<string | null>(null);
   const speakingNow = tiles.find((p) => speakingIds.has(p.userId) && p.userId !== selfId);
-  if (speakingNow) lastSpeakerRef.current = speakingNow.userId;
+  const speakingNowId = speakingNow?.userId;
+  useEffect(() => {
+    if (speakingNowId) setLastSpeaker(speakingNowId);
+  }, [speakingNowId, setLastSpeaker]);
+  const lastSpeaker = speakingNow?.userId ?? lastSpeakerId;
   const focus =
     tiles.find((p) => p.pinned) ??
-    tiles.find((p) => p.userId === lastSpeakerRef.current) ??
+    tiles.find((p) => p.userId === lastSpeaker) ??
     tiles.find((p) => p.kind === "staff" && p.userId !== selfId) ??
     tiles.find((p) => p.userId !== selfId) ??
     tiles[0];
@@ -162,7 +176,11 @@ export function RoomVideoGrid({
   const gridRef = useRef<HTMLDivElement>(null);
   const { cols, tile } = useAdaptiveGrid(gridRef, gridCells, GAP, 16 / 9);
 
-  const renderTile = (p: ParticipantSnapshot, size: TileSize, className?: string) => {
+  // Плитки, где камера включена, а кадра нет (или поток на паузе): ключи для
+  // предела лоадера `TILE_LOADER_MAX_MS`. Собираются при отрисовке, в стор —
+  // эффектом ниже.
+  const now = Date.now();
+  const mediaOf = (p: ParticipantSnapshot) => {
     const track = trackByIdentity.get(p.userId);
     const isSelf = p.userId === selfId;
     const videoTrack = isSelf && !selfDesiredOn ? undefined : track;
@@ -170,18 +188,29 @@ export function RoomVideoGrid({
     // Выключенная чужая камера остаётся подписанным треком с `isMuted` —
     // без этой проверки плитка показывала пустое видео вместо заглушки.
     const videoOn = !!videoTrack && (isSelf || cameraOnIds.has(p.userId));
-    // Чужая камера: до первого кадра и пока сервер держит её на паузе
-    // (входящему каналу не хватает полосы) — иначе тёмная плитка без лоадера.
-    const showLoader = isSelf
+    // Камера включена, но кадра нет: до первого кадра и пока сервер держит
+    // поток на паузе (входящему каналу не хватает полосы).
+    const waiting = isSelf
       ? selfDesiredOn && !selfFrameReady
       : cameraOnIds.has(p.userId) &&
         (!remoteSid || !loadedCameraSids.has(remoteSid) || isStreamPaused(videoTrack?.publication));
+    const waitKey = isSelf ? `self:${p.userId}` : (remoteSid ?? `${p.userId}:pending`);
+    return { isSelf, videoTrack, remoteSid, videoOn, waiting, waitKey };
+  };
+  const waitingNow = tiles.map(mediaOf).filter((m) => m.waiting).map((m) => m.waitKey);
+
+  const renderTile = (p: ParticipantSnapshot, size: TileSize, className?: string) => {
+    const { isSelf, videoTrack, remoteSid, videoOn, waiting, waitKey } = mediaOf(p);
+    const since = waitingSince.get(waitKey);
+    const showLoader = waiting && (since === undefined || now - since < TILE_LOADER_MAX_MS);
+    const videoVisible = videoOn && !waiting;
     const speaking = speakingIds.has(p.userId);
     const reconnecting = reconnectingIds?.has(p.userId) ?? false;
     const micOff = micOffIds.has(p.userId);
     const weak = weakIds.has(p.userId);
     const roleSuffix = p.kind === "staff" && p.role ? ROLE_SUFFIX[p.role] : undefined;
     const small = size === "sm" || size === "xs";
+    const bubble = bubbles?.get(p.userId);
 
     return (
       <div
@@ -192,6 +221,9 @@ export function RoomVideoGrid({
           className,
         )}
       >
+        {/* Нижний слой — всегда знак и цвет участника: пока видео нет, грузится
+            или стоит на паузе, плитка не пустеет и не превращается в спиннер. */}
+        <ParticipantPlaceholder participant={p} colorKey={participantColorKey(p, lessonId)} size={size} />
         {videoTrack ? (
           <VideoTrack
             trackRef={videoTrack}
@@ -199,15 +231,26 @@ export function RoomVideoGrid({
               isSelf ? () => setSelfFrameReady(true) : remoteSid ? () => markCameraLoaded(remoteSid) : undefined
             }
             className={cn(
-              "absolute inset-0 size-full object-cover transition-opacity",
+              "absolute inset-0 size-full object-cover transition-opacity duration-200 motion-reduce:transition-none",
               isSelf && "-scale-x-100",
-              (showLoader || !videoOn) && "opacity-0",
+              !videoVisible && "opacity-0",
             )}
           />
         ) : null}
-        {!videoOn && !showLoader ? <ParticipantPlaceholder participant={p} size={size} /> : null}
 
-        {showLoader && !reconnecting ? <MediaLoader label="Камера загружается" size={small ? "sm" : "md"} /> : null}
+        {showLoader && !reconnecting ? (
+          <span
+            role="status"
+            className={cn(
+              "pointer-events-none absolute flex items-center justify-center rounded-full bg-[rgba(16,24,40,.6)] text-white",
+              "animate-in fade-in-0 fill-mode-both duration-300 [animation-delay:300ms] motion-reduce:animate-none",
+              size === "xs" ? "left-1 top-1 size-5" : small ? "bottom-2 right-2 size-6" : "bottom-2.5 right-2.5 size-7",
+            )}
+          >
+            <Loader className={size === "xs" ? "size-3" : "size-3.5"} />
+            <span className="sr-only">Камера загружается</span>
+          </span>
+        ) : null}
 
         {reconnecting ? (
           <span
@@ -277,13 +320,64 @@ export function RoomVideoGrid({
             {weak ? <SignalLow className="size-3 shrink-0 text-amber-400" aria-label="Плохая связь" /> : null}
             <span className="truncate">
               {p.fullName}
-              {isSelf ? " (вы)" : size === "lg" && roleSuffix ? ` · ${roleSuffix}` : ""}
+              {isSelf ? " (вы)" : (size === "lg" || size === "md") && roleSuffix ? ` · ${roleSuffix}` : ""}
             </span>
           </span>
+        ) : (
+          // Лента телефона: короткое имя внизу плитки, иначе ученики с
+          // одинаковым знаком неразличимы.
+          <span className="pointer-events-none absolute inset-x-1 bottom-1 flex items-center justify-center gap-0.5 rounded-md bg-[rgba(16,24,40,.62)] px-1 text-[10px] font-medium leading-4 text-white">
+            {micOff ? <MicOff className="size-2.5 shrink-0 text-red-300" aria-label="Микрофон выключен" /> : null}
+            <span className="truncate">{isSelf ? "Вы" : shortName(p.fullName)}</span>
+          </span>
+        )}
+
+        {bubble ? (
+          size === "xs" ? (
+            <span
+              className="pointer-events-none absolute left-1 top-1 size-2.5 rounded-full border-2 border-white bg-primary"
+              aria-label={`Новое сообщение: ${bubble}`}
+            />
+          ) : (
+            <span
+              role="status"
+              className={cn(
+                "pointer-events-none absolute max-w-[calc(100%-20px)] rounded-xl bg-card px-2.5 py-1.5 text-foreground shadow-[0_6px_16px_rgba(16,24,40,.22)] [overflow-wrap:anywhere]",
+                "line-clamp-2 animate-in fade-in-0 slide-in-from-bottom-1 duration-200 motion-reduce:animate-none",
+                size === "lg" ? "bottom-11 left-2.5 text-[13px]" : "bottom-9 left-2 text-xs",
+              )}
+            >
+              {bubble}
+            </span>
+          )
         ) : null}
       </div>
     );
   };
+
+  // Ожидания без кадра — в стор (момент начала нужен для предела лоадера);
+  // закончившиеся — убрать, чтобы следующее включение камеры снова получило лоадер.
+  const waitingKey = waitingNow.join("|");
+  useEffect(() => {
+    const current = new Set(waitingKey ? waitingKey.split("|") : []);
+    const at = Date.now();
+    for (const key of current) noteWaiting(key, at);
+    for (const key of useTileMediaStore.getState().waitingSince.keys()) {
+      if (!current.has(key)) clearWaiting(key);
+    }
+  }, [waitingKey, noteWaiting, clearWaiting]);
+  // Перерисовать, когда истечёт предел лоадера ближайшей плитки.
+  const [, bumpLoaderClock] = useState(0);
+  let nextLoaderExpiry = Infinity;
+  for (const key of waitingNow) {
+    const since = waitingSince.get(key);
+    if (since !== undefined && since + TILE_LOADER_MAX_MS > now) nextLoaderExpiry = Math.min(nextLoaderExpiry, since + TILE_LOADER_MAX_MS);
+  }
+  useEffect(() => {
+    if (nextLoaderExpiry === Infinity) return;
+    const timer = setTimeout(() => bumpLoaderClock((n) => n + 1), nextLoaderExpiry - Date.now() + 30);
+    return () => clearTimeout(timer);
+  }, [nextLoaderExpiry]);
 
   const strip = (list: ParticipantSnapshot[]) => {
     if (list.length === 0) return null;
@@ -341,7 +435,7 @@ export function RoomVideoGrid({
             className="flex h-11 items-center gap-2 whitespace-nowrap rounded-full border border-border bg-card py-0 pl-1.5 pr-3.5 text-[13.5px] font-semibold text-foreground shadow-[0_8px_20px_rgba(16,24,40,.14)]"
           >
             <span className="relative shrink-0">
-              <UserAvatar id={teacher.userId} role={markRoleOf(teacher.kind, teacher.role)} size={32} />
+              <UserAvatar colorKey={participantColorKey(teacher, lessonId)} role={markRoleOf(teacher.kind, teacher.role)} size={32} />
               <span className="absolute -bottom-px -right-px size-2.5 rounded-full border-2 border-card bg-success" />
             </span>
             {label}
@@ -508,6 +602,11 @@ export function RoomVideoGrid({
       </div>
     </div>
   );
+}
+
+/** Имя до первого пробела — для подписи крошечной плитки ленты. */
+function shortName(fullName: string): string {
+  return fullName.trim().split(/\s+/)[0] ?? fullName;
 }
 
 /** Столько метка «говорит» держится после паузы в речи. */

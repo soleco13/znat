@@ -25,6 +25,7 @@ import {
   LogOut,
   Maximize,
   MessageSquare,
+  Mic,
   MicOff,
   Minimize,
   MoreHorizontal,
@@ -37,6 +38,7 @@ import {
   SignalLow,
   SlidersHorizontal,
   Users,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import type {
@@ -94,7 +96,7 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
 import { UserAvatar } from "@/shared/ui/avatar";
-import { markRoleOf } from "@/shared/ui/role-mark";
+import { markRoleOf, participantColorKey } from "@/shared/ui/role-mark";
 import { SimpleTooltip, TooltipProvider } from "@/shared/ui/tooltip";
 import { DeckPanel } from "../decks/DeckPanel.js";
 import { listLessonActivities } from "../materials/activity-api.js";
@@ -110,7 +112,9 @@ import { formatClock, participantsCount } from "./format.js";
 import { ScreenShareAutoPip, type ScreenShareAutoPipHandle } from "./ScreenShareAutoPip.js";
 import { RoomControlButton, type RoomControlVariant } from "./RoomControlButton.js";
 import { useRoomIdentity } from "./use-room-identity.js";
-import { useIsNarrowViewport, useMinViewportWidth } from "./use-narrow-viewport.js";
+import { useWakeLock } from "./use-wake-lock.js";
+import { RoomHotkeys } from "./RoomHotkeys.js";
+import { useIsNarrowViewport, useIsPhoneLandscape, useMinViewportWidth } from "./use-narrow-viewport.js";
 import { SelfMicButton } from "./MicControls.js";
 import { MicSync } from "./MicSync.js";
 import { ParticipantMenu } from "./ParticipantMenu.js";
@@ -180,6 +184,9 @@ function buildRoomOptions(settings: ClientMediaSettings | null): RoomOptions {
  * над сеткой камер: занимали место в сетке и висели, пока их не закроют.
  */
 const ROOM_TOAST = { position: "top-center" as const, duration: 6000 };
+
+/** Сколько держится пузырь нового сообщения на плитке автора. */
+const CHAT_BUBBLE_MS = 5_000;
 
 /** Ошибка действия в уроке (права, режим, чат…) — плашкой, одна за раз. */
 function showRoomError(message: string) {
@@ -362,11 +369,46 @@ export function RoomPage() {
   const [screenSharePreempted, setScreenSharePreempted] = useState(0);
   const selfIdRef = useRef(selfId);
   selfIdRef.current = selfId;
+  // Сигналы входа/выхода — только учителю: ученику 30 сигналов о входе
+  // одноклассников ни к чему (частоту ограничивает `playParticipantSound`).
+  const soundsRef = useRef(false);
+  /** Учитель вручную проверил ответ — плеер ученика перечитывает задание. */
+  const [gradedSignal, setGradedSignal] = useState(0);
+  /** Свежие сообщения по автору — пузырь на его плитке у учителя (~5 с). */
+  const [chatBubbles, setChatBubbles] = useState<ReadonlyMap<string, string>>(() => new Map());
+  const bubbleTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const showChatBubble = useCallback((authorId: string, body: string) => {
+    const text = body.length > 140 ? `${body.slice(0, 139)}…` : body;
+    setChatBubbles((prev) => new Map(prev).set(authorId, text));
+    const timers = bubbleTimersRef.current;
+    const old = timers.get(authorId);
+    if (old) clearTimeout(old);
+    timers.set(
+      authorId,
+      setTimeout(() => {
+        timers.delete(authorId);
+        setChatBubbles((prev) => {
+          if (!prev.has(authorId)) return prev;
+          const next = new Map(prev);
+          next.delete(authorId);
+          return next;
+        });
+      }, CHAT_BUBBLE_MS),
+    );
+  }, []);
+  useEffect(() => {
+    const timers = bubbleTimersRef.current;
+    return () => {
+      for (const t of timers.values()) clearTimeout(t);
+      timers.clear();
+    };
+  }, []);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [videoLayout, setVideoLayout] = useState<"grid" | "speaker">("grid");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const isNarrowViewport = useIsNarrowViewport();
+  const phoneLandscape = useIsPhoneLandscape();
   useEffect(() => {
     const onChange = () => setIsFullscreen(document.fullscreenElement !== null);
     document.addEventListener("fullscreenchange", onChange);
@@ -390,6 +432,7 @@ export function RoomPage() {
   }, [media]);
 
   const isTeacher = identity?.role === "teacher" || identity?.role === "admin";
+  soundsRef.current = isTeacher;
 
   const handleMessage = useCallback((message: ServerRoomMessage) => {
     switch (message.type) {
@@ -398,7 +441,7 @@ export function RoomPage() {
         setParticipants(message.participants);
         break;
       case "participant_joined":
-        if (message.participant.userId !== selfIdRef.current) playParticipantSound("joined");
+        if (soundsRef.current && message.participant.userId !== selfIdRef.current) playParticipantSound("joined");
         setParticipants((prev) => [
           ...prev.filter((p) => p.userId !== message.participant.userId),
           message.participant,
@@ -412,7 +455,7 @@ export function RoomPage() {
         );
         break;
       case "participant_left":
-        if (message.userId !== selfIdRef.current) playParticipantSound("left");
+        if (soundsRef.current && message.userId !== selfIdRef.current) playParticipantSound("left");
         setParticipants((prev) => prev.filter((p) => p.userId !== message.userId));
         break;
       case "participant_removed":
@@ -420,7 +463,7 @@ export function RoomPage() {
           setBlocked(message.reason === "link_rotated" ? LINK_ROTATED_SCREEN : REMOVED_SCREEN);
           break;
         }
-        playParticipantSound("left");
+        if (soundsRef.current) playParticipantSound("left");
         setParticipants((prev) => prev.filter((p) => p.userId !== message.userId));
         break;
       case "entry_locked":
@@ -435,8 +478,22 @@ export function RoomPage() {
         break;
       case "hand_raised":
         setParticipants((prev) =>
-          prev.map((p) => (p.userId === message.userId ? { ...p, handRaised: message.raised } : p)),
+          prev.map((p) =>
+            p.userId === message.userId
+              ? {
+                  ...p,
+                  handRaised: message.raised,
+                  // Старый сервер времени не присылает — порядок тогда по приходу события.
+                  handRaisedAt: message.raised ? (message.raisedAt ?? p.handRaisedAt ?? new Date().toISOString()) : null,
+                }
+              : p,
+          ),
         );
+        break;
+      case "microphones_muted":
+        if (selfIdRef.current && message.userIds.includes(selfIdRef.current)) {
+          toast("Учитель выключил ваш микрофон", { ...ROOM_TOAST, id: "room-teacher-mic", duration: 4000, icon: <MicOff className="size-4 text-muted-foreground" /> });
+        }
         break;
       case "participant_pinned":
         setParticipants((prev) =>
@@ -446,6 +503,9 @@ export function RoomPage() {
       case "chat_message":
         // После переподключения история уже могла подтянуть это сообщение.
         setChat((prev) => (prev.some((m) => m.id === message.message.id) ? prev : [...prev, message.message]));
+        if (soundsRef.current && message.message.authorId && message.message.authorId !== selfIdRef.current) {
+          showChatBubble(message.message.authorId, message.message.body);
+        }
         break;
       case "lesson_mode":
         setLessonMode(message.mode);
@@ -469,6 +529,9 @@ export function RoomPage() {
       case "activity_reviewed":
         setReviewSignal((n) => n + 1);
         break;
+      case "activity_graded":
+        setGradedSignal((n) => n + 1);
+        break;
       case "recording_status": {
         const prev = recordingActivePrevRef.current;
         if (prev !== null && prev !== message.active) playRecordingSound(message.active);
@@ -491,7 +554,7 @@ export function RoomPage() {
         showRoomError(message.message);
         break;
     }
-  }, []);
+  }, [showChatBubble]);
 
   // Сервер удаляет участника после ~90 с молчания (телефон заснул, сеть
   // пропала) и закрывает его сокет кодом 4003. Входим заново тем же POST
@@ -579,13 +642,10 @@ export function RoomPage() {
     [lessonId],
   );
 
-  // Всё второстепенное — после входа: на медленной сети эти запросы и куски
-  // сборки делили бы канал с самим входом (/join, соединение урока, медиа).
+  // Вошли в урок (`/join` ответил). Всё второстепенное — после этого: на
+  // медленной сети эти запросы делили бы канал с самим входом. Доска и
+  // задания — ещё позже, после подключения медиа (`PrefetchStageWhenMediaUp`).
   const joined = media !== null;
-  useEffect(() => {
-    if (!lessonId || !joined) return;
-    prefetchLessonStage();
-  }, [lessonId, joined]);
 
   // История чата — при входе и после каждого переподключения соединения
   // урока: пока оно было разорвано, новые сообщения не приходили и терялись
@@ -699,6 +759,25 @@ export function RoomPage() {
 
   const self = participants.find((p) => p.userId === selfId);
 
+  // Учитель дал или забрал слово — ученику короткая плашка: иначе он не
+  // понимает, почему микрофон вдруг стал недоступен или снова доступен.
+  const selfCanSpeak = self?.permissions.canSpeak;
+  const canSpeakPrevRef = useRef<boolean | undefined>(undefined);
+  useEffect(() => {
+    const prev = canSpeakPrevRef.current;
+    canSpeakPrevRef.current = selfCanSpeak;
+    if (isTeacher || prev === undefined || selfCanSpeak === undefined || prev === selfCanSpeak) return;
+    toast(selfCanSpeak ? "Учитель дал вам слово — можно включить микрофон" : "Учитель выключил ваш микрофон", {
+      ...ROOM_TOAST,
+      id: "room-teacher-mic",
+      duration: 4000,
+      icon: selfCanSpeak ? <Mic className="size-4 text-primary" /> : <MicOff className="size-4 text-muted-foreground" />,
+    });
+  }, [selfCanSpeak, isTeacher]);
+
+  // Экран не гаснет, пока участник на уроке (см. `useWakeLock`).
+  useWakeLock(media !== null && !leftAsGuest && blocked === null);
+
   function leaveRoom() {
     if (!lessonId) return;
     // До запроса: пока /leave идёт, сервер может закрыть соединение урока, и
@@ -745,6 +824,15 @@ export function RoomPage() {
     await apiFetch(`/lessons/${lessonId}/participants/${userId}/mute`, { method: "POST" }).catch(() =>
       showRoomError("Не удалось заглушить участника"),
     );
+  }
+
+  /** Опустить руку одному ученику или всем (без `userId`). */
+  async function lowerHands(userId?: string) {
+    if (!lessonId) return;
+    await apiFetch(`/lessons/${lessonId}/hands/lower`, {
+      method: "POST",
+      body: JSON.stringify(userId ? { userId } : {}),
+    }).catch(() => showRoomError(userId ? "Не удалось опустить руку" : "Не удалось опустить руки"));
   }
 
   async function muteAll() {
@@ -856,7 +944,10 @@ export function RoomPage() {
   const presence = usePresenceGrace(participants);
   const connectedCount = presence.participants.filter((p) => p.connected).length;
   const aloneOnStage = media !== null && stageView === "people" && connectedCount <= 1;
-  const raisedHands = participants.filter((p) => p.handRaised && p.connected && p.userId !== selfId);
+  // Очередь рук — по времени подъёма (у записей без времени — по входу).
+  const raisedHands = participants
+    .filter((p) => p.handRaised && p.connected && p.userId !== selfId)
+    .sort((a, b) => (a.handRaisedAt ?? a.joinedAt).localeCompare(b.handRaisedAt ?? b.joinedAt));
 
   // Поднятая рука — учителю плашка на каждого нового поднявшего (не висит:
   // сам список поднятых рук остаётся в «Участниках»).
@@ -938,6 +1029,14 @@ export function RoomPage() {
         </div>
       </div>
       <ScrollArea className="min-h-0 flex-1">
+        {isTeacher && raisedHands.length > 0 ? (
+          <HandsQueue
+            hands={raisedHands}
+            onGiveWord={(id) => void togglePermission(id, "canSpeak", true)}
+            onLower={(id) => void lowerHands(id)}
+            onLowerAll={() => void lowerHands()}
+          />
+        ) : null}
         {media ? <LivePeopleList {...peopleListProps} /> : <PeopleList {...peopleListProps} />}
       </ScrollArea>
     </div>
@@ -1213,13 +1312,15 @@ export function RoomPage() {
     </ScrollArea>
   );
 
-  const drawerBody = (sheet: boolean) => (
+  const drawerBody = (sheet: boolean, handle = sheet) => (
     <div className="flex h-full min-h-0 flex-col">
       {sheet ? (
         <>
-          <div className="flex shrink-0 justify-center pb-1 pt-2.5" aria-hidden>
-            <span className="h-1 w-[38px] rounded-full bg-border" />
-          </div>
+          {handle ? (
+            <div className="flex shrink-0 justify-center pb-1 pt-2.5" aria-hidden>
+              <span className="h-1 w-[38px] rounded-full bg-border" />
+            </div>
+          ) : null}
           <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 pb-2.5 pt-1.5">
             <SheetTitle className="min-w-0 truncate text-base font-bold">
               {DRAWER_TABS.find((t) => t.key === drawer)?.label ?? ""}
@@ -1326,6 +1427,8 @@ export function RoomPage() {
           decks={decks}
           isTeacher={isTeacher}
           reviewSignal={reviewSignal}
+          gradedSignal={gradedSignal}
+          bubbles={chatBubbles}
           videoLayout={videoLayout}
           onLayoutChange={setVideoLayout}
           onShowAll={() => setDrawer("people")}
@@ -1462,9 +1565,10 @@ export function RoomPage() {
   );
 
   const drawerIconButton = (mode: DrawerMode, label: string, Icon: LucideIcon, badge?: ReactNode) => (
-    <SimpleTooltip content={label} side="top">
+    <SimpleTooltip content={mode === "chat" ? `${label} · C` : label} side="top">
       <button
         type="button"
+        data-hotkey={mode === "chat" ? "C" : undefined}
         onClick={() => toggleDrawer(mode)}
         aria-pressed={drawer === mode}
         aria-label={label}
@@ -1476,9 +1580,121 @@ export function RoomPage() {
     </SimpleTooltip>
   );
 
+  // Пункты меню урока — общие для шапки телефона и колонки альбомной раскладки.
+  const lessonMenuItems = (
+    <>
+      <DropdownMenuLabel className={MENU_LABEL}>Урок</DropdownMenuLabel>
+      {!isTeacher ? (
+        <DropdownMenuItem className={MENU_ITEM} onSelect={() => setDrawer("people")}>
+          <Users aria-hidden />
+          <span className="flex-1">Участники</span>
+          <span className="text-xs text-text-3">{connectedCount}</span>
+        </DropdownMenuItem>
+      ) : null}
+      <DropdownMenuItem className={MENU_ITEM} onSelect={() => setDrawer("tools")}>
+        <ClipboardList aria-hidden />
+        Материалы урока
+      </DropdownMenuItem>
+      {isTeacher ? (
+        <DropdownMenuItem className={MENU_ITEM} onSelect={toggleBoard}>
+          <PenLine aria-hidden />
+          {stageView === "board" ? "Закрыть доску" : "Открыть доску"}
+        </DropdownMenuItem>
+      ) : null}
+      {isTeacher ? recordingItem : null}
+      {isTeacher && lessonJoinPath ? (
+        <DropdownMenuItem className={MENU_ITEM} onSelect={copyJoinLink}>
+          <LinkIcon aria-hidden />
+          Пригласить
+        </DropdownMenuItem>
+      ) : null}
+      {media ? (
+        <DropdownMenuItem className={MENU_ITEM} onSelect={openSettings}>
+          <Settings aria-hidden />
+          Настройки устройств
+        </DropdownMenuItem>
+      ) : null}
+      {classMenuItems}
+    </>
+  );
+
+  // ── Телефон в альбомной ориентации ───────────────────────────────────────
+  // Сцена во всю высоту, кнопки колонкой справа: шапка и два ряда кнопок
+  // снизу оставляли сцене треть экрана высотой 375–390 px.
+  const landscapeControls = phoneLandscape ? (
+    <nav
+      aria-label="Управление уроком"
+      className="flex w-16 shrink-0 flex-col items-center justify-center gap-2 overflow-y-auto py-2 pl-1 pr-[max(8px,env(safe-area-inset-right))] [scrollbar-width:none]"
+    >
+      {media ? micButton("rail") : null}
+      {media ? cameraButton("rail") : null}
+      {isTeacher ? (
+        <RoomControlButton
+          variant="rail"
+          tone="action"
+          active={drawer === "people"}
+          activeIcon={Users}
+          inactiveIcon={Users}
+          activeLabel="Участники"
+          inactiveLabel="Участники"
+          badge={raisedHands.length || undefined}
+          onToggle={() => toggleDrawer("people")}
+        />
+      ) : (
+        <RoomControlButton
+          variant="rail"
+          tone="action"
+          active={self?.handRaised ?? false}
+          activeIcon={Hand}
+          inactiveIcon={Hand}
+          activeLabel="Опустить руку"
+          inactiveLabel="Поднять руку"
+          hotkey="H"
+          onToggle={toggleHand}
+        />
+      )}
+      <RoomControlButton
+        variant="rail"
+        tone="action"
+        active={drawer === "chat"}
+        activeIcon={MessageSquare}
+        inactiveIcon={MessageSquare}
+        activeLabel="Чат"
+        inactiveLabel="Чат"
+        hotkey="C"
+        badge={unreadChat}
+        onToggle={() => toggleDrawer("chat")}
+      />
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label="Меню урока"
+            className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-border bg-card text-foreground transition-colors hover:bg-surface-2 [&_svg]:size-[21px]"
+          >
+            <MoreHorizontal aria-hidden />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" side="left" className={cn(MENU_CONTENT, "max-h-[calc(100dvh-16px)] overflow-y-auto")}>
+          {lessonMenuItems}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <button
+        type="button"
+        onClick={leaveRoom}
+        aria-label="Выйти из урока"
+        title="Выйти из урока"
+        className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90 [&_svg]:size-5"
+      >
+        <LogOut aria-hidden />
+      </button>
+    </nav>
+  ) : null;
+
   const content = (
     <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
       {/* Шапка — десктоп */}
+      {phoneLandscape ? null : (
       <header className="hidden h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 md:flex">
         <BrandMark className="size-[30px] text-primary" />
         <span className="flex min-w-0 flex-col">
@@ -1512,7 +1728,10 @@ export function RoomPage() {
         </div>
       </header>
 
+      )}
+
       {/* Шапка — телефон */}
+      {phoneLandscape ? null : (
       <header className="flex shrink-0 items-center gap-2 px-3.5 pb-2.5 pt-[max(8px,env(safe-area-inset-top))] md:hidden">
         <BrandMark className="size-[26px] text-primary" />
         <span className="min-w-0 truncate text-[13.5px] font-bold">{lessonTitle ?? "Урок"}</span>
@@ -1530,44 +1749,14 @@ export function RoomPage() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className={MENU_CONTENT}>
-            <DropdownMenuLabel className={MENU_LABEL}>Урок</DropdownMenuLabel>
-            {!isTeacher ? (
-              <DropdownMenuItem className={MENU_ITEM} onSelect={() => setDrawer("people")}>
-                <Users aria-hidden />
-                <span className="flex-1">Участники</span>
-                <span className="text-xs text-text-3">{connectedCount}</span>
-              </DropdownMenuItem>
-            ) : null}
-            <DropdownMenuItem className={MENU_ITEM} onSelect={() => setDrawer("tools")}>
-              <ClipboardList aria-hidden />
-              Материалы урока
-            </DropdownMenuItem>
-            {isTeacher ? (
-              <DropdownMenuItem className={MENU_ITEM} onSelect={toggleBoard}>
-                <PenLine aria-hidden />
-                {stageView === "board" ? "Закрыть доску" : "Открыть доску"}
-              </DropdownMenuItem>
-            ) : null}
-            {isTeacher ? recordingItem : null}
-            {isTeacher && lessonJoinPath ? (
-              <DropdownMenuItem className={MENU_ITEM} onSelect={copyJoinLink}>
-                <LinkIcon aria-hidden />
-                Пригласить
-              </DropdownMenuItem>
-            ) : null}
-            {media ? (
-              <DropdownMenuItem className={MENU_ITEM} onSelect={openSettings}>
-                <Settings aria-hidden />
-                Настройки устройств
-              </DropdownMenuItem>
-            ) : null}
-            {classMenuItems}
+            {lessonMenuItems}
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
+      )}
 
       <div className="relative flex min-h-0 flex-1">
-        {drawer ? (
+        {drawer && !phoneLandscape ? (
           <aside className="hidden w-[340px] shrink-0 flex-col border-r border-border bg-card md:flex">
             {drawerBody(false)}
           </aside>
@@ -1575,24 +1764,45 @@ export function RoomPage() {
 
         {/* `Sheet` затемняет весь экран своим оверлеем независимо от CSS-классов
             содержимого — монтируем его только на узком вьюпорте. */}
-        {isNarrowViewport ? (
+        {isNarrowViewport || phoneLandscape ? (
           <Sheet open={drawer !== null} onOpenChange={(o) => !o && setDrawer(null)}>
             <SheetContent
-              side="bottom"
+              side={phoneLandscape ? "right" : "bottom"}
               aria-describedby={undefined}
-              className="flex h-[min(560px,80dvh)] flex-col gap-0 rounded-t-3xl border-0 p-0 shadow-[0_-8px_24px_rgba(16,24,40,.18)] [&>button:first-of-type]:hidden"
+              className={cn(
+                "flex flex-col gap-0 border-0 p-0 [&>button:first-of-type]:hidden",
+                phoneLandscape
+                  ? "w-[min(360px,60vw)] pr-[env(safe-area-inset-right)] shadow-[-8px_0_24px_rgba(16,24,40,.18)] sm:max-w-none"
+                  : "h-[min(560px,80dvh)] rounded-t-3xl shadow-[0_-8px_24px_rgba(16,24,40,.18)]",
+              )}
             >
-              {drawerBody(true)}
+              {drawerBody(true, !phoneLandscape)}
             </SheetContent>
           </Sheet>
         ) : null}
 
-        <main className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto px-3 md:gap-3 md:p-3.5">
+        <main
+          className={cn(
+            "relative flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto",
+            phoneLandscape
+              ? "py-2 pl-[max(8px,env(safe-area-inset-left))] pr-1"
+              : "px-3 md:gap-3 md:p-3.5",
+          )}
+        >
+          {phoneLandscape ? (
+            <div className="pointer-events-none absolute left-[max(12px,env(safe-area-inset-left))] top-3 z-30 flex items-center gap-1.5">
+              <StatusPill status={status} compact />
+              <MediaLinkPill hidden={status !== "connected"} compact />
+              {recordingActive ? <RecordingIcon /> : null}
+            </div>
+          ) : null}
           {stageArea}
         </main>
+        {landscapeControls}
       </div>
 
       {/* Футер — десктоп */}
+      {phoneLandscape ? null : (
       <footer className="hidden h-[76px] shrink-0 items-center justify-between gap-4 border-t border-border bg-card px-4 md:flex">
         {/* Слева — кнопки-меню (участники/чат/материалы/⋯): были у кнопки
             «Выйти» справа, пользователь попросил поменять местами с
@@ -1659,6 +1869,7 @@ export function RoomPage() {
               inactiveIcon={Hand}
               activeLabel="Опустить руку"
               inactiveLabel="Поднять руку"
+              hotkey="H"
               onToggle={toggleHand}
             />
           ) : null}
@@ -1723,7 +1934,10 @@ export function RoomPage() {
         </div>
       </footer>
 
+      )}
+
       {/* Футер — телефон */}
+      {phoneLandscape ? null : (
       <footer className="flex shrink-0 flex-col gap-2.5 px-3 pb-[max(20px,env(safe-area-inset-bottom))] pt-3.5 md:hidden">
         <div className="flex items-stretch gap-2">
           {media ? micButton("tile") : null}
@@ -1749,6 +1963,7 @@ export function RoomPage() {
               activeLabel="Опустить руку"
               inactiveLabel="Поднять руку"
               caption="Рука"
+              hotkey="H"
               onToggle={toggleHand}
             />
           )}
@@ -1760,6 +1975,7 @@ export function RoomPage() {
             inactiveIcon={MessageSquare}
             activeLabel="Чат"
             inactiveLabel="Чат"
+            hotkey="C"
             badge={unreadChat}
             onToggle={() => toggleDrawer("chat")}
           />
@@ -1773,6 +1989,7 @@ export function RoomPage() {
           Выйти из урока
         </button>
       </footer>
+      )}
 
       {media ? <DeviceSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} /> : null}
 
@@ -1865,8 +2082,15 @@ export function RoomPage() {
         <Empty className="p-0 md:p-0">
           <EmptyHeader>
             <EmptyTitle as="h1">Вы вышли из урока</EmptyTitle>
-            <EmptyDescription>Чтобы вернуться, откройте ссылку на урок ещё раз.</EmptyDescription>
+            <EmptyDescription>Если вышли случайно — вернитесь, урок продолжается.</EmptyDescription>
           </EmptyHeader>
+          {/* Гостевая сессия этого урока (кука) ещё жива: перезагрузка снова
+              проверит её на сервере (удалён, вход закрыт, ссылка сменилась —
+              покажет причину) и откроет проверку устройств. Чужой урок так не
+              открыть: доступ решает кука, а не id в адресе. */}
+          <Button className="h-11 px-5 text-[15px]" onClick={() => window.location.reload()}>
+            Вернуться в урок
+          </Button>
         </Empty>
       </StatusScreen>
     );
@@ -1943,10 +2167,12 @@ export function RoomPage() {
       >
         {lessonId ? <MediaTelemetry lessonId={lessonId} /> : null}
         <MediaDeviceErrorNotice />
+        <RoomHotkeys />
         <ApplyAudioOutput deviceId={spkDeviceId} />
         <MicSync enabled={self?.permissions.canSpeak ?? false} />
         <VideoSubscriptionManager participants={participants} mode={lessonMode} />
         <PoorLinkMediaAdapter />
+        <PrefetchStageWhenMediaUp />
         {lessonId ? (
           <MediaRecovery
             lessonId={lessonId}
@@ -2033,6 +2259,33 @@ function StatusPill({ status, compact = false }: { status: SocketStatusLike; com
 const MEDIA_PILL_DELAY_MS = 4000;
 /** Первое подключение медиа на нормальной сети — 1–3 с; дольше — пора сказать. */
 const MEDIA_FIRST_CONNECT_PILL_DELAY_MS = 12_000;
+
+/**
+ * Доска и задания докачиваются заранее (`prefetchLessonStage`), но только когда
+ * звук и видео уже подключились: на медленной сети ~575 КБ кусков иначе
+ * делили канал с `/join`, подключением LiveKit и первыми секундами медиа.
+ * Только наблюдение за состоянием комнаты — на подключение LiveKit не
+ * влияет. Если доска или задание уже на экране, их кусок грузится сам, не
+ * дожидаясь этого. Если медиа так и не подключилось, куски загрузятся по
+ * требованию при показе.
+ */
+function PrefetchStageWhenMediaUp() {
+  const room = useMaybeRoomContext();
+  useEffect(() => {
+    if (!room) return;
+    const update = () => {
+      if (room.state !== ConnectionState.Connected) return;
+      room.off(RoomEvent.ConnectionStateChanged, update);
+      prefetchLessonStage();
+    };
+    room.on(RoomEvent.ConnectionStateChanged, update);
+    update();
+    return () => {
+      room.off(RoomEvent.ConnectionStateChanged, update);
+    };
+  }, [room]);
+  return null;
+}
 
 /**
  * Звук и видео сейчас не идут: LiveKit переподключается или отключился, а
@@ -2154,6 +2407,63 @@ function StageBanner({
   );
 }
 
+/**
+ * Поднятые руки по порядку: учитель видит, кто первый, кто следующий и кому
+ * слово уже дано. Опустить можно одну руку или все сразу.
+ */
+function HandsQueue({
+  hands,
+  onGiveWord,
+  onLower,
+  onLowerAll,
+}: {
+  hands: ParticipantSnapshot[];
+  onGiveWord: (userId: string) => void;
+  onLower: (userId: string) => void;
+  onLowerAll: () => void;
+}) {
+  const smallBtn =
+    "h-7 shrink-0 rounded-full border border-border bg-card px-2.5 text-[12.5px] font-semibold text-text-2 transition-colors hover:bg-surface-2";
+  return (
+    <section aria-label="Поднятые руки" className="mx-2 mt-2 flex flex-col gap-1 rounded-[10px] border border-border bg-surface-2 p-2">
+      <div className="flex items-center justify-between gap-2 px-1">
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-2">
+          <Hand className="size-3.5 text-warning" aria-hidden />
+          Руки · {hands.length}
+        </span>
+        <button type="button" onClick={onLowerAll} className={smallBtn}>
+          Опустить все
+        </button>
+      </div>
+      <ol className="flex flex-col gap-0.5">
+        {hands.map((p, i) => (
+          <li key={p.userId} className="flex items-center gap-2 rounded-lg bg-card px-2 py-1.5">
+            <span className="w-5 shrink-0 text-center text-[13px] font-bold tabular-nums text-text-2">{i + 1}</span>
+            <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{p.fullName}</span>
+            {p.permissions.canSpeak ? (
+              <span className="shrink-0 text-xs text-text-2">слово дано</span>
+            ) : (
+              <button type="button" onClick={() => onGiveWord(p.userId)} className={smallBtn}>
+                Дать слово
+              </button>
+            )}
+            <SimpleTooltip content="Опустить руку">
+              <button
+                type="button"
+                onClick={() => onLower(p.userId)}
+                aria-label={`Опустить руку: ${p.fullName}`}
+                className="flex size-7 shrink-0 items-center justify-center rounded-full text-text-2 transition-colors hover:bg-surface-2 [&_svg]:size-4"
+              >
+                <X aria-hidden />
+              </button>
+            </SimpleTooltip>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 type PeopleListProps = {
   participants: ParticipantSnapshot[];
   selfId: string | undefined;
@@ -2201,6 +2511,7 @@ function PeopleList({
   onTogglePin,
   onRemove,
 }: PeopleListProps) {
+  const { id: lessonId } = useParams<{ id: string }>();
   const q = query.trim().toLowerCase();
   const rows = participants
     .filter((p) => !q || p.fullName.toLowerCase().includes(q))
@@ -2243,7 +2554,7 @@ function PeopleList({
               !p.connected && "opacity-60",
             )}
           >
-            <UserAvatar id={p.userId} role={markRoleOf(p.kind, p.role)} size={32} />
+            <UserAvatar colorKey={participantColorKey(p, lessonId)} role={markRoleOf(p.kind, p.role)} size={32} />
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="flex min-w-0 items-center gap-1.5">
                 <span className="truncate text-sm font-medium text-foreground">{p.fullName}</span>
@@ -2301,6 +2612,8 @@ function StageContent({
   decks,
   isTeacher,
   reviewSignal,
+  gradedSignal,
+  bubbles,
   videoLayout = "grid",
   onLayoutChange,
   onShowAll,
@@ -2320,6 +2633,8 @@ function StageContent({
   decks: Deck[];
   isTeacher: boolean;
   reviewSignal: number;
+  gradedSignal: number;
+  bubbles: ReadonlyMap<string, string>;
   videoLayout?: "grid" | "speaker";
   onLayoutChange: (layout: "grid" | "speaker") => void;
   onShowAll: () => void;
@@ -2341,6 +2656,7 @@ function StageContent({
         activityId={activityId}
         isTeacher={isTeacher}
         reviewSignal={reviewSignal}
+        gradedSignal={gradedSignal}
         onClose={onActivityClose}
       />
     ) : screenSharing ? (
@@ -2361,6 +2677,7 @@ function StageContent({
         layout={videoLayout}
         onLayoutChange={onLayoutChange}
         onShowAll={onShowAll}
+        bubbles={bubbles}
       />
     );
 
@@ -2374,11 +2691,11 @@ function StageContent({
         <div className="relative min-h-0 min-w-0 flex-1">
           {main}
           {studentRail ? null : (
-            <RoomVideoGrid participants={participants} reconnectingIds={reconnectingIds} selfId={selfId} variant="pip" />
+            <RoomVideoGrid participants={participants} reconnectingIds={reconnectingIds} selfId={selfId} variant="pip" bubbles={bubbles} />
           )}
         </div>
         {studentRail ? (
-          <RoomVideoGrid participants={participants} reconnectingIds={reconnectingIds} selfId={selfId} mode={mode} variant="rail" onShowAll={onShowAll} />
+          <RoomVideoGrid participants={participants} reconnectingIds={reconnectingIds} selfId={selfId} mode={mode} variant="rail" onShowAll={onShowAll} bubbles={bubbles} />
         ) : null}
       </div>
     );
@@ -2402,7 +2719,7 @@ function StageContent({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2 md:flex-row md:gap-3">
       <div className="min-h-0 min-w-0 flex-1">{main}</div>
-      <RoomVideoGrid participants={participants} reconnectingIds={reconnectingIds} selfId={selfId} mode={mode} variant="rail" onShowAll={onShowAll} />
+      <RoomVideoGrid participants={participants} reconnectingIds={reconnectingIds} selfId={selfId} mode={mode} variant="rail" onShowAll={onShowAll} bubbles={bubbles} />
     </div>
   );
 }

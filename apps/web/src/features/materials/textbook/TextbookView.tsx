@@ -5,6 +5,7 @@ import type {
   PublicMaterial,
   QuestionResponse,
   SubmitActivityResult,
+  TeacherFeedbackItem,
   SubmitFeedbackItem,
 } from "@school/shared";
 
@@ -62,6 +63,7 @@ export function TextbookView({
   onPositionChange,
   renderAfterTask,
   barEnd,
+  teacherFeedback,
 }: {
   material: {
     title: string;
@@ -90,6 +92,8 @@ export function TextbookView({
   renderAfterTask?: (blockId: string) => React.ReactNode;
   /** Доп. кнопки в конце панели навигации (на уроке — «Свернуть»). */
   barEnd?: React.ReactNode;
+  /** Итог ручной проверки учителем по вопросам (`MyActivity.teacherFeedback`). */
+  teacherFeedback?: readonly TeacherFeedbackItem[];
 }) {
   const book = useMemo(
     () => buildTextbook(material.blocks, material.settings.layout),
@@ -158,6 +162,11 @@ export function TextbookView({
     if (!r?.revealed) return null;
     return new Map<string, SubmitFeedbackItem>(r.feedback.map((f) => [f.questionId, f]));
   }, [submit?.result]);
+
+  const teacherNotes = useMemo(
+    () => new Map((teacherFeedback ?? []).map((f) => [f.questionId, f])),
+    [teacherFeedback],
+  );
 
   const totalTasks = book.taskNumber.size;
   const answered = [...book.taskNumber.keys()].filter((id) => hasAnswer(responses[id])).length;
@@ -234,6 +243,7 @@ export function TextbookView({
                         onChange={(r) => onResponseChange?.(id, r)}
                         disabled={disabled}
                         result={results?.get(id)}
+                        teacherNote={teacherNotes.get(id)}
                       />
                       {renderAfterTask?.(id)}
                     </>

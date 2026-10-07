@@ -61,6 +61,7 @@ function toSnapshot(participantId: string, entry: PresenceEntry): ParticipantSna
     role: entry.role,
     connected: entry.connected,
     handRaised: entry.handRaised,
+    handRaisedAt: entry.handRaised ? (entry.handRaisedAt ?? null) : null,
     pinned: entry.pinned,
     permissions: entry.permissions,
     joinedAt: entry.joinedAt,
@@ -660,14 +661,41 @@ export async function setHandRaised(
   raised: boolean,
 ): Promise<void> {
   await assertMembership(actor, lessonId);
+  // Повторное «поднять» не сдвигает ученика в конец очереди.
+  const current = raised ? await presence.getParticipant(lessonId, actor.participantId) : null;
+  const raisedAt = raised ? (current?.handRaised && current.handRaisedAt ? current.handRaisedAt : new Date().toISOString()) : null;
   const result = await presence.patchParticipant(lessonId, actor.participantId, {
     handRaised: raised,
+    handRaisedAt: raisedAt,
     lastSeenAt: Date.now(),
   });
   if (!result) {
     throw new AppError(409, "not_in_room", "Сначала войдите в урок");
   }
-  emitRoomEvent(lessonId, { type: "hand_raised", userId: actor.participantId, raised });
+  emitRoomEvent(lessonId, { type: "hand_raised", userId: actor.participantId, raised, raisedAt });
+}
+
+/**
+ * Учитель опускает руку одному ученику (`targetUserId`) или всем сразу.
+ * Авторизация — как у закрепления и мьюта: учитель-владелец урока или админ.
+ */
+export async function lowerHands(
+  schoolId: string,
+  lessonId: string,
+  requester: AccessTokenPayload,
+  targetUserId?: string,
+): Promise<void> {
+  const lesson = await lessonsService.getLesson(schoolId, lessonId);
+  const isOwnerTeacher = requester.role === "teacher" && lesson.teacherId === requester.sub;
+  if (requester.role !== "admin" && !isOwnerTeacher) {
+    throw new AppError(403, "forbidden", "Только учитель урока может опускать руки участникам");
+  }
+  const participants = await presence.listParticipants(lessonId);
+  for (const [userId, entry] of participants) {
+    if (!entry.handRaised || (targetUserId && userId !== targetUserId)) continue;
+    const result = await presence.patchParticipant(lessonId, userId, { handRaised: false, handRaisedAt: null });
+    if (result) emitRoomEvent(lessonId, { type: "hand_raised", userId, raised: false, raisedAt: null });
+  }
 }
 
 /**
@@ -877,6 +905,7 @@ export async function muteParticipantNow(
   }
   const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
   await mediaService.muteParticipant(livekitRoom, targetUserId);
+  emitRoomEvent(lessonId, { type: "microphones_muted", userIds: [targetUserId] });
 }
 
 /** «Мьют всех» (Э2.5) — глушит микрофоны всех подключённых учеников одной кнопкой, учителя не трогает. */
@@ -892,6 +921,7 @@ export async function muteAllNow(schoolId: string, lessonId: string, requester: 
     .filter(([, entry]) => entry.kind === "guest")
     .map(([userId]) => userId);
   await mediaService.muteMicrophones(livekitRoom, studentIds);
+  if (studentIds.length > 0) emitRoomEvent(lessonId, { type: "microphones_muted", userIds: studentIds });
 }
 
 async function assertLessonTeacher(
@@ -1221,6 +1251,7 @@ export async function sendChatMessage(
     id: row.id,
     lessonId: row.lessonId,
     userId: row.userId,
+    authorId: actor.participantId,
     authorName: entry.fullName,
     body: row.body,
     createdAt: row.createdAt.toISOString(),
@@ -1243,6 +1274,7 @@ export async function listChatHistory(
     id: row.id,
     lessonId: row.lessonId,
     userId: row.userId,
+    authorId: row.userId ?? row.guestId ?? null,
     authorName: row.authorName,
     body: row.body,
     createdAt: row.createdAt.toISOString(),

@@ -240,6 +240,21 @@ export interface MyActivity {
    * потеря просто открывает с первого слайда.
    */
   currentBlockId: string | null;
+  /**
+   * Результаты ручной проверки сданной попытки — только уже проверенные
+   * учителем ответы и только если результаты задания открыты ученику
+   * (`revealResults`, как у баллов сабмита). Пусто до проверки.
+   */
+  teacherFeedback?: TeacherFeedbackItem[];
+}
+
+/** Итог ручной проверки одного ответа (Э8.12): баллы и комментарий учителя. */
+export interface TeacherFeedbackItem {
+  questionId: string;
+  score: number;
+  maxScore: number;
+  comment: string | null;
+  gradedAt: string;
 }
 
 // ─── Сабмит (§8 ТЗ: `POST /activities/:id/submit`) ─────────────────────────

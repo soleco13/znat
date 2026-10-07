@@ -1,0 +1,128 @@
+[
+ {
+  "label": "landing",
+  "url": "/",
+  "profile": "slow4g",
+  "m": {
+   "dcl": 1383,
+   "load": 1383,
+   "fcp": 2300,
+   "lcp": 2300,
+   "tbt": 87,
+   "longtasks": 5,
+   "ttiApprox": 2991,
+   "heap": 5
+  },
+  "n": 6,
+  "extra": {
+   "wall": 6156
+  }
+ },
+ {
+  "label": "login",
+  "url": "/login",
+  "profile": "slow4g",
+  "m": {
+   "dcl": 1428,
+   "load": 1430,
+   "fcp": 1724,
+   "lcp": 1880,
+   "tbt": 220,
+   "longtasks": 4,
+   "ttiApprox": 2302,
+   "heap": 4
+  },
+  "n": 14,
+  "extra": {
+   "formVisibleMs": 2319,
+   "wall": 5580
+  }
+ },
+ {
+  "label": "classroom",
+  "url": "/lessons/add87950-752e-43b0-85c3-7628bbc079d5/room",
+  "profile": "slow4g",
+  "m": {
+   "dcl": 1557,
+   "load": 1564,
+   "fcp": 1852,
+   "lcp": 5668,
+   "tbt": 519,
+   "longtasks": 9,
+   "ttiApprox": 6090,
+   "heap": 8
+  },
+  "n": 142,
+  "extra": {
+   "prejoinMs": 5679,
+   "inRoom": true,
+   "roomMs": 1143,
+   "boardMs": 3373,
+   "wall": 38163
+  }
+ },
+ {
+  "label": "student",
+  "url": "/j/<token>",
+  "profile": "slow4g",
+  "m": {
+   "dcl": 1573,
+   "load": 1603,
+   "fcp": 2368,
+   "lcp": 3044,
+   "tbt": 303,
+   "longtasks": 6,
+   "ttiApprox": 3149,
+   "heap": 7
+  },
+  "n": 116,
+  "extra": {
+   "formMs": 3074,
+   "inRoom": true,
+   "roomMs": 3731,
+   "wall": 27904
+  }
+ },
+ {
+  "label": "material",
+  "url": "(in-lesson activity)",
+  "profile": "slow4g",
+  "m": {
+   "dcl": 1573,
+   "load": 1603,
+   "fcp": 2368,
+   "lcp": 3044,
+   "tbt": 7669,
+   "longtasks": 61,
+   "ttiApprox": 40472,
+   "heap": 11
+  },
+  "n": 37,
+  "extra": {
+   "activity": 201,
+   "shown": true,
+   "shownMs": 4841
+  }
+ },
+ {
+  "label": "editor",
+  "url": "/materials/edit/<id>",
+  "profile": "slow4g",
+  "m": {
+   "dcl": 2514,
+   "load": 2553,
+   "fcp": 3000,
+   "lcp": 11488,
+   "tbt": 3836,
+   "longtasks": 17,
+   "ttiApprox": 11748,
+   "heap": 11
+  },
+  "n": 50,
+  "extra": {
+   "editorVisible": true,
+   "editorMs": 11447,
+   "wall": 18537
+  }
+ }
+]

@@ -1,0 +1,150 @@
+{
+ "results": [
+  {
+   "name": "teacher joined",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "wake lock requested after join (teacher)",
+   "pass": true,
+   "detail": "[\"request\",\"granted\"]"
+  },
+  {
+   "name": "guest joined",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "teacher sees guest",
+   "pass": true,
+   "detail": "a2d99008-1dd1-41ef-8392-838db4d4835d"
+  },
+  {
+   "name": "guest toast: teacher took the word",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "guest toast: teacher gave the word",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "guest toast: teacher muted",
+   "pass": true,
+   "detail": "status 204"
+  },
+  {
+   "name": "teacher hand toast",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "hands queue ordered by raise time",
+   "pass": true,
+   "detail": "[\"1 Вера Лебедева Дать слово\",\"2 Анна Смирнова Дать слово\",\"3 Ученик Проверка слово дано\"]"
+  },
+  {
+   "name": "chat bubble on author tile (teacher)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "chat bubble disappears after ~5s",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "lower all hands (real guest hand down)",
+   "pass": true,
+   "detail": "status 204, aria-pressed false"
+  },
+  {
+   "name": "hotkey C opens chat",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "hotkey ignored while typing",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "camera-off button not red-filled",
+   "pass": true,
+   "detail": "inline-flex shrink-0 items-center overflow-hidden rounded-full border shadow-xs transition-colors border-border bg-card "
+  },
+  {
+   "name": "teacher 390x844-portrait",
+   "pass": true,
+   "detail": "{\"coarse\":true,\"landscapeLayout\":false,\"stageH\":648,\"stageW\":390,\"leaveVisible\":true,\"hScroll\":false}"
+  },
+  {
+   "name": "teacher 844x390-landscape",
+   "pass": true,
+   "detail": "{\"coarse\":true,\"landscapeLayout\":true,\"stageH\":390,\"stageW\":780,\"leaveVisible\":true,\"hScroll\":false}"
+  },
+  {
+   "name": "teacher 375x667-portrait",
+   "pass": true,
+   "detail": "{\"coarse\":true,\"landscapeLayout\":false,\"stageH\":471,\"stageW\":375,\"leaveVisible\":true,\"hScroll\":false}"
+  },
+  {
+   "name": "teacher 667x375-landscape",
+   "pass": true,
+   "detail": "{\"coarse\":true,\"landscapeLayout\":true,\"stageH\":375,\"stageW\":603,\"leaveVisible\":true,\"hScroll\":false}"
+  },
+  {
+   "name": "teacher 1440x900-desktop",
+   "pass": true,
+   "detail": "{\"coarse\":false,\"landscapeLayout\":false,\"stageH\":768,\"stageW\":1100,\"leaveVisible\":true,\"hScroll\":false}"
+  },
+  {
+   "name": "guest 390x844-portrait",
+   "pass": true,
+   "detail": "{\"coarse\":true,\"landscapeLayout\":false,\"stageH\":648,\"stageW\":390,\"leaveVisible\":true,\"hScroll\":false}"
+  },
+  {
+   "name": "guest 844x390-landscape",
+   "pass": true,
+   "detail": "{\"coarse\":true,\"landscapeLayout\":true,\"stageH\":390,\"stageW\":780,\"leaveVisible\":true,\"hScroll\":false}"
+  },
+  {
+   "name": "guest 375x667-portrait",
+   "pass": true,
+   "detail": "{\"coarse\":true,\"landscapeLayout\":false,\"stageH\":471,\"stageW\":375,\"leaveVisible\":true,\"hScroll\":false}"
+  },
+  {
+   "name": "guest 667x375-landscape",
+   "pass": true,
+   "detail": "{\"coarse\":true,\"landscapeLayout\":true,\"stageH\":375,\"stageW\":603,\"leaveVisible\":true,\"hScroll\":false}"
+  },
+  {
+   "name": "guest 1440x900-desktop",
+   "pass": true,
+   "detail": "{\"coarse\":false,\"landscapeLayout\":false,\"stageH\":768,\"stageW\":1440,\"leaveVisible\":true,\"hScroll\":false}"
+  },
+  {
+   "name": "left screen has 'Вернуться в урок'",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "return leads back to device check (session restored)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "guest rejoined after return",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "name": "wake lock released on leave (guest)",
+   "pass": true,
+   "detail": "[\"request\",\"granted\",\"released\"]"
+  }
+ ],
+ "errors": []
+}

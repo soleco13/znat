@@ -6,15 +6,19 @@ import { SimpleTooltip } from "@/shared/ui/tooltip";
 import { Loader } from "@/shared/ui/loader";
 import { toast } from "@/shared/ui/sonner";
 
-export type RoomControlVariant = "circle" | "pill" | "tile";
+export type RoomControlVariant = "circle" | "pill" | "tile" | "rail";
 
 /**
  * Кнопка панели урока. Три вида:
  *  - `circle` — круглый тумблер с подписью в тултипе (PiP-тулбар);
  *  - `pill` — десктопный футер: иконка + подпись в строку, опционально
  *    сплит-кнопка «шеврон» для выбора устройства внутри той же пилюли;
- *  - `tile` — мобильный футер: крупная плитка 56px, иконка над подписью.
- * `tone="media"`: выключено — красная заливка. `tone="action"`: включено — синий тинт.
+ *  - `tile` — мобильный футер: крупная плитка 56px, иконка над подписью;
+ *  - `rail` — телефон в альбомной ориентации: квадрат 48px в колонке справа, только иконка.
+ * `tone="media"`: выключено — красная заливка. `tone="quiet"`: выключено — обычная
+ * кнопка с перечёркнутой иконкой (камера: выключенная камера у ученика —
+ * норма, а не тревога; красная заливка весь урок выглядела как ошибка).
+ * `tone="action"`: включено — синий тинт.
  */
 export function RoomControlButton({
   active,
@@ -33,6 +37,7 @@ export function RoomControlButton({
   onOpenSettings,
   settingsLabel = "Настройки устройства",
   badge,
+  hotkey,
 }: {
   active: boolean;
   activeIcon: LucideIcon;
@@ -41,7 +46,7 @@ export function RoomControlButton({
   inactiveLabel: string;
   onToggle: () => void;
   disabled?: boolean;
-  tone?: "media" | "action";
+  tone?: "media" | "quiet" | "action";
   speaking?: boolean;
   loading?: boolean;
   /** Переопределяет текст подсказки (напр. причину, по которой кнопка недоступна). */
@@ -54,10 +59,13 @@ export function RoomControlButton({
   settingsLabel?: string;
   /** Только `tile`: счётчик в углу (непрочитанные сообщения). */
   badge?: number;
+  /** Горячая клавиша (`RoomHotkeys` нажимает кнопку с этим `data-hotkey`) — и подсказка в тултипе. */
+  hotkey?: string;
 }) {
   const Icon = active ? ActiveIcon : InactiveIcon;
   const label = title ?? (active ? activeLabel : inactiveLabel);
   const alarm = tone === "media" && !active;
+  const quietOff = tone === "quiet" && !active;
   const highlighted = tone === "action" && active;
   const surface = alarm
     ? "border-destructive bg-destructive text-destructive-foreground"
@@ -65,7 +73,8 @@ export function RoomControlButton({
       ? "border-primary-muted bg-primary-light text-primary"
       : "border-border bg-card text-foreground";
   const hover = alarm ? "hover:bg-black/10" : highlighted ? "hover:bg-black/[.04]" : "hover:bg-surface-2";
-  const iconNode = loading ? <Loader /> : <Icon aria-hidden />;
+  const iconNode = loading ? <Loader /> : <Icon aria-hidden className={quietOff ? "text-destructive" : undefined} />;
+  const tooltip = hotkey ? `${label} · ${hotkey}` : label;
   // Недоступна, но с причиной («Микрофон выключил учитель — поднимите руку»):
   // не блокируем, а по нажатию объясняем. У настоящей disabled-кнопки
   // подсказка не всплывает ни на телефоне, ни на десктопе (нет событий
@@ -81,6 +90,7 @@ export function RoomControlButton({
       <button
         type="button"
         onClick={handleToggle}
+        data-hotkey={hotkey}
         disabled={blocked}
         aria-disabled={explain ? true : undefined}
         aria-pressed={active}
@@ -105,6 +115,35 @@ export function RoomControlButton({
     );
   }
 
+  if (variant === "rail") {
+    return (
+      <button
+        type="button"
+        onClick={handleToggle}
+        data-hotkey={hotkey}
+        disabled={blocked}
+        aria-disabled={explain ? true : undefined}
+        aria-pressed={active}
+        aria-label={label}
+        title={label}
+        className={cn(
+          explain && "opacity-50",
+          "relative flex size-12 shrink-0 items-center justify-center rounded-2xl border transition-colors disabled:opacity-50 [&_svg]:size-[21px] [&_svg]:shrink-0",
+          surface,
+          alarm ? "" : hover,
+          speaking && "ring-2 ring-success ring-offset-1",
+        )}
+      >
+        {iconNode}
+        {badge ? (
+          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground">
+            {badge}
+          </span>
+        ) : null}
+      </button>
+    );
+  }
+
   if (variant === "pill") {
     return (
       <span
@@ -114,10 +153,11 @@ export function RoomControlButton({
           speaking && "ring-2 ring-success ring-offset-1",
         )}
       >
-        <SimpleTooltip content={label} side="top">
+        <SimpleTooltip content={tooltip} side="top">
           <button
             type="button"
             onClick={handleToggle}
+            data-hotkey={hotkey}
             disabled={blocked}
             aria-disabled={explain ? true : undefined}
             aria-pressed={active}

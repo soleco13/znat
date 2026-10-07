@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import type { ActivityProgress, StudentProgress, StudentProgressStatus } from "@school/shared";
 
 import { UserAvatar } from "@/shared/ui/avatar";
+import { participantColorKey } from "@/shared/ui/role-mark";
 import { Badge } from "@/shared/ui/badge";
 import { CenteredSpinner } from "@/shared/ui/spinner";
 import {
@@ -30,6 +32,8 @@ export function ClassProgressPanel({
   /** Э12.5/§7.3: клик по ученику — открыть его попытку (учителю на уроке). */
   onSelectStudent?: (participantId: string, displayName: string) => void;
 }) {
+  // На уроке — его id (ключ цвета ученика тот же, что у плитки); вне урока — пусто.
+  const { id: lessonId } = useParams<{ id: string }>();
   const [progress, setProgress] = useState<ActivityProgress | null>(null);
   const [error, setError] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -105,7 +109,7 @@ export function ClassProgressPanel({
                 >
                   <TableCell>
                     <span className="flex items-center gap-2 font-medium">
-                      <UserAvatar id={s.identityId} role="student" size={24} />
+                      <UserAvatar colorKey={participantColorKey({ kind: "guest", userId: s.identityId, fullName: s.displayName }, lessonId)} role="student" size={24} />
                       {s.displayName}
                     </span>
                   </TableCell>

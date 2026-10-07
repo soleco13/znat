@@ -1,0 +1,27 @@
+import fs from "node:fs";
+import { connectBrowser, sleep, byText } from "./cdp.mjs";
+const ORIGIN="https://213.21.241.28"; const B=await connectBrowser(process.env.CDP);
+const r=await fetch(ORIGIN+"/api/v1/auth/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:process.env.T_EMAIL,password:process.env.T_PW})}); const cookie=r.headers.get("set-cookie");
+const { browserContextId } = await B.call("Target.createBrowserContext", {}); const { targetId } = await B.call("Target.createTarget", { url: "about:blank", browserContextId }); const { sessionId } = await B.call("Target.attachToTarget", { targetId, flatten: true });
+const send=(m,p)=>B.call(m,p,sessionId); await send("Network.enable"); await send("Runtime.enable"); await send("Page.enable");
+await send("Emulation.setDeviceMetricsOverride", { width: 1366, height: 768, deviceScaleFactor: 1, mobile: false });
+await send("Network.setCookie",{name:"refresh_token",value:cookie.match(/refresh_token=([^;]+)/)[1],url:ORIGIN+"/api/v1/auth",path:"/api/v1/auth",secure:true,httpOnly:true,sameSite:"Lax"});
+const ev=async e=>{const x=await send("Runtime.evaluate",{expression:e,returnByValue:true,awaitPromise:true}); return x.result.value ?? x.exceptionDetails?.text;};
+const click=async expr=>{const pt=await ev(`(()=>{const el=${expr}; if(!el) return null; const b=el.getBoundingClientRect(); return {x:b.x+b.width/2,y:b.y+b.height/2}})()`); if(!pt) return false; for (const type of ["mouseMoved","mousePressed","mouseReleased"]) await send("Input.dispatchMouseEvent",{type,x:pt.x,y:pt.y,button:"left",clickCount:1}); return true;};
+const shot=async n=>{const {data}=await send("Page.captureScreenshot",{format:"png"}); fs.writeFileSync(n, Buffer.from(data,"base64"));};
+await send("Page.navigate",{url:`${ORIGIN}/lessons/${process.env.LID}/room`}); await sleep(5000);
+if (await ev(`!!${byText("button","Присоединиться")}`)) { await click(byText("button","Присоединиться")); } await sleep(6000);
+const wait=async (fn,ms)=>{const t0=Date.now(); while(Date.now()-t0<ms){ if(await fn()) return true; await sleep(300);} return false;};
+const boardUp=()=>ev(`!!document.querySelector('.excalidraw canvas')`);
+const imgs=()=>ev(`[...document.querySelectorAll('img')].filter(i=>(i.getAttribute('src')||'').startsWith('data:image/png') && i.naturalWidth>0).length`);
+const doska=`[...document.querySelectorAll('button')].find(e => (e.textContent||'').trim() === 'Доска')`;
+if (!(await wait(boardUp, 8000))) { await click(doska); console.log("board up", await wait(boardUp, 30000)); }
+console.log("pdf pages", await wait(async()=> (await imgs())>0, 20000), await imgs());
+const key=async (k,code,vk)=>{ await send("Input.dispatchKeyEvent",{type:"keyDown",key:k,code,windowsVirtualKeyCode:vk}); await send("Input.dispatchKeyEvent",{type:"keyUp",key:k,code,windowsVirtualKeyCode:vk}); };
+await ev(`[...document.querySelectorAll('button[aria-label="Ещё"]')].find(e=>e.getBoundingClientRect().y<400).focus()`); await key("Enter","Enter",13);
+console.log("menu open", await wait(()=>ev(`!![...document.querySelectorAll('[role="menuitem"]')].find(e => (e.textContent||'').includes('perf-test'))`), 5000));
+console.log("clicked", await click(`[...document.querySelectorAll('[role="menuitem"]')].find(e => (e.textContent||'').includes('perf-test'))`));
+console.log("removed", await wait(async()=> (await imgs())===0, 10000));
+await shot("results/dbg-board-3.png");
+await click(doska); console.log("board hidden", await wait(async()=>!(await boardUp()), 10000));
+process.exit(0);

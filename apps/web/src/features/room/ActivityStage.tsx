@@ -28,14 +28,16 @@ export function ActivityStage({
   activityId,
   isTeacher,
   reviewSignal = 0,
+  gradedSignal = 0,
   onClose,
 }: {
   activityId: string;
   isTeacher: boolean;
   reviewSignal?: number;
+  gradedSignal?: number;
   onClose?: () => void;
 }) {
-  if (!isTeacher) return <StudentActivityStage activityId={activityId} onClose={onClose} />;
+  if (!isTeacher) return <StudentActivityStage activityId={activityId} gradedSignal={gradedSignal} onClose={onClose} />;
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm">
       <TeacherActivityStage activityId={activityId} reviewSignal={reviewSignal} onClose={onClose} />
@@ -52,9 +54,11 @@ export function ActivityStage({
  */
 function StudentActivityStage({
   activityId,
+  gradedSignal,
   onClose,
 }: {
   activityId: string;
+  gradedSignal: number;
   onClose?: () => void;
 }) {
   const strokes = useStudentAnnotationsPoll(activityId, true);
@@ -67,6 +71,7 @@ function StudentActivityStage({
       <div className="pb-24">
         <ActivityPlayer
           activityId={activityId}
+          gradedSignal={gradedSignal}
           showHead={false}
           annotationOverlay={<MaterialAnnotationLayer strokes={strokes} editable={false} />}
           barEnd={

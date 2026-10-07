@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Check, CircleDot, Clock, Lightbulb, X } from "lucide-react";
-import type { PublicQuestionBlock, QuestionResponse, SubmitFeedbackItem } from "@school/shared";
+import { Check, CircleDot, Clock, Lightbulb, MessageSquareText, X } from "lucide-react";
+import type { PublicQuestionBlock, QuestionResponse, SubmitFeedbackItem, TeacherFeedbackItem } from "@school/shared";
 
 import { cn } from "@/lib/utils";
 import { sanitizeHtml } from "@/shared/sanitize-html";
@@ -53,6 +53,7 @@ export function TextbookTask({
   onChange,
   disabled,
   result,
+  teacherNote,
 }: {
   block: PublicQuestionBlock;
   number: number;
@@ -60,6 +61,8 @@ export function TextbookTask({
   onChange: (response: QuestionResponse) => void;
   disabled: boolean;
   result?: SubmitFeedbackItem;
+  /** Учитель проверил ответ вручную — баллы и комментарий (вместо «Проверит учитель»). */
+  teacherNote?: TeacherFeedbackItem;
 }) {
   const [hintOpen, setHintOpen] = useState(false);
   const promptId = `tb-task-${block.id}`;
@@ -100,7 +103,7 @@ export function TextbookTask({
           dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.hint.html) }}
         />
       ) : null}
-      {result ? <TaskResult result={result} /> : null}
+      {teacherNote ? <TeacherNote note={teacherNote} /> : result ? <TaskResult result={result} /> : null}
     </section>
   );
 }
@@ -132,6 +135,23 @@ function TaskResult({ result }: { result: SubmitFeedbackItem }) {
         </>
       )}
     </p>
+  );
+}
+
+function TeacherNote({ note }: { note: TeacherFeedbackItem }) {
+  return (
+    <div className="tb-teacher-note">
+      <p className="tb-result tb-result--checked">
+        <Check aria-hidden />
+        Проверено учителем · {formatPoints(note.score)} из {formatPoints(note.maxScore)}
+      </p>
+      {note.comment ? (
+        <blockquote className="tb-teacher-comment">
+          <MessageSquareText aria-hidden />
+          <span>{note.comment}</span>
+        </blockquote>
+      ) : null}
+    </div>
   );
 }
 

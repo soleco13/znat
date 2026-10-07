@@ -1,0 +1,11 @@
+import fs from "node:fs";
+const host = process.env.CDP; const tabs = await (await fetch(`http://${host}/json/list`)).json();
+const t = tabs.find((x) => x.type === "page" && x.url.startsWith("https"));
+const ws = new WebSocket(t.webSocketDebuggerUrl.replace(/127\.0\.0\.1:9222|localhost:9222/, host));
+await new Promise((r) => (ws.onopen = r)); let id = 1; const pend = new Map();
+ws.onmessage = (e) => { const m = JSON.parse(e.data); if (pend.has(m.id)) { pend.get(m.id)(m.result); pend.delete(m.id); } };
+const send = (method, params = {}) => new Promise((r) => { const i = id++; pend.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
+const r = await send("Runtime.evaluate", { expression: "location.href + '\\n' + document.body.innerText.slice(0,600) + '\\n' + [...document.querySelectorAll('button')].map(b=>b.type+':'+(b.innerText||b.getAttribute('aria-label'))).join(' | ')", returnByValue: true });
+console.log(r.result.value);
+const s = await send("Page.captureScreenshot", { format: "png" }); fs.writeFileSync("/out/peek.png", Buffer.from(s.data, "base64"));
+process.exit(0);

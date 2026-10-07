@@ -1,0 +1,16 @@
+import { connectBrowser, sleep } from "../matis-tile-placeholder-2026-10-06/cdp.mjs";
+const host = process.env.CDP_G; const b = await connectBrowser(host);
+const tab = (await (await fetch(`http://${host}/json/list`)).json()).find((t) => t.type === "page" && t.url.includes("/lessons/"));
+const { sessionId } = await b.call("Target.attachToTarget", { targetId: tab.id, flatten: true });
+const ev = async (e) => (await b.call("Runtime.evaluate", { expression: e, returnByValue: true }, sessionId)).result.value;
+await ev(`(() => { if (window.__wsTrace) return; window.__wsTrace = []; const O = window.WebSocket; const t0 = Date.now();
+  window.WebSocket = function (u, p) { const ws = p ? new O(u, p) : new O(u); if (String(u).includes('/ws?')) { const id = window.__wsTrace.length; window.__wsTrace.push([Date.now()-t0, 'new#'+id]);
+    ws.addEventListener('open', () => window.__wsTrace.push([Date.now()-t0, 'open#'+id])); ws.addEventListener('close', (e) => window.__wsTrace.push([Date.now()-t0, 'close#'+id+':'+e.code])); } return ws; };
+  window.WebSocket.prototype = O.prototype; Object.assign(window.WebSocket, { CONNECTING: 0, OPEN: 1, CLOSING: 2, CLOSED: 3 });
+  window.__pill = []; let last = ''; setInterval(() => { const t = [...document.querySelectorAll('header span')].map(e => e.innerText).find(x => /Подключение|Переподключение|Нет связи/.test(x)) || 'ok'; if (t !== last) { last = t; window.__pill.push([Date.now()-t0, t]); } }, 250);
+  window.addEventListener('offline', () => window.__pill.push([Date.now()-t0, 'EV offline'])); window.addEventListener('online', () => window.__pill.push([Date.now()-t0, 'EV online'])); })()`);
+const ph = process.argv[2];
+if (ph === "off") await b.call("Network.emulateNetworkConditions", { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 }, sessionId);
+if (ph === "on") await b.call("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 }, sessionId);
+if (ph === "dump") console.log(JSON.stringify({ ws: await ev("window.__wsTrace"), pill: await ev("window.__pill") }));
+process.exit(0);

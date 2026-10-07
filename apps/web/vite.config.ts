@@ -14,6 +14,13 @@ const LESSON_ENTRY_MODULES = [
 ];
 
 /**
+ * Куски по требованию: список файлов для `warmChunk` (докачка с повторами
+ * перед `import()`) есть, но service worker их заранее не качает. pdf.js —
+ * только для PDF-презентаций (`canvas/pdf.ts` грузит его при первом PDF).
+ */
+const ON_DEMAND_MODULES = ["pdfjs-dist/build/pdf.mjs"];
+
+/**
  * Динамические импорты внутри кусков урока, которые тоже нужны заранее:
  * Excalidraw подгружает сама русскую локаль и полифилл `roundRect`, без
  * повторов — оборвался запрос, и доска у ученика на английском.
@@ -47,8 +54,9 @@ function lessonAssetsManifest(): Plugin {
       for (const chunk of chunks) {
         // По составу, а не по `facadeModuleId`: Rollup может склеить кусок с
         // соседними модулями, и фасада у него не будет (так вышло с доской).
-        const module = LESSON_ENTRY_MODULES.find((m) => chunk.moduleIds.some((id) => id.endsWith(m)));
-        if (chunk.isEntry || module) visit(chunk.fileName, assets);
+        const lessonModule = LESSON_ENTRY_MODULES.find((m) => chunk.moduleIds.some((id) => id.endsWith(m)));
+        const module = lessonModule ?? ON_DEMAND_MODULES.find((m) => chunk.moduleIds.some((id) => id.endsWith(m)));
+        if (chunk.isEntry || lessonModule) visit(chunk.fileName, assets);
         if (module) {
           const own = new Set<string>();
           visit(chunk.fileName, own);
@@ -148,6 +156,9 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
-    sourcemap: true,
+    // Карты собираются (для разбора ошибок), но без ссылки в коде: браузер о
+    // них не знает, а в образ они кладутся вне раздаваемой папки (Dockerfile).
+    // В картах — весь исходник фронтенда с комментариями, наружу им нельзя.
+    sourcemap: "hidden",
   },
 });

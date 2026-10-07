@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import {
   handRaiseRequestSchema,
+  lowerHandsRequestSchema,
   listChatQuerySchema,
   pinParticipantRequestSchema,
   sendChatMessageRequestSchema,
@@ -176,6 +177,12 @@ export default async function roomsRoutes(app: FastifyInstance) {
   app.patch<{ Params: { id: string } }>("/lessons/:id/entry", staff, async (request, reply) => {
     const body = setEntryLockedRequestSchema.parse(request.body);
     await roomsService.setEntryLocked(request.user.schoolId, request.params.id, request.user, body.locked);
+    return reply.status(204).send();
+  });
+
+  app.post<{ Params: { id: string } }>("/lessons/:id/hands/lower", staff, async (request, reply) => {
+    const body = lowerHandsRequestSchema.parse(request.body ?? {});
+    await roomsService.lowerHands(request.user.schoolId, request.params.id, request.user, body.userId);
     return reply.status(204).send();
   });
 

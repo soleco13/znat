@@ -11,7 +11,7 @@ import {
 } from "@/shared/ui/select";
 import { Textarea } from "@/shared/ui/textarea";
 import { INTERACTION_LABELS } from "../block-factories.js";
-import { FormulaEditor } from "../FormulaEditor.js";
+import { FormulaEditor } from "../LazyFormulaEditor.js";
 import { MediaAssetPicker } from "../MediaAssetPicker.js";
 import { InteractionEditor } from "../QuestionInteractionEditors.js";
 import { RichTextEditor } from "../RichTextEditor.js";

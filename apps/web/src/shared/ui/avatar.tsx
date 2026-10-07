@@ -46,18 +46,18 @@ AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName;
  * подписано рядом, поэтому аватар декоративный.
  */
 function UserAvatar({
-  id,
+  colorKey,
   role,
   size = 40,
   className,
 }: {
-  /** id пользователя или гостя урока — по нему выбирается цвет. */
-  id: string;
+  /** Ключ цвета: `participantColorKey` участника урока или id аккаунта сотрудника. */
+  colorKey: string;
   role: MarkRole;
   size?: number;
   className?: string;
 }) {
-  const tint = tintOf(id);
+  const tint = tintOf(colorKey);
   return (
     <span
       aria-hidden

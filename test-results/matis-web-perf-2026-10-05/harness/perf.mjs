@@ -64,7 +64,7 @@ async function metrics(p) {
   return p.eval(`(() => { const n = performance.getEntriesByType('navigation')[0] || {}; const P = window.__perf || {}; const fcp = P.fcp || 0;
     const tbt = (P.lt || []).filter(([s]) => s >= fcp).reduce((a, [, d]) => a + Math.max(0, d - 50), 0);
     const lastLt = (P.lt || []).reduce((a, [s, d]) => Math.max(a, s + d), 0);
-    return { dcl: Math.round(n.domContentLoadedEventEnd || 0), load: Math.round(n.loadEventEnd || 0), fcp: Math.round(P.fcp || 0), lcp: Math.round(P.lcp || 0), tbt: Math.round(tbt), longtasks: (P.lt || []).length, ttiApprox: Math.round(Math.max(lastLt, n.domContentLoadedEventEnd || 0)), heap: performance.memory ? Math.round(performance.memory.usedJSHeapSize/1048576) : null }; })()`);
+    return { dcl: Math.round(n.domContentLoadedEventEnd || 0), load: Math.round(n.loadEventEnd || 0), fcp: Math.round(P.fcp || 0), lcp: Math.round(P.lcp || 0), tbt: Math.round(tbt), longtasks: (P.lt || []).length, ttiApprox: Math.round(Math.max(lastLt, n.domContentLoadedEventEnd || 0)), heap: performance.memory ? Math.round(performance.memory.usedJSHeapSize/1048576) : null, lt: P.lt, now: Math.round(performance.now()) }; })()`);
 }
 const results = [];
 function dump(p, label, url, m, extra = {}) {
