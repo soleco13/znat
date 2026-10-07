@@ -61,3 +61,45 @@ groups:
       # образа livekit/egress — свериться через Context7 при подключении
       # второй машины и добавить сюда алерт на «CPU egress высок, а
       # lesson_recording_active == 0» (рассинхрон egress/БД).
+
+  # Медиа-сервер. Метрики LiveKit (prometheus.port 6789, livekit 1.13.x):
+  # оценка связи участников (0 = poor, 1 = good, 2 = excellent), PLI, задержка
+  # пересылки. До этого о качестве живых уроков узнавали только из жалоб.
+  - name: livekit
+    rules:
+      - alert: LiveKitDown
+        expr: up{job="livekit"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "LiveKit не отдаёт метрики уже минуту — уроки без видео и звука"
+
+      - alert: LiveKitPoorQualityShare
+        expr: |
+          sum(rate(livekit_quality_rating_bucket{le="0"}[10m]))
+            / sum(rate(livekit_quality_rating_count[10m])) > 0.2
+          and sum(livekit_participant_total) >= 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Больше 20 % оценок связи участников — poor дольше 10 минут"
+
+      - alert: LiveKitPliStorm
+        expr: |
+          sum(rate(livekit_pli_total[5m])) / clamp_min(sum(livekit_participant_total), 1) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Больше 1 запроса ключевого кадра в секунду на участника 10 минут — у кого-то сыпется видео"
+
+      - alert: LiveKitForwardLatencyHigh
+        expr: |
+          histogram_quantile(0.9, sum(rate(livekit_forward_latency_ns_bucket[5m])) by (le)) > 50e6
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p90 задержки пересылки в SFU выше 50 мс 5 минут — SFU упирается в CPU"

@@ -23,6 +23,11 @@ scrape_configs:
     static_configs:
       - targets: ["redis-exporter:9121"]
 
+  # LiveKit на network_mode: host — снаружи порт закрыт ufw, docker-сетям открыт.
+  - job_name: livekit
+    static_configs:
+      - targets: ["host.docker.internal:6789"]
+
   - job_name: prometheus
     static_configs:
       - targets: ["localhost:9090"]

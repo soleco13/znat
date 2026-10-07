@@ -57,6 +57,8 @@ ufw allow 443/tcp
 # Caddy (443, /livekit), app — через host.docker.internal, egress — через
 # 127.0.0.1. Открыт только docker-сетям (G-09 аудита гостевого доступа).
 ufw allow from 172.16.0.0/12 to any port 7880 proto tcp
+# Метрики LiveKit (prometheus.port) — тоже только docker-сетям: их скрейпит Prometheus оверлея.
+ufw allow from 172.16.0.0/12 to any port 6789 proto tcp
 ufw allow 7881/tcp
 ufw allow 50000:60000/udp
 ufw allow 3478/tcp

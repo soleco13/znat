@@ -195,6 +195,11 @@ services:
           password: ${REDIS_PASSWORD}
         turn:
           enabled: false
+        # Метрики SFU (PLI/NACK/потери/forward latency/оценка связи) для
+        # Prometheus оверлея мониторинга. Порт наружу закрыт ufw — открыт
+        # только docker-сетям (172.16.0.0/12), как 7880.
+        prometheus:
+          port: 6789
         # Э2.7, §10.5 ТЗ: посещаемость и завершение урока по вебхукам, не
         # только по нашему собственному опросу. Порт 3000 доступен livekit'у
         # напрямую через 127.0.0.1 — сам livekit на network_mode: host (это
