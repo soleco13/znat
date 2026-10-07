@@ -1,0 +1,62 @@
+diff --git a/pkg/twcc/twcc.go b/pkg/twcc/twcc.go
+index 6d2d749..2638235 100644
+--- a/pkg/twcc/twcc.go
++++ b/pkg/twcc/twcc.go
+@@ -55,7 +55,7 @@ func (t *Responder) Push(ssrc uint32, sn uint16, timeNS int64, marker bool) {
+ 	t.recorder.Record(ssrc, sn, timeNS/1000)
+ 
+ 	delta := timeNS - t.lastReport
+-	if t.recorder.PacketsHeld() > 20 &&
++	if t.recorder.PacketsHeld() > 0 &&
+ 		(delta >= tccReportDelta ||
+ 			t.recorder.PacketsHeld() > 100 ||
+ 			(marker && delta >= tccReportDeltaAfterMark)) {
+diff --git a/pkg/twcc/twcc_test.go b/pkg/twcc/twcc_test.go
+index e40675b..e54e5ff 100644
+--- a/pkg/twcc/twcc_test.go
++++ b/pkg/twcc/twcc_test.go
+@@ -48,16 +48,19 @@ func TestBuildFeedbackOnPush(t *testing.T) {
+ 		expectedFeedbackPackets int
+ 	}{
+ 		{
+-			name:                    "should not build when fewer than 21 packets",
++			// Low packet rate (a congested camera sends ~6 packets/s): reports must
++			// still go out every tccReportDelta, otherwise the sender's delay-based
++			// BWE times out and the stream stays at the lowest layer for minutes.
++			name:                    "should build for a single packet when delta is sufficient",
+ 			mSSRC:                   validmSSRC,
+-			expectedFeedbackPackets: 0,
+-			pkts:                    makeTestPackets(tccReportDelta, 1, 20),
++			expectedFeedbackPackets: 1,
++			pkts:                    makeTestPackets(tccReportDelta, 1, 1),
+ 		},
+ 		{
+-			name:                    "should not build when mSSRC is invalid",
+-			mSSRC:                   invalidmSSRC,
+-			expectedFeedbackPackets: 0,
+-			pkts:                    makeTestPackets(tccReportDelta, 1, 21),
++			name:                    "should build once for fewer than 21 packets when delta is sufficient",
++			mSSRC:                   validmSSRC,
++			expectedFeedbackPackets: 1,
++			pkts:                    makeTestPackets(tccReportDelta, 1, 20),
+ 		},
+ 		{
+ 			name:                    "should not build when delta is too small",
+@@ -66,7 +69,7 @@ func TestBuildFeedbackOnPush(t *testing.T) {
+ 			pkts:                    makeTestPackets(0, 1, 21),
+ 		},
+ 		{
+-			name:                    "should build when more than 20 packets and delta is sufficient",
++			name:                    "should build when delta is sufficient",
+ 			mSSRC:                   validmSSRC,
+ 			expectedFeedbackPackets: 1,
+ 			pkts:                    makeTestPackets(tccReportDelta, 1, 21),
+@@ -78,7 +81,7 @@ func TestBuildFeedbackOnPush(t *testing.T) {
+ 			pkts:                    makeTestPackets(0, 1, 101),
+ 		},
+ 		{
+-			name:                    "should build when more than 20 packets and marker with sufficient delta",
++			name:                    "should build on marker with sufficient delta",
+ 			mSSRC:                   validmSSRC,
+ 			expectedFeedbackPackets: 1,
+ 			pkts: func() []testPacket {

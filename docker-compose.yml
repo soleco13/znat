@@ -123,7 +123,11 @@ services:
   livekit:
     # Версии медиа закреплены: `:latest` обновил бы медиа-сервер на любом pull.
     # Обновлять осознанно, с проверкой урока (CLAUDE.md: конфиги LiveKit — читать построчно).
-    image: livekit/livekit-server:v1.13.6
+    # Своя сборка: v1.13.8 (фикс dynacast #4907) + отчёты TWCC по времени
+    # (services/livekit/Dockerfile). Откат: image livekit/livekit-server:v1.13.6
+    # без build и `docker compose up -d livekit`.
+    image: znat/livekit-server:v1.13.8-twcc
+    build: services/livekit
     restart: unless-stopped
     network_mode: host
     # Медиа-путь в реальном времени — приоритет над CPU остальных контейнеров
