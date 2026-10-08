@@ -123,10 +123,11 @@ services:
   livekit:
     # Версии медиа закреплены: `:latest` обновил бы медиа-сервер на любом pull.
     # Обновлять осознанно, с проверкой урока (CLAUDE.md: конфиги LiveKit — читать построчно).
-    # Своя сборка: v1.13.8 (фикс dynacast #4907) + отчёты TWCC по времени
-    # (services/livekit/Dockerfile). Откат: image livekit/livekit-server:v1.13.6
-    # без build и `docker compose up -d livekit`.
-    image: znat/livekit-server:v1.13.8-twcc
+    # Своя сборка: v1.13.9 (фикс dynacast #4907, allow_pause на пути с одним
+    # PeerConnection #4957) + отчёты TWCC по времени (services/livekit/Dockerfile).
+    # Откат: image znat/livekit-server:v1.13.8-twcc (собран, лежит локально)
+    # или livekit/livekit-server:v1.13.6 без build и `docker compose up -d livekit`.
+    image: znat/livekit-server:v1.13.9-twcc
     build: services/livekit
     restart: unless-stopped
     network_mode: host
@@ -181,6 +182,14 @@ services:
               port: 3478
               protocol: udp
               secret: ${TURN_SHARED_SECRET}
+            # Тот же coturn на UDP 443: сети, где наружу открыт только 443,
+            # часто пропускают и UDP 443 (QUIC). Порт перенаправляет на 3478
+            # правило nat в /etc/ufw/before.rules (scripts/server-setup.sh);
+            # UDP 443 свободен — HTTP/3 у Caddy выключен.
+            - host: ${TURN_DOMAIN}
+              port: 443
+              protocol: udp
+              secret: ${TURN_SHARED_SECRET}
             # TURNS (TLS) на 5349 — для сетей со строгим файрволом/DPI, где
             # голый UDP на нестандартный порт режется целиком (частая причина
             # «у меня хороший интернет, а связь на уроке плохая» — см. заметку
@@ -194,6 +203,17 @@ services:
               port: ${TURN_TLS_PORT:-5349}
               protocol: tls
               secret: ${TURN_SHARED_SECRET}
+          # При нехватке канала даже на нижние слои сервер ставит часть видео
+          # на паузу, звук не трогает (индикатор паузы в плитке уже есть).
+          # Работает для клиентов на одном PeerConnection только с 1.13.9.
+          congestion_control:
+            allow_pause: true
+        # Safari принимает RED, но сам не отправляет: голос с iPhone и с Mac/
+        # iPad учителя шёл без избыточности. Сервер сам добавляет в пакет два
+        # предыдущих — поток такого голоса у получателей ~×3, поэтому ученики
+        # публикуют голос пресетом speech, 24 кбит/с (RoomPage.buildRoomOptions).
+        audio:
+          active_red_encoding: true
         redis:
           address: 127.0.0.1:6379
           password: ${REDIS_PASSWORD}

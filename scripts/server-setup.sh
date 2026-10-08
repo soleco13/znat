@@ -64,6 +64,19 @@ ufw allow 50000:60000/udp
 ufw allow 3478/tcp
 ufw allow 3478/udp
 ufw allow 5349/tcp
+# TURN на UDP 443: ядро перенаправляет его на coturn :3478 (см. turn_servers
+# в docker-compose.yml). HTTP/3 у Caddy выключен, порт свободен. Фильтр видит
+# пакет уже с портом 3478 (nat PREROUTING раньше INPUT) — хватает правила выше.
+if ! grep -q -- '--dport 443 -j REDIRECT --to-ports 3478' /etc/ufw/before.rules; then
+  cat >> /etc/ufw/before.rules <<'RULES'
+
+# TURN на UDP 443 -> coturn :3478
+*nat
+:PREROUTING ACCEPT [0:0]
+-A PREROUTING -p udp --dport 443 -j REDIRECT --to-ports 3478
+COMMIT
+RULES
+fi
 ufw --force enable
 
 echo "==> Готово."

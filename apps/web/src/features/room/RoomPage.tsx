@@ -8,7 +8,7 @@ import {
   useRoomContext,
   useTracks,
 } from "@livekit/components-react";
-import { ConnectionQuality, ConnectionState, RoomEvent, Track, VideoPresets, type RoomOptions } from "livekit-client";
+import { AudioPresets, ConnectionQuality, ConnectionState, RoomEvent, Track, VideoPresets, type RoomOptions } from "livekit-client";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -155,8 +155,14 @@ const FALLBACK_ROOM_OPTIONS: RoomOptions = {
  * отдельно). Вызывается ПОСЛЕ `if (!media) return` (см. ниже) — на этот
  * момент `clientMediaSettings` уже загружены тем же ответом `join()`, что
  * и `media`.
+ *
+ * Битрейт школы — только учителю. Камера ученика (360p) при входе и в
+ * `MediaRecovery` брала его отсюда (по умолчанию 1700 кбит/с), а кнопкой
+ * получала штатные для 360p 450 кбит/с: развернул учитель плитку — телефон
+ * отдаёт ~2 Мбит/с. Голос ученика — `speech` (24 кбит/с) вместо `music`
+ * (48, с RED ~80): на слабом канале его хватает.
  */
-function buildRoomOptions(settings: ClientMediaSettings | null): RoomOptions {
+function buildRoomOptions(settings: ClientMediaSettings | null, isTeacher: boolean): RoomOptions {
   if (!settings) return FALLBACK_ROOM_OPTIONS;
   return {
     videoCaptureDefaults: { resolution: toVideoResolution(settings.cameraResolution, settings.cameraFps) },
@@ -170,7 +176,8 @@ function buildRoomOptions(settings: ClientMediaSettings | null): RoomOptions {
     },
     publishDefaults: {
       simulcast: true,
-      videoEncoding: toVideoEncoding(settings.cameraFps, settings.cameraBitrateKbps),
+      videoEncoding: isTeacher ? toVideoEncoding(settings.cameraFps, settings.cameraBitrateKbps) : VideoPresets.h360.encoding,
+      audioPreset: isTeacher || settings.micHighQuality ? AudioPresets.music : AudioPresets.speech,
     },
     adaptiveStream: true,
     dynacast: true,
@@ -1550,6 +1557,7 @@ export function RoomPage() {
         variant={variant}
         onOpenSettings={variant === "pill" ? openSettings : undefined}
         maxResolution={VideoPresets.h360.resolution}
+        encoding={VideoPresets.h360.encoding}
         disabled={!self?.permissions.canPublishVideo}
         disabledReason="Камеру включает учитель — поднимите руку"
       />
@@ -2128,7 +2136,7 @@ export function RoomPage() {
         serverUrl={media.url}
         token={media.token}
         connect
-        options={buildRoomOptions(clientMediaSettings)}
+        options={buildRoomOptions(clientMediaSettings, isTeacher)}
         connectOptions={MEDIA_CONNECT_OPTIONS}
         audio={
           self?.permissions.canSpeak && joinMicEnabled
@@ -2186,10 +2194,14 @@ export function RoomPage() {
                     },
                     { videoEncoding: toVideoEncoding(clientMediaSettings.cameraFps, clientMediaSettings.cameraBitrateKbps) },
                   )
-                : participant.setCameraEnabled(true, {
-                    resolution: isTeacher ? VideoPresets.h720.resolution : VideoPresets.h360.resolution,
-                    deviceId: camDeviceId ?? undefined,
-                  })
+                : participant.setCameraEnabled(
+                    true,
+                    {
+                      resolution: isTeacher ? VideoPresets.h720.resolution : VideoPresets.h360.resolution,
+                      deviceId: camDeviceId ?? undefined,
+                    },
+                    { videoEncoding: isTeacher ? undefined : VideoPresets.h360.encoding },
+                  )
             }
             onRejoined={(data) => setParticipants(data.participants)}
             onBlocked={(err) => {
