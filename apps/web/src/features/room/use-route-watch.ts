@@ -67,8 +67,12 @@ async function probeRouteAddress(): Promise<string | null> {
         }
       };
     });
-    await pc.setLocalDescription(await pc.createOffer());
-    return await found;
+    const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), PROBE_TIMEOUT_MS));
+    const offer = (async () => {
+      await pc.setLocalDescription(await pc.createOffer());
+      return found;
+    })();
+    return await Promise.race([offer, timeout]);
   } catch {
     return null;
   } finally {
@@ -86,18 +90,9 @@ type StatsEntry = Record<string, unknown>;
  * не годится — у Safari её локальный кандидат prflx/srflx без relatedAddress
  * (тест 2026-10-08). Пара через relay — не трогаем.
  */
-async function mediaLocalAddresses(room: Room): Promise<{ addresses: string[]; localType: string | null } | null> {
-  const local = room.localParticipant;
-  const own = local.getTrackPublication(Track.Source.Microphone)?.track ?? local.getTrackPublication(Track.Source.Camera)?.track;
-  let report = own ? await own.getRTCStatsReport() : undefined;
-  if (!report) {
-    for (const p of room.remoteParticipants.values()) {
-      for (const pub of p.trackPublications.values()) {
-        if (pub.track && pub.isSubscribed) report ??= await pub.track.getRTCStatsReport();
-      }
-    }
-  }
-  if (!report) return null;
+type MediaAddresses = { addresses: string[]; localType: string | null; reason: string | null };
+
+function addressesFromReport(report: RTCStatsReport): MediaAddresses {
   const entries: StatsEntry[] = [];
   report.forEach((s: StatsEntry) => entries.push(s));
   const pairId = entries.find((s) => s.type === "transport" && typeof s.selectedCandidatePairId === "string")
@@ -105,22 +100,58 @@ async function mediaLocalAddresses(room: Room): Promise<{ addresses: string[]; l
   const pair =
     (pairId ? (report.get(pairId) as StatsEntry | undefined) : undefined) ??
     entries.find((s) => s.type === "candidate-pair" && (s.selected === true || (s.nominated === true && s.state === "succeeded")));
-  const cand = pair ? (report.get(String(pair.localCandidateId)) as StatsEntry | undefined) : undefined;
-  if (!pair || !cand) return null;
-  const localType = typeof cand.candidateType === "string" ? cand.candidateType : null;
-  if (localType === "relay") return null;
+  if (!pair) {
+    const pairs = entries.filter((s) => s.type === "candidate-pair").length;
+    return { addresses: [], localType: null, reason: `no_pair:${entries.length}/${pairs}` };
+  }
+  const cand = report.get(String(pair.localCandidateId)) as StatsEntry | undefined;
+  const localType = typeof cand?.candidateType === "string" ? cand.candidateType : null;
+  if (localType === "relay") return { addresses: [], localType, reason: "relay" };
   const addresses = new Set<string>();
   const add = (v: unknown) => {
     if (typeof v === "string" && IPV4.test(v)) addresses.add(v);
   };
-  if (localType === "host") add(cand.address ?? cand.ip);
-  else add(cand.relatedAddress);
+  if (localType === "host") add(cand?.address ?? cand?.ip);
+  else add(cand?.relatedAddress);
+  let hosts = 0;
   for (const s of entries) {
     if (s.type !== "local-candidate" || s.candidateType !== "host") continue;
+    hosts += 1;
     if (pair.transportId && s.transportId && s.transportId !== pair.transportId) continue;
     add(s.address ?? s.ip);
   }
-  return { addresses: [...addresses], localType };
+  return { addresses: [...addresses], localType, reason: addresses.size ? null : `no_address:${hosts}` };
+}
+
+/**
+ * Статистика с первого трека, где есть выбранная пара: своя камера, микрофон,
+ * демонстрация, потом чужие. Отчёт отправителя в Safari бывает без пары
+ * (микрофон — тест 2026-10-08), а путь у всех треков один.
+ */
+async function mediaLocalAddresses(room: Room): Promise<MediaAddresses> {
+  const tracks: { getRTCStatsReport(): Promise<RTCStatsReport | undefined> }[] = [];
+  const local = room.localParticipant;
+  for (const source of [Track.Source.Camera, Track.Source.Microphone, Track.Source.ScreenShare]) {
+    const t = local.getTrackPublication(source)?.track;
+    if (t) tracks.push(t);
+  }
+  for (const p of room.remoteParticipants.values()) {
+    for (const pub of p.trackPublications.values()) {
+      if (pub.track && pub.isSubscribed) tracks.push(pub.track);
+    }
+  }
+  const reasons: string[] = [];
+  for (const t of tracks.slice(0, 6)) {
+    const report = await t.getRTCStatsReport();
+    if (!report) {
+      reasons.push("no_report");
+      continue;
+    }
+    const found = addressesFromReport(report);
+    if (found.addresses.length || found.reason === "relay") return found;
+    reasons.push(found.reason ?? "");
+  }
+  return { addresses: [], localType: null, reason: reasons.join(",") || "no_tracks" };
 }
 
 /**
@@ -145,7 +176,8 @@ export function useRouteWatch(): void {
     let attempts = 0;
     let nextAllowedAt = 0;
     let busy = false;
-    let reportedUnavailable = false;
+    let reportedNoRoute = false;
+    const reportedUnavailable = new Set<string>();
     let reportedReady = false;
     const base = () => ({ livekitRoom: room.name || null, identity: room.localParticipant.identity || null });
     const tick = async () => {
@@ -158,11 +190,16 @@ export function useRouteWatch(): void {
       try {
         const route = await probeRouteAddress();
         const found = route ? await mediaLocalAddresses(room) : null;
-        if (route && found && found.addresses.length === 0 && !reportedUnavailable) {
-          // Локальных адресов пары в статистике нет — детектор в этой вкладке
-          // бесполезен; одна строка в лог, чтобы это было видно.
-          reportedUnavailable = true;
-          track("media_route_switch", { ...base(), stage: "unavailable", routeAddress: route, localType: found.localType });
+        if (!route && !reportedNoRoute) {
+          // Адрес маршрута скрыт (*.local) или не собрался — одна строка в лог.
+          reportedNoRoute = true;
+          track("media_route_switch", { ...base(), stage: "unavailable", reason: "no_route" });
+        }
+        const reasonKey = found?.reason?.replace(/:[\d/]+/g, "") ?? null;
+        if (found?.reason && reasonKey && reasonKey !== "relay" && !reportedUnavailable.has(reasonKey)) {
+          // Адресов пары медиа нет в статистике — причина в лог, по разу на каждую.
+          reportedUnavailable.add(reasonKey);
+          track("media_route_switch", { ...base(), stage: "unavailable", routeAddress: route, reason: found.reason });
         }
         const media = found?.addresses.join(",") ?? "";
         if (!route || !media || room.state !== ConnectionState.Connected) {
