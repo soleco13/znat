@@ -18,6 +18,8 @@ export const CLIENT_EVENT_NAMES = [
   "livekit_connect_slow",
   /** Выбранная пара ICE: host/srflx/relay, udp/tcp/tls — при подключении и при смене. */
   "media_path",
+  /** Safari: медиа не на маршруте по умолчанию (Wi-Fi включился) — перезапуск пути и итог. */
+  "media_route_switch",
   /** Раз в минуту: отправка своей камеры (fps/высота/ограничение) и заморозки приёма. */
   "media_quality",
   "websocket_disconnected",

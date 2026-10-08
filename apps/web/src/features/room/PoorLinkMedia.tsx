@@ -13,6 +13,7 @@ import {
 import { linkQuality, useLinkPoor, useLinkProbe } from "@/shared/link-quality";
 import { requestLessonPrecache } from "@/shared/service-worker";
 import { useIsNarrowViewport, useIsPhoneLandscape } from "./use-narrow-viewport.js";
+import { refreshMediaPath, useRouteWatch } from "./use-route-watch.js";
 
 /**
  * Видео уступает канал звуку и доске, когда у ЭТОГО участника плохая связь.
@@ -111,9 +112,7 @@ function useMediaPathRefresh(): void {
       if (lastAttemptAt) retryMs = Math.min(retryMs * 2, PATH_RETRY_MAX_MS);
       lastAttemptAt = now;
       badSince = 0;
-      const who = room.localParticipant.identity;
-      void fetch(`/ping?link=repath&who=${encodeURIComponent(who)}`, { cache: "no-store" }).catch(() => undefined);
-      void room.simulateScenario("signal-reconnect").catch(() => undefined);
+      refreshMediaPath(room);
     };
     const interval = setInterval(tick, 2000);
     return () => clearInterval(interval);
@@ -146,6 +145,7 @@ export function PoorLinkMediaAdapter() {
   const room = useRoomContext();
   useReportLiveKitQuality();
   useMediaPathRefresh();
+  useRouteWatch();
   useLinkProbe();
   const poor = useLinkPoor();
   const phone = useIsPhone();
