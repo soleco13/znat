@@ -23,8 +23,14 @@ function isWebKitRouting(): boolean {
   return ios || (/Safari\//.test(ua) && !/Chrome|Chromium|Edg|OPR|Android/.test(ua));
 }
 
-const ROUTE_CHECK_MS = 10_000;
-/** Столько расхождений подряд (~20 с стабильной новой сети) — перезапуск. */
+/**
+ * Перезапуск — через 5–10 с после того, как новая сеть стала маршрутом по
+ * умолчанию: проверка уже видит маршрут, а не включение Wi-Fi, поэтому
+ * собранные заново кандидаты сядут в него. Две проверки подряд — от
+ * дребезга сети.
+ */
+const ROUTE_CHECK_MS = 5_000;
+/** Столько расхождений подряд — перезапуск. */
 const ROUTE_MISMATCHES = 2;
 /** Пауза после перезапуска, который снова сел не туда; удваивается. */
 const ROUTE_RETRY_MIN_MS = 60_000;
@@ -73,12 +79,14 @@ async function probeRouteAddress(): Promise<string | null> {
 type StatsEntry = Record<string, unknown>;
 
 /**
- * Локальный адрес выбранной пары ICE медиа. Сравниваем локальные адреса, не
- * публичные: публичный за NAT оператора меняется между соединениями. У srflx
- * локальный — relatedAddress; у relay связанный адрес — внешний, такие пары
- * не трогаем.
+ * Локальные IPv4, на которых собраны кандидаты пары медиа: host-кандидаты её
+ * транспорта. WebKit собирает их только на маршруте по умолчанию, поэтому это
+ * сеть, в которой медиа сейчас. Сравниваем локальные адреса, не публичные:
+ * публичный за NAT оператора меняется между соединениями. Адрес у самой пары
+ * не годится — у Safari её локальный кандидат prflx/srflx без relatedAddress
+ * (тест 2026-10-08). Пара через relay — не трогаем.
  */
-async function mediaLocalAddress(room: Room): Promise<string | null> {
+async function mediaLocalAddresses(room: Room): Promise<{ addresses: string[]; localType: string | null } | null> {
   const local = room.localParticipant;
   const own = local.getTrackPublication(Track.Source.Microphone)?.track ?? local.getTrackPublication(Track.Source.Camera)?.track;
   let report = own ? await own.getRTCStatsReport() : undefined;
@@ -98,9 +106,21 @@ async function mediaLocalAddress(room: Room): Promise<string | null> {
     (pairId ? (report.get(pairId) as StatsEntry | undefined) : undefined) ??
     entries.find((s) => s.type === "candidate-pair" && (s.selected === true || (s.nominated === true && s.state === "succeeded")));
   const cand = pair ? (report.get(String(pair.localCandidateId)) as StatsEntry | undefined) : undefined;
-  if (!cand) return null;
-  const address = cand.candidateType === "host" ? (cand.address ?? cand.ip) : cand.candidateType === "relay" ? null : cand.relatedAddress;
-  return typeof address === "string" && IPV4.test(address) ? address : null;
+  if (!pair || !cand) return null;
+  const localType = typeof cand.candidateType === "string" ? cand.candidateType : null;
+  if (localType === "relay") return null;
+  const addresses = new Set<string>();
+  const add = (v: unknown) => {
+    if (typeof v === "string" && IPV4.test(v)) addresses.add(v);
+  };
+  if (localType === "host") add(cand.address ?? cand.ip);
+  else add(cand.relatedAddress);
+  for (const s of entries) {
+    if (s.type !== "local-candidate" || s.candidateType !== "host") continue;
+    if (pair.transportId && s.transportId && s.transportId !== pair.transportId) continue;
+    add(s.address ?? s.ip);
+  }
+  return { addresses: [...addresses], localType };
 }
 
 /**
@@ -111,8 +131,8 @@ async function mediaLocalAddress(room: Room): Promise<string | null> {
  * умолчанию на сотовой, и кандидаты снова собираются там (тест 2026-10-08,
  * 08:51:53: перезапуск через 2 с после включения Wi-Fi сел на сотовую).
  *
- * Поэтому раз в 10 с сравниваем локальный адрес маршрута по умолчанию с
- * локальным адресом пары медиа. Два расхождения подряд — перевыбор пути.
+ * Поэтому раз в 5 с сравниваем локальный адрес маршрута по умолчанию с
+ * локальными адресами пары медиа. Два расхождения подряд — перевыбор пути.
  * После перезапуска проверка продолжается: снова не туда — следующий не
  * раньше чем через минуту, дальше с нарастающей паузой. Только WebKit;
  * молча, каждое срабатывание — в лог.
@@ -126,6 +146,7 @@ export function useRouteWatch(): void {
     let nextAllowedAt = 0;
     let busy = false;
     let reportedUnavailable = false;
+    let reportedReady = false;
     const base = () => ({ livekitRoom: room.name || null, identity: room.localParticipant.identity || null });
     const tick = async () => {
       if (busy) return;
@@ -136,18 +157,24 @@ export function useRouteWatch(): void {
       busy = true;
       try {
         const route = await probeRouteAddress();
-        const media = route ? await mediaLocalAddress(room) : null;
-        if (route && !media && !reportedUnavailable) {
-          // Адрес пары не достать (нет relatedAddress в статистике) — детектор
-          // в этой вкладке бесполезен; одна строка в лог, чтобы это было видно.
+        const found = route ? await mediaLocalAddresses(room) : null;
+        if (route && found && found.addresses.length === 0 && !reportedUnavailable) {
+          // Локальных адресов пары в статистике нет — детектор в этой вкладке
+          // бесполезен; одна строка в лог, чтобы это было видно.
           reportedUnavailable = true;
-          track("media_route_switch", { ...base(), stage: "unavailable", routeAddress: route });
+          track("media_route_switch", { ...base(), stage: "unavailable", routeAddress: route, localType: found.localType });
         }
+        const media = found?.addresses.join(",") ?? "";
         if (!route || !media || room.state !== ConnectionState.Connected) {
           mismatches = 0;
           return;
         }
-        if (route === media) {
+        if (!reportedReady) {
+          // Первое сравнение удалось — в лог, что детектор в этой вкладке работает.
+          reportedReady = true;
+          track("media_route_switch", { ...base(), stage: "ready", mediaAddress: media, routeAddress: route, localType: found?.localType });
+        }
+        if (found?.addresses.includes(route)) {
           if (attempts > 0) track("media_route_switch", { ...base(), stage: "settled", mediaAddress: media, attempts });
           mismatches = 0;
           attempts = 0;
