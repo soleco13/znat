@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useRoomContext } from "@livekit/components-react";
-import { ConnectionState, Track, type Room } from "livekit-client";
+import { ConnectionState, RoomEvent, type Room } from "livekit-client";
 
 import { track } from "../../shared/telemetry.js";
 
@@ -80,108 +80,70 @@ async function probeRouteAddress(): Promise<string | null> {
   }
 }
 
-type StatsEntry = Record<string, unknown>;
-
-/**
- * Локальные IPv4, на которых собраны кандидаты пары медиа: host-кандидаты её
- * транспорта. WebKit собирает их только на маршруте по умолчанию, поэтому это
- * сеть, в которой медиа сейчас. Сравниваем локальные адреса, не публичные:
- * публичный за NAT оператора меняется между соединениями. Адрес у самой пары
- * не годится — у Safari её локальный кандидат prflx/srflx без relatedAddress
- * (тест 2026-10-08). Пара через relay — не трогаем.
- */
-type MediaAddresses = { addresses: string[]; localType: string | null; reason: string | null };
-
-function addressesFromReport(report: RTCStatsReport): MediaAddresses {
-  const entries: StatsEntry[] = [];
-  report.forEach((s: StatsEntry) => entries.push(s));
-  const pairId = entries.find((s) => s.type === "transport" && typeof s.selectedCandidatePairId === "string")
-    ?.selectedCandidatePairId as string | undefined;
-  const pair =
-    (pairId ? (report.get(pairId) as StatsEntry | undefined) : undefined) ??
-    entries.find((s) => s.type === "candidate-pair" && (s.selected === true || (s.nominated === true && s.state === "succeeded")));
-  if (!pair) {
-    const pairs = entries.filter((s) => s.type === "candidate-pair").length;
-    return { addresses: [], localType: null, reason: `no_pair:${entries.length}/${pairs}` };
-  }
-  const cand = report.get(String(pair.localCandidateId)) as StatsEntry | undefined;
-  const localType = typeof cand?.candidateType === "string" ? cand.candidateType : null;
-  if (localType === "relay") return { addresses: [], localType, reason: "relay" };
-  const addresses = new Set<string>();
-  const add = (v: unknown) => {
-    if (typeof v === "string" && IPV4.test(v)) addresses.add(v);
-  };
-  if (localType === "host") add(cand?.address ?? cand?.ip);
-  else add(cand?.relatedAddress);
-  let hosts = 0;
-  for (const s of entries) {
-    if (s.type !== "local-candidate" || s.candidateType !== "host") continue;
-    hosts += 1;
-    if (pair.transportId && s.transportId && s.transportId !== pair.transportId) continue;
-    add(s.address ?? s.ip);
-  }
-  return { addresses: [...addresses], localType, reason: addresses.size ? null : `no_address:${hosts}` };
-}
-
-/**
- * Статистика с первого трека, где есть выбранная пара: своя камера, микрофон,
- * демонстрация, потом чужие. Отчёт отправителя в Safari бывает без пары
- * (микрофон — тест 2026-10-08), а путь у всех треков один.
- */
-async function mediaLocalAddresses(room: Room): Promise<MediaAddresses> {
-  const tracks: { getRTCStatsReport(): Promise<RTCStatsReport | undefined> }[] = [];
-  const local = room.localParticipant;
-  for (const source of [Track.Source.Camera, Track.Source.Microphone, Track.Source.ScreenShare]) {
-    const t = local.getTrackPublication(source)?.track;
-    if (t) tracks.push(t);
-  }
-  for (const p of room.remoteParticipants.values()) {
-    for (const pub of p.trackPublications.values()) {
-      if (pub.track && pub.isSubscribed) tracks.push(pub.track);
-    }
-  }
-  const reasons: string[] = [];
-  for (const t of tracks.slice(0, 6)) {
-    const report = await t.getRTCStatsReport();
-    if (!report) {
-      reasons.push("no_report");
-      continue;
-    }
-    const found = addressesFromReport(report);
-    if (found.addresses.length || found.reason === "relay") return found;
-    reasons.push(found.reason ?? "");
-  }
-  return { addresses: [], localType: null, reason: reasons.join(",") || "no_tracks" };
-}
-
 /**
  * Wi-Fi включился посреди урока, а медиа осталось на сотовой. Safari не
  * переносит UDP-соединение на новую сеть и не сообщает странице о смене
  * сети; сам LiveKit перезапускает ICE только при обрыве. Если обрыв случился
  * в первые секунды после включения Wi-Fi, iOS ещё держит маршрут по
  * умолчанию на сотовой, и кандидаты снова собираются там (тест 2026-10-08,
- * 08:51:53: перезапуск через 2 с после включения Wi-Fi сел на сотовую).
+ * 08:51:53 и 09:10:33: перезапуск через 2 с после включения Wi-Fi сел на
+ * сотовую).
  *
- * Поэтому раз в 5 с сравниваем локальный адрес маршрута по умолчанию с
- * локальными адресами пары медиа. Два расхождения подряд — перевыбор пути.
- * После перезапуска проверка продолжается: снова не туда — следующий не
- * раньше чем через минуту, дальше с нарастающей паузой. Только WebKit;
- * молча, каждое срабатывание — в лог.
+ * Сеть медиа из статистики не узнать: Safari не отдаёт в getStats ни host-
+ * кандидатов, ни relatedAddress (тест 2026-10-08, 09:16). Поэтому помним
+ * маршрут на момент сбора кандидатов: проба в начале (пере)подключения и
+ * после него. Совпали — медиа в этой сети. Разошлись (маршрут сменился
+ * посреди подключения) — сеть медиа неизвестна, считаем, что не та.
+ * Раз в 5 с проба текущего маршрута; две подряд не совпали с сетью медиа —
+ * перевыбор пути. Повтор не раньше чем через минуту, дальше с нарастающей
+ * паузой. Только WebKit; молча, каждое срабатывание — в лог.
  */
 export function useRouteWatch(): void {
   const room = useRoomContext();
   useEffect(() => {
     if (!isWebKitRouting()) return;
+    let disposed = false;
+    /** Сеть, в которой собраны кандидаты медиа; null — неизвестна. */
+    let mediaRoute: string | null = null;
+    /** Маршрут сменился посреди подключения — сеть медиа под вопросом. */
+    let mediaAmbiguous = false;
+    let startProbe: Promise<string | null> | null = null;
+    let connectSeq = 0;
     let mismatches = 0;
     let attempts = 0;
     let nextAllowedAt = 0;
     let busy = false;
-    let reportedNoRoute = false;
-    const reportedUnavailable = new Set<string>();
     let reportedReady = false;
+    let reportedNoRoute = false;
     const base = () => ({ livekitRoom: room.name || null, identity: room.localParticipant.identity || null });
+
+    const onState = (state: ConnectionState) => {
+      if (
+        state === ConnectionState.Connecting ||
+        state === ConnectionState.Reconnecting ||
+        state === ConnectionState.SignalReconnecting
+      ) {
+        // Повторные события одного переподключения — первая проба ближе к его началу.
+        startProbe ??= probeRouteAddress();
+        mismatches = 0;
+        return;
+      }
+      if (state !== ConnectionState.Connected) return;
+      const seq = ++connectSeq;
+      const start = startProbe;
+      startProbe = null;
+      void (async () => {
+        const [before, after] = await Promise.all([start, probeRouteAddress()]);
+        if (disposed || seq !== connectSeq) return;
+        mediaRoute = after;
+        mediaAmbiguous = before !== null && after !== null && before !== after;
+        mismatches = 0;
+        if (mediaAmbiguous) track("media_route_switch", { ...base(), stage: "ambiguous", routeBefore: before, routeAfter: after });
+      })();
+    };
+
     const tick = async () => {
-      if (busy) return;
+      if (busy || startProbe) return;
       if (room.state !== ConnectionState.Connected || document.hidden) {
         mismatches = 0;
         return;
@@ -189,30 +151,24 @@ export function useRouteWatch(): void {
       busy = true;
       try {
         const route = await probeRouteAddress();
-        const found = route ? await mediaLocalAddresses(room) : null;
-        if (!route && !reportedNoRoute) {
-          // Адрес маршрута скрыт (*.local) или не собрался — одна строка в лог.
-          reportedNoRoute = true;
-          track("media_route_switch", { ...base(), stage: "unavailable", reason: "no_route" });
-        }
-        const reasonKey = found?.reason?.replace(/:[\d/]+/g, "") ?? null;
-        if (found?.reason && reasonKey && reasonKey !== "relay" && !reportedUnavailable.has(reasonKey)) {
-          // Адресов пары медиа нет в статистике — причина в лог, по разу на каждую.
-          reportedUnavailable.add(reasonKey);
-          track("media_route_switch", { ...base(), stage: "unavailable", routeAddress: route, reason: found.reason });
-        }
-        const media = found?.addresses.join(",") ?? "";
-        if (!route || !media || room.state !== ConnectionState.Connected) {
+        if (disposed || room.state !== ConnectionState.Connected) return;
+        if (!route) {
+          if (!reportedNoRoute) {
+            // Адрес маршрута скрыт (*.local) или не собрался — одна строка в лог.
+            reportedNoRoute = true;
+            track("media_route_switch", { ...base(), stage: "unavailable", reason: "no_route" });
+          }
           mismatches = 0;
           return;
         }
+        // Вкладка открылась уже подключённой — маршрут сейчас и есть сеть медиа.
+        if (mediaRoute === null && !mediaAmbiguous) mediaRoute = route;
         if (!reportedReady) {
-          // Первое сравнение удалось — в лог, что детектор в этой вкладке работает.
           reportedReady = true;
-          track("media_route_switch", { ...base(), stage: "ready", mediaAddress: media, routeAddress: route, localType: found?.localType });
+          track("media_route_switch", { ...base(), stage: "ready", mediaAddress: mediaRoute, routeAddress: route });
         }
-        if (found?.addresses.includes(route)) {
-          if (attempts > 0) track("media_route_switch", { ...base(), stage: "settled", mediaAddress: media, attempts });
+        if (route === mediaRoute && !mediaAmbiguous) {
+          if (attempts > 0) track("media_route_switch", { ...base(), stage: "settled", mediaAddress: route, attempts });
           mismatches = 0;
           attempts = 0;
           nextAllowedAt = 0;
@@ -224,7 +180,13 @@ export function useRouteWatch(): void {
         mismatches = 0;
         attempts += 1;
         nextAllowedAt = now + Math.min(ROUTE_RETRY_MIN_MS * 2 ** (attempts - 1), ROUTE_RETRY_MAX_MS);
-        track("media_route_switch", { ...base(), stage: "restart", mediaAddress: media, routeAddress: route, attempt: attempts });
+        track("media_route_switch", {
+          ...base(),
+          stage: "restart",
+          mediaAddress: mediaAmbiguous ? "ambiguous" : mediaRoute,
+          routeAddress: route,
+          attempt: attempts,
+        });
         refreshMediaPath(room);
       } catch {
         // Диагностика пути — не повод для ошибки урока; следующий тик попробует снова.
@@ -232,7 +194,13 @@ export function useRouteWatch(): void {
         busy = false;
       }
     };
+
+    room.on(RoomEvent.ConnectionStateChanged, onState);
     const interval = setInterval(() => void tick(), ROUTE_CHECK_MS);
-    return () => clearInterval(interval);
+    return () => {
+      disposed = true;
+      room.off(RoomEvent.ConnectionStateChanged, onState);
+      clearInterval(interval);
+    };
   }, [room]);
 }
