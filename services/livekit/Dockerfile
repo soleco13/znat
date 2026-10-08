@@ -26,6 +26,15 @@ RUN git clone --depth 1 -b ${LIVEKIT_VERSION} https://github.com/livekit/livekit
  && git clone https://github.com/livekit/mediatransportutil.git mediatransportutil \
  && git -C mediatransportutil checkout ${MTU_COMMIT}
 
+# Окно возврата после обрыва медиа: ICE рвётся через 10+5 с, дальше сервер
+# ждал клиента всего 5 с и закрывал участника. Обрыв дольше ~20 с (лифт,
+# режим полёта, переключение сети на iPhone) кончался не быстрым resume, а
+# полным переподключением: «could not restart participant» и ещё ~7–12 с без
+# медиа (тест 2026-10-08). 30 с — окно ~45 с; плитка пропавшего участника
+# всё это время остаётся в комнате, присутствие приложения сверяется с LiveKit.
+RUN sed -i 's/disconnectCleanupDuration          = 5 \* time.Second/disconnectCleanupDuration          = 30 * time.Second/' livekit/pkg/rtc/participant.go \
+ && grep -q 'disconnectCleanupDuration          = 30 \* time.Second' livekit/pkg/rtc/participant.go
+
 COPY twcc-report-by-time.patch /src/
 RUN patch -d mediatransportutil -p1 < twcc-report-by-time.patch \
  && grep -q 'PacketsHeld() > 0 &&' mediatransportutil/pkg/twcc/twcc.go

@@ -287,7 +287,13 @@ class MediaStatsSampler {
     const audio = new Map<string, { concealed: number; total: number }>();
     for (const { sid, report } of remoteAudio) {
       for (const i of statsOfType(report, "inbound-rtp")) {
-        const cur = { concealed: num(i.concealedSamples) ?? 0, total: num(i.totalSamplesReceived) ?? 0 };
+        // Тишину собеседника (DTX: в паузах Opus почти не шлёт пакеты) браузер
+        // тоже маскирует — без вычета silentConcealedSamples выключенный или
+        // молчащий микрофон давал 50–100% «потерь».
+        const cur = {
+          concealed: Math.max(0, (num(i.concealedSamples) ?? 0) - (num(i.silentConcealedSamples) ?? 0)),
+          total: num(i.totalSamplesReceived) ?? 0,
+        };
         audio.set(sid, cur);
         const prev = this.lastAudio.get(sid);
         if (prev && cur.total >= prev.total) {
