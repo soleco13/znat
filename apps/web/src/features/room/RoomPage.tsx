@@ -128,6 +128,8 @@ import { VideoSubscriptionManager } from "./VideoSubscriptions.js";
 import { Loader } from "@/shared/ui/loader";
 import { BrandMark } from "@/shared/ui/brand-mark";
 import { PoorLinkMediaAdapter } from "./PoorLinkMedia.js";
+import { CpuLoadAdapter } from "./cpu-load.js";
+import { ScreenShareStopSweep } from "./screen-share-stop.js";
 import { MEDIA_CONNECT_OPTIONS, MEDIA_RECONNECT_POLICY, MediaRecovery } from "./MediaRecovery.js";
 import { clearRejoinState, readRejoinState, writeRejoinState } from "./rejoin-state.js";
 import { MediaTelemetry, reportLiveKitConnectionFailed } from "./MediaTelemetry.js";
@@ -2180,6 +2182,8 @@ export function RoomPage() {
         <MicSync enabled={self?.permissions.canSpeak ?? false} />
         <VideoSubscriptionManager participants={participants} mode={lessonMode} />
         <PoorLinkMediaAdapter />
+        <CpuLoadAdapter />
+        <ScreenShareStopSweep />
         <PrefetchStageWhenMediaUp />
         {lessonId ? (
           <MediaRecovery

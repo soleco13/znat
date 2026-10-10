@@ -205,6 +205,8 @@ class MediaStatsSampler {
     const camera = local.getTrackPublication(Track.Source.Camera)?.track;
     const mic = local.getTrackPublication(Track.Source.Microphone)?.track;
     const cameraReport = camera && !camera.isMuted ? await camera.getRTCStatsReport() : undefined;
+    const screen = local.getTrackPublication(Track.Source.ScreenShare)?.track;
+    const screenReport = screen ? await screen.getRTCStatsReport() : undefined;
 
     const remoteVideo: { sid: string; report: RTCStatsReport }[] = [];
     const remoteAudio: { sid: string; report: RTCStatsReport }[] = [];
@@ -268,6 +270,24 @@ class MediaStatsSampler {
       this.lastBytesSent = null;
     }
 
+    // Своя демонстрация: верхний активный слой и причина ограничения — видно,
+    // упирается ли она в процессор (урок 2026-10-09: этого в логе не было).
+    let shareHeight: number | null = null;
+    let shareFps: number | null = null;
+    let shareLimit: string | null = null;
+    if (screenReport) {
+      for (const o of statsOfType(screenReport, "outbound-rtp")) {
+        const reason = str(o.qualityLimitationReason);
+        if (reason && reason !== "none") shareLimit = reason;
+        else shareLimit ??= reason;
+        const h = num(o.frameHeight);
+        if (h !== null && (num(o.framesPerSecond) ?? 0) > 0 && (shareHeight === null || h > shareHeight)) {
+          shareHeight = h;
+          shareFps = num(o.framesPerSecond);
+        }
+      }
+    }
+
     // Приём: новые заморозки видео и доля маскированного звука с прошлого тика.
     let recvFreezes = 0;
     let recvMinFps: number | null = null;
@@ -314,6 +334,9 @@ class MediaStatsSampler {
       sendFps,
       sendLimit,
       sendKbps,
+      shareHeight,
+      shareFps,
+      shareLimit,
       recvVideo: remoteVideo.length,
       recvMinFps,
       recvFreezes,

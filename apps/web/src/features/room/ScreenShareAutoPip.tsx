@@ -10,6 +10,7 @@ import { SelfCameraButton } from "./CameraControls.js";
 import { RoomControlButton } from "./RoomControlButton.js";
 import { RoomVideoGrid } from "./RoomVideoGrid.js";
 import { SelfMicButton } from "./MicControls.js";
+import { stopOwnScreenShare } from "./screen-share-stop.js";
 
 /**
  * Авто-«картинка в картинке» на время демонстрации экрана — как в Толке.
@@ -228,7 +229,7 @@ export const ScreenShareAutoPip = forwardRef<
           activeLabel="Остановить демонстрацию"
           inactiveLabel="Остановить демонстрацию"
           onToggle={() => {
-            void localParticipant.setScreenShareEnabled(false).catch(() => undefined);
+            void stopOwnScreenShare(localParticipant);
             if (lessonId) void apiFetch(`/lessons/${lessonId}/screen-share/release`, { method: "POST" }).catch(() => undefined);
             pipWindowRef.current?.close();
           }}

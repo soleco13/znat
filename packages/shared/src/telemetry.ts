@@ -22,6 +22,8 @@ export const CLIENT_EVENT_NAMES = [
   "media_route_switch",
   /** Раз в минуту: отправка своей камеры (fps/высота/ограничение) и заморозки приёма. */
   "media_quality",
+  /** Своё устройство не успевает: смена ступени камеры/демонстрации ради звука (cpu-governor.ts). */
+  "media_cpu_adapt",
   "websocket_disconnected",
   "websocket_reconnect",
   "whiteboard_sync_started",

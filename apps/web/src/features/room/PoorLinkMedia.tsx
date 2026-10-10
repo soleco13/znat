@@ -14,6 +14,8 @@ import { linkQuality, useLinkPoor, useLinkProbe } from "@/shared/link-quality";
 import { requestLessonPrecache } from "@/shared/service-worker";
 import { useIsNarrowViewport, useIsPhoneLandscape } from "./use-narrow-viewport.js";
 import { refreshMediaPath, useRouteWatch } from "./use-route-watch.js";
+import { cpuConstrainedRecently, useCpuHeavy } from "./cpu-load.js";
+import { useCameraBitrateBySize } from "./camera-bitrate.js";
 
 /**
  * Видео уступает канал звуку и доске, когда у ЭТОГО участника плохая связь.
@@ -67,6 +69,8 @@ const PATH_RETRY_MIN_MS = 60_000;
 const PATH_RETRY_MAX_MS = 8 * 60_000;
 /** Связь хорошая столько подряд — прошлые попытки не в счёт. */
 const PATH_GOOD_RESET_MS = 60_000;
+/** Своя отправка видео упиралась в процессор так недавно — плохая оценка не про сеть. */
+const PATH_CPU_QUIET_MS = 120_000;
 
 /**
  * Медиа застревает на старой сети. Ученик вошёл с мобильного интернета и
@@ -82,6 +86,12 @@ const PATH_GOOD_RESET_MS = 60_000;
  * Браузер заново собирает кандидаты и выбирает лучшую сеть — Wi-Fi.
  * Если сеть не менялась, это короткая пауза на уже плохой связи; повторы
  * с нарастающей паузой. Молча, в интерфейсе ничего.
+ *
+ * Не перевыбираем, пока своё устройство недавно не справлялось
+ * (`cpu-load.ts`): урок 2026-10-09 — у учителя на слабом компьютере
+ * потери от перегрузки процессора LiveKit оценил как плохую связь, и три
+ * перезапуска подряд (по 2–6 с без звука) только добавили обрывов. Сеть при
+ * этом была исправна, новый путь ничего не менял.
  */
 function useMediaPathRefresh(): void {
   const room = useRoomContext();
@@ -106,6 +116,10 @@ function useMediaPathRefresh(): void {
         return;
       }
       goodSince = 0;
+      if (cpuConstrainedRecently(PATH_CPU_QUIET_MS)) {
+        badSince = 0;
+        return;
+      }
       if (!badSince) badSince = now;
       if (now - badSince < STUCK_PATH_MS) return;
       if (lastAttemptAt && now - lastAttemptAt < retryMs) return;
@@ -145,6 +159,7 @@ export function PoorLinkMediaAdapter() {
   const room = useRoomContext();
   useReportLiveKitQuality();
   useMediaPathRefresh();
+  useCameraBitrateBySize();
   useRouteWatch();
   useLinkProbe();
   const poor = useLinkPoor();
@@ -174,6 +189,11 @@ export function PoorLinkMediaAdapter() {
     return () => clearTimeout(timer);
   }, [poor]);
 
+  // Своё устройство не справляется (`cpu-load.ts`, ступень 2+): чужие камеры
+  // тоже нижним слоем — каждая принятая камера разбирается процессором
+  // учителя. Демонстрацию — нет: её текст должен оставаться читаемым.
+  const cpuHeavy = useCpuHeavy();
+
   // Чужие камеры и демонстрация: нижний слой при плохой связи (у демонстрации
   // он есть с 2026-09-26 — 360p/5 кадр/с), иначе — как решит adaptiveStream.
   // Без этого сервер периодически пробовал поднять качество, полный поток в
@@ -181,14 +201,15 @@ export function PoorLinkMediaAdapter() {
   // не выше 360p (`PHONE_CAMERA_MAX`); оба ограничения — здесь, в одном
   // месте: `setVideoQuality` и `setVideoDimensions` сбрасывают друг друга.
   useEffect(() => {
-    const quality = poor ? VideoQuality.LOW : VideoQuality.HIGH;
     const apply = (pub: RemoteTrackPublication) => {
       const video = pub.source === Track.Source.Camera || pub.source === Track.Source.ScreenShare;
       // Только у потоков со слоями: у однослойного (например, демонстрация
       // со старой версии страницы) нижнего слоя нет, просить его нечего.
       if (!video || !pub.isSubscribed || !pub.simulcasted) return;
-      if (phone && !poor && pub.source === Track.Source.Camera) pub.setVideoDimensions(PHONE_CAMERA_MAX);
-      else pub.setVideoQuality(quality);
+      const camera = pub.source === Track.Source.Camera;
+      const low = poor || (camera && cpuHeavy);
+      if (phone && !low && camera) pub.setVideoDimensions(PHONE_CAMERA_MAX);
+      else pub.setVideoQuality(low ? VideoQuality.LOW : VideoQuality.HIGH);
     };
     for (const participant of room.remoteParticipants.values()) {
       for (const pub of participant.trackPublications.values()) apply(pub);
@@ -198,7 +219,7 @@ export function PoorLinkMediaAdapter() {
     return () => {
       room.off(RoomEvent.TrackSubscribed, onSubscribed);
     };
-  }, [room, poor, phone]);
+  }, [room, poor, phone, cpuHeavy]);
 
   return null;
 }

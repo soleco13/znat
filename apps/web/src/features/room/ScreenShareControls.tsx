@@ -7,6 +7,7 @@ import { MonitorUp, MonitorX } from "lucide-react";
 import { apiFetch } from "@/shared/api-client";
 import { RoomControlButton, type RoomControlVariant } from "./RoomControlButton.js";
 import { toast } from "@/shared/ui/sonner";
+import { clearStaleScreenShare, stopOwnScreenShare } from "./screen-share-stop.js";
 
 /**
  * Э7.1, §5.2 ТЗ: «1080p@5fps для документов» — дефолт, когда параметры
@@ -33,6 +34,8 @@ const DOCUMENT_SCREEN_SHARE_PRESET = new VideoPreset(1920, 1080, 1_000_000, 5, "
  *   полного (400–1200 кбит/с) — для средней связи. Без него разрыв между
  *   нижним и полным был в 16 раз, и зритель с каналом ~1 Мбит/с всё время
  *   смотрел размытый нижний слой.
+ * Если процессор учителя не справляется — демонстрация одним слоем
+ * 5 кадр/с (`cpu-load-engine.ts`), пока он не освободится.
  * LiveKit делает третий слой, только если ширина источника ≥ 960 px.
  */
 function screenShareExtraLayers(encoding: VideoPreset): VideoPreset[] {
@@ -169,7 +172,7 @@ export function SelfScreenShareButton({
     }
     if (!isScreenShareEnabledRef.current) return;
     onScreenShareStopped?.();
-    void localParticipant.setScreenShareEnabled(false).catch(() => undefined);
+    void stopOwnScreenShare(localParticipant);
     toast.info("Демонстрацию перехватил учитель/администратор");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preemptedSignal]);
@@ -244,6 +247,9 @@ export function SelfScreenShareButton({
       );
       return;
     }
+    // Прежняя демонстрация, остановленная во время переподключения, могла
+    // остаться на сервере — снять её до новой публикации.
+    await clearStaleScreenShare(localParticipant);
     let track: LocalTrack | undefined;
     try {
       [track] = await localParticipant.createScreenTracks({
@@ -274,9 +280,7 @@ export function SelfScreenShareButton({
     // Как в `ScreenShareStatusBar`: остановка могла упасть на плохой связи,
     // блокировку на сервере освобождаем всё равно.
     try {
-      await localParticipant.setScreenShareEnabled(false);
-    } catch {
-      // трек всё равно снимается при переподключении
+      await stopOwnScreenShare(localParticipant);
     } finally {
       releaseScreenShare(lessonId);
     }
@@ -341,9 +345,7 @@ export function ScreenShareStatusBar({
     // блокировку демонстрации на сервере всё равно освобождаем, иначе её
     // не мог начать никто другой.
     try {
-      await localParticipant.setScreenShareEnabled(false);
-    } catch {
-      // трек всё равно снимается при переподключении
+      await stopOwnScreenShare(localParticipant);
     } finally {
       if (lessonId) releaseScreenShare(lessonId);
     }
