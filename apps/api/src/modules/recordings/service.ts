@@ -1,4 +1,5 @@
 import path from "node:path";
+import { chmod, mkdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import type { AccessTokenPayload } from "@school/shared";
 import {
@@ -41,6 +42,30 @@ const NANOS_PER_SEC = 1_000_000_000;
 /** Абсолютный путь для egress по нашему ключу хранилища. */
 function absoluteFilepath(storageKey: string): string {
   return path.posix.join(env.STORAGE_ROOT, storageKey);
+}
+
+/**
+ * Каталог записи создаёт app ДО старта egress, а не сам egress. Egress (uid
+ * 1001) делает каталоги с правами 0755, и маска ACL у них становится r-x —
+ * выданное в deploy.sh право app (uid 999) на запись срезается: удаление
+ * записи падало с EACCES (2026-10-09), обложка не создавалась. Владелец
+ * каталога — app, а chmod 0775 после mkdir поднимает маску ACL до rwx, так
+ * что egress пишет туда по своему ACL-праву u:1001.
+ * Сбой не блокирует запись: egress создаст каталог сам, как раньше.
+ */
+async function prepareRecordingDir(storageKey: string): Promise<void> {
+  const root = path.posix.join(env.STORAGE_ROOT, "recordings");
+  const dir = path.posix.dirname(absoluteFilepath(storageKey));
+  try {
+    await mkdir(dir, { recursive: true });
+    for (let d = dir; d.startsWith(root + "/"); d = path.posix.dirname(d)) {
+      // Каталоги школы, созданные раньше egress'ом, не наши — chmod на них
+      // даст EPERM; маску на них чинит deploy.sh.
+      await chmod(d, 0o775).catch(() => {});
+    }
+  } catch (err) {
+    logTaskFailure("recordings.prepare_dir", err, { storageKey });
+  }
 }
 
 function toSummary(row: RecordingRow): RecordingSummary {
@@ -131,6 +156,8 @@ export async function startLessonRecording(
   // токен должен уйти внутрь его параметров (customBaseUrl), см. схему в
   // packages/shared/src/recordings.ts.
   const recorderToken = await signRecorderToken(lessonId, id);
+
+  await prepareRecordingDir(storageKey);
 
   let started: egress.StartedRecording;
   try {

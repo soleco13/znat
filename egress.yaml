@@ -46,8 +46,10 @@ prometheus_port: 9090
 # CPU-стоимость композита. `cpu_cost` подсказывает egress, сколько ядер
 # резервировать под одну запись, чтобы не запускать вторую, когда машине
 # уже тяжело. Для 2–6-ядерной машины: одна RoomComposite-запись за раз.
+# Значение больше числа ядер — egress молча не принимает задачу (клиент видит
+# таймаут), поэтому задаётся в .env.egress под конкретную машину.
 cpu_cost:
-  room_composite_cpu_cost: 3.0
+  room_composite_cpu_cost: ${EGRESS_ROOM_COMPOSITE_CPU_COST}
 
 # Логи в stdout (docker собирает), JSON — чтобы Grafana Loki парсил поля.
 logging:

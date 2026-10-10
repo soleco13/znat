@@ -24,3 +24,6 @@ server_log.txt
 /room*.png
 docs/screenshots/
 .playwright-mcp/
+
+# Локальный кэш pnpm при сборке на хосте.
+/.pnpm-store/
