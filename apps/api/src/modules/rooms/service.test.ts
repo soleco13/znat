@@ -904,7 +904,8 @@ describe("права участников", () => {
   });
 
   it("если синхронизация с LiveKit падает, presence не меняется и ученику не начинает казаться замьюченным зря", async () => {
-    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    // Урок, где ученикам слово не дано по умолчанию: проверяем сорванную выдачу.
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson({ settings: { studentsCanSpeak: false } }));
     await roomsService.join(guestActor(), LESSON_ID);
     mediaServiceMock.updateLivePermissions.mockRejectedValueOnce(new Error("livekit unreachable"));
 
@@ -916,26 +917,33 @@ describe("права участников", () => {
     expect(snapshot.find((p) => p.userId === STUDENT_ID)?.permissions.canSpeak).toBe(false);
   });
 
-  it("не пускает пятого одновременно говорящего ученика (лимит §5.2 ТЗ)", async () => {
+  it("ученик по умолчанию входит с правом говорить (studentsCanSpeak по умолчанию, 2026-10-11)", async () => {
     lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    await roomsService.join(guestActor(), LESSON_ID);
+
+    const snapshot = await roomsService.listParticipantsSnapshot(LESSON_ID);
+    expect(snapshot.find((p) => p.userId === STUDENT_ID)?.permissions.canSpeak).toBe(true);
+  });
+
+  it("лимита говорящих учеников нет: пятый тоже получает слово (снят 2026-10-11)", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson({ settings: { studentsCanSpeak: false } }));
 
     const studentIds = [
       STUDENT_ID,
       OTHER_STUDENT_ID,
       "88888888-8888-8888-8888-888888888888",
       "99999999-9999-9999-9999-999999999999",
+      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
     ];
     for (const id of studentIds) {
       await roomsService.join(guestActor(id), LESSON_ID);
       await roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), id, { canSpeak: true });
     }
 
-    const fifthId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
-    await roomsService.join(guestActor(fifthId), LESSON_ID);
-
-    await expect(
-      roomsService.updatePermissions(SCHOOL_ID, LESSON_ID, teacherToken(), fifthId, { canSpeak: true }),
-    ).rejects.toMatchObject({ statusCode: 409, code: "mic_limit_reached" });
+    const snapshot = await roomsService.listParticipantsSnapshot(LESSON_ID);
+    for (const id of studentIds) {
+      expect(snapshot.find((p) => p.userId === id)?.permissions.canSpeak, id).toBe(true);
+    }
   });
 
   it("лимит не мешает переключить уже говорящего ученика (canSpeak не меняется на true впервые)", async () => {

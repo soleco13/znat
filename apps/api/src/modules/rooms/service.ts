@@ -31,8 +31,6 @@ const RECONNECT_GRACE_MS = 30_000;
 const HEARTBEAT_TIMEOUT_MS = 60_000;
 const EMPTY_ROOM_AUTOEND_MS = 15 * 60 * 1000;
 const SWEEP_INTERVAL_MS = 15_000;
-/** §5.2 ТЗ: не более 4 включённых микрофонов учеников одновременно, см. память project-video-platform-media-limits. */
-const MAX_SIMULTANEOUS_STUDENT_MICS = 4;
 /** §10.8 ТЗ: тот же порог, что Grafana-алерт Э6.6 (80% медиа-бюджета ~750 Мбит/с) — одно число на автоматическую деградацию (Э6.5) и уведомление человека (Э6.6). */
 const PLATFORM_TRAFFIC_LIMIT_MBPS = 600;
 
@@ -796,17 +794,6 @@ export async function setLessonStage(
   emitRoomEvent(lessonId, { type: "stage_changed", stage });
 }
 
-/** Считает гостей-учеников (не персонал) с уже включённым микрофоном, кроме исключённого — для проверки лимита §5.2 ТЗ. */
-async function countActiveStudentMics(lessonId: string, excludeUserId?: string): Promise<number> {
-  const participants = await presence.listParticipants(lessonId);
-  let count = 0;
-  for (const [userId, entry] of participants) {
-    if (userId === excludeUserId) continue;
-    if (entry.kind === "guest" && entry.permissions.canSpeak) count++;
-  }
-  return count;
-}
-
 /**
  * Меняет права участника (Э1) и, если это влияет на аудио, синхронизирует уже
  * выданный LiveKit-грант вживую (Э2.5) — токен неизменяем, простое обновление
@@ -832,16 +819,9 @@ export async function updatePermissions(
     throw new AppError(404, "not_found", "Участник не найден в комнате");
   }
 
-  if (patch.canSpeak === true && entry.kind === "guest" && !entry.permissions.canSpeak) {
-    const activeMics = await countActiveStudentMics(lessonId, targetUserId);
-    if (activeMics >= MAX_SIMULTANEOUS_STUDENT_MICS) {
-      throw new AppError(
-        409,
-        "mic_limit_reached",
-        `Одновременно могут говорить не более ${MAX_SIMULTANEOUS_STUDENT_MICS} учеников — сначала выключите чей-то микрофон`,
-      );
-    }
-  }
+  // Лимита «не более 4 говорящих учеников» (§5.2 ТЗ) больше нет — снят
+  // решением владельца 2026-10-11 вместе с микрофоном учеников по умолчанию
+  // (studentsCanSpeak, packages/shared/src/lessons.ts).
 
   const permissions = { ...entry.permissions, ...patch };
   const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);

@@ -116,7 +116,7 @@ const SETTINGS_FIELDS: { key: keyof LessonSettings; label: string; hint: string 
   {
     key: "studentsCanSpeak",
     label: "Ученики включают микрофон",
-    hint: "Все сразу, без разрешения учителя (лимит «не более 4» при этом не действует)",
+    hint: "Ученики входят с включённым микрофоном, без разрешения учителя",
   },
   {
     key: "studentsCanPublishVideo",

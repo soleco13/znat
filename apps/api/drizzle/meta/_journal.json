@@ -232,6 +232,13 @@
       "when": 1790849153035,
       "tag": "0032_media_asset_kind_video",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1791696146838,
+      "tag": "0033_students_can_speak_default",
+      "breakpoints": true
     }
   ]
 }
