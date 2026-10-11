@@ -1,20 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { FastifyRequest } from "fastify";
 
-const { authServiceMock, guestsServiceMock } = vi.hoisted(() => ({
+const { authServiceMock, guestsServiceMock, recorderAuthMock } = vi.hoisted(() => ({
   authServiceMock: { verifyAccessToken: vi.fn() },
   guestsServiceMock: { GUEST_COOKIE_NAME: "guest_session", verifyGuestToken: vi.fn() },
+  recorderAuthMock: { verifyRecorderToken: vi.fn() },
 }));
 vi.mock("../modules/auth/service.js", () => authServiceMock);
 vi.mock("../modules/guests/service.js", () => guestsServiceMock);
+vi.mock("../modules/recorder-auth/service.js", () => recorderAuthMock);
 
 const { rateLimitKey, rateLimitMax, isStaticAppRequest, IDENTITY_RATE_LIMIT_PER_MINUTE, ANONYMOUS_RATE_LIMIT_PER_MINUTE } =
   await import("./rate-limit-key.js");
 
-function request(opts: { authorization?: string; guestCookie?: string; ip?: string }): FastifyRequest {
+function request(opts: { authorization?: string; guestCookie?: string; ip?: string; query?: Record<string, string> }): FastifyRequest {
   return {
     headers: opts.authorization ? { authorization: opts.authorization } : {},
     cookies: opts.guestCookie ? { guest_session: opts.guestCookie } : {},
+    query: opts.query ?? {},
     ip: opts.ip ?? "91.105.156.108",
   } as unknown as FastifyRequest;
 }
@@ -37,6 +40,25 @@ describe("rateLimitKey", () => {
 
     await expect(rateLimitKey(request({ authorization: "Bearer tok" }))).resolves.toBe("staff:teacher-1");
     expect(authServiceMock.verifyAccessToken).toHaveBeenCalledWith("tok");
+  });
+
+  it("страница записи — счётчик урока, а не общий IP шлюза Docker (REST и WS)", async () => {
+    authServiceMock.verifyAccessToken.mockRejectedValue(new Error("not staff"));
+    recorderAuthMock.verifyRecorderToken.mockImplementation(async (t: string) =>
+      t === "rec" ? { typ: "recorder", lessonId: "lesson-1", recordingId: "r1" } : null,
+    );
+
+    await expect(rateLimitKey(request({ authorization: "Bearer rec", ip: "172.19.0.1" }))).resolves.toBe("recorder:lesson-1");
+    await expect(rateLimitKey(request({ query: { recorderToken: "rec" }, ip: "172.19.0.1" }))).resolves.toBe("recorder:lesson-1");
+    expect(rateLimitMax(request({}), "recorder:lesson-1")).toBe(IDENTITY_RATE_LIMIT_PER_MINUTE);
+  });
+
+  it("поддельный recorder-токен — откат на IP", async () => {
+    authServiceMock.verifyAccessToken.mockRejectedValue(new Error("bad"));
+    recorderAuthMock.verifyRecorderToken.mockResolvedValue(null);
+
+    await expect(rateLimitKey(request({ authorization: "Bearer fake", ip: "1.2.3.4" }))).resolves.toBe("ip:1.2.3.4");
+    await expect(rateLimitKey(request({ query: { recorderToken: "fake" }, ip: "1.2.3.4" }))).resolves.toBe("ip:1.2.3.4");
   });
 
   it("поддельный токен или кука не дают нового счётчика — откат на IP", async () => {

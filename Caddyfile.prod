@@ -88,6 +88,11 @@
 	# напрямую, минуя Caddy). Наружу закрыт защитой в глубину.
 	@metrics path /metrics
 	respond @metrics 404
+	# Вебхуки LiveKit приходят напрямую в app (127.0.0.1:3000, livekit на
+	# host-сети), снаружи этот путь не нужен: подписанный вебхук вне лимита
+	# запросов, и закрытый путь не даёт гонять проверку подписи из интернета.
+	@webhooks path /webhooks/*
+	respond @webhooks 404
 
 	# LiveKit signaling под тем же сертификатом и портом, что и сайт.
 	# Схема как в рабочем Caddyfile: LIVEKIT_PUBLIC_URL=wss://<домен>/livekit,

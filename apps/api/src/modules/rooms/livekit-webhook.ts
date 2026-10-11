@@ -53,7 +53,13 @@ export default async function livekitWebhookRoutes(app: FastifyInstance) {
       done(null, body);
     });
 
-    scope.post<{ Body: string }>("/webhooks/livekit", async (request, reply) => {
+    // Вне лимита запросов: LiveKit шлёт по вебхуку на каждый вход/выход и
+    // публикацию трека (урок на 30 человек — ~100 в первую минуту) с одного
+    // адреса шлюза Docker; общий счётчик «по IP» (100/мин) отвечал 429, и
+    // события пропадали — запись зависала в «starting», терялась посещаемость
+    // (нагрузочный тест 2026-10-11). Защита — подпись LiveKit ниже (без неё
+    // 401) и закрытый снаружи путь /webhooks/* в Caddyfile.prod.
+    scope.post<{ Body: string }>("/webhooks/livekit", { config: { rateLimit: false } }, async (request, reply) => {
       let event;
       try {
         event = await receiver.receive(request.body, request.headers.authorization);
