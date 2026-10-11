@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   LiveKitRoom,
   RoomAudioRenderer,
@@ -131,7 +131,7 @@ import { PoorLinkMediaAdapter } from "./PoorLinkMedia.js";
 import { CpuLoadAdapter } from "./cpu-load.js";
 import { ScreenShareStopSweep } from "./screen-share-stop.js";
 import { MEDIA_CONNECT_OPTIONS, MEDIA_RECONNECT_POLICY, MediaRecovery } from "./MediaRecovery.js";
-import { clearRejoinState, readRejoinState, writeRejoinState } from "./rejoin-state.js";
+import { clearRejoinState, readRejoinState, rememberJoinPath, writeRejoinState } from "./rejoin-state.js";
 import { MediaTelemetry, reportLiveKitConnectionFailed } from "./MediaTelemetry.js";
 import { MediaDeviceErrorNotice } from "./media-device-errors.js";
 
@@ -352,7 +352,7 @@ export function RoomPage() {
   const [clientMediaSettings, setClientMediaSettings] = useState<ClientMediaSettings | null>(null);
   // Перезагрузка вкладки посреди урока — сразу обратно в урок, с теми же
   // устройствами и тем, что было включено (см. `rejoin-state.ts`).
-  const [rejoin] = useState(readRejoinState);
+  const [rejoin] = useState(() => readRejoinState(lessonId));
   const [deviceCheckDone, setDeviceCheckDone] = useState(rejoin !== null);
   const [micDeviceId, setMicDeviceId] = useState<string | null>(rejoin?.micId ?? null);
   const [camDeviceId, setCamDeviceId] = useState<string | null>(rejoin?.camId ?? null);
@@ -711,6 +711,24 @@ export function RoomPage() {
       .catch(() => undefined);
   }, [lessonId, isGuest, guestSession?.lessonTitle]);
 
+  // В адресной строке на уроке — та же короткая ссылка, по которой входят
+  // (`/<код>`), а не внутренний `/lessons/<uuid>/room` (запрос 2026-10-11).
+  // Персонал знает её из карточки урока; гость — с экрана входа (state
+  // навигации), карточку урока ему не отдают (§1.4 план-ТЗ). Меняем только
+  // адрес в браузере: внутренний маршрут react-router остаётся прежним, F5 по
+  // ссылке возвращает в урок через экран входа (`shouldRejoinViaLink`).
+  const location = useLocation();
+  const enteredViaPath = (location.state as { joinPath?: string } | null)?.joinPath ?? null;
+  const displayJoinPath = lessonJoinPath ?? enteredViaPath;
+  useEffect(() => {
+    if (!lessonId || !displayJoinPath) return;
+    rememberJoinPath(lessonId, displayJoinPath);
+    if (window.location.pathname + window.location.search !== displayJoinPath) {
+      // `history.state` не трогаем — в нём ключ записи react-router.
+      window.history.replaceState(window.history.state, "", displayJoinPath);
+    }
+  }, [lessonId, displayJoinPath]);
+
   const copyJoinLink = useCallback(() => {
     if (!lessonJoinPath) return;
     navigator.clipboard
@@ -746,8 +764,8 @@ export function RoomPage() {
   }, [lessonId, joined, rejoin]);
 
   useEffect(() => {
-    if (joined) writeRejoinState({ act: stageView === "activity" });
-  }, [joined, stageView]);
+    if (joined) writeRejoinState(lessonId, { act: stageView === "activity" });
+  }, [lessonId, joined, stageView]);
 
   const refetchedDecksRef = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -792,7 +810,7 @@ export function RoomPage() {
     // До запроса: пока /leave идёт, сервер может закрыть соединение урока, и
     // повторный вход (`rejoinAfterEviction`) не должен успеть сработать.
     leftRef.current = true;
-    clearRejoinState();
+    clearRejoinState(lessonId);
     // Не ждём ответа: на плохой связи (и в оверлее «Связь прервалась», где
     // сети нет вовсе) кнопка «Выйти» до 30 с ничего не делала. `keepalive`
     // доносит запрос и после ухода со страницы; не дошёл — сервер сам
@@ -2117,7 +2135,7 @@ export function RoomPage() {
           setSpkDeviceId(r.spkDeviceId);
           setJoinMicEnabled(r.micEnabled);
           setJoinCamEnabled(r.camEnabled);
-          writeRejoinState({
+          writeRejoinState(lessonId, {
             mic: r.micEnabled,
             cam: r.camEnabled,
             micId: r.micDeviceId,
@@ -2217,7 +2235,7 @@ export function RoomPage() {
             resumeSignal={mediaResumeSignal}
             initialWanted={rejoin ? { camera: rejoin.cam, microphone: rejoin.mic } : undefined}
             onWantedChange={(w) => {
-              writeRejoinState({ cam: w.camera, mic: w.microphone });
+              writeRejoinState(lessonId, { cam: w.camera, mic: w.microphone });
               // `audio`/`video` у `<LiveKitRoom>` применяются при каждом новом
               // подключении (вход заново в `MediaRecovery`, «Продолжить
               // здесь»). С выбором экрана проверки там выключенный за урок

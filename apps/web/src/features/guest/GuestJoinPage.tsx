@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Link2Off, WifiOff } from "lucide-react";
 import { lessonJoinCodeSchema } from "@school/shared";
 
@@ -14,7 +14,8 @@ import { StatusScreen } from "@/shared/ui/status-screen";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { warmChunk } from "@/shared/chunk-warmup";
-import { enterGuestLesson, fetchGuestLessonInfo } from "./guest-api.js";
+import { isReloadOf, shouldRejoinViaLink } from "@/features/room/rejoin-state";
+import { enterGuestLesson, fetchGuestLessonInfo, restoreGuestSession } from "./guest-api.js";
 import { useGuestSessionStore } from "./guest-session-store.js";
 
 // Только докачка, без `import()`: оборванный `import()` браузер запоминает,
@@ -84,27 +85,47 @@ export function ShortJoinPage() {
  */
 export function GuestJoinPage() {
   const { token = "" } = useParams<{ token: string }>();
+  // Ссылка, по которой вошли (`/<код>` или `/j/<token>`): комната покажет её
+  // в адресной строке вместо `/lessons/<uuid>/room`.
+  const { pathname: linkPath } = useLocation();
   const navigate = useNavigate();
   const deadLink = useRef(false);
   const info = useAsync(() => fetchLessonInfoWithRetry(token, deadLink), [token]);
   const [checkingStaff, setCheckingStaff] = useState(true);
 
-  // Учитель открыл ссылку своего урока вне приложения — входит учителем, а не учеником.
   useEffect(() => {
     let cancelled = false;
-    void resolveStaffLesson(token).then((lessonId) => {
+    void (async () => {
+      // F5 на уроке: в адресной строке комната держит эту ссылку (RoomPage).
+      // Гость этого урока уже вошёл (кука) — сразу обратно в комнату, без
+      // повторного ввода имени. Гость — раньше staff, как в RequireRoomAccess.
+      if (isReloadOf(linkPath)) {
+        const restored = await restoreGuestSession();
+        if (cancelled) return;
+        if (restored && restored !== "unavailable") {
+          if (shouldRejoinViaLink(restored.lessonId, linkPath)) {
+            navigate(`/lessons/${restored.lessonId}/room`, { replace: true, state: { joinPath: linkPath } });
+            return;
+          }
+          // Сессия другого урока — к этой ссылке не относится.
+          useGuestSessionStore.getState().clearSession();
+          setGuestMode(false);
+        }
+      }
+      // Учитель открыл ссылку своего урока вне приложения — входит учителем, а не учеником.
+      const lessonId = await resolveStaffLesson(token);
       if (cancelled) return;
       if (lessonId) {
         useGuestSessionStore.getState().clearSession();
-        navigate(`/lessons/${lessonId}/room`, { replace: true });
+        navigate(`/lessons/${lessonId}/room`, { replace: true, state: { joinPath: linkPath } });
       } else {
         setCheckingStaff(false);
       }
-    });
+    })();
     return () => {
       cancelled = true;
     };
-  }, [token, navigate]);
+  }, [token, linkPath, navigate]);
 
   // Пока ученик вводит имя, в фоне качаем только сам урок (страница урока,
   // LiveKit). Доску и задания — уже в уроке, после подключения звука и видео
@@ -128,7 +149,7 @@ export function GuestJoinPage() {
     setSubmitting(true);
     try {
       const session = await enterGuestLesson(token, trimmed, info.data.lessonTitle);
-      navigate(`/lessons/${session.lessonId}/room`, { replace: true });
+      navigate(`/lessons/${session.lessonId}/room`, { replace: true, state: { joinPath: linkPath } });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Не удалось войти в урок");
       setSubmitting(false);
