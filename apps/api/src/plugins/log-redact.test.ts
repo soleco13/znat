@@ -18,6 +18,17 @@ describe("redactUrl", () => {
     expect(redactUrl("/api/v1/j/abc123def/enter")).toBe("/api/v1/j/[redacted]/enter");
   });
 
+  it("вырезает короткую ссылку урока /<код> в корне сайта", () => {
+    expect(redactUrl("/skkshki42pwy")).toBe("/[redacted]");
+    expect(redactUrl("/skkshki42pwy?utm=tg")).toBe("/[redacted]?utm=tg");
+  });
+
+  it("пути приложения похожей длины не трогает", () => {
+    expect(redactUrl("/verify-email?token=x")).toBe("/verify-email?token=%5Bredacted%5D");
+    expect(redactUrl("/lessons/abc/room")).toBe("/lessons/abc/room");
+    expect(redactUrl("/skkshki42pwyz")).toBe("/skkshki42pwyz");
+  });
+
   it("адрес без секретов не меняет", () => {
     expect(redactUrl("/api/v1/lessons/1?page=2")).toBe("/api/v1/lessons/1?page=2");
     expect(redactUrl("/health")).toBe("/health");

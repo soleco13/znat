@@ -73,9 +73,14 @@ export function errorFields(err: unknown): { errorName: string; errorMessage: st
   return { errorName: typeof err, errorMessage: String(err).slice(0, 200) };
 }
 
-/** Путь страницы без токена ссылки урока (`/j/<token>` — сам по себе пропуск в урок). */
+/**
+ * Путь страницы без токена ссылки урока: `/j/<token>` и короткая `/<код>`
+ * (lessonJoinCodeSchema) — сами по себе пропуск в урок.
+ */
 export function safePath(): string {
-  return location.pathname.replace(/\/j\/[^/]+/, "/j/[redacted]");
+  return location.pathname
+    .replace(/\/j\/[^/]+/, "/j/[redacted]")
+    .replace(/^\/[a-z0-9]{12}(?=\/|$)/, "/[redacted]");
 }
 
 if (typeof window !== "undefined") {

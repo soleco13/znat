@@ -161,7 +161,7 @@ export function SettingsPage() {
           <Section title="Функции">
             <Row
               title="Гостевой доступ по ссылке"
-              description="Ученик может войти в урок без аккаунта по прямой ссылке (/j/...)"
+              description="Ученик может войти в урок без аккаунта по прямой ссылке урока"
             >
               <Switch
                 checked={data.guestAccessEnabled}

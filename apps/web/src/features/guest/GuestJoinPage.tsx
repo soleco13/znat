@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Link2Off, WifiOff } from "lucide-react";
+import { lessonJoinCodeSchema } from "@school/shared";
 
 import { ApiError, apiFetch, hasStaffSession, setGuestMode } from "@/shared/api-client";
 import { useAuthStore } from "@/shared/auth-store";
@@ -65,7 +66,18 @@ async function resolveStaffLesson(token: string): Promise<string | null> {
 }
 
 /**
- * Э12.6 — экран входа ученика по прямой ссылке (`/j/:token`). Вне `AppShell`
+ * Короткая ссылка урока `/<код>` (2026-10-11). Маршрут `/:token` в корне
+ * ловит любой одиночный сегмент, которого нет среди статических маршрутов
+ * (их React Router ставит выше динамических), поэтому экран входа — только
+ * для строки в формате кода; прочие адреса, как и раньше, ничего не рисуют.
+ */
+export function ShortJoinPage() {
+  const { token = "" } = useParams<{ token: string }>();
+  return lessonJoinCodeSchema.safeParse(token).success ? <GuestJoinPage /> : null;
+}
+
+/**
+ * Э12.6 — экран входа ученика по прямой ссылке (`/<код>` или `/j/:token`). Вне `AppShell`
  * и `RequireAuth`: у ученика аккаунта нет (§0 план-ТЗ). Поток: карточка
  * урока → «Представьтесь» произвольным именем → комната (экран проверки
  * устройств живёт внутри `RoomPage`).

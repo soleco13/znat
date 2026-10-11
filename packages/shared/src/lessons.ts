@@ -75,6 +75,17 @@ export const updateLessonRequestSchema = z
 export type UpdateLessonRequest = z.infer<typeof updateLessonRequestSchema>;
 
 /**
+ * Код короткой ссылки урока: `https://<домен>/<код>`, например `/skkshki42pwy`
+ * (2026-10-11, вместо 64 hex-символов в `/j/<token>`). 12 символов [a-z0-9]
+ * ≈ 62 бита — перебор при rate-limit входа гостя невозможен. Обязательно хотя
+ * бы одна цифра: в путях приложения (/login, /lessons, …) цифр нет, поэтому
+ * код в корне сайта никогда не совпадёт с маршрутом, в том числе с будущим.
+ * Старые длинные токены продолжают работать по `/j/<token>`.
+ */
+export const LESSON_JOIN_CODE_LENGTH = 12;
+export const lessonJoinCodeSchema = z.string().regex(/^(?=[a-z0-9]*\d)[a-z0-9]{12}$/);
+
+/**
  * Урок в списке/карточке для персонала (`GET /lessons`, `GET /lessons/:id`).
  * `joinToken`/`joinPath` отдаются только staff — по ним админ копирует
  * ссылку ученикам. Гость этой формы не видит никогда.
@@ -87,7 +98,7 @@ export const lessonSummarySchema = z.object({
   scheduledAt: z.string().nullable(),
   settings: lessonSettingsSchema,
   joinToken: z.string(),
-  /** Относительный путь входа (`/j/<token>`) — фронт достраивает до абсолютного URL сам. */
+  /** Относительный путь входа: `/<код>` (короткая ссылка) или `/j/<token>` у старых уроков — фронт достраивает до абсолютного URL сам. */
   joinPath: z.string(),
   createdAt: z.string(),
 });

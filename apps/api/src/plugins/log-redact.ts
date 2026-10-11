@@ -5,10 +5,17 @@ const SECRET_QUERY_PARAMS = ["token", "recorderToken", "sig"];
 
 /** Ссылка урока `/j/<token>` (страница и API входа гостя) — сама по себе пропуск в урок. */
 const JOIN_LINK_PATH = /(^|\/)j\/[^/?#]+/;
+/**
+ * Короткая ссылка урока `/<код>` (lessonJoinCodeSchema, 2026-10-11) — тот же
+ * пропуск. Страницу по ней отдаёт app (SPA-фолбэк), и адрес попадает в лог
+ * запроса. Режем любой 12-символьный [a-z0-9] сегмент в корне — шире, чем
+ * формат кода (цифра не требуется): лишнее скрытие безвредно.
+ */
+const SHORT_JOIN_PATH = /^\/[a-z0-9]{12}(?=[/?#]|$)/;
 
 /** Токен в `/ws?token=…` иначе целиком оседал в логах при каждом подключении к уроку. */
 export function redactUrl(url: string): string {
-  url = url.replace(JOIN_LINK_PATH, "$1j/[redacted]");
+  url = url.replace(JOIN_LINK_PATH, "$1j/[redacted]").replace(SHORT_JOIN_PATH, "/[redacted]");
   const q = url.indexOf("?");
   if (q === -1) return url;
   const params = new URLSearchParams(url.slice(q + 1));

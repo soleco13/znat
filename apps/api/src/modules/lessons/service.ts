@@ -1,6 +1,8 @@
 import { randomBytes } from "node:crypto";
 import {
   defaultLessonSettings,
+  LESSON_JOIN_CODE_LENGTH,
+  lessonJoinCodeSchema,
   lessonSettingsSchema,
   type AdminCreateLessonRequest,
   type LessonAttendance,
@@ -16,13 +18,31 @@ import * as usersService from "../users/service.js";
 import * as repo from "./repo.js";
 import { logTaskFailure } from "../../plugins/logger.js";
 
-/** 32 случайных байта → 64 hex-символа. Секрет прямой ссылки урока (§1.6 план-ТЗ). */
-function mintJoinToken(): string {
-  return randomBytes(32).toString("hex");
+const JOIN_CODE_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+/**
+ * Секрет прямой ссылки урока (§1.6 план-ТЗ) — короткий код `/<код>`
+ * (формат и почему он безопасен — `lessonJoinCodeSchema` в packages/shared).
+ * Байты ≥ 252 отбрасываются: 252 = 7 × 36, иначе первые символы алфавита
+ * выпадали бы чаще. Код без цифры перевыпускается (~2% случаев) — цифра
+ * отделяет коды от маршрутов приложения. Совпадение с чужим кодом
+ * (≈ n²/2⁶³) ловит UNIQUE на lessons.join_token.
+ */
+export function mintJoinToken(): string {
+  for (;;) {
+    let code = "";
+    while (code.length < LESSON_JOIN_CODE_LENGTH) {
+      for (const byte of randomBytes(LESSON_JOIN_CODE_LENGTH * 2)) {
+        if (byte < 252 && code.length < LESSON_JOIN_CODE_LENGTH) code += JOIN_CODE_ALPHABET[byte % 36];
+      }
+    }
+    if (lessonJoinCodeSchema.safeParse(code).success) return code;
+  }
 }
 
-function joinPath(joinToken: string): string {
-  return `/j/${joinToken}`;
+/** Короткие коды — в корне сайта; старые 64-hex токены (до 2026-10-11) — по-прежнему `/j/<token>`. */
+export function joinPath(joinToken: string): string {
+  return lessonJoinCodeSchema.safeParse(joinToken).success ? `/${joinToken}` : `/j/${joinToken}`;
 }
 
 /** `lessons.settings` — внешняя граница (jsonb): парсим схемой, не доверяем форме из БД. */

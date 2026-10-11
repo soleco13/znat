@@ -1,7 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Suspense, type ReactNode } from "react";
 
-import { GuestJoinPage } from "./features/guest/GuestJoinPage.js";
+import { GuestJoinPage, ShortJoinPage } from "./features/guest/GuestJoinPage.js";
 import { AppShell } from "./shared/AppShell.js";
 import { TeacherShell } from "./shared/TeacherShell.js";
 import { useAuthStore } from "./shared/auth-store.js";
@@ -103,6 +103,9 @@ export function App() {
         />
         {/* Э12.6 — вход ученика по прямой ссылке, вне AppShell и RequireAuth. */}
         <Route path="/j/:token" element={<GuestJoinPage />} />
+        {/* Короткая ссылка урока `/<код>` (lessonJoinCodeSchema). Статические
+            пути выше (/login, /lessons, …) React Router ставит первыми. */}
+        <Route path="/:token" element={<ShortJoinPage />} />
         {/* §4.2 ТЗ: уроки — admin и teacher; методист сюда не ходит. */}
         <Route
           path="/lessons"
