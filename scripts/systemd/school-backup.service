@@ -5,7 +5,11 @@ Requires=docker.service
 
 [Service]
 Type=oneshot
-User=deploy
-WorkingDirectory=/home/deploy/school-platform
-EnvironmentFile=/home/deploy/school-platform/.env
-ExecStart=/home/deploy/school-platform/scripts/backup.sh
+# Пути — фактический каталог проекта на сервере (2026-10-11: /root/znat,
+# как и на прежнем сервере; пользователя deploy нет — SSH и запуск от root).
+# Имя каталога важно: compose-проект «znat» даёт том znat_assets_data,
+# который бэкапит scripts/backup.sh.
+User=root
+WorkingDirectory=/root/znat
+EnvironmentFile=/root/znat/.env
+ExecStart=/root/znat/scripts/backup.sh

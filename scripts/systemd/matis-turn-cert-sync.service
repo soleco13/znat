@@ -1,0 +1,11 @@
+# Копия сертификата TURNS из хранилища Caddy в turn-certs/ + SIGUSR2 coturn
+# (scripts/turn-cert-sync.sh). Путь — фактический каталог проекта на сервере.
+[Unit]
+Description=Matis: sync TURN TLS certificate from Caddy to coturn
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/znat
+ExecStart=/root/znat/scripts/turn-cert-sync.sh

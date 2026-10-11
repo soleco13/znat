@@ -1,8 +1,18 @@
+# Продовый конфиг под домен (Э0.8). Подключается docker-compose.prod.yml
+# вместо Caddyfile (тот — для работы по голому IP). Переменные окружения
+# контейнера caddy (docker-compose.prod.yml, значения из .env):
+#   CADDY_DOMAIN — сайт, например matis-edu.ru
+#   TURN_DOMAIN  — имя TURN, например turn.matis-edu.ru (сертификат для coturn)
+#   ACME_EMAIL   — почта для уведомлений Let's Encrypt
+# Сертификаты Let's Encrypt выпускаются автоматически (HTTP-01 на :80,
+# TLS-ALPN на :443). DNS (A, без AAAA) на сервер должен смотреть ДО запуска,
+# иначе неудачные проверки упрутся в лимиты Let's Encrypt.
 {
-	# HTTP/3 (QUIC, UDP 443) выключен: UDP 443 наружу не опубликован
-	# (docker-compose.yml публикует только TCP), а Caddy всё равно объявлял
-	# браузерам `alt-svc: h3` — лишние попытки через недоступный UDP. Да и на
-	# мобильных сетях UDP теряется сильнее TCP (замер 2026-09-26).
+	email {$ACME_EMAIL}
+	# HTTP/3 (QUIC, UDP 443) выключен: UDP 443 занят TURN (nat-правило
+	# UDP 443 -> coturn :3478 в /etc/ufw/before.rules), а Caddy всё равно
+	# объявлял бы браузерам `alt-svc: h3` — лишние попытки через недоступный
+	# UDP. Да и на мобильных сетях UDP теряется сильнее TCP (замер 2026-09-26).
 	servers {
 		protocols h1 h2
 	}
@@ -41,34 +51,60 @@
 	header @landing_page Cache-Control "no-cache"
 }
 
-# Продовый конфиг (Э0.8). Подставляется на сервере через переменную окружения CADDY_DOMAIN.
-# Пример: CADDY_DOMAIN=school.example.ru
-{$CADDY_DOMAIN} {
+# Файлы /files/* (слайды, картинки, MP4 записей) отдаёт Caddy, а не Node:
+# приложение проверяет HMAC-подпись ссылки и отвечает пустым телом с
+# заголовком X-Accel-Redirect (FILES_VIA_PROXY=true), Caddy берёт файл с
+# того же тома хранилища (read-only). Поддерживает Range — перемотка видео.
+# Заголовок видит только Caddy: клиент подставить его не может, это ответ
+# upstream, а не запрос. Один в один с тем же сниппетом в Caddyfile.
+(app_proxy) {
 	import security_headers
 	import static_policy
+
+	reverse_proxy app:3000 {
+		@accel header X-Accel-Redirect *
+		handle_response @accel {
+			root * /srv/files
+			rewrite * {rp.header.X-Accel-Redirect}
+			file_server
+		}
+	}
+	# zstd — браузерам, которые его понимают (Chrome, Edge, Firefox), gzip —
+	# остальным. Brotli на лету штатный Caddy не умеет; статика приложения и
+	# лендинга уже лежит brotli-копиями и сюда не пережимается.
+	encode zstd gzip
+
+	@files path /files/*
+	header @files Cache-Control "private, max-age=3600"
+}
+
+{$CADDY_DOMAIN} {
 	# Только по HTTPS: браузер не пойдёт на http:// даже по старой ссылке.
-	header Strict-Transport-Security "max-age=31536000"
+	# Включено после проверки выпуска сертификата (2026-10-11): с HSTS ошибка
+	# сертификата не обходится кликом, а браузер помнит заголовок год.
+	# HSTS-PENDING header Strict-Transport-Security "max-age=31536000"
 
 	# /metrics — только для Prometheus внутри docker-сети (app:3000/metrics
 	# напрямую, минуя Caddy). Наружу закрыт защитой в глубину.
 	@metrics path /metrics
 	respond @metrics 404
 
-	# LiveKit (Э2): signaling WS/HTTP наружу только через /rtc — так медиа-сервер
-	# не занимает отдельный публичный порт для сигналинга. Сам медиатрафик
-	# (UDP 50000-60000, TURN 3478) идёт мимо Caddy напрямую, см. ufw в
-	# scripts/server-setup.sh — Caddy тут ни при чём, WebRTC поверх UDP не
-	# проксируется через HTTP-реверс-прокси.
-	handle /rtc/* {
-		uri strip_prefix /rtc
-		# localhost здесь был бы адресом самого контейнера caddy, не хоста —
-		# livekit в network_mode: host виден только через шлюз хоста
-		# (см. extra_hosts у caddy в docker-compose.yml).
+	# LiveKit signaling под тем же сертификатом и портом, что и сайт.
+	# Схема как в рабочем Caddyfile: LIVEKIT_PUBLIC_URL=wss://<домен>/livekit,
+	# livekit-client сам дописывает /rtc (/rtc/validate) к serverUrl,
+	# handle_path срезает /livekit и LiveKit получает свой /rtc.
+	# Прежний вариант здесь (handle /rtc/* + uri strip_prefix /rtc) не был
+	# проверен и ломал путь: после срезания LiveKit получал бы "/" вместо /rtc.
+	# localhost здесь был бы адресом самого контейнера caddy, не хоста —
+	# livekit в network_mode: host виден только через шлюз хоста
+	# (extra_hosts у caddy в docker-compose.yml).
+	handle_path /livekit/* {
 		reverse_proxy host.docker.internal:7880
 	}
 
-	# Лендинг на "/" — см. подробный комментарий в тестовом Caddyfile (тот же
-	# приём). /login и остальные пути приложения по-прежнему идут в app ниже.
+	# Лендинг на "/" — см. подробный комментарий в Caddyfile (тот же приём).
+	# `handle /` — точное совпадение, не префикс. /login и остальные пути
+	# приложения по-прежнему идут в app ниже.
 	handle / {
 		root * /srv/landing
 		# Рядом с файлами лендинга — brotli-копии (*.br, сборка landing/).
@@ -84,22 +120,18 @@
 		}
 	}
 
-	# Файлы /files/* — Caddy после проверки подписи в приложении, см. тестовый Caddyfile.
-	reverse_proxy app:3000 {
-		@accel header X-Accel-Redirect *
-		handle_response @accel {
-			root * /srv/files
-			rewrite * {rp.header.X-Accel-Redirect}
-			file_server
-		}
-	}
-	# zstd — браузерам, которые его понимают (Chrome, Edge, Firefox), gzip —
-	# остальным. Brotli на лету штатный Caddy не умеет; статика приложения и
-	# лендинга уже лежит brotli-копиями и сюда не пережимается.
-	encode zstd gzip
+	import app_proxy
+}
 
-	# HMAC-подписанные ссылки на файлы отдаём с длинным кэшем на клиенте —
-	# подпись сама по себе уже ограничивает срок жизни ссылки.
-	@files path /files/*
-	header @files Cache-Control "private, max-age=3600"
+# www — только редирект на апекс (один адрес сайта: куки, ссылки /j/<token>).
+www.{$CADDY_DOMAIN} {
+	redir https://{$CADDY_DOMAIN}{uri} permanent
+}
+
+# Имя TURN: сайт нужен только ради сертификата Let's Encrypt для TURNS
+# (coturn :5349). Сам coturn его не получает — Caddy хранит ключ 0600 root,
+# а coturn работает под nobody: копию в turn-certs/ кладёт и coturn
+# перечитывает scripts/turn-cert-sync.sh (таймер). По HTTPS тут ничего нет.
+{$TURN_DOMAIN} {
+	respond 404
 }

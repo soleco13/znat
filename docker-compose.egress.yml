@@ -50,15 +50,17 @@ services:
     # Chrome активно использует разделяемую память; дефолтные 64 МБ приводят к
     # падениям рендерера на длинных записях.
     shm_size: 1gb
-    # Однохостовый тестовый стенд (см. заметку деплоя): egress реально делит
-    # эти же 2 CPU с livekit, а не сидит на второй машине, как в §10.4 ТЗ.
-    # Жёсткий cap 1.5 CPU совпадает с уже подобранным
-    # cpu_cost.room_composite_cpu_cost=1.5 в egress.local.yaml — запись не
-    # должна суметь съесть оба ядра и посадить качество связи у всех
-    # остальных участников урока. cpu_shares ниже дефолтных 1024 — при
-    # реальной конкуренции за CPU livekit/coturn (cpu_shares: 4096 в
-    # docker-compose.yml) выигрывают у записи.
-    cpus: "1.5"
+    # Запись на том же хосте, что LiveKit (сервер matis-edu.ru, 2026-10-11,
+    # i7-8700, 12 логических CPU): egress сидит на CPU 4,5,10,11 (2 физических
+    # ядра), которые НЕ пересекаются с livekit/coturn (1,2,7,8) и с
+    # app/БД (3,9) — раскладка в docker-compose.prod.yml. Делит их только с
+    # converter (квота 0.8). cpus 3 = cpu_cost.room_composite_cpu_cost в
+    # .env.egress (EGRESS_ROOM_COMPOSITE_CPU_COST=3): стоимость больше
+    # выделенного — egress молча не примет задачу, клиент увидит таймаут.
+    # На прежнем 2-ядерном стенде было cpus 1.5 без cpuset. cpu_shares ниже
+    # дефолтных 1024 — при реальной конкуренции за CPU выигрывают другие.
+    cpuset: "4,5,10,11"
+    cpus: "3"
     cpu_shares: 512
     environment:
       EGRESS_CONFIG_FILE: /etc/egress.yaml

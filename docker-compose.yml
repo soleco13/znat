@@ -164,10 +164,14 @@ services:
           # согласование на каждом подключении. node_ip — штатное поле
           # livekit (yaml-тег `node_ip`, pkg rtcconfig) — задаёт единственный
           # адрес явно, без STUN-перебора по интерфейсам; use_external_ip
-          # отключён, раз адрес и так известен точно (TURN_DOMAIN — тот же
-          # публичный IP, что уже используется для TURN/STUN).
+          # отключён, раз адрес и так известен точно.
+          # node_ip — ТОЛЬКО IPv4-литерал (LIVEKIT_NODE_IP), не домен: это
+          # адрес ICE-кандидата, его кладут в SDP как есть. Раньше брался
+          # TURN_DOMAIN, пока тот был IP; с доменом (turn.matis-edu.ru,
+          # 2026-10-11) переменные разделены — имя нужно TURN/TLS для
+          # сертификата, а кандидату — голый адрес.
           use_external_ip: false
-          node_ip: ${TURN_DOMAIN}
+          node_ip: ${LIVEKIT_NODE_IP:?set LIVEKIT_NODE_IP (public IPv4) in .env}
           # link-local IPv6 docker-интерфейсов (veth/bridge) pion пытается
           # занять по всему port_range: bind без зоны даёт EINVAL на каждый
           # из 10 000 портов, с перечитыванием интерфейсов на каждой попытке.
@@ -202,12 +206,12 @@ services:
             # TURNS (TLS) на 5349 — для сетей со строгим файрволом/DPI, где
             # голый UDP на нестандартный порт режется целиком (частая причина
             # «у меня хороший интернет, а связь на уроке плохая» — см. заметку
-            # деплоя). Сертификат самоподписанный (нет домена, только IP) —
-            # в отличие от обычной HTTPS-страницы, ICE-агент браузера не
-            # показывает предупреждение и не требует клика — TURNS кандидат
-            # либо тихо срабатывает, либо тихо отбрасывается и ICE падает на
-            # другой кандидат (UDP TURN/STUN). Проверить на реальном
-            # проблемном подключении, это best-effort, не гарантия.
+            # деплоя). С 2026-10-11 сертификат настоящий (Let's Encrypt на
+            # TURN_DOMAIN=turn.matis-edu.ru, выпускает Caddy, в turn-certs/ его
+            # кладёт scripts/turn-cert-sync.sh). Браузер проверяет сертификат
+            # TURNS молча: с самоподписанным (как было на IP) кандидат тихо
+            # отбрасывался — поэтому host здесь обязан быть именем из
+            # сертификата, а не IP.
             - host: ${TURN_DOMAIN}
               port: ${TURN_TLS_PORT:-5349}
               protocol: tls
@@ -246,10 +250,11 @@ services:
 
   # Свой TURN (§3.2, §10.5 ТЗ) вместо stun.l.google.com — часть учеников
   # сидит за школьными/корпоративными NAT, без TURN у них не будет медиа.
-  # TLS (5349) добавлен тестово (2026-09-11) с самоподписанным сертификатом
-  # (./turn-certs, не в git, сгенерирован openssl на TURN_DOMAIN=IP) — на
-  # боевом домене заменить на реальный сертификат (Let's Encrypt и т.п.), см.
-  # "Известные пробелы" в docs/CURRENT_STAGE.md.
+  # TLS (5349): ./turn-certs (не в git) — Let's Encrypt на TURN_DOMAIN.
+  # Выпускает и продлевает Caddy (сайт turn.* в Caddyfile.prod); копию с
+  # владельцем nobody (uid 65534, coturn не root, а Caddy хранит ключ 0600
+  # root) кладёт и перечитывает (SIGUSR2) scripts/turn-cert-sync.sh по
+  # таймеру matis-turn-cert-sync.timer. До 2026-10-11 был самоподписанный на IP.
   coturn:
     # Версия закреплена по той же причине, что у livekit.
     image: coturn/coturn:4.18.0-r0
@@ -286,16 +291,17 @@ services:
       # (ttl по умолчанию, 14400 с; короче нельзя — coturn проверяет срок на
       # каждом Refresh, длинный урок через TURN оборвался бы), а законный
       # адресат relay у браузера один — SFU на этом хосте (node_ip =
-      # TURN_DOMAIN). Раньше запрещены были только частные IPv4: relay к
+      # LIVEKIT_NODE_IP). Раньше запрещены были только частные IPv4: relay к
       # любому публичному адресу и в 100.64/10 работал (проверено
       # turnutils_uclient) — открытый ретранслятор за счёт канала сервера.
       # Сначала запрет всего IPv4 и IPv6 (заодно 0/8, 100.64/10, 127/8,
       # 169.254/16, ::1, fc00::/7, fe80::/10, ::ffff:0:0/96), потом
       # разрешение адреса LiveKit: allowed-peer-ip сильнее denied-peer-ip.
-      # TURN_DOMAIN должен быть IP — его же берёт node_ip LiveKit.
+      # Здесь нужен IP, а не имя: тот же LIVEKIT_NODE_IP, что node_ip LiveKit
+      # (TURN_DOMAIN с 2026-10-11 — домен, coturn его как peer не разрешит).
       - --denied-peer-ip=0.0.0.0-255.255.255.255
       - --denied-peer-ip=::-ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
-      - --allowed-peer-ip=${TURN_DOMAIN}
+      - --allowed-peer-ip=${LIVEKIT_NODE_IP:?set LIVEKIT_NODE_IP in .env}
       # Браузер берёт у TURN только UDP-relay (RFC 6062 TCP-relay WebRTC не
       # использует), а TCP-relay — это туннель к произвольному TCP-сервису.
       - --no-tcp-relay

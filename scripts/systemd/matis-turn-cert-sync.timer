@@ -1,0 +1,11 @@
+# Caddy продлевает сертификат за ~30 дней до конца (или за треть срока),
+# раз в сутки ночью — с запасом. Persistent — догонит пропуск после простоя.
+[Unit]
+Description=Matis: daily TURN certificate sync
+
+[Timer]
+OnCalendar=*-*-* 04:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
