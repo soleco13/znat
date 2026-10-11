@@ -82,7 +82,7 @@
 	# Только по HTTPS: браузер не пойдёт на http:// даже по старой ссылке.
 	# Включено после проверки выпуска сертификата (2026-10-11): с HSTS ошибка
 	# сертификата не обходится кликом, а браузер помнит заголовок год.
-	# HSTS-PENDING header Strict-Transport-Security "max-age=31536000"
+	header Strict-Transport-Security "max-age=31536000"
 
 	# /metrics — только для Prometheus внутри docker-сети (app:3000/metrics
 	# напрямую, минуя Caddy). Наружу закрыт защитой в глубину.

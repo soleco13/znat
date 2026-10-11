@@ -89,6 +89,13 @@ services:
     cpuset: "4,5,10,11"
     logging: *rotated-logs
     cpu_quota: 80000
+    # ВЫКЛЮЧЕН по умолчанию (2026-10-11): образ не собирается — freshclam
+    # получает 403 «Blocked by CDN» от database.clamav.net с IP сервера, а
+    # без базы антивируса конвертер не собирается (так задумано, не обходить
+    # молча). Профиль нужен, чтобы deploy.sh (build + up -d всех сервисов)
+    # не падал на нём. Включить, когда база доступна (зеркало/прокси при
+    # сборке): COMPOSE_PROFILES=converter в .env — compose читает его сам.
+    profiles: ["converter"]
 
   caddy:
     cpuset: "3,9"

@@ -1,5 +1,16 @@
 # Текущий этап: Э12 — гостевой вход учеников, новый UI урока
 
+> 2026-10-11: **Переезд на домен matis-edu.ru** (новый сервер 95.213.143.106,
+> i7-8700 6C/12T, 32 ГБ, чистая база). Caddyfile.prod (LE на домен, www → апекс,
+> LiveKit `/livekit`, HSTS), TURNS 5349 с настоящим сертификатом на
+> turn.matis-edu.ru (Caddy выпускает, `scripts/turn-cert-sync.sh` + таймер
+> кладёт в turn-certs/ и шлёт coturn SIGUSR2), `LIVEKIT_NODE_IP` отделён от
+> `TURN_DOMAIN`, cpuset под 12 CPU (docker-compose.prod.yml), запись на этом же
+> хосте (CPU 4,5,10,11). Не сделано: TURN на TCP 443 (один IPv4, см.
+> docs/turn-tls-443.md); converter — профиль `converter`, выключен: 403 от
+> database.clamav.net; SMTP не настроен — подтверждение почты при регистрации
+> не уходит; restic-репозиторий не задан (бэкап только локальный).
+>
 > 2026-09-23: **Э14.2 закрыт** — приглашения в пространство (`school_invites`,
 > модуль `invites`, страница `/admin/invites`, приём по ссылке
 > `/s/:slug/invite/:code`). Только по прямой ссылке от админа, не открытый
@@ -6232,8 +6243,9 @@ event loop lag app не вырос; CPU ядер 0-3 (LiveKit) не затрон
    через Docker Desktop эти сервисы не поднимутся даже если поставить Docker.
    Реальная проверка Э2.1 возможна только на Linux (прод-сервер или отдельная
    Linux VM/CI-раннер).
-3. TLS для coturn (TURNS, 5349) отложен — нужен сертификат на `TURN_DOMAIN`,
-   это делается при разворачивании на боевом домене (Э0.8), не раньше.
+3. ~~TLS для coturn (TURNS, 5349)~~ — сделано 2026-10-11 на matis-edu.ru:
+   Let's Encrypt на turn.matis-edu.ru (Caddy + scripts/turn-cert-sync.sh).
+   TURN на TCP 443 по-прежнему нет — нужен второй IPv4 (docs/turn-tls-443.md).
 4. Перед Э2.2 нужно согласовать с пользователем добавление зависимости
    `livekit-server-sdk` (backend); перед Э2.3 — `livekit-client` и
    `@livekit/components-react` (frontend). Пока не добавлены.

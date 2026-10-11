@@ -38,7 +38,11 @@ ENV NODE_ENV=production
 # смонтирован как tmpfs в docker-compose).
 ENV HOME=/tmp
 
+# ca-certificates — явно: при --no-install-recommends он не ставится (у
+# libcurl это лишь Recommends), и freshclam ниже падал с «Problem with the
+# SSL CA cert» на HTTPS к database.clamav.net (сборка 2026-10-11).
 RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates \
       libreoffice-impress \
       libreoffice-writer \
       poppler-utils \
