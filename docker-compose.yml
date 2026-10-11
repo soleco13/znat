@@ -216,6 +216,15 @@ services:
               port: ${TURN_TLS_PORT:-5349}
               protocol: tls
               secret: ${TURN_SHARED_SECRET}
+            # TURNS на TCP 443 — последний рубеж для сетей, где наружу открыт
+            # только 443 (2026-10-11). Тот же coturn :5349: на проде TCP 443
+            # держит sni-proxy (docker-compose.prod.yml) и по SNI = TURN_DOMAIN
+            # отдаёт соединение coturn'у, остальное — Caddy. Без sni-proxy
+            # (локально) кандидат просто не соберётся.
+            - host: ${TURN_DOMAIN}
+              port: 443
+              protocol: tls
+              secret: ${TURN_SHARED_SECRET}
           # При нехватке канала даже на нижние слои сервер ставит часть видео
           # на паузу, звук не трогает (индикатор паузы в плитке уже есть).
           # Работает для клиентов на одном PeerConnection только с 1.13.9.
@@ -279,6 +288,11 @@ services:
       - --pkey=/certs/turn_key.pem
       - --min-port=49000
       - --max-port=49999
+      # Relay-адрес — всегда публичный IPv4. Иначе coturn берёт его с
+      # интерфейса, на который пришёл клиент: TURNS на TCP 443 приходит от
+      # sni-proxy на 127.0.0.1 — и браузер получал relay 127.0.0.1:<порт>,
+      # нерабочий кандидат (проверено 2026-10-11).
+      - --relay-ip=${LIVEKIT_NODE_IP:?set LIVEKIT_NODE_IP in .env}
       - --realm=${TURN_DOMAIN}
       - --use-auth-secret
       - --static-auth-secret=${TURN_SHARED_SECRET}

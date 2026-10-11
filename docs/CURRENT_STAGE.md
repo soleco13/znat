@@ -6,8 +6,8 @@
 > turn.matis-edu.ru (Caddy выпускает, `scripts/turn-cert-sync.sh` + таймер
 > кладёт в turn-certs/ и шлёт coturn SIGUSR2), `LIVEKIT_NODE_IP` отделён от
 > `TURN_DOMAIN`, cpuset под 12 CPU (docker-compose.prod.yml), запись на этом же
-> хосте (CPU 4,5,10,11). Не сделано: TURN на TCP 443 (один IPv4, см.
-> docs/turn-tls-443.md); converter — профиль `converter`, выключен: 403 от
+> хосте (CPU 4,5,10,11). TURN на TCP 443 — сделан (sni-proxy, docs/turn-tls-443.md);
+> запись: 2 одновременных (замер, reports/server-capacity-report.md); converter — профиль `converter`, выключен: 403 от
 > database.clamav.net; SMTP не настроен — подтверждение почты при регистрации
 > не уходит; restic-репозиторий не задан (бэкап только локальный).
 >
