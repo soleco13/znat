@@ -1,0 +1,48 @@
+{
+ "name": "R15-L4x30",
+ "lessons": 4,
+ "studentsPerLesson": 30,
+ "minutes": 10.0,
+ "mode": "lecture",
+ "record": true,
+ "screen": true,
+ "studentVideo": true,
+ "talkPct": 10,
+ "genCpus": "0,6,3,9",
+ "start": "2026-10-11T11:09:18",
+ "lessonIds": [
+  "dd1788c7-4c61-4706-a0a8-c809ed12c770",
+  "764a4418-0f9c-4556-8fbe-7410e63d0d27",
+  "791af4f1-2f79-438f-8cd3-01b58c0b7791",
+  "457aa966-497e-4a5a-967d-2ac15f2364f9"
+ ],
+ "end": "2026-10-11T11:19:49",
+ "recordings": [
+  {
+   "id": "8140a11e-2eef-4341-852e-da7a97041fc6",
+   "lessonId": "dd1788c7-4c61-4706-a0a8-c809ed12c770",
+   "status": "ready",
+   "durationSec": 587,
+   "sizeBytes": 120238365,
+   "startedAt": "2026-10-11T08:09:28.289Z",
+   "endedAt": "2026-10-11T08:19:18.879Z",
+   "expiresAt": "2027-01-09T08:19:18.879Z",
+   "url": "/files/recordings%2F8834388f-b8a4-4c74-865d-213324d7e739%2Fdd1788c7-4c61-4706-a0a8-c809ed12c770%2F8140a11e-2eef-4341-852e-da7a97041fc6.mp4?exp=1791710389&sig=OaDDfZqnwwe3BUiIK--pEHeEhs5zUPqhSdzn2R4F7-g",
+   "urlExpiresAt": "2026-10-11T09:19:49.377Z",
+   "posterUrl": "/files/recordings%2F8834388f-b8a4-4c74-865d-213324d7e739%2Fdd1788c7-4c61-4706-a0a8-c809ed12c770%2F8140a11e-2eef-4341-852e-da7a97041fc6.jpg?exp=1791710389&sig=JqRJ-9DSqfxPkqJcUYWvzSd-zcLDXXwkAkh_zEX_v1k"
+  },
+  {
+   "id": "560cb690-d287-4063-bd50-f473fc77c419",
+   "lessonId": "764a4418-0f9c-4556-8fbe-7410e63d0d27",
+   "status": "ready",
+   "durationSec": 587,
+   "sizeBytes": 120665176,
+   "startedAt": "2026-10-11T08:09:37.807Z",
+   "endedAt": "2026-10-11T08:19:28.771Z",
+   "expiresAt": "2027-01-09T08:19:28.771Z",
+   "url": "/files/recordings%2F8834388f-b8a4-4c74-865d-213324d7e739%2F764a4418-0f9c-4556-8fbe-7410e63d0d27%2F560cb690-d287-4063-bd50-f473fc77c419.mp4?exp=1791710389&sig=AXbC8iuwkQdw9unmOVUPSFxB6TE2mFE5BW73CA0glnA",
+   "urlExpiresAt": "2026-10-11T09:19:49.384Z",
+   "posterUrl": "/files/recordings%2F8834388f-b8a4-4c74-865d-213324d7e739%2F764a4418-0f9c-4556-8fbe-7410e63d0d27%2F560cb690-d287-4063-bd50-f473fc77c419.jpg?exp=1791710389&sig=sKhD8W6dJpTViuirEf0FQqdtDte7iottEaUpHS4aixU"
+  }
+ ]
+}

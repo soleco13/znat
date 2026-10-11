@@ -1,0 +1,219 @@
+{
+ "name": "A-L2x30",
+ "lessons": 2,
+ "studentsPerLesson": 30,
+ "users": 62,
+ "mode": "lecture",
+ "window": [
+  "2026-10-11T09:44:36",
+  "2026-10-11T09:53:01"
+ ],
+ "samples": 101,
+ "cpuTotalPct": {
+  "avg": 24.73,
+  "p95": 25.8,
+  "max": 26.2
+ },
+ "cpu_livekit": {
+  "avg": 0.753,
+  "p95": 0.815,
+  "max": 0.822
+ },
+ "cpu_egress": {
+  "avg": 1.382,
+  "p95": 1.429,
+  "max": 1.451
+ },
+ "cpu_app": {
+  "avg": 0.017,
+  "p95": 0.032,
+  "max": 0.033
+ },
+ "cpu_caddy": {
+  "avg": 0.001,
+  "p95": 0.001,
+  "max": 0.003
+ },
+ "cpu_coturn": {
+  "avg": 0.001,
+  "p95": 0.002,
+  "max": 0.006
+ },
+ "cpu_postgres": {
+  "avg": 0.013,
+  "p95": 0.015,
+  "max": 0.016
+ },
+ "cpu_redis": {
+  "avg": 0.01,
+  "p95": 0.01,
+  "max": 0.016
+ },
+ "cpu_generators": {
+  "avg": 0.785,
+  "p95": 0.846,
+  "max": 0.876
+ },
+ "cpuLivekitPctOfCpuset": 18.8,
+ "cpuEgressPctOfCpuset": 34.5,
+ "cpuGenPctOfCpuset": 19.6,
+ "serverCpuCoresExclGen": 2.18,
+ "serverCpuPctExclGen": 18.2,
+ "perCpuAvg": [
+  20.1,
+  18.9,
+  18.7,
+  21.5,
+  34.5,
+  34.6,
+  20.1,
+  18.9,
+  18.8,
+  21.4,
+  34.6,
+  34.4
+ ],
+ "perCpuMax": [
+  22.4,
+  21.4,
+  21.1,
+  25.1,
+  36.7,
+  36.6,
+  22.9,
+  20.9,
+  21.1,
+  24.7,
+  37.1,
+  36.9
+ ],
+ "runQueue": {
+  "avg": 5.1,
+  "p95": 18,
+  "max": 22
+ },
+ "ctxPerSec": {
+  "avg": 90562.0,
+  "p95": 96132,
+  "max": 98696
+ },
+ "iowaitPct": {
+  "avg": 0.04,
+  "p95": 0.12,
+  "max": 0.32
+ },
+ "memUsedMB": {
+  "avg": 4309.0,
+  "p95": 4370,
+  "max": 4398
+ },
+ "memPct": 13.8,
+ "memContainersMB_end": {
+  "app": 133,
+  "livekit": 941,
+  "egress": 1861,
+  "caddy": 33,
+  "coturn": 34,
+  "postgres": 46,
+  "redis": 5
+ },
+ "memDriftMB": 158,
+ "swapUsedMB_max": 0,
+ "swapInOut": [
+  0,
+  0
+ ],
+ "loMbps": {
+  "avg": 233.2,
+  "p95": 265.3,
+  "max": 266.5
+ },
+ "eth0TxMbps": {
+  "avg": 0.03,
+  "p95": 0.13,
+  "max": 0.37
+ },
+ "udpInPps": {
+  "avg": 44820.0,
+  "p95": 49455,
+  "max": 49686
+ },
+ "udpErrors": {
+  "RcvbufErrors": 0,
+  "SndbufErrors": 0,
+  "InErrors": 0
+ },
+ "netDrops": 0,
+ "diskWriteMBs": {
+  "avg": 3.49,
+  "p95": 16.77,
+  "max": 23.5
+ },
+ "diskBusyPct": {
+  "avg": 1.3,
+  "p95": 2.6,
+  "max": 3.1
+ },
+ "throttleEvents": 0,
+ "cgroupThrottled": {},
+ "mhzAvg": {
+  "avg": 4300.0,
+  "p95": 4302,
+  "max": 4303
+ },
+ "tempC": {
+  "avg": 47.6,
+  "p95": 51.0,
+  "max": 52.0
+ },
+ "clientConnectedMin": 62,
+ "clientParticipants": 62,
+ "clientRxVideoMbps": 153.5,
+ "clientRxAudioMbps": 6.3,
+ "clientLossPctP95": 0,
+ "clientLossPctMax": 0,
+ "clientJitterMsP95": 7.0,
+ "clientJitterMsMax": 7.9,
+ "audioJitterMsP95": 7.0,
+ "audioJitterMsMax": 7.9,
+ "videoJitterMsP95": 0.6,
+ "audioLossPctP95": 0,
+ "studentsWithoutTeacherVideoMax": 0,
+ "reconnects": 0,
+ "disconnects": 0,
+ "wsDrops": 0,
+ "failedJoins": 0,
+ "joinMsP95_max": 45,
+ "firstMediaMsP95_max": 220,
+ "recordingStart": [
+  "started starting in 538ms",
+  "start_failed: POST /lessons/7fad7bb6-629d-474d-af48-f132f496f9c1/recordings: 502 {\"error\":\"egress_unavailable\",\"message\":\"Сервис записи не ответил, по�"
+ ],
+ "recordingsBytes": 230685915,
+ "recordingsReady": 1,
+ "recordingsTotal": 1,
+ "recordingsStatuses": [
+  "ready"
+ ],
+ "calcServerEgressMbps": 159.8,
+ "calcNicUtilPct": 16.0,
+ "criteria": {
+  "livekitCpu<=70%": true,
+  "egressCpu<=70%": true,
+  "serverCpu<=70%": true,
+  "ram<=75%": true,
+  "noSwapIO": true,
+  "noUdpErrors": true,
+  "noThermalThrottle": true,
+  "lossP95<=1%": true,
+  "audioJitterP95<=30ms": true,
+  "allConnected": true,
+  "everyoneSeesTeacher": true,
+  "noDisconnects": true,
+  "allRecordingsReady": false,
+  "calcNic<=70%": true,
+  "generatorNotSaturated": true
+ },
+ "passMedia": true,
+ "passAll": false
+}

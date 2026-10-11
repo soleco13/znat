@@ -1,0 +1,32 @@
+{
+ "name": "pilot2",
+ "lessons": 1,
+ "studentsPerLesson": 5,
+ "minutes": 2.0,
+ "mode": "lecture",
+ "record": true,
+ "screen": true,
+ "studentVideo": true,
+ "talkPct": 10,
+ "genCpus": "0,6,3,9",
+ "start": "2026-10-11T08:55:31",
+ "lessonIds": [
+  "224009c6-3b2c-43ed-9ae6-71ecd8af0bfc"
+ ],
+ "end": "2026-10-11T08:57:33",
+ "recordings": [
+  {
+   "id": "aed49bc1-9b7a-4623-9b8a-301cff6bd03e",
+   "lessonId": "224009c6-3b2c-43ed-9ae6-71ecd8af0bfc",
+   "status": "ready",
+   "durationSec": 113,
+   "sizeBytes": 44630977,
+   "startedAt": "2026-10-11T05:55:36.919Z",
+   "endedAt": "2026-10-11T05:57:32.337Z",
+   "expiresAt": "2027-01-09T05:57:32.337Z",
+   "url": "/files/recordings%2F8834388f-b8a4-4c74-865d-213324d7e739%2F224009c6-3b2c-43ed-9ae6-71ecd8af0bfc%2Faed49bc1-9b7a-4623-9b8a-301cff6bd03e.mp4?exp=1791701853&sig=OLiajWN5f8kKXMv5cAaILNeO2l82N9MHWXDddq3QToo",
+   "urlExpiresAt": "2026-10-11T06:57:33.536Z",
+   "posterUrl": "/files/recordings%2F8834388f-b8a4-4c74-865d-213324d7e739%2F224009c6-3b2c-43ed-9ae6-71ecd8af0bfc%2Faed49bc1-9b7a-4623-9b8a-301cff6bd03e.jpg?exp=1791701853&sig=7QsxYnr-ClCoYxZ5n3hqdh7dLw-kINEkUrOpodlo-tI"
+  }
+ ]
+}

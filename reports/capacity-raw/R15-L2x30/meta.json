@@ -1,0 +1,46 @@
+{
+ "name": "R15-L2x30",
+ "lessons": 2,
+ "studentsPerLesson": 30,
+ "minutes": 10.0,
+ "mode": "lecture",
+ "record": true,
+ "screen": true,
+ "studentVideo": true,
+ "talkPct": 10,
+ "genCpus": "0,6,3,9",
+ "start": "2026-10-11T10:45:56",
+ "lessonIds": [
+  "7936d8ce-4271-4d15-89c5-a000c9e2f64a",
+  "cbb4399f-f845-4c49-bb5f-14521c162752"
+ ],
+ "end": "2026-10-11T10:56:07",
+ "recordings": [
+  {
+   "id": "c3fefa28-dbf0-4a2d-8c23-10039ef56ee7",
+   "lessonId": "7936d8ce-4271-4d15-89c5-a000c9e2f64a",
+   "status": "ready",
+   "durationSec": 587,
+   "sizeBytes": 120560294,
+   "startedAt": "2026-10-11T07:46:06.693Z",
+   "endedAt": "2026-10-11T07:55:57.238Z",
+   "expiresAt": "2027-01-09T07:55:57.238Z",
+   "url": "/files/recordings%2F8834388f-b8a4-4c74-865d-213324d7e739%2F7936d8ce-4271-4d15-89c5-a000c9e2f64a%2Fc3fefa28-dbf0-4a2d-8c23-10039ef56ee7.mp4?exp=1791708967&sig=FpSJVZJp5k27E0YdkaZayPIeRqOdJ7knwYvQchUzBtw",
+   "urlExpiresAt": "2026-10-11T08:56:07.608Z",
+   "posterUrl": "/files/recordings%2F8834388f-b8a4-4c74-865d-213324d7e739%2F7936d8ce-4271-4d15-89c5-a000c9e2f64a%2Fc3fefa28-dbf0-4a2d-8c23-10039ef56ee7.jpg?exp=1791708967&sig=5NRwPc6IrI6LBGEhA17Di3ZCxWa9cdeiXIfEzsoW_UI"
+  },
+  {
+   "id": "2bba412c-1f7b-4997-b05d-948787d246f9",
+   "lessonId": "cbb4399f-f845-4c49-bb5f-14521c162752",
+   "status": "ready",
+   "durationSec": 587,
+   "sizeBytes": 120314027,
+   "startedAt": "2026-10-11T07:46:16.232Z",
+   "endedAt": "2026-10-11T07:56:07.190Z",
+   "expiresAt": "2027-01-09T07:56:07.190Z",
+   "url": "/files/recordings%2F8834388f-b8a4-4c74-865d-213324d7e739%2Fcbb4399f-f845-4c49-bb5f-14521c162752%2F2bba412c-1f7b-4997-b05d-948787d246f9.mp4?exp=1791708967&sig=60Grsv16FFHUv0r_BXuWcepbjBJB0esla8Z2DNUNhqw",
+   "urlExpiresAt": "2026-10-11T08:56:07.618Z",
+   "posterUrl": "/files/recordings%2F8834388f-b8a4-4c74-865d-213324d7e739%2Fcbb4399f-f845-4c49-bb5f-14521c162752%2F2bba412c-1f7b-4997-b05d-948787d246f9.jpg?exp=1791708967&sig=A_mXz_beXrmGdtovokS6oo-rOjZSN1EJAZce16HiD78"
+  }
+ ]
+}

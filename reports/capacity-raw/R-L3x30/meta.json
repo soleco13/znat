@@ -1,0 +1,47 @@
+{
+ "name": "R-L3x30",
+ "lessons": 3,
+ "studentsPerLesson": 30,
+ "minutes": 10.0,
+ "mode": "lecture",
+ "record": true,
+ "screen": true,
+ "studentVideo": true,
+ "talkPct": 10,
+ "genCpus": "0,6,3,9",
+ "start": "2026-10-11T10:34:17",
+ "lessonIds": [
+  "e1fc1e46-5103-414b-9f50-12c3bbde93ef",
+  "3afe91f6-dbf5-4acf-aae6-2c78d60d477f",
+  "5d7994f5-9f58-4d7a-bc25-deb10a0eb575"
+ ],
+ "end": "2026-10-11T10:44:37",
+ "recordings": [
+  {
+   "id": "a574a129-1085-4549-8ddf-2917dcf0119c",
+   "lessonId": "e1fc1e46-5103-414b-9f50-12c3bbde93ef",
+   "status": "ready",
+   "durationSec": 588,
+   "sizeBytes": 231080121,
+   "startedAt": "2026-10-11T07:34:27.187Z",
+   "endedAt": "2026-10-11T07:44:17.849Z",
+   "expiresAt": "2027-01-09T07:44:17.849Z",
+   "url": "/files/recordings%2F8834388f-b8a4-4c74-865d-213324d7e739%2Fe1fc1e46-5103-414b-9f50-12c3bbde93ef%2Fa574a129-1085-4549-8ddf-2917dcf0119c.mp4?exp=1791708277&sig=T2waImdv4ljaBTQKJ9o95gNmXkmPWqyG-UxbPxiTd4A",
+   "urlExpiresAt": "2026-10-11T08:44:37.921Z",
+   "posterUrl": "/files/recordings%2F8834388f-b8a4-4c74-865d-213324d7e739%2Fe1fc1e46-5103-414b-9f50-12c3bbde93ef%2Fa574a129-1085-4549-8ddf-2917dcf0119c.jpg?exp=1791708277&sig=ohh4Dni3me7UbKI8HOoQFGyRw9HBL51Ptax8gKJSuVo"
+  },
+  {
+   "id": "ee695d80-c483-40d3-ae1e-aaf9bccc52d3",
+   "lessonId": "3afe91f6-dbf5-4acf-aae6-2c78d60d477f",
+   "status": "ready",
+   "durationSec": 588,
+   "sizeBytes": 231340631,
+   "startedAt": "2026-10-11T07:34:36.720Z",
+   "endedAt": "2026-10-11T07:44:27.741Z",
+   "expiresAt": "2027-01-09T07:44:27.741Z",
+   "url": "/files/recordings%2F8834388f-b8a4-4c74-865d-213324d7e739%2F3afe91f6-dbf5-4acf-aae6-2c78d60d477f%2Fee695d80-c483-40d3-ae1e-aaf9bccc52d3.mp4?exp=1791708277&sig=41XCuqw-dXCFFW8CwFAhgMf3PNp6fyZt5ywGPC3-Cnw",
+   "urlExpiresAt": "2026-10-11T08:44:37.930Z",
+   "posterUrl": "/files/recordings%2F8834388f-b8a4-4c74-865d-213324d7e739%2F3afe91f6-dbf5-4acf-aae6-2c78d60d477f%2Fee695d80-c483-40d3-ae1e-aaf9bccc52d3.jpg?exp=1791708277&sig=jVOPMlIkyRPGDbrVmoNCCD8FFBEVjYBBuU5qO4Vea6k"
+  }
+ ]
+}

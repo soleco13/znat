@@ -1,0 +1,347 @@
+{
+ "name": "R15-L3x30",
+ "lessons": 3,
+ "studentsPerLesson": 30,
+ "users": 93,
+ "mode": "lecture",
+ "window": [
+  "2026-10-11T10:58:46",
+  "2026-10-11T11:07:21"
+ ],
+ "samples": 103,
+ "cpuTotalPct": {
+  "avg": 45.73,
+  "p95": 60.4,
+  "max": 97.9
+ },
+ "cpu_livekit": {
+  "avg": 1.215,
+  "p95": 1.299,
+  "max": 1.479
+ },
+ "cpu_egress": {
+  "avg": 2.629,
+  "p95": 2.797,
+  "max": 3.364
+ },
+ "cpu_app": {
+  "avg": 0.02,
+  "p95": 0.034,
+  "max": 0.159
+ },
+ "cpu_caddy": {
+  "avg": 0.002,
+  "p95": 0.004,
+  "max": 0.019
+ },
+ "cpu_coturn": {
+  "avg": 0.001,
+  "p95": 0.005,
+  "max": 0.007
+ },
+ "cpu_postgres": {
+  "avg": 0.014,
+  "p95": 0.016,
+  "max": 0.029
+ },
+ "cpu_redis": {
+  "avg": 0.011,
+  "p95": 0.013,
+  "max": 0.022
+ },
+ "cpu_generators": {
+  "avg": 0.774,
+  "p95": 1.416,
+  "max": 1.626
+ },
+ "cpuLivekitPctOfCpuset": 30.4,
+ "cpuEgressPctOfCpuset": 65.7,
+ "cpuGenPctOfCpuset": 19.4,
+ "serverCpuCoresExclGen": 4.71,
+ "serverCpuPctExclGen": 39.2,
+ "perCpuAvg": [
+  35.8,
+  33.6,
+  33.4,
+  37.3,
+  67.0,
+  67.1,
+  36.1,
+  33.6,
+  33.2,
+  37.3,
+  67.0,
+  66.9
+ ],
+ "perCpuMax": [
+  97.4,
+  98.4,
+  97.8,
+  95.8,
+  99.8,
+  100.0,
+  96.6,
+  98.0,
+  96.8,
+  96.2,
+  100.0,
+  100.0
+ ],
+ "runQueue": {
+  "avg": 12.3,
+  "p95": 26,
+  "max": 66
+ },
+ "ctxPerSec": {
+  "avg": 117670.0,
+  "p95": 124811,
+  "max": 133824
+ },
+ "iowaitPct": {
+  "avg": 0.2,
+  "p95": 0.41,
+  "max": 2.56
+ },
+ "memUsedMB": {
+  "avg": 6257.0,
+  "p95": 6321,
+  "max": 7354
+ },
+ "memPct": 23.0,
+ "memContainersMB_end": {
+  "egress": 2287,
+  "app": 151,
+  "livekit": 1397,
+  "caddy": 47,
+  "coturn": 60,
+  "postgres": 65,
+  "redis": 6
+ },
+ "memDriftMB": -1874,
+ "swapUsedMB_max": 0,
+ "swapInOut": [
+  0,
+  0
+ ],
+ "loMbps": {
+  "avg": 368.8,
+  "p95": 415.1,
+  "max": 469.7
+ },
+ "eth0TxMbps": {
+  "avg": 0.05,
+  "p95": 0.16,
+  "max": 0.96
+ },
+ "udpInPps": {
+  "avg": 69647.0,
+  "p95": 76066,
+  "max": 85623
+ },
+ "udpErrors": {
+  "RcvbufErrors": 0,
+  "SndbufErrors": 0,
+  "InErrors": 0
+ },
+ "netDrops": 0,
+ "diskWriteMBs": {
+  "avg": 9.22,
+  "p95": 30.37,
+  "max": 244.2
+ },
+ "diskBusyPct": {
+  "avg": 8.4,
+  "p95": 12.5,
+  "max": 35.2
+ },
+ "throttleEvents": 0,
+ "cgroupThrottled": {
+  "egress": 1
+ },
+ "mhzAvg": {
+  "avg": 4300.0,
+  "p95": 4300,
+  "max": 4301
+ },
+ "tempC": {
+  "avg": 55.0,
+  "p95": 59.0,
+  "max": 65.0
+ },
+ "clientConnectedMin": 93,
+ "clientParticipants": 93,
+ "clientRxVideoMbps": 229.8,
+ "clientRxAudioMbps": 9.38,
+ "clientLossPctP95": 0,
+ "clientLossPctMax": 0,
+ "clientJitterMsP95": 21.4,
+ "clientJitterMsMax": 22.1,
+ "audioJitterMsP95": 21.4,
+ "audioJitterMsMax": 22.1,
+ "videoJitterMsP95": 0.7,
+ "audioLossPctP95": 0,
+ "studentsWithoutTeacherVideoMax": 0,
+ "reconnects": 0,
+ "disconnects": 0,
+ "wsDrops": 0,
+ "failedJoins": 0,
+ "joinMsP95_max": 44,
+ "firstMediaMsP95_max": 234,
+ "recordingStart": [
+  "started starting in 556ms",
+  "started starting in 51ms",
+  "started starting in 2697ms"
+ ],
+ "recordingsBytes": 241728835,
+ "egressEvents": [
+  {
+   "egressID": "EG_BypqQ24N8T92",
+   "videoBuffersDropped": 0,
+   "droppedByQueue": {
+    "video_input_queue": 0,
+    "video_queue": 0
+   }
+  },
+  {
+   "egressID": "EG_ivCgnYcBXrDT",
+   "level": "warn",
+   "msg": "Can't record audio fast enough",
+   "error": "Dropped 8820 samples. This is most likely because downstream can't keep up and is consuming samples too slowly."
+  },
+  {
+   "egressID": "EG_ivCgnYcBXrDT",
+   "videoBuffersDropped": 0,
+   "droppedByQueue": {
+    "video_input_queue": 0,
+    "video_queue": 0
+   }
+  },
+  {
+   "egressID": "EG_tUYiBUfgDS7s",
+   "videoBuffersDropped": 0,
+   "droppedByQueue": {
+    "video_input_queue": 0,
+    "video_queue": 0
+   }
+  },
+  {
+   "egressID": null,
+   "level": "warn",
+   "msg": "high cpu usage",
+   "error": ""
+  },
+  {
+   "egressID": null,
+   "level": "warn",
+   "msg": "high cpu usage",
+   "error": ""
+  },
+  {
+   "egressID": null,
+   "level": "warn",
+   "msg": "high cpu usage",
+   "error": ""
+  },
+  {
+   "egressID": null,
+   "level": "warn",
+   "msg": "high cpu usage",
+   "error": ""
+  },
+  {
+   "egressID": null,
+   "level": "warn",
+   "msg": "high cpu usage",
+   "error": ""
+  },
+  {
+   "egressID": null,
+   "level": "warn",
+   "msg": "high cpu usage",
+   "error": ""
+  },
+  {
+   "egressID": null,
+   "level": "warn",
+   "msg": "high cpu usage",
+   "error": ""
+  },
+  {
+   "egressID": null,
+   "level": "warn",
+   "msg": "high cpu usage",
+   "error": ""
+  },
+  {
+   "egressID": null,
+   "level": "warn",
+   "msg": "high cpu usage",
+   "error": ""
+  },
+  {
+   "egressID": null,
+   "level": "warn",
+   "msg": "high cpu usage",
+   "error": ""
+  },
+  {
+   "egressID": "EG_BypqQ24N8T92",
+   "level": "warn",
+   "msg": "requested graceful stop for high cpu",
+   "error": ""
+  },
+  {
+   "egressID": "EG_BypqQ24N8T92",
+   "avgCPU": 1.08,
+   "maxCPU": 1.42,
+   "maxMemoryMB": 1766
+  },
+  {
+   "egressID": "EG_ivCgnYcBXrDT",
+   "avgCPU": 1.34,
+   "maxCPU": 2.22,
+   "maxMemoryMB": 1749
+  },
+  {
+   "egressID": "EG_tUYiBUfgDS7s",
+   "avgCPU": 1.32,
+   "maxCPU": 1.91,
+   "maxMemoryMB": 1760
+  }
+ ],
+ "egressVideoBuffersDropped": 0,
+ "recordingsFps": [
+  14.99,
+  15.0,
+  15.0
+ ],
+ "recordingsReady": 3,
+ "recordingsTotal": 3,
+ "recordingsStatuses": [
+  "ready",
+  "ready",
+  "ready"
+ ],
+ "calcServerEgressMbps": 239.2,
+ "calcNicUtilPct": 23.9,
+ "criteria": {
+  "livekitCpu<=70%": true,
+  "egressCpu<=70%": true,
+  "serverCpu<=70%": true,
+  "ram<=75%": true,
+  "noSwapIO": true,
+  "noUdpErrors": true,
+  "noThermalThrottle": true,
+  "lossP95<=1%": true,
+  "audioJitterP95<=30ms": true,
+  "allConnected": true,
+  "everyoneSeesTeacher": true,
+  "noDisconnects": true,
+  "allRecordingsReady": true,
+  "noRecordingFrameDrops": true,
+  "calcNic<=70%": true,
+  "generatorNotSaturated": true
+ },
+ "passMedia": true,
+ "passAll": true
+}

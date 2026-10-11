@@ -1,0 +1,33 @@
+{
+ "name": "A-L2x30",
+ "lessons": 2,
+ "studentsPerLesson": 30,
+ "minutes": 10.0,
+ "mode": "lecture",
+ "record": true,
+ "screen": true,
+ "studentVideo": true,
+ "talkPct": 10,
+ "genCpus": "0,6,3,9",
+ "start": "2026-10-11T09:43:06",
+ "lessonIds": [
+  "2c2ca7a2-9c8f-415e-bcf4-1b3c62148916",
+  "7fad7bb6-629d-474d-af48-f132f496f9c1"
+ ],
+ "end": "2026-10-11T09:53:16",
+ "recordings": [
+  {
+   "id": "080ed7fe-5ec1-48f4-86a4-ad667f466019",
+   "lessonId": "2c2ca7a2-9c8f-415e-bcf4-1b3c62148916",
+   "status": "ready",
+   "durationSec": 588,
+   "sizeBytes": 230685915,
+   "startedAt": "2026-10-11T06:43:16.061Z",
+   "endedAt": "2026-10-11T06:53:06.536Z",
+   "expiresAt": "2027-01-09T06:53:06.536Z",
+   "url": "/files/recordings%2F8834388f-b8a4-4c74-865d-213324d7e739%2F2c2ca7a2-9c8f-415e-bcf4-1b3c62148916%2F080ed7fe-5ec1-48f4-86a4-ad667f466019.mp4?exp=1791705196&sig=SZQiWr337vCIA0ItG5JJSgKoztDVSgxtW5hqAjBnmtE",
+   "urlExpiresAt": "2026-10-11T07:53:16.813Z",
+   "posterUrl": "/files/recordings%2F8834388f-b8a4-4c74-865d-213324d7e739%2F2c2ca7a2-9c8f-415e-bcf4-1b3c62148916%2F080ed7fe-5ec1-48f4-86a4-ad667f466019.jpg?exp=1791705196&sig=fXPSbbsGm4RFNF1U5UdE8qL6R8Dwqf99_PIb_nMe9gE"
+  }
+ ]
+}

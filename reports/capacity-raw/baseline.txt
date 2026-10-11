@@ -1,0 +1,80 @@
+=== 2026-10-11T08:40:26+03:00 baseline
+7.0.0-38-generic
+CPU(s):                                  12
+Model name:                              Intel(R) Core(TM) i7-8700 CPU @ 3.20GHz
+BIOS Model name:                         Intel(R) Core(TM) i7-8700 CPU @ 3.20GHz To Be Filled By O.E.M. CPU @ 3.2GHz
+Thread(s) per core:                      2
+Core(s) per socket:                      6
+CPU(s) scaling MHz:                      93%
+CPU max MHz:                             4600.0000
+CPU min MHz:                             800.0000
+     12 performance
+cpu0 idle states on: POLL C1 
+cpu1 idle states on: POLL C1 
+cpu3 idle states on: POLL C1 C1E C3 C6 C7s C8 C9 C10 
+cpu4 idle states on: POLL C1 C1E C3 C6 C7s C8 C9 C10 
+               total        used        free      shared  buff/cache   available
+Mem:           31959        1736       12149          33       18552       30222
+Swap:           4762           0        4762
+NAME      TYPE      SIZE USED PRIO
+/dev/md43 partition 4.7G   0B   -1
+/dev/md42       433G   28G  384G   7% /
+Package id 0:  +35.0°C  (high = +82.0°C, crit = +100.0°C)
+0.06 0.15 0.42 1/520 84575
+ 0  0      0 12443012 550064 18447596    0    0     0     1 1380 2478  0  0 99  0  0  0
+ 0  0      0 12440552 550072 18447600    0    0     4    46 1805 2976  1  0 99  0  0  0
+ 0  0      0 12439796 550072 18447604    0    0     0     0  690  977  0  0 100  0  0  0
+--- containers
+/znat-app-1 cpuset=3,9 quota=0 nano=0 mem=0 shares=0 image=znat-app
+/znat-livekit-1 cpuset=1,2,7,8 quota=0 nano=0 mem=0 shares=4096 image=znat/livekit-server:v1.13.9-twcc-r30
+/znat-egress-1 cpuset=4,5,10,11 quota=0 nano=3000000000 mem=0 shares=512 image=livekit/egress:v1.14.1
+/znat-caddy-1 cpuset=3,9 quota=100000 nano=0 mem=0 shares=0 image=caddy:2-alpine
+/znat-coturn-1 cpuset=1,2,7,8 quota=0 nano=0 mem=0 shares=4096 image=coturn/coturn:4.18.0-r0
+/znat-postgres-1 cpuset=3,9 quota=0 nano=0 mem=0 shares=0 image=postgres:17
+/znat-redis-1 cpuset=3,9 quota=0 nano=0 mem=0 shares=0 image=redis:7
+znat-app-1 cpu=0.16% mem=151.2MiB / 31.21GiB net=7.02MB / 10.3MB
+znat-livekit-1 cpu=0.10% mem=42.38MiB / 31.21GiB net=0B / 0B
+znat-egress-1 cpu=0.45% mem=25.1MiB / 31.21GiB net=0B / 0B
+znat-caddy-1 cpu=0.00% mem=14.78MiB / 31.21GiB net=18.1MB / 58.7MB
+znat-coturn-1 cpu=0.02% mem=17.72MiB / 31.21GiB net=0B / 0B
+znat-postgres-1 cpu=0.00% mem=38.11MiB / 31.21GiB net=571kB / 537kB
+znat-redis-1 cpu=0.18% mem=4.934MiB / 31.21GiB net=3.82MB / 3.18MB
+--- net
+    RX:  bytes packets errors dropped  missed   mcast           
+    3952456976 2914626      0       0       0       4 
+    TX:  bytes packets errors dropped carrier collsns           
+     165346340  307726      0       0       0       0 
+    0 packet receive errors
+    0 receive buffer errors
+    0 send buffer errors
+     tx_errors: 0
+     rx_errors: 0
+     rx_missed: 0
+TcpOutSegs                      426910             0.0
+TcpRetransSegs                  197                0.0
+--- irq
+132: ahci[0000:00:17.0]
+133: eth0
+irq 132 -> 0
+irq 133 -> 6
+--- sysctl
+net.core.rmem_max = 26214400
+net.core.rmem_default = 1048576
+net.ipv4.ip_local_port_range = 10000	48999
+vm.swappiness = 10
+--- livekit
+2026-10-11T05:04:56.310Z	INFO	livekit	service/server.go:309	starting LiveKit server	{"portHttp": 7880, "nodeID": "ND_3WqREBTHpv5v", "nodeIP": "95.213.143.106", "version": "1.13.9", "rtc.portTCP": 7881, "rtc.portICERange": [50000, 60000], "portPrometheus": 6789}
+livekit_node_messages{direction="request",node_id="ND_3WqREBTHpv5v",node_type="SERVER",status="success",type="signal"} 598
+livekit_node_messages{direction="response",node_id="ND_3WqREBTHpv5v",node_type="SERVER",status="success",type="signal"} 389
+livekit_node_packet_total{node_id="ND_3WqREBTHpv5v",node_type="SERVER",type="dropped"} 0
+livekit_node_packet_total{node_id="ND_3WqREBTHpv5v",node_type="SERVER",type="out"} 160307
+livekit_node_service_operation{error_type="",node_id="ND_3WqREBTHpv5v",node_type="SERVER",status="success",type="answer"} 47
+livekit_node_service_operation{error_type="",node_id="ND_3WqREBTHpv5v",node_type="SERVER",status="success",type="participant_join"} 8
+livekit_node_service_operation{error_type="",node_id="ND_3WqREBTHpv5v",node_type="SERVER",status="success",type="peer_connection"} 8
+livekit_node_twirp_request_latency_ms_bucket{method="CreateRoom",node_id="ND_3WqREBTHpv5v",node_type="SERVER",service="RoomService",status="200",le="5"} 7
+livekit_node_twirp_request_latency_ms_bucket{method="CreateRoom",node_id="ND_3WqREBTHpv5v",node_type="SERVER",service="RoomService",status="200",le="10"} 7
+livekit_node_twirp_request_latency_ms_bucket{method="CreateRoom",node_id="ND_3WqREBTHpv5v",node_type="SERVER",service="RoomService",status="200",le="25"} 7
+--- egress
+livekit_egress_available{cluster_id="",node_id="NE_KgKFcCiVzDQB"} 1
+--- active lessons (redis presence)
+live lessons: 0

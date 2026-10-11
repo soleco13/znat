@@ -1,0 +1,229 @@
+{
+ "name": "A-L6x30",
+ "lessons": 6,
+ "studentsPerLesson": 30,
+ "users": 186,
+ "mode": "lecture",
+ "window": [
+  "2026-10-11T10:09:18",
+  "2026-10-11T10:18:24"
+ ],
+ "samples": 110,
+ "cpuTotalPct": {
+  "avg": 47.58,
+  "p95": 50.7,
+  "max": 51.9
+ },
+ "cpu_livekit": {
+  "avg": 1.94,
+  "p95": 2.108,
+  "max": 2.255
+ },
+ "cpu_egress": {
+  "avg": 1.377,
+  "p95": 1.529,
+  "max": 1.605
+ },
+ "cpu_app": {
+  "avg": 0.025,
+  "p95": 0.038,
+  "max": 0.197
+ },
+ "cpu_caddy": {
+  "avg": 0.005,
+  "p95": 0.008,
+  "max": 0.019
+ },
+ "cpu_coturn": {
+  "avg": 0.002,
+  "p95": 0.006,
+  "max": 0.007
+ },
+ "cpu_postgres": {
+  "avg": 0.015,
+  "p95": 0.017,
+  "max": 0.023
+ },
+ "cpu_redis": {
+  "avg": 0.012,
+  "p95": 0.014,
+  "max": 0.022
+ },
+ "cpu_generators": {
+  "avg": 0.54,
+  "p95": 2.486,
+  "max": 2.529
+ },
+ "cpuLivekitPctOfCpuset": 48.5,
+ "cpuEgressPctOfCpuset": 34.4,
+ "cpuGenPctOfCpuset": 13.5,
+ "serverCpuCoresExclGen": 5.17,
+ "serverCpuPctExclGen": 43.1,
+ "perCpuAvg": [
+  58.7,
+  49.1,
+  48.6,
+  60.1,
+  35.1,
+  34.4,
+  59.0,
+  49.1,
+  48.7,
+  60.1,
+  35.1,
+  34.3
+ ],
+ "perCpuMax": [
+  65.8,
+  56.2,
+  55.7,
+  68.2,
+  40.2,
+  39.3,
+  66.0,
+  56.0,
+  56.4,
+  68.6,
+  40.8,
+  39.2
+ ],
+ "runQueue": {
+  "avg": 16.3,
+  "p95": 29,
+  "max": 33
+ },
+ "ctxPerSec": {
+  "avg": 141249.0,
+  "p95": 149370,
+  "max": 151546
+ },
+ "iowaitPct": {
+  "avg": 0.11,
+  "p95": 0.22,
+  "max": 0.86
+ },
+ "memUsedMB": {
+  "avg": 8058.0,
+  "p95": 8276,
+  "max": 8296
+ },
+ "memPct": 26.0,
+ "memContainersMB_end": {
+  "app": 150,
+  "livekit": 2632,
+  "egress": 1544,
+  "caddy": 68,
+  "coturn": 60,
+  "postgres": 48,
+  "redis": 7
+ },
+ "memDriftMB": -2148,
+ "swapUsedMB_max": 0,
+ "swapInOut": [
+  0,
+  0
+ ],
+ "loMbps": {
+  "avg": 607.5,
+  "p95": 696.2,
+  "max": 697.0
+ },
+ "eth0TxMbps": {
+  "avg": 0.08,
+  "p95": 0.13,
+  "max": 4.65
+ },
+ "udpInPps": {
+  "avg": 121631.0,
+  "p95": 133799,
+  "max": 134067
+ },
+ "udpErrors": {
+  "RcvbufErrors": 0,
+  "SndbufErrors": 0,
+  "InErrors": 0
+ },
+ "netDrops": 0,
+ "diskWriteMBs": {
+  "avg": 4.14,
+  "p95": 16.82,
+  "max": 88.32
+ },
+ "diskBusyPct": {
+  "avg": 4.9,
+  "p95": 7.4,
+  "max": 13.2
+ },
+ "throttleEvents": 0,
+ "cgroupThrottled": {},
+ "mhzAvg": {
+  "avg": 4273.0,
+  "p95": 4300,
+  "max": 4302
+ },
+ "tempC": {
+  "avg": 52.8,
+  "p95": 56.0,
+  "max": 59.0
+ },
+ "clientConnectedMin": 186,
+ "clientParticipants": 186,
+ "clientRxVideoMbps": 457.2,
+ "clientRxAudioMbps": 18.66,
+ "clientLossPctP95": 0,
+ "clientLossPctMax": 0,
+ "clientJitterMsP95": 24.4,
+ "clientJitterMsMax": 25.5,
+ "audioJitterMsP95": 24.4,
+ "audioJitterMsMax": 25.5,
+ "videoJitterMsP95": 1.1,
+ "audioLossPctP95": 0,
+ "studentsWithoutTeacherVideoMax": 0,
+ "reconnects": 0,
+ "disconnects": 0,
+ "wsDrops": 0,
+ "failedJoins": 0,
+ "joinMsP95_max": 82,
+ "firstMediaMsP95_max": 355,
+ "recordingStart": [
+  "started starting in 536ms",
+  "start_failed: POST /lessons/bf2c8246-dfb6-46e2-a798-3cae70054986/recordings: 502 {\"error\":\"egress_unavailable\",\"message\":\"Сервис записи не ответил, по�",
+  "start_failed: POST /lessons/cbbe51c8-fe2c-430c-812b-0375fa165228/recordings: 502 {\"error\":\"egress_unavailable\",\"message\":\"Сервис записи не ответил, по�",
+  "start_failed: POST /lessons/22b4bccf-c278-4cd9-b5f8-1e53e26a6ff3/recordings: 502 {\"error\":\"egress_unavailable\",\"message\":\"Сервис записи не ответил, по�",
+  "start_failed: POST /lessons/25602650-290b-44d1-b77b-b17fd9dade2f/recordings: 502 {\"error\":\"egress_unavailable\",\"message\":\"Сервис записи не ответил, по�",
+  "start_failed: POST /lessons/d07a98bb-867d-4565-bf8a-42415031426a/recordings: 502 {\"error\":\"egress_unavailable\",\"message\":\"Сервис записи не ответил, по�"
+ ],
+ "recordingsBytes": 230740356,
+ "egressEvents": [],
+ "egressVideoBuffersDropped": 0,
+ "recordingsFps": [
+  30.0
+ ],
+ "recordingsReady": 1,
+ "recordingsTotal": 1,
+ "recordingsStatuses": [
+  "ready"
+ ],
+ "calcServerEgressMbps": 475.9,
+ "calcNicUtilPct": 47.6,
+ "criteria": {
+  "livekitCpu<=70%": true,
+  "egressCpu<=70%": true,
+  "serverCpu<=70%": true,
+  "ram<=75%": true,
+  "noSwapIO": true,
+  "noUdpErrors": true,
+  "noThermalThrottle": true,
+  "lossP95<=1%": true,
+  "audioJitterP95<=30ms": true,
+  "allConnected": true,
+  "everyoneSeesTeacher": true,
+  "noDisconnects": true,
+  "allRecordingsReady": false,
+  "noRecordingFrameDrops": true,
+  "calcNic<=70%": true,
+  "generatorNotSaturated": true
+ },
+ "passMedia": true,
+ "passAll": false
+}

@@ -1,0 +1,32 @@
+{
+ "name": "A-L1x30",
+ "lessons": 1,
+ "studentsPerLesson": 30,
+ "minutes": 10.0,
+ "mode": "lecture",
+ "record": true,
+ "screen": true,
+ "studentVideo": true,
+ "talkPct": 10,
+ "genCpus": "0,6,3,9",
+ "start": "2026-10-11T09:31:04",
+ "lessonIds": [
+  "7439c0e5-5804-4708-9c59-ab3fde51d76c"
+ ],
+ "end": "2026-10-11T09:41:05",
+ "recordings": [
+  {
+   "id": "c231c65a-697c-410b-b6a3-9790d54f4680",
+   "lessonId": "7439c0e5-5804-4708-9c59-ab3fde51d76c",
+   "status": "ready",
+   "durationSec": 588,
+   "sizeBytes": 230829762,
+   "startedAt": "2026-10-11T06:31:14.696Z",
+   "endedAt": "2026-10-11T06:41:05.202Z",
+   "expiresAt": "2027-01-09T06:41:05.202Z",
+   "url": "/files/recordings%2F8834388f-b8a4-4c74-865d-213324d7e739%2F7439c0e5-5804-4708-9c59-ab3fde51d76c%2Fc231c65a-697c-410b-b6a3-9790d54f4680.mp4?exp=1791704465&sig=8rbNFpzrST5H-epKN2SrSYbGjwOsn7rlpbqz0xFJdgY",
+   "urlExpiresAt": "2026-10-11T07:41:05.643Z",
+   "posterUrl": null
+  }
+ ]
+}

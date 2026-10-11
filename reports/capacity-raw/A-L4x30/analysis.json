@@ -1,0 +1,223 @@
+{
+ "name": "A-L4x30",
+ "lessons": 4,
+ "studentsPerLesson": 30,
+ "users": 124,
+ "mode": "lecture",
+ "window": [
+  "2026-10-11T09:56:47",
+  "2026-10-11T10:05:33"
+ ],
+ "samples": 105,
+ "cpuTotalPct": {
+  "avg": 36.52,
+  "p95": 37.9,
+  "max": 38.8
+ },
+ "cpu_livekit": {
+  "avg": 1.374,
+  "p95": 1.429,
+  "max": 1.513
+ },
+ "cpu_egress": {
+  "avg": 1.381,
+  "p95": 1.473,
+  "max": 1.542
+ },
+ "cpu_app": {
+  "avg": 0.021,
+  "p95": 0.034,
+  "max": 0.219
+ },
+ "cpu_caddy": {
+  "avg": 0.003,
+  "p95": 0.006,
+  "max": 0.021
+ },
+ "cpu_coturn": {
+  "avg": 0.002,
+  "p95": 0.005,
+  "max": 0.007
+ },
+ "cpu_postgres": {
+  "avg": 0.014,
+  "p95": 0.015,
+  "max": 0.025
+ },
+ "cpu_redis": {
+  "avg": 0.011,
+  "p95": 0.012,
+  "max": 0.023
+ },
+ "cpu_generators": {
+  "avg": 0.624,
+  "p95": 1.622,
+  "max": 1.638
+ },
+ "cpuLivekitPctOfCpuset": 34.4,
+ "cpuEgressPctOfCpuset": 34.5,
+ "cpuGenPctOfCpuset": 15.6,
+ "serverCpuCoresExclGen": 3.76,
+ "serverCpuPctExclGen": 31.3,
+ "perCpuAvg": [
+  39.4,
+  34.8,
+  34.4,
+  41.2,
+  34.9,
+  34.4,
+  39.7,
+  34.7,
+  34.5,
+  41.1,
+  34.8,
+  34.4
+ ],
+ "perCpuMax": [
+  41.8,
+  38.4,
+  38.0,
+  46.4,
+  38.2,
+  38.7,
+  42.4,
+  38.6,
+  38.0,
+  46.7,
+  38.0,
+  37.8
+ ],
+ "runQueue": {
+  "avg": 6.0,
+  "p95": 15,
+  "max": 20
+ },
+ "ctxPerSec": {
+  "avg": 128557.0,
+  "p95": 137484,
+  "max": 140948
+ },
+ "iowaitPct": {
+  "avg": 0.16,
+  "p95": 0.29,
+  "max": 0.44
+ },
+ "memUsedMB": {
+  "avg": 6123.0,
+  "p95": 6263,
+  "max": 6284
+ },
+ "memPct": 19.7,
+ "memContainersMB_end": {
+  "app": 147,
+  "livekit": 1755,
+  "egress": 1317,
+  "caddy": 50,
+  "coturn": 46,
+  "postgres": 48,
+  "redis": 6
+ },
+ "memDriftMB": -1347,
+ "swapUsedMB_max": 0,
+ "swapInOut": [
+  0,
+  0
+ ],
+ "loMbps": {
+  "avg": 425.7,
+  "p95": 455.9,
+  "max": 456.2
+ },
+ "eth0TxMbps": {
+  "avg": 0.07,
+  "p95": 0.13,
+  "max": 4.18
+ },
+ "udpInPps": {
+  "avg": 84278.0,
+  "p95": 88531,
+  "max": 88559
+ },
+ "udpErrors": {
+  "RcvbufErrors": 0,
+  "SndbufErrors": 0,
+  "InErrors": 0
+ },
+ "netDrops": 0,
+ "diskWriteMBs": {
+  "avg": 3.38,
+  "p95": 16.77,
+  "max": 26.44
+ },
+ "diskBusyPct": {
+  "avg": 7.9,
+  "p95": 10.3,
+  "max": 11.1
+ },
+ "throttleEvents": 0,
+ "cgroupThrottled": {
+  "egress": 1
+ },
+ "mhzAvg": {
+  "avg": 4278.0,
+  "p95": 4301,
+  "max": 4301
+ },
+ "tempC": {
+  "avg": 50.5,
+  "p95": 53.0,
+  "max": 55.0
+ },
+ "clientConnectedMin": 124,
+ "clientParticipants": 124,
+ "clientRxVideoMbps": 305.2,
+ "clientRxAudioMbps": 12.47,
+ "clientLossPctP95": 0,
+ "clientLossPctMax": 0,
+ "clientJitterMsP95": 21.7,
+ "clientJitterMsMax": 22.8,
+ "audioJitterMsP95": 21.7,
+ "audioJitterMsMax": 22.8,
+ "videoJitterMsP95": 0.8,
+ "audioLossPctP95": 0,
+ "studentsWithoutTeacherVideoMax": 0,
+ "reconnects": 0,
+ "disconnects": 0,
+ "wsDrops": 0,
+ "failedJoins": 0,
+ "joinMsP95_max": 51,
+ "firstMediaMsP95_max": 224,
+ "recordingStart": [
+  "started starting in 536ms",
+  "start_failed: POST /lessons/36b9b2f6-e567-4d1a-a8ba-30486f0896bb/recordings: 502 {\"error\":\"egress_unavailable\",\"message\":\"Сервис записи не ответил, по�",
+  "start_failed: POST /lessons/ff638d96-67a3-4d18-92ec-2cb209bf7632/recordings: 502 {\"error\":\"egress_unavailable\",\"message\":\"Сервис записи не ответил, по�",
+  "start_failed: POST /lessons/e445ee63-b49a-4115-900d-ce2ca1992ac5/recordings: 502 {\"error\":\"egress_unavailable\",\"message\":\"Сервис записи не ответил, по�"
+ ],
+ "recordingsBytes": 231089914,
+ "recordingsReady": 1,
+ "recordingsTotal": 1,
+ "recordingsStatuses": [
+  "ready"
+ ],
+ "calcServerEgressMbps": 317.7,
+ "calcNicUtilPct": 31.8,
+ "criteria": {
+  "livekitCpu<=70%": true,
+  "egressCpu<=70%": true,
+  "serverCpu<=70%": true,
+  "ram<=75%": true,
+  "noSwapIO": true,
+  "noUdpErrors": true,
+  "noThermalThrottle": true,
+  "lossP95<=1%": true,
+  "audioJitterP95<=30ms": true,
+  "allConnected": true,
+  "everyoneSeesTeacher": true,
+  "noDisconnects": true,
+  "allRecordingsReady": false,
+  "calcNic<=70%": true,
+  "generatorNotSaturated": true
+ },
+ "passMedia": true,
+ "passAll": false
+}
