@@ -202,6 +202,26 @@ describe.skipIf(!url)("raw-repo на Postgres", () => {
     expect(snap.oldestQueuedSec).toBeGreaterThanOrEqual(0);
   });
 
+  it("ретеншн исходников: только ready/failed/aborted с истёкшим сроком; очередь и сборка — никогда", async () => {
+    const db = holder.db as ReturnType<typeof drizzle>;
+    const mk = async (status: string, expired: boolean, lesson = LESSON) => {
+      const r = await insert(lesson);
+      await db.execute(sql`UPDATE raw_recordings SET status = ${status}::raw_recording_status,
+        raw_expires_at = now() + ${expired ? "-1 hour" : "1 hour"}::interval WHERE id = ${r.id}`);
+      return r.id;
+    };
+    const readyOld = await mk("ready", true);
+    const readyNew = await mk("ready", false, LESSON2);
+    const failedOld = await mk("failed", true, LESSON);
+    const queuedOld = await mk("queued_for_render", true, LESSON2);
+    const renderingOld = await mk("rendering", true, LESSON);
+    const ids = (await repo.listRawSourcesToPurge(100)).map((r) => r.id).sort();
+    expect(ids).toEqual([readyOld, failedOld].sort());
+    expect(ids).not.toContain(readyNew);
+    expect(ids).not.toContain(queuedOld);
+    expect(ids).not.toContain(renderingOld);
+  });
+
   it("журнал: повтор (recording, seq) пропускается, страницы по порядку", async () => {
     const row = await insert();
     const ev = (seq: number) => ({ recordingId: row.id, seq, tsMs: 1000 + seq, kind: "yjs_update", payload: null, data: Buffer.from([seq]) });

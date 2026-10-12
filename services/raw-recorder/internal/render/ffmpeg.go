@@ -134,6 +134,7 @@ type segmentParams struct {
 	Tracks     map[string]convert.Track
 	Frames     []Frame // кадры главной области (доска/задание), по возрастанию
 	FontFile   string
+	Preset     string // пресет x264 (одинаковый у всех сегментов записи — иначе склейка без перекодирования не сработает)
 }
 
 // renderSegment — один сегмент с постоянной раскладкой в H.264 без звука.
@@ -259,7 +260,7 @@ func renderSegment(ctx context.Context, cpu *time.Duration, p segmentParams, out
 		"-filter_complex", strings.Join(filters, ";"),
 		"-map", "[out]",
 		"-frames:v", strconv.FormatInt(p.FrameCount, 10),
-		"-c:v", "libx264", "-preset", "veryfast", "-profile:v", "high", "-pix_fmt", "yuv420p",
+		"-c:v", "libx264", "-preset", p.Preset, "-profile:v", "high", "-pix_fmt", "yuv420p",
 		"-crf", "23", "-maxrate", fmt.Sprintf("%dk", p.BitrateKb), "-bufsize", fmt.Sprintf("%dk", p.BitrateKb*2),
 		"-g", strconv.Itoa(p.FPS*2), "-r", strconv.Itoa(p.FPS),
 		"-threads", "2",

@@ -164,3 +164,15 @@ func readFile(path string) (string, error) {
 	b, err := os.ReadFile(path)
 	return string(b), err
 }
+
+func TestSplitLongSegments(t *testing.T) {
+	segs := splitLong([]Segment{{StartMs: 0, EndMs: 1000}, {StartMs: 1000, EndMs: 11000}}, 3000)
+	if len(segs) != 5 || segs[1].StartMs != 1000 || segs[4].EndMs != 11000 {
+		t.Fatalf("%v", segs)
+	}
+	for i := 1; i < len(segs); i++ {
+		if segs[i].StartMs != segs[i-1].EndMs {
+			t.Fatalf("gap at %d", i)
+		}
+	}
+}

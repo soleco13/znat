@@ -46,6 +46,10 @@ type Config struct {
 	FrameStepMs int64
 	// Parallel — сколько сегментов кодировать одновременно.
 	Parallel int
+	// MaxSegmentSec — предел длины сегмента (0 — без предела), см. Inputs.MaxSegmentMs.
+	MaxSegmentSec int
+	// X264Preset — пресет кодирования (veryfast по умолчанию).
+	X264Preset string
 }
 
 type Worker struct {
@@ -60,6 +64,9 @@ func NewWorker(cfg Config, api *apiclient.Client, log *slog.Logger) *Worker {
 	}
 	if cfg.Parallel <= 0 {
 		cfg.Parallel = 2
+	}
+	if cfg.X264Preset == "" {
+		cfg.X264Preset = "veryfast"
 	}
 	return &Worker{cfg: cfg, api: api, log: log}
 }
@@ -239,10 +246,11 @@ func (w *Worker) render(ctx context.Context, job *apiclient.RenderJob, setStep f
 	g := NewGeometry(job.Width, job.Height)
 	scenes, changeTimes := ScenesFromJournal(events, job.T0Ms, durMs)
 	segs := BuildSegments(Inputs{
-		DurationMs: durMs,
-		Presence:   PresenceFromJournal(events, job.T0Ms),
-		Scenes:     scenes,
-		Tracks:     idx.Tracks,
+		DurationMs:   durMs,
+		MaxSegmentMs: int64(w.cfg.MaxSegmentSec) * 1000,
+		Presence:     PresenceFromJournal(events, job.T0Ms),
+		Scenes:       scenes,
+		Tracks:       idx.Tracks,
 	}, g)
 	metrics["segments"] = len(segs)
 	layoutJSON, _ := json.MarshalIndent(segs, "", " ")
@@ -262,25 +270,39 @@ func (w *Worker) render(ctx context.Context, job *apiclient.RenderJob, setStep f
 		return nil, err
 	}
 	segFiles := make([]string, len(segs))
-	if err := timed("segments", func() error {
-		return w.renderSegments(ctx, &cpu, job, g, segs, tracks, frames, tracksDir, segDir, totalFrames, segFiles)
-	}); err != nil {
-		return nil, err
-	}
 	durSec := float64(totalFrames) / float64(fps)
 
-	// 6. audio
+	// 6. audio — одновременно с видеосегментами: звук не зависит от раскладки,
+	// а последовательно он добавлял ~1,4 мин к часовому уроку (замер 2026-10-12).
 	audio := filepath.Join(work, "audio.m4a")
-	if err := timed("audio", func() error {
-		if fileDone(audio) {
-			return nil
-		}
-		if err := mixAudio(ctx, &cpu, audioFiles, durSec, audio+".tmp.m4a"); err != nil {
-			return err
-		}
-		return markDone(audio+".tmp.m4a", audio)
-	}); err != nil {
-		return nil, err
+	var audioCPU time.Duration
+	var audioSec float64
+	audioErr := make(chan error, 1)
+	go func() {
+		t := time.Now()
+		err := func() error {
+			if fileDone(audio) {
+				return nil
+			}
+			if err := mixAudio(ctx, &audioCPU, audioFiles, durSec, audio+".tmp.m4a"); err != nil {
+				return err
+			}
+			return markDone(audio+".tmp.m4a", audio)
+		}()
+		audioSec = time.Since(t).Seconds()
+		audioErr <- err
+	}()
+	segErr := timed("segments", func() error {
+		return w.renderSegments(ctx, &cpu, job, g, segs, tracks, frames, tracksDir, segDir, totalFrames, segFiles)
+	})
+	aErr := <-audioErr
+	cpu += audioCPU
+	metrics["step_audio_sec"] = round2(audioSec)
+	if segErr != nil {
+		return nil, segErr
+	}
+	if aErr != nil {
+		return nil, fmt.Errorf("audio: %w", aErr)
 	}
 
 	// 7. mux
@@ -369,7 +391,7 @@ func (w *Worker) renderSegments(ctx context.Context, cpu *time.Duration, job *ap
 		tasks = append(tasks, task{i: i, out: out, params: segmentParams{
 			Seg: s, Geometry: g, FPS: job.FPS, FrameStart: fStart, FrameCount: fEnd - fStart,
 			BitrateKb: job.VideoBitrateKbps, TracksDir: tracksDir, WorkDir: wd, Tracks: tracks,
-			Frames: frames, FontFile: w.cfg.FontFile,
+			Frames: frames, FontFile: w.cfg.FontFile, Preset: w.cfg.X264Preset,
 		}})
 	}
 	var mu sync.Mutex

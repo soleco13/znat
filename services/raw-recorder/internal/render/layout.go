@@ -162,9 +162,13 @@ type SceneChange struct {
 // Inputs — всё, из чего строится раскладка.
 type Inputs struct {
 	DurationMs int64
-	Presence   []PresenceChange
-	Scenes     []SceneChange
-	Tracks     []convert.Track
+	// MaxSegmentMs — длинные сегменты режутся на куски не длиннее этого (0 —
+	// не резать): иначе час демонстрации — один ffmpeg на одном ядре, и
+	// параллелизм сборки не помогает.
+	MaxSegmentMs int64
+	Presence     []PresenceChange
+	Scenes       []SceneChange
+	Tracks       []convert.Track
 }
 
 func isCamera(t convert.Track) bool {
@@ -230,7 +234,32 @@ func BuildSegments(in Inputs, g Geometry) []Segment {
 		}
 		segs = append(segs, seg)
 	}
-	return mergeShort(segs, 200)
+	return splitLong(mergeShort(segs, 200), in.MaxSegmentMs)
+}
+
+// splitLong — куски одинаковой раскладки не длиннее maxMs.
+func splitLong(segs []Segment, maxMs int64) []Segment {
+	if maxMs <= 0 {
+		return segs
+	}
+	var out []Segment
+	for _, s := range segs {
+		n := (s.EndMs - s.StartMs + maxMs - 1) / maxMs
+		if n <= 1 {
+			out = append(out, s)
+			continue
+		}
+		step := (s.EndMs - s.StartMs) / n
+		for k := int64(0); k < n; k++ {
+			part := s
+			part.StartMs = s.StartMs + k*step
+			if k < n-1 {
+				part.EndMs = s.StartMs + (k+1)*step
+			}
+			out = append(out, part)
+		}
+	}
+	return out
 }
 
 func layoutAt(in Inputs, g Geometry, ms int64) Segment {

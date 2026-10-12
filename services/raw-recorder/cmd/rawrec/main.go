@@ -80,6 +80,8 @@ func main() {
 				FontFile:      env("FONT_FILE", "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf"),
 				FrameStepMs:   int64(envInt("FRAME_STEP_MS", 500)),
 				Parallel:      envInt("RENDER_PARALLEL", 2),
+				MaxSegmentSec: envInt("MAX_SEGMENT_SEC", 0),
+				X264Preset:    env("RENDER_X264_PRESET", "veryfast"),
 			}, api, log).Run(ctx)
 		}
 	case "playcheck":
