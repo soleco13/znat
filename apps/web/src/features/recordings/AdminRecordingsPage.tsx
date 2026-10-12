@@ -348,6 +348,7 @@ export function AdminRecordingsPage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant={STATUS_VARIANT[r.status]}>{STATUS_LABEL[r.status]}</Badge>
+                        {r.method === "experimental" ? <Badge variant="blue">эксперимент</Badge> : null}
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-1.5">

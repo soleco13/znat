@@ -27,7 +27,7 @@ import * as roomsService from "../rooms/service.js";
 import * as schoolSettingsService from "../school-settings/service.js";
 import { signRecorderToken } from "../recorder-auth/service.js";
 import { deleteFile, deleteTree, getSignedFileUrl, statFile } from "../storage/service.js";
-import { enqueuePoster, removePoster } from "./poster.js";
+import { enqueuePoster, posterExists, posterKeyFor, removePoster } from "./poster.js";
 import * as journal from "./journal.js";
 import * as rawRepo from "./raw-repo.js";
 import type { RawRecordingRow } from "./raw-repo.js";
@@ -270,6 +270,49 @@ export function toRawWithDownload(row: RawRecordingRow): RecordingWithDownload {
     urlExpiresAt: new Date(Date.now() + env.RECORDING_URL_TTL_SEC * 1000).toISOString(),
     posterUrl: null,
   };
+}
+
+/** То же, что `toRawWithDownload`, плюс обложка (если уже посчитана). */
+export async function toRawWithDownloadAndPoster(row: RawRecordingRow): Promise<RecordingWithDownload> {
+  const item = toRawWithDownload(row);
+  if (row.status !== "ready" || !(await posterExists(row.outputKey))) return item;
+  return { ...item, posterUrl: getSignedFileUrl(posterKeyFor(row.outputKey), env.RECORDING_URL_TTL_SEC) };
+}
+
+/** Записи школы для страницы администратора (первые `limit`, новые сверху) и их общее число. */
+export async function listRawRecordingsForSchool(
+  schoolId: string,
+  limit: number,
+): Promise<{ rows: RawRecordingRow[]; total: number }> {
+  const [rows, total] = await Promise.all([
+    rawRepo.listRawRecordingsForSchool(schoolId, limit),
+    rawRepo.countRawRecordingsForSchool(schoolId),
+  ]);
+  return { rows, total };
+}
+
+export async function findRawRecordingForSchool(id: string, schoolId: string): Promise<RawRecordingRow | null> {
+  const row = await rawRepo.findRawRecording(id);
+  return row && row.schoolId === schoolId ? row : null;
+}
+
+export async function sumReadyRawSizeForSchool(schoolId: string): Promise<number> {
+  return rawRepo.sumReadyRawSizeForSchool(schoolId);
+}
+
+/**
+ * Удаление экспериментальной записи администратором: ролик, обложка и
+ * исходные дорожки (в них медиа урока). Идущую или собираемую — нельзя.
+ */
+export async function deleteRawRecording(row: RawRecordingRow): Promise<void> {
+  if (!["ready", "failed", "aborted"].includes(row.status)) {
+    throw new AppError(409, "recording_active", "Запись ещё идёт или обрабатывается — удалить можно после окончания");
+  }
+  await deleteFile(row.outputKey);
+  await removePoster(row.outputKey);
+  await deleteTree(row.recordingDir);
+  await rawRepo.markRawDeleted(row.id);
+  await rawRepo.clearRawExpiry(row.id);
 }
 
 export async function getRawRecordingDetail(user: AccessTokenPayload, id: string): Promise<RawRecordingDetail> {

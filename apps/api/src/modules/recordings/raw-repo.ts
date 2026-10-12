@@ -518,3 +518,27 @@ export async function queueSnapshot(): Promise<{
   for (const r of counts.rows) byStatus[r.status] = Number(r.n);
   return { byStatus, oldestQueuedSec: Number(q?.oldest ?? 0), queuedLessonSec: Number(q?.total ?? 0) };
 }
+
+// ─── Страница администратора «Записи» ──────────────────────────────────────
+
+export async function listRawRecordingsForSchool(schoolId: string, limit: number): Promise<RawRecordingRow[]> {
+  return db
+    .select()
+    .from(rawRecordings)
+    .where(eq(rawRecordings.schoolId, schoolId))
+    .orderBy(desc(rawRecordings.startedAt))
+    .limit(limit);
+}
+
+export async function countRawRecordingsForSchool(schoolId: string): Promise<number> {
+  const [row] = await db.select({ value: count() }).from(rawRecordings).where(eq(rawRecordings.schoolId, schoolId));
+  return Number(row?.value ?? 0);
+}
+
+export async function sumReadyRawSizeForSchool(schoolId: string): Promise<number> {
+  const [row] = await db
+    .select({ value: sql<string | null>`sum(${rawRecordings.sizeBytes})` })
+    .from(rawRecordings)
+    .where(and(eq(rawRecordings.schoolId, schoolId), eq(rawRecordings.status, "ready")));
+  return Number(row?.value ?? 0);
+}

@@ -48,6 +48,11 @@ const { rawRepoMock, repoMock, egressMock, lessonsMock, roomsMock, storageMock, 
     completeRenderLease: vi.fn(),
     expireRenderLeases: vi.fn(),
     countJournalEvents: vi.fn(),
+    listRawRecordingsForSchool: vi.fn(),
+    countRawRecordingsForSchool: vi.fn(),
+    sumReadyRawSizeForSchool: vi.fn(),
+    markRawDeleted: vi.fn(),
+    clearRawExpiry: vi.fn(),
     listJournalPage: vi.fn(),
   },
   repoMock: {
@@ -58,6 +63,8 @@ const { rawRepoMock, repoMock, egressMock, lessonsMock, roomsMock, storageMock, 
     findActiveRecordingForLesson: vi.fn(),
     updateRecording: vi.fn(),
     lessonHasActiveRecording: vi.fn(),
+    listRecordingsForSchool: vi.fn(),
+    sumRecordingsSizeForSchool: vi.fn(),
   },
   egressMock: {
     startRoomRecording: vi.fn(),
@@ -65,7 +72,11 @@ const { rawRepoMock, repoMock, egressMock, lessonsMock, roomsMock, storageMock, 
     findActiveEgressByFilepath: vi.fn(),
     mapEgressStatus: vi.fn(),
   },
-  lessonsMock: { getLesson: vi.fn(), ensureLivekitRoom: vi.fn() },
+  lessonsMock: {
+    getLesson: vi.fn(),
+    ensureLivekitRoom: vi.fn(),
+    getLessonTitles: vi.fn().mockResolvedValue(new Map([["22222222-2222-2222-2222-222222222222", { title: "Тест", teacherId: "33333333-3333-3333-3333-333333333333" }]])),
+  },
   roomsMock: { broadcastToLesson: vi.fn(), countConnectedParticipants: vi.fn() },
   storageMock: {
     getSignedFileUrl: vi.fn((key: string) => `/files/${key}?sig`),
@@ -105,7 +116,9 @@ vi.mock("../lessons/service.js", () => lessonsMock);
 vi.mock("../rooms/service.js", () => roomsMock);
 vi.mock("../storage/service.js", () => storageMock);
 vi.mock("../school-settings/service.js", () => settingsMock);
-vi.mock("../users/service.js", () => ({ getUserNames: vi.fn() }));
+vi.mock("../users/service.js", () => ({
+  getUserNames: vi.fn().mockResolvedValue(new Map([["33333333-3333-3333-3333-333333333333", { fullName: "Учитель" }]])),
+}));
 
 const service = await import("./service.js");
 const raw = await import("./raw-service.js");
@@ -537,5 +550,62 @@ describe("страница кадров: доступ только токено�
     expect(data.events).toHaveLength(2);
     expect(data.events[1]!.data).toBe(Buffer.from([1, 2]).toString("base64"));
     expect(data.t1Ms - data.t0Ms).toBe(30 * 60_000);
+  });
+});
+
+describe("страница администратора «Записи» — экспериментальные тоже", () => {
+  it("список: обе таблицы по времени начала, пагинация и общий счёт", async () => {
+    enableExperimental();
+    repoMock.listRecordingsForSchool.mockResolvedValue({
+      rows: [egressRow({ id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", status: "aborted", startedAt: new Date("2026-10-12T12:48:00Z") })],
+      total: 1,
+    });
+    rawRepoMock.listRawRecordingsForSchool.mockResolvedValue([rawRow({ status: "ready", startedAt: new Date("2026-10-12T13:35:00Z") })]);
+    rawRepoMock.countRawRecordingsForSchool.mockResolvedValue(1);
+    const res = await service.listAllRecordings(admin, { page: 1, pageSize: 20 });
+    expect(res.total).toBe(2);
+    expect(res.items.map((i) => i.method ?? "egress")).toEqual(["experimental", "egress"]);
+    expect(res.items[0]).toMatchObject({ lessonTitle: "Тест", teacherName: "Учитель", status: "ready" });
+    expect(res.items[0]!.url).toContain(RAW_ID);
+  });
+
+  it("метод выключен — список как раньше, только Egress", async () => {
+    repoMock.listRecordingsForSchool.mockResolvedValue({ rows: [egressRow({ status: "ready" })], total: 1 });
+    const res = await service.listAllRecordings(admin, { page: 1, pageSize: 20 });
+    expect(res.total).toBe(1);
+    expect(rawRepoMock.listRawRecordingsForSchool).not.toHaveBeenCalled();
+  });
+
+  it("удаление экспериментальной: ролик, обложка и исходные дорожки", async () => {
+    enableExperimental();
+    repoMock.findRecordingById.mockResolvedValue(null);
+    rawRepoMock.findRawRecording.mockResolvedValue(rawRow({ status: "ready" }));
+    await service.adminDeleteRecording(admin, RAW_ID);
+    expect(storageMock.deleteFile).toHaveBeenCalledWith(`recordings/${SCHOOL}/${LESSON}/${RAW_ID}.mp4`);
+    expect(storageMock.deleteTree).toHaveBeenCalledWith(`raw-recordings/${SCHOOL}/${LESSON}/${RAW_ID}`);
+    expect(rawRepoMock.markRawDeleted).toHaveBeenCalledWith(RAW_ID);
+  });
+
+  it("идущую или собираемую экспериментальную удалить нельзя", async () => {
+    enableExperimental();
+    repoMock.findRecordingById.mockResolvedValue(null);
+    rawRepoMock.findRawRecording.mockResolvedValue(rawRow({ status: "rendering" }));
+    await expect(service.adminDeleteRecording(admin, RAW_ID)).rejects.toMatchObject({ statusCode: 409 });
+    expect(storageMock.deleteTree).not.toHaveBeenCalled();
+  });
+
+  it("чужая школа — 404", async () => {
+    enableExperimental();
+    repoMock.findRecordingById.mockResolvedValue(null);
+    rawRepoMock.findRawRecording.mockResolvedValue(rawRow({ schoolId: OTHER_SCHOOL, status: "ready" }));
+    await expect(service.getRecordingDetail(admin, RAW_ID)).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("внешняя ссылка на готовую экспериментальную", async () => {
+    enableExperimental();
+    repoMock.findRecordingById.mockResolvedValue(null);
+    rawRepoMock.findRawRecording.mockResolvedValue(rawRow({ status: "ready" }));
+    const link = await service.createExternalDownloadLink(admin, RAW_ID);
+    expect(link.url).toContain(`${RAW_ID}.mp4`);
   });
 });

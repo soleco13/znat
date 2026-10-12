@@ -388,20 +388,37 @@ export async function listAllRecordings(
   }
   const pageSize = Math.min(Math.max(1, input.pageSize || DEFAULT_ADMIN_PAGE_SIZE), MAX_ADMIN_PAGE_SIZE);
   const page = Math.max(1, input.page || 1);
-  const { rows, total } = await repo.listRecordingsForSchool(user.schoolId, {
-    limit: pageSize,
-    offset: (page - 1) * pageSize,
-  });
-
-  const items = await denormalizeRecordings(user.schoolId, rows);
-
-  return { items, total };
+  const offset = (page - 1) * pageSize;
+  if (!rawService.experimentalRecordingEnabled()) {
+    const { rows, total } = await repo.listRecordingsForSchool(user.schoolId, { limit: pageSize, offset });
+    return { items: await denormalizeRecordings(user.schoolId, rows), total };
+  }
+  // Экспериментальные записи — в том же архиве (пометка `method`). Две таблицы
+  // сливаются по времени начала: берём из каждой первые offset+pageSize.
+  const [egressPart, rawPart] = await Promise.all([
+    repo.listRecordingsForSchool(user.schoolId, { limit: offset + pageSize, offset: 0 }),
+    rawService.listRawRecordingsForSchool(user.schoolId, offset + pageSize),
+  ]);
+  const merged = [
+    ...(await Promise.all(egressPart.rows.map(toWithDownload))),
+    ...(await Promise.all(rawPart.rows.map(rawService.toRawWithDownloadAndPoster))),
+  ]
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+    .slice(offset, offset + pageSize);
+  return { items: await denormalizeItems(user.schoolId, merged), total: egressPart.total + rawPart.total };
 }
 
 /** Докладывает `lessonTitle`/`teacherName` к строкам записей — общий шаг для списка и одной записи. */
 async function denormalizeRecordings(
   schoolId: string,
   rows: RecordingRow[],
+): Promise<AdminRecordingsListResponse["items"]> {
+  return denormalizeItems(schoolId, await Promise.all(rows.map(toWithDownload)));
+}
+
+async function denormalizeItems(
+  schoolId: string,
+  rows: RecordingWithDownload[],
 ): Promise<AdminRecordingsListResponse["items"]> {
   const lessonTitles = await lessonsService.getLessonTitles(
     schoolId,
@@ -410,15 +427,15 @@ async function denormalizeRecordings(
   const teacherIds = [...lessonTitles.values()].map((l) => l.teacherId);
   const teacherNames = await usersService.getUserNames(schoolId, teacherIds);
 
-  return Promise.all(rows.map(async (row) => {
+  return rows.map((row) => {
     const lesson = lessonTitles.get(row.lessonId);
     const teacherName = lesson ? teacherNames.get(lesson.teacherId)?.fullName : undefined;
     return {
-      ...(await toWithDownload(row)),
+      ...row,
       lessonTitle: lesson?.title ?? "Урок удалён",
       teacherName: teacherName ?? "—",
     };
-  }));
+  });
 }
 
 /**
@@ -434,9 +451,19 @@ export async function getRecordingDetail(
     throw new AppError(403, "forbidden", "Страница записей доступна только администратору");
   }
   const row = await repo.findRecordingById(recordingId, user.schoolId);
-  if (!row) throw new AppError(404, "not_found", "Запись не найдена");
+  if (!row) {
+    const raw = await findRawForAdmin(recordingId, user.schoolId);
+    if (!raw) throw new AppError(404, "not_found", "Запись не найдена");
+    const [item] = await denormalizeItems(user.schoolId, [await rawService.toRawWithDownloadAndPoster(raw)]);
+    return item!;
+  }
   const [item] = await denormalizeRecordings(user.schoolId, [row]);
   return item!;
+}
+
+/** Экспериментальная запись школы по id (страница «Записи»); метод выключен — нет. */
+async function findRawForAdmin(id: string, schoolId: string) {
+  return rawService.experimentalRecordingEnabled() ? rawService.findRawRecordingForSchool(id, schoolId) : null;
 }
 
 /** Место на диске (§10.10 ТЗ — «сколько места есть/занято») + отдельно сколько из занятого — именно записи. */
@@ -444,11 +471,12 @@ export async function getStorageUsage(user: AccessTokenPayload): Promise<Storage
   if (user.role !== "admin") {
     throw new AppError(403, "forbidden", "Место на диске доступно только администратору");
   }
-  const [disk, recordingsBytes] = await Promise.all([
+  const [disk, recordingsBytes, rawBytes] = await Promise.all([
     getDiskUsage(),
     repo.sumRecordingsSizeForSchool(user.schoolId),
+    rawService.experimentalRecordingEnabled() ? rawService.sumReadyRawSizeForSchool(user.schoolId) : Promise.resolve(0),
   ]);
-  return { ...disk, recordingsBytes };
+  return { ...disk, recordingsBytes: recordingsBytes + rawBytes };
 }
 
 /**
@@ -466,11 +494,16 @@ export async function createExternalDownloadLink(
     throw new AppError(403, "forbidden", "Внешняя ссылка доступна только администратору");
   }
   const row = await repo.findRecordingById(recordingId, user.schoolId);
-  if (!row || row.status !== "ready" || !row.storageKey) {
+  let storageKey: string | null = row?.status === "ready" ? row.storageKey : null;
+  if (!row) {
+    const raw = await findRawForAdmin(recordingId, user.schoolId);
+    if (raw?.status === "ready") storageKey = raw.outputKey;
+  }
+  if (!storageKey) {
     throw new AppError(404, "not_found", "Запись не найдена или ещё не готова");
   }
   const ttl = Math.min(Math.max(1, ttlSeconds || EXTERNAL_LINK_DEFAULT_TTL_SEC), EXTERNAL_LINK_MAX_TTL_SEC);
-  const path = getSignedFileUrl(row.storageKey, ttl);
+  const path = getSignedFileUrl(storageKey, ttl);
   return {
     url: new URL(path, env.PUBLIC_ORIGIN).toString(),
     expiresAt: new Date(Date.now() + ttl * 1000).toISOString(),
@@ -491,7 +524,12 @@ export async function adminDeleteRecording(
     throw new AppError(403, "forbidden", "Удаление записи доступно только администратору");
   }
   const row = await repo.findRecordingById(recordingId, user.schoolId);
-  if (!row) throw new AppError(404, "not_found", "Запись не найдена");
+  if (!row) {
+    const raw = await findRawForAdmin(recordingId, user.schoolId);
+    if (!raw) throw new AppError(404, "not_found", "Запись не найдена");
+    await rawService.deleteRawRecording(raw);
+    return;
+  }
   if (ACTIVE_RECORDING_STATUSES.includes(row.status)) {
     throw new AppError(409, "recording_active", "Сначала остановите запись, потом можно удалить");
   }

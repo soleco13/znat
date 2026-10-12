@@ -189,6 +189,7 @@ export function RecordingViewerPage() {
                 <dt className="text-muted-foreground">Статус</dt>
                 <dd className="mt-0.5">
                   <Badge variant={STATUS_VARIANT[data.status]}>{STATUS_LABEL[data.status]}</Badge>
+                        {data.method === "experimental" ? <Badge variant="blue">эксперимент</Badge> : null}
                 </dd>
               </div>
               <div>

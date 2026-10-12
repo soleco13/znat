@@ -44,6 +44,9 @@ const STATUS_VARIANT: Record<RecordingStatus, "blue" | "green" | "yellow" | "red
   deleted: "gray",
 };
 
+/** Сколько после старта нельзя нажать «Остановить» (защита от двойного клика). */
+const STOP_LOCK_MS = 5000;
+
 export function RecordingPanel({
   lessonId,
   recordingActive,
@@ -63,6 +66,11 @@ export function RecordingPanel({
   // Школе разрешена экспериментальная запись — в диалоге есть «Тестовая запись».
   const [experimentalAvailable, setExperimentalAvailable] = useState(false);
   const [busyMode, setBusyMode] = useState<"normal" | "test" | null>(null);
+  // «Остановить» появляется на месте «Начать запись»: повторный клик сразу
+  // после старта останавливал запись за секунду (2026-10-12, дважды) — Egress
+  // при этом прерывается без файла. Первые секунды кнопка неактивна.
+  const [stopLockedUntil, setStopLockedUntil] = useState(0);
+  const [, forceTick] = useState(0);
 
   const disabledRef = useRef(false);
   disabledRef.current = disabled;
@@ -97,6 +105,8 @@ export function RecordingPanel({
     setError(null);
     try {
       const rec = await startLessonRecording(lessonId, { test });
+      setStopLockedUntil(Date.now() + STOP_LOCK_MS);
+      setTimeout(() => forceTick((n) => n + 1), STOP_LOCK_MS + 50);
       setActiveId(rec.id);
       onActiveChange(true);
       setConfirming(false);
@@ -153,11 +163,18 @@ export function RecordingPanel({
             Запись урока пока недоступна — сервис записи не подключён.
           </p>
         ) : recordingActive ? (
-          <Button variant="destructive" size="sm" onClick={handleStop} loading={busy}>
-            {busy ? "Останавливаем…" : "Остановить запись"}
+          <Button
+            key="stop"
+            variant="destructive"
+            size="sm"
+            onClick={handleStop}
+            loading={busy}
+            disabled={Date.now() < stopLockedUntil}
+          >
+            {busy ? "Останавливаем…" : Date.now() < stopLockedUntil ? "Запись запускается…" : "Остановить запись"}
           </Button>
         ) : (
-          <Button variant="outline" size="sm" onClick={() => setConfirming(true)}>
+          <Button key="start" variant="outline" size="sm" onClick={() => setConfirming(true)}>
             <Circle className="fill-destructive text-destructive" aria-hidden />
             Начать запись
           </Button>
