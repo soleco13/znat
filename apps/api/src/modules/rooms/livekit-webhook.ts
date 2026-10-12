@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { TrackSource, WebhookReceiver } from "livekit-server-sdk";
+import { TrackSource, TrackType, WebhookReceiver } from "livekit-server-sdk";
 import { env } from "../../plugins/env.js";
 import * as roomsService from "./service.js";
 import * as recordingsService from "../recordings/service.js";
@@ -109,6 +109,27 @@ export default async function livekitWebhookRoutes(app: FastifyInstance) {
       ) {
         // Э10: статус записи едет от egress ко строке recordings через вебхук.
         await recordingsService.applyEgressWebhook(event.egressInfo);
+      }
+
+      // Журнал экспериментальной записи (docs/experimental-recording.md):
+      // состав и дорожки комнаты. Сбой журнала не должен вернуть LiveKit 500.
+      if (
+        event.event === "participant_joined" ||
+        event.event === "participant_left" ||
+        event.event === "track_published" ||
+        event.event === "track_unpublished" ||
+        event.event === "room_finished"
+      ) {
+        await recordingsService
+          .handleLivekitEventForRawRecording({
+            event: event.event,
+            roomName: roomName ?? null,
+            identity: userId ?? null,
+            trackSid: event.track?.sid ?? null,
+            source: event.track ? (TrackSource[event.track.source] ?? null) : null,
+            trackType: event.track ? (TrackType[event.track.type] ?? null) : null,
+          })
+          .catch((err: unknown) => request.log.warn({ err }, "livekit webhook: журнал экспериментальной записи"));
       }
 
       return reply.status(200).send();

@@ -117,6 +117,16 @@ export async function deleteFile(storageKey: string) {
   return adapter.remove(storageKey);
 }
 
+/** Размер файла; `null`, если его нет. */
+export async function statFile(storageKey: string): Promise<{ sizeBytes: number } | null> {
+  return adapter.stat(storageKey);
+}
+
+/** Удалить каталог целиком (исходники экспериментальной записи). */
+export async function deleteTree(prefix: string): Promise<void> {
+  return adapter.removeTree(prefix);
+}
+
 export function getSignedFileUrl(storageKey: string, ttlSeconds: number = SIGNED_URL_TTL_SECONDS): string {
   const { exp, sig } = signStorageUrl(storageKey, ttlSeconds, env.STORAGE_HMAC_SECRET);
   const encodedKey = encodeURIComponent(storageKey);

@@ -22,6 +22,7 @@ import { signRecorderToken } from "../recorder-auth/service.js";
 import { getSignedFileUrl, deleteFile, getDiskUsage } from "../storage/service.js";
 import type { EgressInfo } from "livekit-server-sdk";
 import * as egress from "./egress-client.js";
+import * as rawService from "./raw-service.js";
 import * as repo from "./repo.js";
 import { enqueuePoster, posterExists, posterKeyFor, removePoster } from "./poster.js";
 import type { RecordingRow } from "./repo.js";
@@ -147,6 +148,12 @@ export async function startLessonRecording(
   const existing = await repo.findActiveRecordingForLesson(lessonId, user.schoolId);
   if (existing) return toSummary(existing);
 
+  // Метод записи (docs/experimental-recording.md): без явного включения для
+  // школы (env) и урока (lesson_recording_modes) — всегда `egress`, и путь
+  // ниже идёт ровно как раньше.
+  const mode = await rawService.resolveRecordingMode(user.schoolId, lessonId);
+  if (mode === "experimental") return startExperimentalOnly(user, lessonId);
+
   const livekitRoom = await lessonsService.ensureLivekitRoom(user.schoolId, lessonId);
 
   const id = randomUUID();
@@ -192,7 +199,38 @@ export async function startLessonRecording(
   // Э10.3, 152-ФЗ: как только запись пошла — баннер согласия у ВСЕХ
   // участников урока, включая учеников (тот же приём, что `activity_started`).
   roomsService.broadcastToLesson(lessonId, { type: "recording_status", active: true });
+
+  // Режим сравнения (`both`, только явно отмеченные тестовые уроки):
+  // экспериментальная запись параллельно. Её сбой не трогает запись Egress.
+  if (mode === "both") {
+    try {
+      await rawService.startRawRecording({
+        schoolId: user.schoolId,
+        lessonId,
+        startedBy: user.sub,
+        livekitRoom,
+        compareRecordingId: row.id,
+      });
+    } catch (err) {
+      logTaskFailure("recordings.raw_start", err, { lessonId, compareRecordingId: row.id });
+    }
+  }
   return toSummary(row);
+}
+
+/** Только экспериментальный метод (`experimental`): Egress не запускается. */
+async function startExperimentalOnly(user: AccessTokenPayload, lessonId: string): Promise<RecordingSummary> {
+  const livekitRoom = await lessonsService.ensureLivekitRoom(user.schoolId, lessonId);
+  const raw = await rawService.startRawRecording({
+    schoolId: user.schoolId,
+    lessonId,
+    startedBy: user.sub,
+    livekitRoom,
+    compareRecordingId: null,
+  });
+  // 152-ФЗ: баннер согласия — так же, как у основной записи.
+  roomsService.broadcastToLesson(lessonId, { type: "recording_status", active: true });
+  return rawService.toRawSummary(raw);
 }
 
 /** Пауза перед повтором старта egress — за неё успевает отработать уже принятый запрос. */
@@ -230,6 +268,14 @@ export async function stopLessonRecording(
   await assertRecordingAccess(user, lessonId);
 
   const row = await repo.findRecordingById(recordingId, user.schoolId);
+  if ((!row || row.lessonId !== lessonId) && rawService.experimentalRecordingEnabled()) {
+    const raw = await rawService.findRawRecordingForLesson(recordingId, lessonId, user.schoolId);
+    if (raw) {
+      const stopped = await rawService.requestRawStop(raw);
+      roomsService.broadcastToLesson(lessonId, { type: "recording_status", active: false });
+      return rawService.toRawSummary(stopped);
+    }
+  }
   if (!row || row.lessonId !== lessonId) {
     throw new AppError(404, "not_found", "Запись не найдена");
   }
@@ -246,6 +292,12 @@ export async function stopLessonRecording(
   const updated = await repo.updateRecording(row.id, {
     status: status === "recording" || status === "starting" ? "processing" : status,
   });
+  // Режим `both`: учитель останавливает запись урока — и параллельную тоже.
+  if (rawService.experimentalRecordingEnabled()) {
+    await rawService
+      .stopRawRecordingForLesson(lessonId)
+      .catch((err: unknown) => logTaskFailure("recordings.raw_stop", err, { lessonId }));
+  }
   // Запись больше не идёт — снимаем баннер согласия у всех участников.
   roomsService.broadcastToLesson(lessonId, { type: "recording_status", active: false });
   return toSummary(updated ?? row);
@@ -258,7 +310,9 @@ export async function stopLessonRecording(
  * не секрет (баннер и так виден всем).
  */
 export async function isLessonRecordingActive(lessonId: string): Promise<boolean> {
-  return repo.lessonHasActiveRecording(lessonId);
+  if (await repo.lessonHasActiveRecording(lessonId)) return true;
+  // Экспериментальная запись — тот же баннер согласия (152-ФЗ).
+  return rawService.experimentalRecordingEnabled() && (await rawService.findActiveRawRecording(lessonId)) !== null;
 }
 
 /**
@@ -286,9 +340,19 @@ export async function getLessonRecordings(
   await assertRecordingAccess(user, lessonId);
   const rows = await repo.listRecordingsForLesson(lessonId, user.schoolId);
   const active = rows.find((r) => ACTIVE_RECORDING_STATUSES.includes(r.status)) ?? null;
+  const recordings = await Promise.all(rows.map(toWithDownload));
+  if (!rawService.experimentalRecordingEnabled()) {
+    return { active: active ? toSummary(active) : null, recordings };
+  }
+  // Экспериментальные записи урока — в том же списке, со своим `method`.
+  const rawRows = await rawService.listRawRecordingsForLesson(lessonId, user.schoolId);
+  const rawActive = rawRows.find((r) => r.status === "requested" || r.status === "recording") ?? null;
+  const merged = [...recordings, ...rawRows.map(rawService.toRawWithDownload)].sort((a, b) =>
+    b.startedAt.localeCompare(a.startedAt),
+  );
   return {
-    active: active ? toSummary(active) : null,
-    recordings: await Promise.all(rows.map(toWithDownload)),
+    active: active ? toSummary(active) : rawActive ? rawService.toRawSummary(rawActive) : null,
+    recordings: merged,
   };
 }
 
@@ -623,4 +687,51 @@ export function startRecordingReconcileSweep(): void {
     runRecordingReconcileOnce().catch((err: unknown) => logTaskFailure("recordings.reconcile_sweep", err));
   reconcileTimer = setInterval(() => void sweep(), RECONCILE_SWEEP_INTERVAL_MS);
   reconcileTimer.unref?.();
+}
+
+// ─── Экспериментальная запись: API модуля для routes и других модулей ──────
+
+export {
+  claimRecordJob,
+  claimRenderJob,
+  experimentalRecordingEnabled,
+  getJournalPage,
+  getLessonRecordingMode,
+  getRawRecordingDetail,
+  getReplayData,
+  recorderFinished,
+  recorderHeartbeat,
+  renderFailed,
+  renderFinished,
+  renderHeartbeat,
+  retryRawRender,
+  runRawRetentionOnce,
+  runRawSweepOnce,
+  setLessonRecordingMode,
+  startRawRecordingBackground,
+  stopRawRecordingBackground,
+  verifyInternalSecret,
+} from "./raw-service.js";
+
+/**
+ * Вебхук LiveKit (`rooms/livekit-webhook.ts`) — в журнал экспериментальной
+ * записи и стоп её при закрытии комнаты. Метод выключен — ничего не делает.
+ */
+export async function handleLivekitEventForRawRecording(event: {
+  event: string;
+  roomName: string | null;
+  identity: string | null;
+  trackSid: string | null;
+  source: string | null;
+  trackType: string | null;
+}): Promise<void> {
+  if (!rawService.experimentalRecordingEnabled() || !event.roomName) return;
+  rawService.journalLivekitEvent(event.roomName, {
+    event: event.event,
+    identity: event.identity,
+    trackSid: event.trackSid,
+    source: event.source,
+    trackType: event.trackType,
+  });
+  if (event.event === "room_finished") await rawService.handleRawRoomFinished(event.roomName);
 }

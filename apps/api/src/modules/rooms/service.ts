@@ -24,7 +24,7 @@ import * as schoolSettingsService from "../school-settings/service.js";
 import * as presence from "./presence.js";
 import type { PresenceEntry } from "./presence.js";
 import * as repo from "./repo.js";
-import { emitRoomEvent } from "./events.js";
+import { emitRoomEvent, onAnyRoomEvent } from "./events.js";
 import { logTaskFailure, logger } from "../../plugins/logger.js";
 
 const RECONNECT_GRACE_MS = 30_000;
@@ -74,6 +74,17 @@ function toSnapshot(participantId: string, entry: PresenceEntry): ParticipantSna
  */
 export function broadcastToLesson(lessonId: string, message: ServerRoomMessage): void {
   emitRoomEvent(lessonId, message);
+}
+
+/**
+ * Подписка на все события всех уроков — для журнала экспериментальной
+ * записи (recordings). Возвращает отписку. `rooms` не импортирует
+ * `recordings` — подписка идёт в обратную сторону, без цикла.
+ */
+export function subscribeToAllRoomEvents(
+  listener: (lessonId: string, message: ServerRoomMessage) => void,
+): () => void {
+  return onAnyRoomEvent(listener);
 }
 
 /**

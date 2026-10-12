@@ -62,6 +62,12 @@ export const recordingSummarySchema = z.object({
    * `null`, если запись ещё не `ready` или уже `deleted`.
    */
   expiresAt: z.string().datetime().nullable(),
+  /**
+   * Каким методом записано (docs/experimental-recording.md). Нет поля —
+   * основная запись Egress; `experimental` — новая архитектура, строка
+   * `raw_recordings`, статус спроецирован на шкалу выше.
+   */
+  method: z.enum(["egress", "experimental"]).optional(),
 });
 export type RecordingSummary = z.infer<typeof recordingSummarySchema>;
 

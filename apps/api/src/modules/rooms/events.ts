@@ -5,6 +5,27 @@ import type { ServerRoomMessage } from "@school/shared";
 export const roomEvents = new EventEmitter();
 roomEvents.setMaxListeners(0);
 
+type AnyRoomEventListener = (lessonId: string, message: ServerRoomMessage) => void;
+
+/**
+ * Слушатели ВСЕХ событий всех уроков — журнал экспериментальной записи
+ * (recordings, docs/experimental-recording.md). Ошибка слушателя не должна
+ * помешать раздаче события участникам — глушим её здесь.
+ */
+const anyListeners = new Set<AnyRoomEventListener>();
+
+export function onAnyRoomEvent(listener: AnyRoomEventListener): () => void {
+  anyListeners.add(listener);
+  return () => anyListeners.delete(listener);
+}
+
 export function emitRoomEvent(lessonId: string, message: ServerRoomMessage): void {
   roomEvents.emit(lessonId, message);
+  for (const listener of anyListeners) {
+    try {
+      listener(lessonId, message);
+    } catch {
+      // журнал не важнее урока
+    }
+  }
 }

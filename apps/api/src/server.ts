@@ -42,10 +42,13 @@ import invitesRoutes from "./modules/invites/routes.js";
 import telemetryRoutes from "./modules/telemetry/routes.js";
 import { admitClientEvent } from "./modules/telemetry/service.js";
 import {
+  startRawRecordingBackground,
   startRecordingReconcileSweep,
   startRecordingRetentionSweep,
+  stopRawRecordingBackground,
   stopRecordingRetentionSweep,
 } from "./modules/recordings/service.js";
+import rawRecordingsRoutes from "./modules/recordings/raw-routes.js";
 import {
   buildConvertJobHandlers,
   startDeckReconcileSweep,
@@ -162,6 +165,7 @@ export function buildServer() {
       api.register(materialsRoutes);
       api.register(materialAssetUrlRoutes);
       api.register(recordingsRoutes);
+      api.register(rawRecordingsRoutes);
       api.register(schoolSettingsRoutes);
       api.register(registrationRoutes);
       api.register(invitesRoutes);
@@ -250,6 +254,9 @@ async function main() {
   startDeckReconcileSweep();
   startRecordingRetentionSweep();
   startRecordingReconcileSweep();
+  // Экспериментальная запись (docs/experimental-recording.md): журнал и
+  // сверка — только если метод включён (RAW_RECORDER_SECRET), иначе no-op.
+  startRawRecordingBackground();
   startRefreshTokenCleanup();
   startUnverifiedCleanup();
 
@@ -260,6 +267,7 @@ async function main() {
     stopCanvasUnloadSweep();
     stopDeckReconcileSweep();
     stopRecordingRetentionSweep();
+    await stopRawRecordingBackground().catch(() => undefined);
     stopRefreshTokenCleanup();
     stopUnverifiedCleanup();
     await stopConvertEvents();

@@ -19,4 +19,14 @@ export interface StorageAdapter {
 
   /** Удаляет файл. Не кидает ошибку, если файла уже нет. */
   remove(storageKey: string): Promise<void>;
+
+  /** Размер файла по ключу; `null`, если файла нет. */
+  stat(storageKey: string): Promise<{ sizeBytes: number } | null>;
+
+  /**
+   * Удаляет каталог со всем содержимым (исходные дорожки экспериментальной
+   * записи — сотни файлов-чанков под одним префиксом). Не кидает ошибку,
+   * если каталога уже нет.
+   */
+  removeTree(prefix: string): Promise<void>;
 }

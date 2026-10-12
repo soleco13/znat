@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+/** Пустая строка в .env (`RAW_RECORDER_SECRET=`) — то же, что переменной нет. */
+function emptyToUndefined(value: unknown): unknown {
+  return value === "" ? undefined : value;
+}
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(3000),
@@ -110,6 +115,43 @@ const envSchema = z.object({
    * токенов не должна давать другой (тот же принцип, что у гостевого).
    */
   JWT_RECORDER_SECRET: z.string().min(32),
+
+  // --- Экспериментальная запись (docs/experimental-recording.md). Всё
+  //     выключено по умолчанию: без секрета и списка школ любой урок пишется
+  //     только основным методом (Egress). ---
+  /**
+   * Секрет внутреннего API рекордера и рендера (`/internal/raw-recorder/*`,
+   * Bearer). Пусто — экспериментальный метод выключен целиком, эндпоинты
+   * отвечают 404.
+   */
+  RAW_RECORDER_SECRET: z.preprocess(emptyToUndefined, z.string().min(32).optional()),
+  /**
+   * Школы, которым разрешена экспериментальная запись (uuid через запятую).
+   * Режим урока (`lesson_recording_modes`) действует только для них —
+   * случайная строка в БД не включит новый метод на другой школе. Пусто —
+   * никому. Немедленный возврат всех уроков к Egress — очистить переменную.
+   */
+  RECORDING_EXPERIMENTAL_SCHOOL_IDS: z
+    .string()
+    .default("")
+    .transform((v) => v.split(",").map((s) => s.trim()).filter(Boolean))
+    .pipe(z.array(z.string().uuid())),
+  /** Адрес LiveKit для рекордера (он в host-сети: обычно ws://127.0.0.1:7880). Пусто — LIVEKIT_URL. */
+  RAW_RECORDER_LIVEKIT_URL: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  /**
+   * Origin, с которого Chrome рендера открывает страницу кадров
+   * `/recording-replay` (как RECORDING_EGRESS_TEMPLATE_URL — обычно
+   * http://127.0.0.1:3000, мимо внешней сети). Пусто — PUBLIC_ORIGIN.
+   */
+  RAW_RENDER_REPLAY_ORIGIN: z.preprocess(emptyToUndefined, z.string().url().optional()),
+  /** Предел длительности одной экспериментальной записи. */
+  RAW_RECORDING_MAX_DURATION_SEC: z.coerce.number().int().min(60).max(12 * 3600).default(4 * 3600),
+  /**
+   * Сколько хранить исходные дорожки после успешной сборки MP4 (часы) — для
+   * сравнения и пересборки. До `ready` исходники не удаляются никогда; после
+   * `failed` — 14 дней.
+   */
+  RAW_RECORDING_SOURCE_RETENTION_HOURS: z.coerce.number().int().min(1).max(24 * 90).default(7 * 24),
 
   // --- Э14.1: собственный SMTP-релей на этом же сервере для писем
   //     подтверждения почты при self-signup (гейт §1.2 ТЗ: бесплатный,

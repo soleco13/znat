@@ -2,12 +2,14 @@ import {
   disconnectCanvasParticipant,
   flushCanvasDocuments,
   getActiveCanvasDocumentsCount,
+  getCanvasDocumentState,
   getCanvasDocumentsWithPendingUpdatesCount,
   getRateLimitedCanvasMessagesCount,
   getRejectedReadOnlyUpdatesCount,
   hocuspocus,
   postAnswerToBoard,
   setDrawPermission,
+  setCanvasJournalObserver,
   setDrawPermissionResolver,
   setGuestAccessGate,
   startCanvasUnloadSweep,
@@ -38,15 +40,19 @@ export function closeCanvasDocument(lessonId: string): void {
   hocuspocus.closeConnections(lessonId);
 }
 
+export type { CanvasJournalObserver } from "./hocuspocus.js";
+
 export {
   disconnectCanvasParticipant,
   flushCanvasDocuments,
   getActiveCanvasDocumentsCount,
+  getCanvasDocumentState,
   getCanvasDocumentsWithPendingUpdatesCount,
   getRateLimitedCanvasMessagesCount,
   getRejectedReadOnlyUpdatesCount,
   postAnswerToBoard,
   setDrawPermission,
+  setCanvasJournalObserver,
   setDrawPermissionResolver,
   setGuestAccessGate,
   startCanvasUnloadSweep,

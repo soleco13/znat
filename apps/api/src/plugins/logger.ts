@@ -197,7 +197,15 @@ export type LogEventName =
   | "client_events_dropped"
   | "background_task_failed"
   | "process_unhandled_rejection"
-  | "process_uncaught_exception";
+  | "process_uncaught_exception"
+  // Экспериментальная запись (docs/experimental-recording.md).
+  | "recording_mode_changed"
+  | "raw_recording_requested"
+  | "raw_recording_stop_requested"
+  | "raw_recording_claimed"
+  | "raw_recording_recorded"
+  | "raw_render_claimed"
+  | "raw_recording_ready";
 
 type Level = "debug" | "info" | "warn" | "error" | "fatal";
 

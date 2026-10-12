@@ -7,6 +7,8 @@ import {
   type connectedPayload,
   type onAuthenticatePayload,
   type onDisconnectPayload,
+  type onAwarenessUpdatePayload,
+  type onChangePayload,
   type onLoadDocumentPayload,
   type onStoreDocumentPayload,
 } from "@hocuspocus/server";
@@ -703,6 +705,60 @@ export function getActiveCanvasDocumentsCount(): number {
   return hocuspocus.documents.size;
 }
 
+// ─── Журнал экспериментальной записи (docs/experimental-recording.md) ──────
+
+/**
+ * Наблюдатель изменений доски — журнал экспериментальной записи
+ * (`recordings`). canvas не зависит от recordings: тот сам регистрируется
+ * здесь при старте. Без наблюдателя хуки ниже ничего не делают.
+ */
+export interface CanvasJournalObserver {
+  /** Каждый применённый Yjs-update документа урока (`documentName` = lessonId). */
+  onUpdate(lessonId: string, update: Uint8Array): void;
+  /** Изменение awareness (курсоры, viewport) — только состояния, без сети. */
+  onAwareness(lessonId: string, states: ReadonlyArray<Record<string | number, unknown>>): void;
+}
+
+let journalObserver: CanvasJournalObserver | null = null;
+
+export function setCanvasJournalObserver(observer: CanvasJournalObserver | null): void {
+  journalObserver = observer;
+}
+
+/** Хук Hocuspocus `onChange`: синхронный проброс update наблюдателю, ошибки глушатся — доска важнее журнала. */
+export async function forwardCanvasChange(payload: Pick<onChangePayload, "documentName" | "update">): Promise<void> {
+  if (!journalObserver) return;
+  try {
+    journalObserver.onUpdate(payload.documentName, payload.update);
+  } catch {
+    // журнал не должен мешать доске
+  }
+}
+
+/** Хук Hocuspocus `onAwarenessUpdate` — то же для awareness. */
+export async function forwardCanvasAwareness(
+  payload: Pick<onAwarenessUpdatePayload, "documentName" | "states">,
+): Promise<void> {
+  if (!journalObserver) return;
+  try {
+    journalObserver.onAwareness(payload.documentName, payload.states);
+  } catch {
+    // журнал не должен мешать доске
+  }
+}
+
+/**
+ * Полное состояние Y.Doc урока для ключевого кадра журнала: из памяти, если
+ * документ загружен (свежее сохранённого — дебаунс 3 с), иначе последний
+ * снимок из БД. `null` — доски у урока ещё нет.
+ */
+export async function getCanvasDocumentState(lessonId: string): Promise<Uint8Array | null> {
+  const loaded = hocuspocus.documents.get(lessonId);
+  if (loaded) return encodeStateAsUpdate(loaded);
+  const stored = await repo.loadDoc(lessonId);
+  return stored ? new Uint8Array(stored) : null;
+}
+
 /**
  * Единственный экземпляр Hocuspocus на процесс, монтируется в тот же
  * Fastify-сервер на `/collab` (см. canvas/ws.ts), не отдельным процессом —
@@ -721,6 +777,8 @@ export const hocuspocus = new Hocuspocus({
   afterUnloadDocument: clearDrawPermissionOverrides,
   afterLoadDocument: adaptBroadcastsToLink,
   onStateless: handleLinkStateless,
+  onChange: forwardCanvasChange,
+  onAwarenessUpdate: forwardCanvasAwareness,
 });
 
 // ─── Э8.10, §7.3 ТЗ: «вынести чей-то ответ на доску» ───────────────────────

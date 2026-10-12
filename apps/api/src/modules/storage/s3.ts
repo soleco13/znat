@@ -20,4 +20,12 @@ export class S3StorageAdapter implements StorageAdapter {
   remove(): Promise<void> {
     throw new Error("not implemented");
   }
+
+  stat(): Promise<{ sizeBytes: number } | null> {
+    throw new Error("not implemented");
+  }
+
+  removeTree(): Promise<void> {
+    throw new Error("not implemented");
+  }
 }

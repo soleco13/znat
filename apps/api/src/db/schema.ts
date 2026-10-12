@@ -13,6 +13,9 @@ import {
   unique,
   pgEnum,
   customType,
+  bigint,
+  doublePrecision,
+  uniqueIndex,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
@@ -696,4 +699,116 @@ export const recordings = pgTable(
     // Джоба ретеншна (Э10.4): `status = 'ready' AND expires_at < now()`.
     index("recordings_retention_idx").on(t.status, t.expiresAt),
   ],
+);
+
+// ─── Экспериментальная запись (docs/experimental-recording.md) ─────────────
+// Отдельные таблицы: состояние нового метода не смешивается с `recordings`
+// (основная запись Egress). Совпадают со схемами packages/shared/raw-recordings.ts.
+
+export const lessonRecordingModeEnum = pgEnum("lesson_recording_mode", ["egress", "experimental", "both"]);
+
+export const rawRecordingStatusEnum = pgEnum("raw_recording_status", [
+  "requested",
+  "recording",
+  "finalizing",
+  "queued_for_render",
+  "rendering",
+  "verifying",
+  "ready",
+  "failed",
+  "aborted",
+  "deleted",
+]);
+
+/**
+ * Метод записи конкретного урока. Нет строки — `egress`. Строка действует
+ * только для школ из `RECORDING_EXPERIMENTAL_SCHOOL_IDS` (env) — случайная
+ * запись сюда не включит новый метод на чужой школе.
+ */
+export const lessonRecordingModes = pgTable("lesson_recording_modes", {
+  lessonId: uuid("lesson_id")
+    .primaryKey()
+    .references(() => lessons.id, { onDelete: "cascade" }),
+  schoolId: uuid("school_id")
+    .notNull()
+    .references(() => schools.id, { onDelete: "cascade" }),
+  mode: lessonRecordingModeEnum("mode").notNull(),
+  setBy: uuid("set_by").references(() => users.id, { onDelete: "set null" }),
+  setAt: timestamp("set_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Один запуск экспериментальной записи урока: дорожки, журнал, рендер. */
+export const rawRecordings = pgTable(
+  "raw_recordings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    schoolId: uuid("school_id")
+      .notNull()
+      .references(() => schools.id, { onDelete: "cascade" }),
+    lessonId: uuid("lesson_id")
+      .notNull()
+      .references(() => lessons.id, { onDelete: "cascade" }),
+    startedBy: uuid("started_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    livekitRoom: text("livekit_room").notNull(),
+    status: rawRecordingStatusEnum("status").notNull().default("requested"),
+    /** Попытка записи: растёт, когда упавший рекордер сменяется новым. */
+    attempt: integer("attempt").notNull().default(0),
+    recorderLeaseId: uuid("recorder_lease_id"),
+    recorderWorker: text("recorder_worker"),
+    recorderHeartbeatAt: timestamp("recorder_heartbeat_at", { withTimezone: true }),
+    recorderStats: jsonb("recorder_stats"),
+    stopRequestedAt: timestamp("stop_requested_at", { withTimezone: true }),
+    renderAttempts: integer("render_attempts").notNull().default(0),
+    renderLeaseId: uuid("render_lease_id"),
+    renderWorker: text("render_worker"),
+    renderHeartbeatAt: timestamp("render_heartbeat_at", { withTimezone: true }),
+    renderStep: text("render_step"),
+    renderMetrics: jsonb("render_metrics"),
+    /** Каталог записи в хранилище: `raw-recordings/<school>/<lesson>/<id>`. */
+    recordingDir: text("recording_dir").notNull(),
+    /** Готовый MP4: `recordings/<school>/<lesson>/<id>.mp4` — рядом с записями Egress. */
+    outputKey: text("output_key").notNull(),
+    /** id записи Egress, шедшей параллельно (режим `both`) — для сравнения. */
+    compareRecordingId: uuid("compare_recording_id").references(() => recordings.id, { onDelete: "set null" }),
+    lastError: text("last_error"),
+    durationSec: doublePrecision("duration_sec"),
+    sizeBytes: bigint("size_bytes", { mode: "number" }),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    stoppedAt: timestamp("stopped_at", { withTimezone: true }),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    /** Когда удалить исходные дорожки (только после `ready`, или через срок после `failed`). */
+    rawExpiresAt: timestamp("raw_expires_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("raw_recordings_lesson_idx").on(t.lessonId),
+    index("raw_recordings_status_idx").on(t.status),
+    // Одна идущая экспериментальная запись на урок — защита от двойного старта.
+    uniqueIndex("raw_recordings_one_active_per_lesson")
+      .on(t.lessonId)
+      .where(sql`status IN ('requested', 'recording')`),
+  ],
+);
+
+/**
+ * Журнал урока на время экспериментальной записи. `seq` — порядок записи
+ * событий в процессе API (единственный писатель), `tsMs` — серверное время
+ * (часы хоста, та же шкала, что метки RTP у рекордера). Повтор той же пары
+ * (recording, seq) игнорируется — запись идемпотентна.
+ */
+export const rawRecordingJournal = pgTable(
+  "raw_recording_journal",
+  {
+    recordingId: uuid("recording_id")
+      .notNull()
+      .references(() => rawRecordings.id, { onDelete: "cascade" }),
+    seq: bigint("seq", { mode: "number" }).notNull(),
+    tsMs: bigint("ts_ms", { mode: "number" }).notNull(),
+    kind: text("kind").notNull(),
+    payload: jsonb("payload"),
+    data: bytea("data"),
+  },
+  (t) => [primaryKey({ columns: [t.recordingId, t.seq] })],
 );

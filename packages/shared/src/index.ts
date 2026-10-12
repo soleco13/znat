@@ -12,6 +12,7 @@ export * from "./activities.js";
 export * from "./annotations.js";
 export * from "./import.js";
 export * from "./recordings.js";
+export * from "./raw-recordings.js";
 export * from "./school-settings.js";
 export * from "./schools.js";
 export * from "./inn-ogrn.js";

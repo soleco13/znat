@@ -57,4 +57,18 @@ export class LocalFsStorageAdapter implements StorageAdapter {
   async remove(storageKey: string): Promise<void> {
     await rm(this.resolve(storageKey), { force: true });
   }
+
+  async stat(storageKey: string): Promise<{ sizeBytes: number } | null> {
+    try {
+      const info = await stat(this.resolve(storageKey));
+      return info.isFile() ? { sizeBytes: info.size } : null;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw err;
+    }
+  }
+
+  async removeTree(prefix: string): Promise<void> {
+    await rm(this.resolve(prefix), { recursive: true, force: true });
+  }
 }
