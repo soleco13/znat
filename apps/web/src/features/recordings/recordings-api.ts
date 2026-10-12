@@ -23,8 +23,12 @@ export function getLessonRecordings(lessonId: string): Promise<LessonRecordingsR
 }
 
 /** Учитель урока/админ: начать запись. 503, если запись не включена (нет второй машины). */
-export function startLessonRecording(lessonId: string): Promise<RecordingSummary> {
-  return apiFetch<RecordingSummary>(`/lessons/${lessonId}/recordings`, { method: "POST" });
+export function startLessonRecording(lessonId: string, options: { test?: boolean } = {}): Promise<RecordingSummary> {
+  // `test` — тестовая запись: только экспериментальный метод, без Egress (docs/experimental-recording.md).
+  return apiFetch<RecordingSummary>(`/lessons/${lessonId}/recordings`, {
+    method: "POST",
+    ...(options.test ? { body: JSON.stringify({ test: true }) } : {}),
+  });
 }
 
 /** Учитель урока/админ: остановить запись. Файл финализируется асинхронно (статус → `processing` → `ready`). */

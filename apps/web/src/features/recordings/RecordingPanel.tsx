@@ -60,6 +60,9 @@ export function RecordingPanel({
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [disabled, setDisabled] = useState(false); // RECORDING_ENABLED=false → 503
+  // Школе разрешена экспериментальная запись — в диалоге есть «Тестовая запись».
+  const [experimentalAvailable, setExperimentalAvailable] = useState(false);
+  const [busyMode, setBusyMode] = useState<"normal" | "test" | null>(null);
 
   const disabledRef = useRef(false);
   disabledRef.current = disabled;
@@ -70,6 +73,7 @@ export function RecordingPanel({
       const res = await getLessonRecordings(lessonId);
       setRecordings(res.recordings);
       setActiveId(res.active?.id ?? null);
+      setExperimentalAvailable(res.experimentalAvailable === true);
       onActiveChange(res.active != null);
     } catch (e) {
       if (e instanceof ApiError && e.status === 503) setDisabled(true);
@@ -87,11 +91,12 @@ export function RecordingPanel({
     return () => clearInterval(t);
   }, []);
 
-  async function handleStart() {
+  async function handleStart(test = false) {
     setBusy(true);
+    setBusyMode(test ? "test" : "normal");
     setError(null);
     try {
-      const rec = await startLessonRecording(lessonId);
+      const rec = await startLessonRecording(lessonId, { test });
       setActiveId(rec.id);
       onActiveChange(true);
       setConfirming(false);
@@ -105,6 +110,7 @@ export function RecordingPanel({
       }
     } finally {
       setBusy(false);
+      setBusyMode(null);
     }
   }
 
@@ -173,6 +179,7 @@ export function RecordingPanel({
               <span className="min-w-0 text-muted-foreground">
                 <span className="text-foreground">{formatDate(r.startedAt)}</span>{" "}
                 <Badge variant={STATUS_VARIANT[r.status]}>{STATUS_LABEL[r.status]}</Badge>{" "}
+                {r.method === "experimental" ? <Badge variant="blue">эксперимент</Badge> : null}{" "}
                 · {formatDuration(r.durationSec)} · {formatBytes(r.sizeBytes)}
                 {r.expiresAt ? (
                   <span className="text-text-3"> · хранится до {formatDate(r.expiresAt)}</span>
@@ -201,17 +208,33 @@ export function RecordingPanel({
             <AlertDialogDescription>
               Все участники урока, включая учеников, увидят баннер «Идёт запись урока» (152-ФЗ).
             </AlertDialogDescription>
+            {experimentalAvailable ? (
+              <p className="text-sm text-muted-foreground">
+                «Тестовая запись» — запись новым способом вместо обычной. В списке записей она
+                помечена «эксперимент», файл появится после обработки.
+              </p>
+            ) : null}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Отмена</AlertDialogCancel>
+            {experimentalAvailable ? (
+              <Button
+                variant="outline"
+                disabled={busy}
+                onClick={() => void handleStart(true)}
+              >
+                {busyMode === "test" ? "Запускаем…" : "Тестовая запись"}
+              </Button>
+            ) : null}
             <AlertDialogAction
+              disabled={busy}
               onClick={(e) => {
                 e.preventDefault();
                 void handleStart();
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {busy ? "Запускаем…" : "Да, начать запись"}
+              {busyMode === "normal" ? "Запускаем…" : "Да, начать запись"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

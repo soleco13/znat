@@ -6,6 +6,7 @@ import {
   lessonRecordingsResponseSchema,
   recordingExternalLinkResponseSchema,
   recordingSummarySchema,
+  startRecordingRequestSchema,
   storageUsageResponseSchema,
 } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
@@ -46,7 +47,8 @@ export default async function recordingsRoutes(app: FastifyInstance) {
     { preHandler: app.requireRole("admin", "teacher") },
     async (request, reply) => {
       const lessonId = parseLessonId(request.params.id);
-      const recording = await recordingsService.startLessonRecording(request.user, lessonId);
+      const body = startRecordingRequestSchema.parse(request.body ?? {});
+      const recording = await recordingsService.startLessonRecording(request.user, lessonId, body);
       return reply.status(201).send(recordingSummarySchema.parse(recording));
     },
   );

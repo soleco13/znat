@@ -288,6 +288,50 @@ describe("старт записи по режиму урока", () => {
   });
 });
 
+describe("кнопка «Тестовая запись» (test: true)", () => {
+  it("только экспериментальная запись, Egress не запускается, даже если урок в режиме egress", async () => {
+    enableExperimental();
+    rawRepoMock.findLessonMode.mockResolvedValue(null);
+    const res = await service.startLessonRecording(teacher, LESSON, { test: true });
+    expect(egressMock.startRoomRecording).not.toHaveBeenCalled();
+    expect(repoMock.insertRecording).not.toHaveBeenCalled();
+    expect(res.method).toBe("experimental");
+    expect(roomsMock.broadcastToLesson).toHaveBeenCalledWith(LESSON, { type: "recording_status", active: true });
+  });
+
+  it("школа не допущена — 403, никакой записи не начинается", async () => {
+    enableExperimental([OTHER_SCHOOL]);
+    await expect(service.startLessonRecording(teacher, LESSON, { test: true })).rejects.toMatchObject({
+      statusCode: 403,
+      code: "experimental_recording_not_allowed",
+    });
+    expect(egressMock.startRoomRecording).not.toHaveBeenCalled();
+    expect(rawRepoMock.insertRawRecording).not.toHaveBeenCalled();
+  });
+
+  it("метод выключен на сервере — 403", async () => {
+    await expect(service.startLessonRecording(teacher, LESSON, { test: true })).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("обычная кнопка в режиме урока egress — только Egress", async () => {
+    enableExperimental();
+    rawRepoMock.findLessonMode.mockResolvedValue(null);
+    await service.startLessonRecording(teacher, LESSON);
+    expect(egressMock.startRoomRecording).toHaveBeenCalledTimes(1);
+    expect(rawRepoMock.insertRawRecording).not.toHaveBeenCalled();
+  });
+
+  it("список записей сообщает, доступна ли кнопка", async () => {
+    repoMock.listRecordingsForLesson.mockResolvedValue([]);
+    rawRepoMock.listRawRecordingsForLesson.mockResolvedValue([]);
+    expect((await service.getLessonRecordings(teacher, LESSON)).experimentalAvailable).toBeUndefined();
+    enableExperimental();
+    expect((await service.getLessonRecordings(teacher, LESSON)).experimentalAvailable).toBe(true);
+    enableExperimental([OTHER_SCHOOL]);
+    expect((await service.getLessonRecordings(teacher, LESSON)).experimentalAvailable).toBe(false);
+  });
+});
+
 describe("стоп и статусы — раздельно по методам", () => {
   it("стоп Egress в режиме both останавливает и экспериментальную", async () => {
     enableExperimental();

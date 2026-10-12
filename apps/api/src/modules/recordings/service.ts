@@ -129,6 +129,7 @@ async function assertRecordingAccess(
 export async function startLessonRecording(
   user: AccessTokenPayload,
   lessonId: string,
+  options: { test?: boolean } = {},
 ): Promise<RecordingSummary> {
   if (!env.RECORDING_ENABLED) {
     throw new AppError(503, "recording_disabled", "Запись уроков пока недоступна");
@@ -151,7 +152,14 @@ export async function startLessonRecording(
   // Метод записи (docs/experimental-recording.md): без явного включения для
   // школы (env) и урока (lesson_recording_modes) — всегда `egress`, и путь
   // ниже идёт ровно как раньше.
-  const mode = await rawService.resolveRecordingMode(user.schoolId, lessonId);
+  // «Тестовая запись» из диалога старта: на этот запуск ТОЛЬКО экспериментальный
+  // метод (без Egress — либо одна запись, либо другая, решение владельца
+  // 2026-10-12), независимо от сохранённого режима урока. Только школам,
+  // допущенным на сервере — иначе отказ, а не тихий откат к Egress.
+  if (options.test && !rawService.isSchoolAllowedForExperimental(user.schoolId)) {
+    throw new AppError(403, "experimental_recording_not_allowed", "Тестовая запись не разрешена для этой школы");
+  }
+  const mode = options.test ? "experimental" : await rawService.resolveRecordingMode(user.schoolId, lessonId);
   if (mode === "experimental") return startExperimentalOnly(user, lessonId);
 
   const livekitRoom = await lessonsService.ensureLivekitRoom(user.schoolId, lessonId);
@@ -344,6 +352,7 @@ export async function getLessonRecordings(
   if (!rawService.experimentalRecordingEnabled()) {
     return { active: active ? toSummary(active) : null, recordings };
   }
+  const experimentalAvailable = rawService.isSchoolAllowedForExperimental(user.schoolId);
   // Экспериментальные записи урока — в том же списке, со своим `method`.
   const rawRows = await rawService.listRawRecordingsForLesson(lessonId, user.schoolId);
   const rawActive = rawRows.find((r) => r.status === "requested" || r.status === "recording") ?? null;
@@ -353,6 +362,7 @@ export async function getLessonRecordings(
   return {
     active: active ? toSummary(active) : rawActive ? rawService.toRawSummary(rawActive) : null,
     recordings: merged,
+    experimentalAvailable,
   };
 }
 

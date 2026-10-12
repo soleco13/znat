@@ -94,6 +94,11 @@ export const lessonRecordingsResponseSchema = z.object({
   active: recordingSummarySchema.nullable(),
   /** Все записи урока, новые сверху. */
   recordings: z.array(recordingWithDownloadSchema),
+  /**
+   * Школе разрешена экспериментальная запись (docs/experimental-recording.md)
+   * — в диалоге старта есть кнопка «Тестовая запись». Нет поля — нельзя.
+   */
+  experimentalAvailable: z.boolean().optional(),
 });
 export type LessonRecordingsResponse = z.infer<typeof lessonRecordingsResponseSchema>;
 
@@ -102,6 +107,14 @@ export type LessonRecordingsResponse = z.infer<typeof lessonRecordingsResponseSc
  * формат) — решает сервер по конфигу, не клиент. Ответ — созданная
  * запись в статусе `starting`.
  */
+/**
+ * Тело старта (необязательное). `test: true` — тестовая запись: только
+ * экспериментальным методом, без Egress; только для школ, допущенных на
+ * сервере (`RECORDING_EXPERIMENTAL_SCHOOL_IDS`).
+ */
+export const startRecordingRequestSchema = z.object({ test: z.boolean().optional() });
+export type StartRecordingRequest = z.infer<typeof startRecordingRequestSchema>;
+
 export const startRecordingResponseSchema = recordingSummarySchema;
 export type StartRecordingResponse = z.infer<typeof startRecordingResponseSchema>;
 
