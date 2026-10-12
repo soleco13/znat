@@ -55,6 +55,12 @@ type Track struct {
 	LagP99Ms    float64    `json:"arrivalLagP99Ms"`
 	LagMinMs    float64    `json:"arrivalLagMinMs"`
 	Truncated   bool       `json:"truncatedChunk"`
+	// AspectChanges — моменты (мс), с которых меняются пропорции кадра (поворот
+	// телефона, другое окно в демонстрации): рендер режет по ним сегменты,
+	// чтобы внутри сегмента размер кадра после масштабирования был постоянным.
+	AspectChanges []int64 `json:"aspectChanges,omitempty"`
+	// TinyDropped — служебные кадры SFU размером в несколько пикселей (8×8) и зависящие от них.
+	TinyDropped int `json:"tinyDropped"`
 	// TrailingDropped — отброшенный хвост служебных кадров SFU (см. keepBeforeTrailingBurst).
 	TrailingDropped int `json:"trailingDropped"`
 }
@@ -222,6 +228,17 @@ func convertTrack(dir, outDir string, meta dump.TrackMeta, t0Ms int64) (*Track, 
 	return track, err
 }
 
+// minFrameSide — кадр меньше этого по любой стороне — служебный кадр SFU.
+const minFrameSide = 32
+
+// sameAspect — пропорции совпадают с точностью 2 % (слои simulcast одного
+// источника отличаются только масштабом).
+func sameAspect(w1, h1, w2, h2 uint16) bool {
+	a := float64(w1) / float64(h1)
+	b := float64(w2) / float64(h2)
+	return a/b > 0.98 && a/b < 1.02
+}
+
 type frame struct {
 	ptsMs int64
 	key   bool
@@ -236,6 +253,7 @@ func writeVP8(pkts []packet, path string, relMs func(packet) int64, track *Track
 	var frames []frame
 	needKey := true
 	var prevLastExt int64 = -1
+	var curW, curH uint16
 	i := 0
 	for i < len(pkts) {
 		j := i
@@ -281,11 +299,25 @@ func writeVP8(pkts []packet, path string, relMs func(packet) int64, track *Track
 			track.Dropped++
 			continue
 		}
-		needKey = false
-		if key && len(data) >= 10 && data[3] == 0x9d && data[4] == 0x01 && data[5] == 0x2a && track.Width == 0 {
-			track.Width = uint16(data[6]) | uint16(data[7]&0x3f)<<8
-			track.Height = uint16(data[8]) | uint16(data[9]&0x3f)<<8
+		if key && len(data) >= 10 && data[3] == 0x9d && data[4] == 0x01 && data[5] == 0x2a {
+			w := uint16(data[6]) | uint16(data[7]&0x3f)<<8
+			h := uint16(data[8]) | uint16(data[9]&0x3f)<<8
+			if w < minFrameSide || h < minFrameSide {
+				// «Пустой» кадр SFU (LiveKit шлёт 8×8 при паузе/смене слоя) — не изображение.
+				needKey = true
+				track.TinyDropped++
+				continue
+			}
+			pts := relMs(group[0])
+			if curW != 0 && !sameAspect(curW, curH, w, h) {
+				track.AspectChanges = append(track.AspectChanges, pts)
+			}
+			curW, curH = w, h
+			if track.Width == 0 {
+				track.Width, track.Height = w, h
+			}
 		}
+		needKey = false
 		frames = append(frames, frame{ptsMs: relMs(group[0]), key: key, data: data})
 	}
 	// Служебные кадры SFU при закрытии дорожки (LiveKit шлёт «пустые» кадры

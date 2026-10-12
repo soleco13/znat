@@ -337,3 +337,42 @@ func TestMapperKeepsOverlappingRunsApart(t *testing.T) {
 		t.Errorf("keep = %d, want 2500 (хвост SFU отброшен)", keep)
 	}
 }
+
+// Служебный кадр SFU 8×8 перед настоящими — выброшен вместе с зависящими
+// кадрами; смена пропорций (640×360 → 360×640) отмечена.
+func TestConvertVP8DropsTinyFramesAndMarksAspect(t *testing.T) {
+	root := t.TempDir()
+	trackDir := filepath.Join(root, "rec", "attempt-1", "001_u_camera_T")
+	t0Ms := int64(1_790_000_000_000)
+	keyHdr := func(w, h uint16) []byte {
+		return []byte{0x10, 0x00, 0x00, 0x00, 0x9d, 0x01, 0x2a, byte(w), byte(w >> 8), byte(h), byte(h >> 8)}
+	}
+	var pkts []rtp.Packet
+	var arr []int64
+	seq := uint16(1)
+	add := func(f int, first []byte) {
+		pkts = append(pkts,
+			rtp.Packet{Header: rtp.Header{Version: 2, SequenceNumber: seq, Timestamp: uint32(f * 3000), SSRC: 1}, Payload: first},
+			rtp.Packet{Header: rtp.Header{Version: 2, SequenceNumber: seq + 1, Timestamp: uint32(f * 3000), SSRC: 1, Marker: true}, Payload: []byte{0x00, 0xaa}})
+		seq += 2
+		arr = append(arr, (t0Ms+1000)*1e6+int64(f)*33_333_333, (t0Ms+1000)*1e6+int64(f)*33_333_333)
+	}
+	add(0, keyHdr(8, 8))             // служебный
+	add(1, []byte{0x10, 0x01, 0, 0}) // дельта к нему — тоже вон
+	add(2, keyHdr(640, 360))         // настоящий
+	add(3, []byte{0x10, 0x01, 0, 0})
+	add(4, keyHdr(1280, 720)) // другой слой, те же пропорции
+	add(5, keyHdr(360, 640))  // поворот
+	writeTrack(t, trackDir, dump.TrackMeta{Key: "001_u_camera_T", Attempt: 1, Identity: "u", Source: "CAMERA", Kind: "video", MimeType: "video/VP8", ClockRate: 90000}, pkts, arr)
+	idx, err := ConvertRecording(filepath.Join(root, "rec"), filepath.Join(root, "out"), t0Ms)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tr := idx.Tracks[0]
+	if tr.Frames != 4 || tr.TinyDropped != 1 || tr.Width != 640 {
+		t.Fatalf("frames=%d tiny=%d dropped=%d w=%d", tr.Frames, tr.TinyDropped, tr.Dropped, tr.Width)
+	}
+	if len(tr.AspectChanges) != 1 || tr.AspectChanges[0] < 1160 || tr.AspectChanges[0] > 1175 {
+		t.Errorf("aspect changes %v", tr.AspectChanges)
+	}
+}

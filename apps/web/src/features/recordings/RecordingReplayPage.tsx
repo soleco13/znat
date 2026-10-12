@@ -188,7 +188,9 @@ export function RecordingReplayPage() {
 
   return (
     <div style={FULLSCREEN}>
-      <div style={{ position: "absolute", inset: 0 }}>
+      {/* Доска остаётся смонтированной (Y.Doc и viewport живут дальше), но
+          под заданием не видна: канвас Excalidraw иначе рисуется поверх листа. */}
+      <div style={{ position: "absolute", inset: 0, visibility: scene.kind === "activity" ? "hidden" : "visible" }}>
         <Board
           lessonId={data.lessonId}
           canDraw={false}
@@ -198,7 +200,7 @@ export function RecordingReplayPage() {
         />
       </div>
       {scene.kind === "activity" && scene.view && (
-        <div style={{ position: "absolute", inset: 0, background: "#fff" }}>
+        <div style={{ position: "absolute", inset: 0, zIndex: 10, background: "#fff" }}>
           <RecorderActivitySheet view={scene.view} />
         </div>
       )}

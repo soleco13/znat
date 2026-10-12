@@ -206,6 +206,11 @@ func BuildSegments(in Inputs, g Geometry) []Segment {
 				add(iv.StartMs)
 				add(iv.EndMs)
 			}
+			// Смена пропорций кадра — граница сегмента: внутри сегмента размер
+			// после масштабирования постоянный (иначе crop/pad ffmpeg падают).
+			for _, at := range t.AspectChanges {
+				add(at)
+			}
 		}
 	}
 	times := make([]int64, 0, len(cuts))

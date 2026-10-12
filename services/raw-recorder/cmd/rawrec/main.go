@@ -82,6 +82,18 @@ func main() {
 				Parallel:      envInt("RENDER_PARALLEL", 2),
 			}, api, log).Run(ctx)
 		}
+	case "playcheck":
+		if len(os.Args) != 3 {
+			fmt.Fprintln(os.Stderr, "usage: rawrec playcheck <file.mp4>")
+			os.Exit(2)
+		}
+		res, err := render.PlayCheck(ctx, env("CHROME_PATH", "/usr/bin/google-chrome"), os.Args[2], env("CHROME_SANDBOX", "true") == "true")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		out, _ := json.MarshalIndent(res, "", "  ")
+		fmt.Println(string(out))
 	case "convert":
 		if len(os.Args) != 5 {
 			fmt.Fprintln(os.Stderr, "usage: rawrec convert <recordingDir> <outDir> <t0Ms>")

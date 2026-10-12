@@ -49,9 +49,11 @@ func sliceIVF(src string, track convert.Track, startMs, endMs int64, dst string)
 	if len(track.Keyframes) == 0 {
 		return false, nil
 	}
+	// Допуск на округление начала сегмента до кадра: сегмент, начатый сменой
+	// пропорций, должен брать именно этот ключевой кадр, а не прежний.
 	from := track.Keyframes[0]
 	for _, k := range track.Keyframes {
-		if k.PtsMs <= startMs {
+		if k.PtsMs <= startMs+keyframeSlackMs {
 			from = k
 		}
 	}
@@ -112,6 +114,8 @@ func sliceIVF(src string, track convert.Track, startMs, endMs int64, dst string)
 	return frames > 0, out.Sync()
 }
 
+const keyframeSlackMs = 40
+
 // Frame — кадр главной области (PNG страницы кадров) с момента AtMs.
 type Frame struct {
 	AtMs int64
@@ -140,7 +144,11 @@ func renderSegment(ctx context.Context, cpu *time.Duration, p segmentParams, out
 	startMs := int64(math.Round(float64(p.FrameStart) * 1000 / fps))
 	durSec := float64(p.FrameCount) / fps
 	endMs := startMs + int64(math.Ceil(durSec*1000))
-	args := []string{"-nostdin", "-y", "-loglevel", "error",
+	// -copyts: метки входов как в файлах (мс от начала шкалы записи). Без него
+	// ffmpeg сдвигает каждый вход к нулю от его первого кадра — кусок камеры,
+	// начатый с ключевого кадра, и звук, начатый не с нуля, съезжали (замер
+	// «хлопушкой» 2026-10-12: звук отставал на ~850 мс).
+	args := []string{"-nostdin", "-y", "-loglevel", "error", "-copyts",
 		"-f", "lavfi", "-i", fmt.Sprintf("color=c=0x000000:s=%dx%d:r=%d:d=%.6f", g.W, g.H, p.FPS, durSec)}
 	var filters []string
 	inputs := 1
@@ -180,12 +188,12 @@ func renderSegment(ctx context.Context, cpu *time.Duration, p segmentParams, out
 				return err
 			}
 			if has {
-				args = append(args, "-i", slice)
+				args = append(args, videoInput(slice)...)
 				idx := inputs
 				lbl := next()
 				m := g.Main
 				filters = append(filters,
-					fmt.Sprintf("[%d:v]setpts=PTS-%d/1000/TB,trim=start=0,scale=%d:%d:force_original_aspect_ratio=decrease,pad=%d:%d:(ow-iw)/2:(oh-ih)/2:color=white,format=yuv420p[sc%d]",
+					fmt.Sprintf("[%d:v]setpts=PTS-%d/1000/TB,trim=start=0,scale=%d:%d:force_original_aspect_ratio=decrease:force_divisible_by=2,pad=%d:%d:(ow-iw)/2:(oh-ih)/2:color=white,format=yuv420p[sc%d]",
 						idx, startMs, m.W, m.H, m.W, m.H, idx),
 					fmt.Sprintf("[%s][sc%d]overlay=%d:%d:eof_action=repeat[%s]", label, idx, m.X, m.Y, lbl))
 				label = lbl
@@ -209,12 +217,12 @@ func renderSegment(ctx context.Context, cpu *time.Duration, p segmentParams, out
 		if !has {
 			continue
 		}
-		args = append(args, "-i", slice)
+		args = append(args, videoInput(slice)...)
 		idx := inputs
 		lbl := next()
 		r := tile.Rect
 		filters = append(filters,
-			fmt.Sprintf("[%d:v]setpts=PTS-%d/1000/TB,trim=start=0,scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d,format=yuv420p[cam%d]",
+			fmt.Sprintf("[%d:v]setpts=PTS-%d/1000/TB,trim=start=0,scale=%d:%d:force_original_aspect_ratio=increase:force_divisible_by=2,crop=%d:%d,format=yuv420p[cam%d]",
 				idx, startMs, r.W, r.H, r.W, r.H, idx),
 			fmt.Sprintf("[%s][cam%d]overlay=%d:%d:eof_action=repeat[%s]", label, idx, r.X, r.Y, lbl))
 		label = lbl
@@ -256,8 +264,24 @@ func renderSegment(ctx context.Context, cpu *time.Duration, p segmentParams, out
 		"-g", strconv.Itoa(p.FPS*2), "-r", strconv.Itoa(p.FPS),
 		"-threads", "2",
 		"-an", "-f", "mp4", out)
+	// Команда — в рабочий каталог сегмента: при сбое он остаётся для разбора.
+	_ = os.WriteFile(filepath.Join(p.WorkDir, "ffmpeg-args.json"), mustJSON(args), 0o644)
 	_, err := runTool(ctx, cpu, "ffmpeg", args...)
 	return err
+}
+
+func mustJSON(v any) []byte {
+	b, _ := json.Marshal(v)
+	return b
+}
+
+// videoInput — вход дорожки камеры/демонстрации. Слой simulcast меняется на
+// ходу (и в начале дорожки: первый ключевой кадр часто из нижнего слоя) —
+// по умолчанию ffmpeg на смене размера кадра пересоздаёт весь граф и теряет
+// согласование времени со входами (замер 2026-10-12: видео раньше звука на
+// ~300 мс). -reinit_filter 0: смену размера переваривает сам scale.
+func videoInput(path string) []string {
+	return []string{"-reinit_filter", "0", "-i", path}
 }
 
 func truncateName(name string, maxChars int) string {
@@ -308,7 +332,7 @@ func writeConcatList(path string, frames []Frame, startMs, endMs int64) error {
 
 // mixAudio — все микрофоны (и звук демонстрации) на одну шкалу и в AAC.
 func mixAudio(ctx context.Context, cpu *time.Duration, files []string, durSec float64, out string) error {
-	args := []string{"-nostdin", "-y", "-loglevel", "error"}
+	args := []string{"-nostdin", "-y", "-loglevel", "error", "-copyts"}
 	if len(files) == 0 {
 		args = append(args, "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
 			"-t", fmt.Sprintf("%.6f", durSec), "-c:a", "aac", "-b:a", "128k", out)
