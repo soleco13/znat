@@ -42,6 +42,7 @@ import invitesRoutes from "./modules/invites/routes.js";
 import telemetryRoutes from "./modules/telemetry/routes.js";
 import { admitClientEvent } from "./modules/telemetry/service.js";
 import {
+  startRecordingReconcileSweep,
   startRecordingRetentionSweep,
   stopRecordingRetentionSweep,
 } from "./modules/recordings/service.js";
@@ -248,6 +249,7 @@ async function main() {
   startConvertEvents(buildConvertJobHandlers());
   startDeckReconcileSweep();
   startRecordingRetentionSweep();
+  startRecordingReconcileSweep();
   startRefreshTokenCleanup();
   startUnverifiedCleanup();
 

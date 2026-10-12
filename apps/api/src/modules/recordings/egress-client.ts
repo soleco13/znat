@@ -166,6 +166,28 @@ export async function listActiveEgress(roomName?: string): Promise<EgressInfo[]>
   return all;
 }
 
+/**
+ * Активный egress комнаты, пишущий именно в этот файл. Путь файла выбираем
+ * мы (`recordings/<school>/<lesson>/<id>.mp4`, новый id на каждый старт), так
+ * что совпадение пути однозначно указывает на «наш» egress: ответ на
+ * `startRoomCompositeEgress` мог потеряться при уже запущенной записи.
+ */
+export async function findActiveEgressByFilepath(
+  roomName: string,
+  filepath: string,
+): Promise<StartedRecording | null> {
+  const active = await egressClient.listEgress({ roomName, active: true });
+  for (const info of active) {
+    const request = info.request;
+    if (request.case !== "roomComposite") continue;
+    const outputs = request.value.fileOutputs;
+    if (outputs.some((o) => o.filepath === filepath)) {
+      return { egressId: info.egressId, status: mapEgressStatus(info.status) };
+    }
+  }
+  return null;
+}
+
 /** Детали одного egress по id — синхронизация статуса, если вебхук потерялся. */
 export async function getEgressInfo(egressId: string): Promise<EgressInfo | null> {
   const list = await egressClient.listEgress({ egressId });

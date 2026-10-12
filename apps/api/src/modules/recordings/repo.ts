@@ -120,6 +120,24 @@ export async function listAllActiveRecordings(): Promise<RecordingRow[]> {
 }
 
 /**
+ * Записи, чей статус ещё может поменяться у egress (`starting`/`recording`/
+ * `processing`) и которые старше `olderThan`, — для сверки с egress, если
+ * вебхук потерялся. Свежие не берём: их статус вот-вот придёт вебхуком.
+ */
+export async function listUnsettledRecordings(olderThan: Date, limit = 100): Promise<RecordingRow[]> {
+  return db
+    .select()
+    .from(recordings)
+    .where(
+      and(
+        inArray(recordings.status, ["starting", "recording", "processing"]),
+        lt(recordings.startedAt, olderThan),
+      ),
+    )
+    .limit(limit);
+}
+
+/**
  * Быстрый ответ «идёт ли запись этого урока» без тенант-скоупа — для
  * баннера согласия при подключении сокета (Э10.3), где `schoolId` под
  * рукой нет, а `lessonId` (UUID) и так уникален глобально.

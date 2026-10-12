@@ -161,7 +161,7 @@ export async function startLessonRecording(
 
   let started: egress.StartedRecording;
   try {
-    started = await egress.startRoomRecording({
+    started = await startEgressWithRetry({
       roomName: livekitRoom,
       storageKey,
       absoluteFilepath: absoluteFilepath(storageKey),
@@ -193,6 +193,29 @@ export async function startLessonRecording(
   // участников урока, включая учеников (тот же приём, что `activity_started`).
   roomsService.broadcastToLesson(lessonId, { type: "recording_status", active: true });
   return toSummary(row);
+}
+
+/** Пауза перед повтором старта egress — за неё успевает отработать уже принятый запрос. */
+export const EGRESS_START_RETRY_DELAY_MS = 1500;
+
+/**
+ * Старт egress с одним повтором. Сбой бывает временным (LiveKit/egress
+ * перезапускается), а при таймауте ответа egress мог уже стартовать — тогда
+ * повтор поднял бы вторую запись того же урока. Поэтому перед повтором ищем
+ * активный egress с нашим путём файла и, если он есть, берём его.
+ */
+async function startEgressWithRetry(params: egress.StartRecordingParams): Promise<egress.StartedRecording> {
+  try {
+    return await egress.startRoomRecording(params);
+  } catch (err) {
+    logTaskFailure("recordings.egress_start", err, { roomName: params.roomName, attempt: 1 });
+  }
+  await new Promise((resolve) => setTimeout(resolve, EGRESS_START_RETRY_DELAY_MS));
+  const adopted = await egress
+    .findActiveEgressByFilepath(params.roomName, params.absoluteFilepath)
+    .catch(() => null);
+  if (adopted) return adopted;
+  return egress.startRoomRecording(params);
 }
 
 /** Э10.3 — стоп записи. Файл финализируется асинхронно, статус едет через вебхук. */
@@ -501,6 +524,30 @@ export async function reconcileRecording(row: RecordingRow): Promise<void> {
   });
 }
 
+/** Записи моложе этого возраста не сверяем — их статус вот-вот придёт вебхуком. */
+const RECONCILE_MIN_AGE_MS = 2 * 60 * 1000;
+
+/**
+ * Один проход сверки: все записи, застрявшие в `starting`/`recording`/
+ * `processing`, сверяются с egress (`reconcileRecording`). Нужен, потому что
+ * вебхук egress мог потеряться (рестарт API, 429 до 2026-10-11) — без сверки
+ * запись навсегда оставалась «обрабатывается». Применяет те же правила, что
+ * вебхук (`applyEgressEvent`), так что поведение записи не меняется.
+ */
+export async function runRecordingReconcileOnce(now = new Date()): Promise<number> {
+  const rows = await repo.listUnsettledRecordings(new Date(now.getTime() - RECONCILE_MIN_AGE_MS));
+  let checked = 0;
+  for (const row of rows) {
+    try {
+      await reconcileRecording(row);
+      checked += 1;
+    } catch (err) {
+      logTaskFailure("recordings.reconcile", err, { recordingId: row.id, egressId: row.egressId });
+    }
+  }
+  return checked;
+}
+
 /**
  * Э10.4 — автоудаление по ретеншну (§10.10 ТЗ). Файл убираем через
  * StorageAdapter, строку оставляем в статусе `deleted` для журнала.
@@ -558,4 +605,22 @@ export function stopRecordingRetentionSweep(): void {
     clearInterval(retentionTimer);
     retentionTimer = null;
   }
+  if (reconcileTimer) {
+    clearInterval(reconcileTimer);
+    reconcileTimer = null;
+  }
+}
+
+// --- Сверка зависших записей с egress — тот же приём, раз в 2 минуты:
+//     пользователь видит «обрабатывается» не дольше пары минут после того,
+//     как egress закончил. Запускается вместе со свипом ретеншна. ---
+const RECONCILE_SWEEP_INTERVAL_MS = 2 * 60 * 1000;
+let reconcileTimer: ReturnType<typeof setInterval> | null = null;
+
+export function startRecordingReconcileSweep(): void {
+  if (reconcileTimer) return;
+  const sweep = () =>
+    runRecordingReconcileOnce().catch((err: unknown) => logTaskFailure("recordings.reconcile_sweep", err));
+  reconcileTimer = setInterval(() => void sweep(), RECONCILE_SWEEP_INTERVAL_MS);
+  reconcileTimer.unref?.();
 }

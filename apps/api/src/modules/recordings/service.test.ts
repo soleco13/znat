@@ -12,6 +12,7 @@ const { repoMock, egressMock, lessonsMock, roomsMock, storageMock, schoolSetting
     listExpiredRecordings: vi.fn(),
     listAllActiveRecordings: vi.fn(),
     lessonHasActiveRecording: vi.fn(),
+    listUnsettledRecordings: vi.fn(),
   },
   roomsMock: {
     broadcastToLesson: vi.fn(),
@@ -22,6 +23,7 @@ const { repoMock, egressMock, lessonsMock, roomsMock, storageMock, schoolSetting
     stopRecording: vi.fn(),
     listActiveEgress: vi.fn(),
     getEgressInfo: vi.fn(),
+    findActiveEgressByFilepath: vi.fn(),
     // реальная (не замоканная) — чистая функция маппинга статуса
     mapEgressStatus: vi.fn(),
   },
@@ -185,10 +187,67 @@ describe("startLessonRecording (Э10.3, §10.4 ТЗ)", () => {
     expect(res.id).toBe("rec-1");
   });
 
-  it("egress не ответил → 502, строка не заводится", async () => {
-    egressMock.startRoomRecording.mockRejectedValue(new Error("ECONNREFUSED"));
-    await expect(service.startLessonRecording(adminUser, LESSON)).rejects.toMatchObject({ statusCode: 502 });
-    expect(repoMock.insertRecording).not.toHaveBeenCalled();
+  it("egress не ответил и на повтор → 502, строка не заводится", async () => {
+    vi.useFakeTimers();
+    try {
+      egressMock.startRoomRecording.mockRejectedValue(new Error("ECONNREFUSED"));
+      egressMock.findActiveEgressByFilepath.mockResolvedValue(null);
+      const pending = service.startLessonRecording(adminUser, LESSON);
+      const assertion = expect(pending).rejects.toMatchObject({ statusCode: 502 });
+      // Таймер повтора ставится после реального I/O (mkdir каталога записи) —
+      // ждём первую попытку, потом прокручиваем паузу.
+      await vi.waitFor(() => expect(egressMock.startRoomRecording).toHaveBeenCalledTimes(1));
+      await vi.advanceTimersByTimeAsync(service.EGRESS_START_RETRY_DELAY_MS);
+      await assertion;
+      expect(egressMock.startRoomRecording).toHaveBeenCalledTimes(2);
+      expect(repoMock.insertRecording).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("временный сбой старта — повтор поднимает запись", async () => {
+    vi.useFakeTimers();
+    try {
+      egressMock.startRoomRecording
+        .mockRejectedValueOnce(new Error("twirp unavailable"))
+        .mockResolvedValueOnce({ egressId: "EG_2", status: "starting" });
+      egressMock.findActiveEgressByFilepath.mockResolvedValue(null);
+      repoMock.insertRecording.mockImplementation(async (input) => row(input));
+      const pending = service.startLessonRecording(adminUser, LESSON);
+      // Таймер повтора ставится после реального I/O (mkdir каталога записи) —
+      // ждём первую попытку, потом прокручиваем паузу.
+      await vi.waitFor(() => expect(egressMock.startRoomRecording).toHaveBeenCalledTimes(1));
+      await vi.advanceTimersByTimeAsync(service.EGRESS_START_RETRY_DELAY_MS);
+      const res = await pending;
+      expect(egressMock.startRoomRecording).toHaveBeenCalledTimes(2);
+      expect(repoMock.insertRecording).toHaveBeenCalledWith(expect.objectContaining({ egressId: "EG_2" }));
+      expect(res.status).toBe("starting");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("ответ на старт потерялся, а egress уже пишет наш файл — второй не поднимаем", async () => {
+    vi.useFakeTimers();
+    try {
+      egressMock.startRoomRecording.mockRejectedValueOnce(new Error("timeout"));
+      egressMock.findActiveEgressByFilepath.mockResolvedValue({ egressId: "EG_LOST", status: "recording" });
+      repoMock.insertRecording.mockImplementation(async (input) => row(input));
+      const pending = service.startLessonRecording(adminUser, LESSON);
+      // Таймер повтора ставится после реального I/O (mkdir каталога записи) —
+      // ждём первую попытку, потом прокручиваем паузу.
+      await vi.waitFor(() => expect(egressMock.startRoomRecording).toHaveBeenCalledTimes(1));
+      await vi.advanceTimersByTimeAsync(service.EGRESS_START_RETRY_DELAY_MS);
+      await pending;
+      expect(egressMock.startRoomRecording).toHaveBeenCalledTimes(1);
+      const [roomName, filepath] = egressMock.findActiveEgressByFilepath.mock.calls[0]!;
+      expect(roomName).toBe(`lesson-${LESSON}`);
+      expect(filepath).toMatch(new RegExp(`^/data/assets/recordings/${SCHOOL}/${LESSON}/[0-9a-f-]+\\.mp4$`));
+      expect(repoMock.insertRecording).toHaveBeenCalledWith(expect.objectContaining({ egressId: "EG_LOST" }));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -358,5 +417,44 @@ describe("getRecordingLoadSnapshot (Э10.5 — метрика «egress без п
   it("нет активных записей — пустой снимок", async () => {
     repoMock.listAllActiveRecordings.mockResolvedValue([]);
     await expect(service.getRecordingLoadSnapshot()).resolves.toEqual([]);
+  });
+});
+
+describe("runRecordingReconcileOnce — сверка зависших записей с egress", () => {
+  it("потерянный вебхук: egress уже COMPLETE → запись становится ready", async () => {
+    const stuck = row({ status: "processing" });
+    repoMock.listUnsettledRecordings.mockResolvedValue([stuck]);
+    repoMock.findRecordingByEgressId.mockResolvedValue(stuck);
+    egressMock.getEgressInfo.mockResolvedValue({
+      egressId: "EG_1",
+      status: 3,
+      fileResults: [{ size: 1000n, duration: 60_000_000_000n }],
+      endedAt: 1_790_000_000_000_000_000n,
+    });
+    egressMock.mapEgressStatus.mockReturnValue("ready");
+    const checked = await service.runRecordingReconcileOnce(new Date("2026-09-05T12:00:00Z"));
+    expect(checked).toBe(1);
+    expect(repoMock.updateRecording).toHaveBeenCalledWith(
+      "rec-1",
+      expect.objectContaining({ status: "ready", sizeBytes: 1000, durationSec: 60 }),
+    );
+  });
+
+  it("берёт только записи старше 2 минут", async () => {
+    repoMock.listUnsettledRecordings.mockResolvedValue([]);
+    const now = new Date("2026-09-05T12:00:00Z");
+    await service.runRecordingReconcileOnce(now);
+    expect(repoMock.listUnsettledRecordings).toHaveBeenCalledWith(new Date("2026-09-05T11:58:00Z"));
+  });
+
+  it("сбой egress по одной записи не останавливает проход по остальным", async () => {
+    const a = row({ id: "rec-a", egressId: "EG_A" });
+    const b = row({ id: "rec-b", egressId: "EG_B", status: "starting" });
+    repoMock.listUnsettledRecordings.mockResolvedValue([a, b]);
+    egressMock.getEgressInfo.mockRejectedValueOnce(new Error("twirp unavailable")).mockResolvedValueOnce(null);
+    const checked = await service.runRecordingReconcileOnce(new Date("2026-09-05T12:00:00Z"));
+    expect(checked).toBe(1);
+    // egress о записи не знает, а у нас она всё ещё «идёт» — прерванная.
+    expect(repoMock.updateRecording).toHaveBeenCalledWith("rec-b", expect.objectContaining({ status: "aborted" }));
   });
 });
