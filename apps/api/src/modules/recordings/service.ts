@@ -708,6 +708,7 @@ export {
   getJournalPage,
   getLessonRecordingMode,
   getRawRecordingDetail,
+  getRawQueueSnapshot,
   getReplayData,
   recorderFinished,
   recorderHeartbeat,

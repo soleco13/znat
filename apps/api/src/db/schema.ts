@@ -760,6 +760,12 @@ export const rawRecordings = pgTable(
     recorderHeartbeatAt: timestamp("recorder_heartbeat_at", { withTimezone: true }),
     recorderStats: jsonb("recorder_stats"),
     stopRequestedAt: timestamp("stop_requested_at", { withTimezone: true }),
+    /**
+     * Когда запись впервые попала в очередь сборки (ставит триггер БД при
+     * переходе в `queued_for_render`, повторная постановка не сбрасывает).
+     * Очередь берётся по возрасту: старые задания первыми.
+     */
+    queuedAt: timestamp("queued_at", { withTimezone: true }),
     renderAttempts: integer("render_attempts").notNull().default(0),
     renderLeaseId: uuid("render_lease_id"),
     renderWorker: text("render_worker"),
@@ -785,6 +791,7 @@ export const rawRecordings = pgTable(
   (t) => [
     index("raw_recordings_lesson_idx").on(t.lessonId),
     index("raw_recordings_status_idx").on(t.status),
+    index("raw_recordings_queue_idx").on(t.status, t.queuedAt),
     // Одна идущая экспериментальная запись на урок — защита от двойного старта.
     uniqueIndex("raw_recordings_one_active_per_lesson")
       .on(t.lessonId)

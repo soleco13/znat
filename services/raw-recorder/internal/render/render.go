@@ -145,6 +145,9 @@ func (w *Worker) runJob(parent context.Context, job *apiclient.RenderJob) {
 		return
 	}
 	result.Metrics["renderWallSec"] = round2(time.Since(started).Seconds())
+	// Моменты взятия и окончания — для разбора очереди (ожидание = взятие − постановка).
+	result.Metrics["claimedAtMs"] = started.UnixMilli()
+	result.Metrics["finishedAtMs"] = time.Now().UnixMilli()
 	if rerr := w.api.RenderFinished(report, job.RecordingID, job.LeaseID, result.DurationSec, result.SizeBytes, result.Metrics); rerr != nil {
 		log.Error("render finish report failed", "err", rerr)
 		return

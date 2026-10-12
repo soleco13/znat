@@ -555,6 +555,12 @@ export async function getReplayData(recorder: RecorderTokenPayload, id: string):
   };
 }
 
+/** Метрики очереди (Prometheus, plugins/metrics.ts). Метод выключен — пусто. */
+export async function getRawQueueSnapshot(): Promise<Awaited<ReturnType<typeof rawRepo.queueSnapshot>> | null> {
+  if (!experimentalRecordingEnabled()) return null;
+  return rawRepo.queueSnapshot();
+}
+
 // ─── Сверка и ретеншн ──────────────────────────────────────────────────────
 
 /**

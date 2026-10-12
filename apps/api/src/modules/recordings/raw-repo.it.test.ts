@@ -179,6 +179,29 @@ describe.skipIf(!url)("raw-repo на Postgres", () => {
     expect(await repo.claimRecordJob("host-a/record", randomUUID())).toMatchObject({ id: mine.id, attempt: 2 });
   });
 
+  it("очередь по возрасту: queued_at ставит триггер, повтор после сбоя место не теряет", async () => {
+    const a = await insert(LESSON);
+    const b = await insert(LESSON2);
+    const db = holder.db as ReturnType<typeof drizzle>;
+    // b попала в очередь раньше a
+    await db.execute(sql`UPDATE raw_recordings SET status = 'queued_for_render' WHERE id = ${b.id}`);
+    await new Promise((r) => setTimeout(r, 20));
+    await db.execute(sql`UPDATE raw_recordings SET status = 'queued_for_render' WHERE id = ${a.id}`);
+    const first = await repo.claimRenderJob("r", randomUUID(), 3);
+    expect(first?.id).toBe(b.id);
+    const queuedAt = first!.queuedAt;
+    expect(queuedAt).toBeInstanceOf(Date);
+    // b упала и вернулась в очередь — снова первая (возраст сохранён)
+    await db.execute(sql`UPDATE raw_recordings SET status = 'queued_for_render', render_lease_id = NULL WHERE id = ${b.id}`);
+    const again = await repo.claimRenderJob("r", randomUUID(), 3);
+    expect(again?.id).toBe(b.id);
+    expect(again!.queuedAt!.getTime()).toBe(queuedAt!.getTime());
+    const snap = await repo.queueSnapshot();
+    expect(snap.byStatus.rendering).toBe(1);
+    expect(snap.byStatus.queued_for_render).toBe(1);
+    expect(snap.oldestQueuedSec).toBeGreaterThanOrEqual(0);
+  });
+
   it("журнал: повтор (recording, seq) пропускается, страницы по порядку", async () => {
     const row = await insert();
     const ev = (seq: number) => ({ recordingId: row.id, seq, tsMs: 1000 + seq, kind: "yjs_update", payload: null, data: Buffer.from([seq]) });

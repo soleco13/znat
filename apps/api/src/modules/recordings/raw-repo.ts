@@ -306,7 +306,7 @@ export async function claimRenderJob(
     WHERE id = (
       SELECT id FROM raw_recordings
       WHERE status = 'queued_for_render' AND render_attempts < ${maxAttempts}
-      ORDER BY stopped_at NULLS LAST, started_at
+      ORDER BY queued_at NULLS LAST, stopped_at NULLS LAST, started_at
       LIMIT 1
       FOR UPDATE SKIP LOCKED
     )
@@ -494,3 +494,27 @@ export async function hasJournalKind(recordingId: string, kind: string): Promise
   return row != null;
 }
 
+
+/**
+ * Состояние очереди экспериментальной записи для метрик: число записей по
+ * статусам, возраст самого старого ожидающего рендера (с момента стопа) и
+ * суммарная длительность уроков в очереди (сколько «урока» ждёт сборки).
+ */
+export async function queueSnapshot(): Promise<{
+  byStatus: Record<string, number>;
+  oldestQueuedSec: number;
+  queuedLessonSec: number;
+}> {
+  const counts = await db.execute<{ status: string; n: string }>(sql`
+    SELECT status::text AS status, count(*)::text AS n FROM raw_recordings
+    WHERE status NOT IN ('ready', 'deleted', 'aborted', 'failed') GROUP BY status`);
+  const [q] = (
+    await db.execute<{ oldest: string | null; total: string | null }>(sql`
+      SELECT extract(epoch FROM now() - min(coalesce(queued_at, stopped_at, started_at)))::text AS oldest,
+             sum(extract(epoch FROM coalesce(stopped_at, now()) - started_at))::text AS total
+      FROM raw_recordings WHERE status IN ('queued_for_render', 'rendering', 'verifying', 'finalizing')`)
+  ).rows;
+  const byStatus: Record<string, number> = {};
+  for (const r of counts.rows) byStatus[r.status] = Number(r.n);
+  return { byStatus, oldestQueuedSec: Number(q?.oldest ?? 0), queuedLessonSec: Number(q?.total ?? 0) };
+}

@@ -8,7 +8,7 @@ import {
   getRejectedReadOnlyUpdatesCount,
 } from "../modules/canvas/service.js";
 import { getActiveLessonTrafficSnapshot } from "../modules/rooms/service.js";
-import { getRecordingLoadSnapshot } from "../modules/recordings/service.js";
+import { getRawQueueSnapshot, getRecordingLoadSnapshot } from "../modules/recordings/service.js";
 import { uploadsInMemoryBytes } from "./uploads.js";
 import { pool } from "../db/client.js";
 
@@ -155,6 +155,50 @@ new client.Gauge({
     for (const rec of snapshot) {
       this.set({ lesson_id: rec.lessonId }, rec.connectedParticipants === 0 ? 1 : 0);
     }
+  },
+});
+
+// Экспериментальная запись (docs/experimental-recording.md): очередь сборки.
+// Растущий возраст самого старого задания при стабильном потоке уроков —
+// воркеров рендера не хватает. Один запрос к БД на опрос: снимок общий.
+const RAW_STATUSES = ["requested", "recording", "finalizing", "queued_for_render", "rendering", "verifying"];
+let rawSnapshot: { at: number; value: ReturnType<typeof getRawQueueSnapshot> } | null = null;
+function rawQueue(): ReturnType<typeof getRawQueueSnapshot> {
+  if (!rawSnapshot || Date.now() - rawSnapshot.at > 1000) {
+    rawSnapshot = { at: Date.now(), value: getRawQueueSnapshot() };
+  }
+  return rawSnapshot.value;
+}
+
+new client.Gauge({
+  name: "raw_recording_jobs",
+  help: "Экспериментальные записи в незавершённых статусах",
+  labelNames: ["status"],
+  registers: [register],
+  async collect() {
+    const snap = await rawQueue();
+    if (!snap) return;
+    for (const status of RAW_STATUSES) this.set({ status }, snap.byStatus[status] ?? 0);
+  },
+});
+
+new client.Gauge({
+  name: "raw_render_oldest_age_seconds",
+  help: "Сколько ждёт (с момента стопа) самая старая запись в очереди/сборке",
+  registers: [register],
+  async collect() {
+    const snap = await rawQueue();
+    if (snap) this.set(snap.oldestQueuedSec);
+  },
+});
+
+new client.Gauge({
+  name: "raw_render_backlog_lesson_seconds",
+  help: "Суммарная длительность уроков, ожидающих сборки или собираемых",
+  registers: [register],
+  async collect() {
+    const snap = await rawQueue();
+    if (snap) this.set(snap.queuedLessonSec);
   },
 });
 
