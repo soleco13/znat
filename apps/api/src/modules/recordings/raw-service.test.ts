@@ -299,6 +299,13 @@ describe("кнопка «Тестовая запись» (test: true)", () => {
     expect(roomsMock.broadcastToLesson).toHaveBeenCalledWith(LESSON, { type: "recording_status", active: true });
   });
 
+  it("RECORDING_EXPERIMENTAL_SCHOOL_IDS=all — кнопка доступна любой школе", async () => {
+    enableExperimental(["all"]);
+    expect(raw.isSchoolAllowedForExperimental(OTHER_SCHOOL)).toBe(true);
+    const res = await service.startLessonRecording(teacher, LESSON, { test: true });
+    expect(res.method).toBe("experimental");
+  });
+
   it("школа не допущена — 403, никакой записи не начинается", async () => {
     enableExperimental([OTHER_SCHOOL]);
     await expect(service.startLessonRecording(teacher, LESSON, { test: true })).rejects.toMatchObject({

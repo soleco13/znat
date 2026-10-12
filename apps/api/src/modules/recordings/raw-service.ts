@@ -56,7 +56,9 @@ export function experimentalRecordingEnabled(): boolean {
 }
 
 export function isSchoolAllowedForExperimental(schoolId: string): boolean {
-  return experimentalRecordingEnabled() && env.RECORDING_EXPERIMENTAL_SCHOOL_IDS.includes(schoolId);
+  if (!experimentalRecordingEnabled()) return false;
+  const allowed: readonly string[] = env.RECORDING_EXPERIMENTAL_SCHOOL_IDS;
+  return allowed[0] === "all" || allowed.includes(schoolId);
 }
 
 /**

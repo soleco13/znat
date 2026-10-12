@@ -107,7 +107,7 @@ verifying → ready`, ошибки — `failed` (с `last_error`), `aborted`, `d
 1. В `.env` app (два уровня защиты от случайного включения):
    ```
    RAW_RECORDER_SECRET=<openssl rand -hex 32>
-   RECORDING_EXPERIMENTAL_SCHOOL_IDS=<uuid тестовой школы>
+   RECORDING_EXPERIMENTAL_SCHOOL_IDS=<uuid школ через запятую | all>
    RAW_RECORDER_LIVEKIT_URL=ws://127.0.0.1:7880
    RAW_RENDER_REPLAY_ORIGIN=http://127.0.0.1:3000
    ```
@@ -122,6 +122,9 @@ verifying → ready`, ошибки — `failed` (с `last_error`), `aborted`, `d
    PUT /api/v1/admin/lessons/<lessonId>/recording-mode  {"mode":"experimental"} # только новый
    GET /api/v1/admin/lessons/<lessonId>/recording-mode                          # что применится
    ```
+   Либо без режима урока: в диалоге «Начать запись урока?» кнопка
+   **«Тестовая запись»** — запись этого запуска только экспериментальным
+   методом (без Egress). Видна во всех школах из списка (`all` — во всех).
 4. Учитель нажимает «Запись» как обычно. Состояние:
    `GET /api/v1/admin/raw-recordings/<id>` (статус, попытки, ошибка, метрики),
    пересборка упавшей: `POST /api/v1/admin/raw-recordings/<id>/retry-render`.

@@ -126,7 +126,8 @@ const envSchema = z.object({
    */
   RAW_RECORDER_SECRET: z.preprocess(emptyToUndefined, z.string().min(32).optional()),
   /**
-   * Школы, которым разрешена экспериментальная запись (uuid через запятую).
+   * Школы, которым разрешена экспериментальная запись (uuid через запятую
+   * или `all` — всем).
    * Режим урока (`lesson_recording_modes`) действует только для них —
    * случайная строка в БД не включит новый метод на другой школе. Пусто —
    * никому. Немедленный возврат всех уроков к Egress — очистить переменную.
@@ -135,7 +136,9 @@ const envSchema = z.object({
     .string()
     .default("")
     .transform((v) => v.split(",").map((s) => s.trim()).filter(Boolean))
-    .pipe(z.array(z.string().uuid())),
+    // `all` — всем школам (решение владельца 2026-10-12: «Тестовая запись» во
+    // всём приложении). Только явным словом: пустое значение — никому.
+    .pipe(z.union([z.tuple([z.literal("all")]), z.array(z.string().uuid())])),
   /** Адрес LiveKit для рекордера (он в host-сети: обычно ws://127.0.0.1:7880). Пусто — LIVEKIT_URL. */
   RAW_RECORDER_LIVEKIT_URL: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   /**
