@@ -45,6 +45,12 @@ export default async function rawRecordingsRoutes(app: FastifyInstance) {
     });
     const noLimit = { config: { rateLimit: false as const } };
 
+    // Воркер (рекордер или рендер) стартовал — вернуть задания его прежнего процесса.
+    internal.post("/internal/raw-recorder/recover", noLimit, async (request, reply) => {
+      const body = rawRecordClaimRequestSchema.parse(request.body);
+      return reply.send(await recordingsService.recoverWorker(body.workerId));
+    });
+
     internal.post("/internal/raw-recorder/record/claim", noLimit, async (request, reply) => {
       const body = rawRecordClaimRequestSchema.parse(request.body);
       const job = await recordingsService.claimRecordJob(body.workerId);

@@ -393,6 +393,15 @@ export async function recorderFinished(
   roomsService.broadcastToLesson(row.lessonId, { type: "recording_status", active: false });
 }
 
+/** Воркер стартовал: вернуть задания его прежнего процесса (см. raw-repo#recoverWorkerLeases). */
+export async function recoverWorker(workerId: string): Promise<{ recovered: number }> {
+  const rows = await rawRepo.recoverWorkerLeases(workerId);
+  for (const row of rows) {
+    logger().warn({ recordingId: row.id, status: row.status, workerId }, "raw worker restarted: lease recovered");
+  }
+  return { recovered: rows.length };
+}
+
 // ─── Внутренний API: рендер ────────────────────────────────────────────────
 
 export async function claimRenderJob(workerId: string): Promise<RawRenderJob | null> {

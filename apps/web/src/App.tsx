@@ -39,6 +39,10 @@ const MaterialsEditorLandingPage = lazyNamed(() => import("./features/materials/
 const MaterialsLibraryPage = lazyNamed(() => import("./features/materials/MaterialsLibraryPage.js"), "MaterialsLibraryPage");
 const TeacherLibraryPage = lazyNamed(() => import("./features/materials/TeacherLibraryPage.js"), "TeacherLibraryPage");
 const EgressPage = lazyNamed(() => import("./features/recordings/EgressPage.js"), "EgressPage");
+const RecordingReplayPage = lazyNamed(
+  () => import("./features/recordings/RecordingReplayPage.js"),
+  "RecordingReplayPage",
+);
 const TeacherRecordingsPage = lazyNamed(() => import("./features/recordings/TeacherRecordingsPage.js"), "TeacherRecordingsPage");
 const LessonRecordingPage = lazyNamed(() => import("./features/recordings/LessonRecordingPage.js"), "LessonRecordingPage");
 const RecordingViewerPage = lazyNamed(() => import("./features/recordings/RecordingViewerPage.js"), "RecordingViewerPage");
@@ -155,6 +159,9 @@ export function App() {
         {/* Э10.2 — layout-шаблон записи. Открывается headless-Chrome внутри
             LiveKit Egress на второй машине; без нашей сессии, вне каркаса. */}
         <Route path="/egress" element={<EgressPage />} />
+        {/* Кадры доски/задания для рендера экспериментальной записи
+            (docs/experimental-recording.md) — так же без нашей сессии. */}
+        <Route path="/recording-replay" element={<RecordingReplayPage />} />
         <Route path="/" element={<RequireAuth><HomeRedirect /></RequireAuth>} />
       </Routes>
       </Suspense>

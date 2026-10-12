@@ -701,6 +701,7 @@ export {
   getReplayData,
   recorderFinished,
   recorderHeartbeat,
+  recoverWorker,
   renderFailed,
   renderFinished,
   renderHeartbeat,

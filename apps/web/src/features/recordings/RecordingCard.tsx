@@ -85,7 +85,11 @@ export function RecordingCard({ rec, detailed = false }: { rec: LessonRecordingI
       <div className="flex flex-col gap-2.5 px-4 pb-4 pt-3.5">
         <div className="flex min-w-0 flex-col gap-0.5">
           <span className="truncate text-[15px] font-semibold text-foreground">{rec.lessonTitle}</span>
-          <span className="text-[12.5px] text-muted-foreground">{formatRecordingDate(rec.startedAt)}</span>
+          <span className="text-[12.5px] text-muted-foreground">
+            {formatRecordingDate(rec.startedAt)}
+            {/* Экспериментальный метод (docs/experimental-recording.md) — для сравнения с основной записью. */}
+            {rec.method === "experimental" ? " · эксперимент" : null}
+          </span>
         </div>
         {detailed && rec.status === "ready" ? (
           <div className="flex items-center justify-between text-xs tabular-nums text-muted-foreground">

@@ -165,6 +165,20 @@ describe.skipIf(!url)("raw-repo на Postgres", () => {
     expect(await repo.claimRenderJob("r1", randomUUID(), 3)).toBeNull();
   });
 
+  it("перезапуск воркера: его запись сразу снова requested, чужие не трогаются", async () => {
+    const mine = await insert(LESSON);
+    const other = await insert(LESSON2);
+    await repo.claimRecordJob("host-a/record", randomUUID());
+    await repo.claimRecordJob("host-b/record", randomUUID());
+    const recovered = await repo.recoverWorkerLeases("host-a/record");
+    expect(recovered.map((r) => r.id)).toEqual([mine.id]);
+    expect(recovered[0]!.status).toBe("requested");
+    const otherNow = await repo.findRawRecording(other.id);
+    expect(otherNow?.status).toBe("recording");
+    // следующая попытка — тем же воркером, без ожидания 30 с
+    expect(await repo.claimRecordJob("host-a/record", randomUUID())).toMatchObject({ id: mine.id, attempt: 2 });
+  });
+
   it("журнал: повтор (recording, seq) пропускается, страницы по порядку", async () => {
     const row = await insert();
     const ev = (seq: number) => ({ recordingId: row.id, seq, tsMs: 1000 + seq, kind: "yjs_update", payload: null, data: Buffer.from([seq]) });

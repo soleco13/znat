@@ -1,0 +1,76 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Экспериментальная запись уроков (docs/experimental-recording.md).
+#
+# ОТДЕЛЬНЫЙ compose-проект (`name: znat-raw`): deploy.sh его не поднимает,
+# не пересоздаёт и не останавливает; основная запись (Egress) от него не
+# зависит. Запуск и остановка — только руками:
+#
+#   docker compose -f docker-compose.raw-recorder.yml --env-file .env.raw-recorder up -d --build
+#   docker compose -f docker-compose.raw-recorder.yml --env-file .env.raw-recorder down
+#
+# Без запущенного рекордера экспериментальная запись урока останется в
+# `requested` и после стопа станет `aborted` — основная запись не страдает.
+# В .env.raw-recorder (не в git): RAW_RECORDER_SECRET — тот же, что у app в .env.
+#
+# Сеть — host, как у egress: WebRTC без docker-proxy; API и LiveKit на 127.0.0.1.
+# ─────────────────────────────────────────────────────────────────────────────
+name: znat-raw
+
+x-logging: &rotated-logs
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "3"
+
+x-common: &common
+  image: znat/raw-recorder:dev
+  build:
+    context: ./services/raw-recorder
+  restart: unless-stopped
+  network_mode: host
+  logging: *rotated-logs
+  # uid app: файлы на общем томе создаёт рекордер, удаляет по ретеншну API.
+  user: "999:999"
+  volumes:
+    - assets:/data/assets
+  environment: &common-env
+    MATIS_API_URL: http://127.0.0.1:3000
+    RAW_RECORDER_SECRET: ${RAW_RECORDER_SECRET:?set RAW_RECORDER_SECRET in .env.raw-recorder}
+    STORAGE_ROOT: /data/assets
+
+services:
+  # Во время урока: скрытый участник, RTP как есть на диск. Почти без CPU
+  # (нет декодирования/кодирования) — ядра записи, рядом с egress.
+  raw-recorder:
+    <<: *common
+    command: ["record"]
+    cpuset: "4,5,10,11"
+    cpus: "1"
+    environment:
+      <<: *common-env
+      RAW_RECORDER_MAX_JOBS: "${RAW_RECORDER_MAX_JOBS:-10}"
+
+  # После урока: сборка MP4 (ffmpeg + Chrome для кадров доски). Тяжёлая, но
+  # отложенная: квота 2 CPU и низкий приоритет — при конкуренции уступает
+  # egress и всему остальному. На тех же ядрах, не на медиа-ядрах LiveKit.
+  raw-render:
+    <<: *common
+    command: ["render"]
+    cpuset: "4,5,10,11"
+    cpus: "2"
+    cpu_shares: 256
+    # Песочница Chrome (как у egress) и его разделяемая память.
+    cap_add:
+      - SYS_ADMIN
+    shm_size: 1gb
+    environment:
+      <<: *common-env
+      RENDER_PARALLEL: "${RENDER_PARALLEL:-1}"
+      FRAME_STEP_MS: "${FRAME_STEP_MS:-500}"
+      CHROME_SANDBOX: "true"
+
+volumes:
+  assets:
+    # Том файлов приложения (app → STORAGE_ROOT), созданный основным проектом.
+    external: true
+    name: znat_assets_data

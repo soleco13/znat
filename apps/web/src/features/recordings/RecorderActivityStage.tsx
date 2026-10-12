@@ -50,7 +50,15 @@ export function RecorderActivityStage({
   }, [activityId, recorderToken]);
 
   if (!view) return null;
+  return <RecorderActivitySheet view={view} />;
+}
 
+/**
+ * Сам «лист с заданиями» без загрузки — общий для шаблона записи (выше, с
+ * опросом раз в 5 с) и страницы кадров экспериментальной записи
+ * (`RecordingReplayPage`, вид берётся из журнала урока на момент t).
+ */
+export function RecorderActivitySheet({ view }: { view: RecorderActivityView }) {
   const questions = view.material.blocks.filter((b) => b.type === "question");
 
   return (

@@ -233,6 +233,43 @@ export async function expireRecorderLeases(staleBefore: Date): Promise<RawRecord
 }
 
 /**
+ * Воркер перезапустился (тот же `workerId`): его прежний процесс мёртв, ждать
+ * истечения лиз (30 с записи урока!) незачем — задания сразу возвращаются:
+ * идущая запись — в `requested` (новая попытка), остановленная — на рендер,
+ * недособранная — в очередь рендера (продолжит с контрольных точек).
+ */
+export async function recoverWorkerLeases(workerId: string): Promise<RawRecordingRow[]> {
+  const resumed = await db
+    .update(rawRecordings)
+    .set({ status: "requested", recorderLeaseId: null, recorderWorker: null })
+    .where(
+      and(
+        eq(rawRecordings.status, "recording"),
+        eq(rawRecordings.recorderWorker, workerId),
+        isNull(rawRecordings.stopRequestedAt),
+      ),
+    )
+    .returning();
+  const stopped = await db
+    .update(rawRecordings)
+    .set({ status: "queued_for_render", recorderLeaseId: null, stoppedAt: sql`coalesce(${rawRecordings.stoppedAt}, now())` })
+    .where(
+      and(
+        inArray(rawRecordings.status, ["recording", "finalizing"]),
+        eq(rawRecordings.recorderWorker, workerId),
+        isNotNull(rawRecordings.stopRequestedAt),
+      ),
+    )
+    .returning();
+  const renders = await db
+    .update(rawRecordings)
+    .set({ status: "queued_for_render", renderLeaseId: null })
+    .where(and(inArray(rawRecordings.status, ["rendering", "verifying"]), eq(rawRecordings.renderWorker, workerId)))
+    .returning();
+  return [...resumed, ...stopped, ...renders];
+}
+
+/**
  * Стоп запрошен, а рекордер так и не взял задание (`requested`): данных
  * нет — если ни одной попытки не было, это `aborted`, иначе — рендер того,
  * что успели записать прошлые попытки.
