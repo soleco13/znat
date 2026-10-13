@@ -32,6 +32,7 @@ import { useSelfCameraUiStore } from "./self-camera-ui-store.js";
 import { TILE_LOADER_MAX_MS, useTileMediaStore } from "./tile-media-store.js";
 import { isStreamPaused, useStreamStateUpdates } from "./use-stream-state.js";
 import { useAdaptiveGrid } from "./use-adaptive-grid.js";
+import { useTileMenu } from "./tile-menu-context.js";
 import { useIsNarrowViewport } from "./use-narrow-viewport.js";
 
 const GAP = 10;
@@ -77,6 +78,7 @@ export function RoomVideoGrid({
   onLayoutChange,
   onShowAll,
   bubbles,
+  ordered = false,
 }: {
   participants: ParticipantSnapshot[];
   /** Связь участника с уроком прервалась недавно — плитка на месте с пометкой (`usePresenceGrace`). */
@@ -92,9 +94,12 @@ export function RoomVideoGrid({
   onShowAll?: () => void;
   /** Свежие сообщения чата по автору — пузырь на его плитке (только учителю, см. RoomPage). */
   bubbles?: ReadonlyMap<string, string>;
+  /** Плитки в переданном порядке (окно PiP: постоянные места), без сортировки «персонал первым». */
+  ordered?: boolean;
 }) {
   const narrow = useIsNarrowViewport();
   const { id: lessonId } = useParams<{ id: string }>();
+  const tileMenu = useTileMenu();
   const cameraTracks = useTracks([Track.Source.Camera], { onlySubscribed: true });
   const trackByIdentity = new Map(cameraTracks.map((t) => [t.participant.identity, t]));
   // Камера включена (опубликована и не выключена), но первый кадр ещё не
@@ -139,12 +144,13 @@ export function RoomVideoGrid({
   const selfFrameReady = useSelfCameraUiStore((s) => s.frameReady);
   const setSelfFrameReady = useSelfCameraUiStore((s) => s.setFrameReady);
 
-  const tiles = participants
-    .filter((p) => p.connected)
-    .sort((a, b) => {
-      if (a.kind !== b.kind) return a.kind === "staff" ? -1 : 1;
-      return a.joinedAt.localeCompare(b.joinedAt);
-    });
+  const connectedTiles = participants.filter((p) => p.connected);
+  const tiles = ordered
+    ? connectedTiles
+    : connectedTiles.sort((a, b) => {
+        if (a.kind !== b.kind) return a.kind === "staff" ? -1 : 1;
+        return a.joinedAt.localeCompare(b.joinedAt);
+      });
 
   const [page, setPage] = useState(0);
   const [railExpanded, setRailExpanded] = useState(false);
@@ -242,7 +248,7 @@ export function RoomVideoGrid({
       <div
         key={p.userId}
         className={cn(
-          "relative flex items-center justify-center overflow-hidden bg-[#101828]",
+          "group/tile relative flex items-center justify-center overflow-hidden bg-[#101828]",
           size === "lg" ? "rounded-2xl" : "rounded-xl",
           className,
         )}
@@ -357,6 +363,18 @@ export function RoomVideoGrid({
             <span className="truncate">{isSelf ? "Вы" : shortName(p.fullName)}</span>
           </span>
         )}
+
+        {tileMenu && size !== "xs" ? (
+          <span
+            className={cn(
+              "absolute opacity-100 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/tile:opacity-100 [@media(hover:hover)]:focus-within:opacity-100 [@media(hover:hover)]:has-[[data-state=open]]:opacity-100",
+              small ? "bottom-1.5 right-1.5" : "bottom-2.5 right-2.5",
+              showLoader && !reconnecting && "hidden",
+            )}
+          >
+            {tileMenu(p)}
+          </span>
+        ) : null}
 
         {bubble ? (
           size === "xs" ? (

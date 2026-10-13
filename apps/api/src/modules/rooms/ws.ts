@@ -241,6 +241,7 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
       send({ type: "stage_changed", stage: state.stage });
       send({ type: "lesson_mode", mode: state.mode });
       send({ type: "entry_locked", locked: state.entryLocked });
+      send({ type: "chat_locked", locked: state.chatLocked });
 
       // Э10.3, 152-ФЗ: зашли в уже идущий урок, где запись уже стартовала —
       // сразу показать баннер согласия, не дожидаясь следующего старта/стопа.

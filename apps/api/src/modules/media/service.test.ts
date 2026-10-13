@@ -123,7 +123,7 @@ describe("createParticipantConnection: источники трека по рол
 
     const student = await grantOf(false, "guest", false, true);
     expect(student.grant.canPublish).toBe(true);
-    expect(student.grant.canPublishSources).toEqual(["screen_share"]);
+    expect(student.grant.canPublishSources).toEqual(["screen_share", "screen_share_audio"]);
     expect(student.grant.canPublishSources).not.toContain("camera");
   });
 
@@ -222,7 +222,7 @@ describe("updateLivePermissions: живое обновление гранта у
     const [, init] = fetchMock.mock.calls[0] as [unknown, RequestInit];
     const body = JSON.parse(init.body as string);
     expect(body.permission.canPublish).toBe(true);
-    expect(body.permission.canPublishSources).toEqual(["SCREEN_SHARE"]);
+    expect(body.permission.canPublishSources).toEqual(["SCREEN_SHARE", "SCREEN_SHARE_AUDIO"]);
   });
 
   it("молча проглатывает 404 — участник ещё не подключался к LiveKit, обновлять нечего", async () => {

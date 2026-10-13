@@ -22,6 +22,7 @@ import {
   Link as LinkIcon,
   Lock,
   LockOpen,
+  MessageSquareOff,
   LogOut,
   Maximize,
   MessageSquare,
@@ -117,8 +118,11 @@ import { RoomHotkeys } from "./RoomHotkeys.js";
 import { useIsNarrowViewport, useIsPhoneLandscape, useMinViewportWidth } from "./use-narrow-viewport.js";
 import { SelfMicButton } from "./MicControls.js";
 import { MicSync } from "./MicSync.js";
+import { Switch } from "@/shared/ui/switch";
 import { ParticipantMenu } from "./ParticipantMenu.js";
-import { ScreenShareStatusBar, SelfScreenShareButton } from "./ScreenShareControls.js";
+import { ApplyParticipantVolumes } from "./participant-volume.js";
+import { TileMenuContext } from "./tile-menu-context.js";
+import { canShareScreenHere, ScreenShareStatusBar, SelfScreenShareButton } from "./ScreenShareControls.js";
 import { RoomVideoGrid } from "./RoomVideoGrid.js";
 import { ScreenShareTile } from "./ScreenShareTile.js";
 import { useRoomSocket } from "./useRoomSocket.js";
@@ -347,6 +351,8 @@ export function RoomPage() {
   /** Войти нельзя и повтор не поможет: удалили из урока, вход закрыт, урок полон. */
   const [blocked, setBlocked] = useState<{ title: string; text: string } | null>(null);
   const [entryLocked, setEntryLocked] = useState(false);
+  /** Учитель закрыл чат: ученики читают, но не пишут. */
+  const [chatLocked, setChatLocked] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<ParticipantSnapshot | null>(null);
   const [media, setMedia] = useState<MediaConnection | null>(null);
   const [clientMediaSettings, setClientMediaSettings] = useState<ClientMediaSettings | null>(null);
@@ -440,7 +446,10 @@ export function RoomPage() {
     if (media) setSessionStartedAt(Date.now());
   }, [media]);
 
-  const isTeacher = identity?.role === "teacher" || identity?.role === "admin";
+  const isAdmin = identity?.role === "admin";
+  // Гость с правами учителя (выдаёт администратор) ведёт урок наравне с учителем.
+  const selfCohost = identity?.kind === "guest" && participants.some((p) => p.userId === selfId && p.cohost === true);
+  const isTeacher = identity?.role === "teacher" || isAdmin || selfCohost;
   soundsRef.current = isTeacher;
 
   const handleMessage = useCallback((message: ServerRoomMessage) => {
@@ -477,6 +486,9 @@ export function RoomPage() {
         break;
       case "entry_locked":
         setEntryLocked(message.locked);
+        break;
+      case "chat_locked":
+        setChatLocked(message.locked);
         break;
       case "permissions_updated":
         setParticipants((prev) =>
@@ -627,6 +639,7 @@ export function RoomPage() {
         setSharedStage(data.stage);
         setStageView((v) => (v === "activity" ? v : data.stage));
         setEntryLocked(data.entryLocked);
+        setChatLocked(data.chatLocked ?? false);
       })
       .catch((err) => {
         const screen = blockedScreenFor(err);
@@ -746,8 +759,8 @@ export function RoomPage() {
 
   // Презентации — маршрут персонала; гость получал 401 на каждом входе.
   useEffect(() => {
-    if (joined && !isGuest) refreshDecks();
-  }, [refreshDecks, joined, isGuest]);
+    if (joined && (!isGuest || isTeacher)) refreshDecks();
+  }, [refreshDecks, joined, isGuest, isTeacher]);
 
   useEffect(() => {
     if (!lessonId || !joined) return;
@@ -884,6 +897,25 @@ export function RoomPage() {
     }).catch(() => showRoomError(entryLocked ? "Не удалось открыть вход" : "Не удалось закрыть вход"));
   }
 
+  async function toggleChatLocked() {
+    if (!lessonId) return;
+    await apiFetch(`/lessons/${lessonId}/chat-lock`, {
+      method: "PATCH",
+      body: JSON.stringify({ locked: !chatLocked }),
+    }).catch(() => showRoomError(chatLocked ? "Не удалось открыть чат" : "Не удалось закрыть чат"));
+  }
+
+  /** Права учителя внешнему участнику — только администратор (сервер проверяет сам). */
+  async function setCohost(userId: string, cohost: boolean) {
+    if (!lessonId) return;
+    await apiFetch(`/lessons/${lessonId}/participants/${userId}/cohost`, {
+      method: "PATCH",
+      body: JSON.stringify({ cohost }),
+    }).catch((e) =>
+      showRoomError(e instanceof Error ? e.message : cohost ? "Не удалось выдать права учителя" : "Не удалось забрать права учителя"),
+    );
+  }
+
   /** Э6.3, §5.3 ТЗ. */
   async function togglePin(userId: string, pinned: boolean) {
     if (!lessonId) return;
@@ -1008,7 +1040,8 @@ export function RoomPage() {
     media !== null &&
     Boolean(lessonId) &&
     (isTeacher || Boolean(self?.permissions.canShareScreen)) &&
-    clientMediaSettings?.screenShareEnabled !== false;
+    clientMediaSettings?.screenShareEnabled !== false &&
+    canShareScreenHere();
 
   // ── Панель «Участники» ────────────────────────────────────────────────
   const peopleListProps: PeopleListProps = {
@@ -1016,13 +1049,34 @@ export function RoomPage() {
     reconnectingIds: presence.reconnectingIds,
     selfId,
     isTeacher,
+    isAdmin,
     hasMedia: media !== null,
     query: peopleQuery,
     onTogglePermission: togglePermission,
     onMute: muteParticipant,
     onTogglePin: togglePin,
     onRemove: setRemoveTarget,
+    onSetCohost: setCohost,
   };
+
+  // Кнопка «⋯» на плитке камеры: громкость — всем для чужих плиток,
+  // управление — учителю, права учителя — админу (`ParticipantMenu`).
+  const tileMenu = (p: ParticipantSnapshot) =>
+    p.userId === selfId ? null : (
+      <ParticipantMenu
+        participant={p}
+        hasMedia={media !== null}
+        trigger="tile"
+        manage={isTeacher && !(p.kind === "staff" && p.role === "admin" && !isAdmin)}
+        showVolume
+        canGrantTeacher={isAdmin}
+        onTogglePermission={togglePermission}
+        onMute={muteParticipant}
+        onTogglePin={togglePin}
+        onRemove={setRemoveTarget}
+        onSetCohost={setCohost}
+      />
+    );
 
   const peoplePanel = (sheet: boolean) => (
     <div className="flex h-full min-h-0 flex-col">
@@ -1072,6 +1126,17 @@ export function RoomPage() {
   // ── Панель «Чат» ──────────────────────────────────────────────────────
   const chatPanel = (sheet: boolean) => (
     <div className="flex h-full min-h-0 flex-col">
+      {isTeacher ? (
+        <label
+          className={cn(
+            "flex shrink-0 cursor-pointer items-center gap-2.5 border-b border-border py-2.5 text-[13.5px] text-text-2",
+            sheet ? "px-4" : "px-3",
+          )}
+        >
+          <span className="min-w-0 flex-1">Ученики могут писать</span>
+          <Switch checked={!chatLocked} onCheckedChange={() => void toggleChatLocked()} aria-label="Ученики могут писать в чат" />
+        </label>
+      ) : null}
       {chat.length === 0 && chatPending.length === 0 ? (
         <Empty className="min-h-0 px-7 py-8 md:px-7 md:py-8">
           <EmptyHeader>
@@ -1126,6 +1191,18 @@ export function RoomPage() {
           </div>
         </ScrollArea>
       )}
+      {chatLocked && !isTeacher ? (
+        <p
+          role="status"
+          className={cn(
+            "flex shrink-0 items-center gap-2 border-t border-border text-[13.5px] text-text-2",
+            sheet ? "px-4 pb-[max(22px,env(safe-area-inset-bottom))] pt-3" : "p-3",
+          )}
+        >
+          <MessageSquareOff className="size-4 shrink-0 text-text-3" aria-hidden />
+          Учитель закрыл чат — сообщения можно только читать
+        </p>
+      ) : (
       <form
         onSubmit={sendChat}
         className={cn(
@@ -1150,6 +1227,7 @@ export function RoomPage() {
           <Send aria-hidden />
         </Button>
       </form>
+      )}
     </div>
   );
 
@@ -1470,6 +1548,7 @@ export function RoomPage() {
             lessonId={lessonId}
             canDraw={self?.permissions.canDraw ?? false}
             decks={decks}
+            teacher={isTeacher}
             onClose={isTeacher ? () => changeLessonStage("people") : undefined}
           />
         </div>
@@ -1553,6 +1632,10 @@ export function RoomPage() {
         {entryLocked ? <LockOpen aria-hidden /> : <Lock aria-hidden />}
         {entryLocked ? "Открыть вход" : "Закрыть вход"}
       </DropdownMenuItem>
+      <DropdownMenuItem className={MENU_ITEM} onSelect={toggleChatLocked}>
+        {chatLocked ? <MessageSquare aria-hidden /> : <MessageSquareOff aria-hidden />}
+        {chatLocked ? "Открыть чат" : "Закрыть чат"}
+      </DropdownMenuItem>
     </>
   ) : null;
 
@@ -1591,6 +1674,28 @@ export function RoomPage() {
       disabledReason="Микрофон выключил учитель — поднимите руку"
     />
   );
+
+  // Демонстрация — и на компьютере, и на телефоне/планшете, где браузер её умеет.
+  const shareButton = (variant: RoomControlVariant) =>
+    shareVisible && lessonId ? (
+      <SelfScreenShareButton
+        variant={variant}
+        lessonId={lessonId}
+        preemptedSignal={screenSharePreempted}
+        priority={isTeacher}
+        encoding={
+          clientMediaSettings
+            ? toScreenShareEncoding(
+                clientMediaSettings.screenShareResolution,
+                clientMediaSettings.screenShareFps,
+                clientMediaSettings.screenShareBitrateKbps,
+              )
+            : undefined
+        }
+        onScreenShareStarted={() => void pipRef.current?.open()}
+        onScreenShareStopped={() => pipRef.current?.close()}
+      />
+    ) : null;
 
   const drawerIconButton = (mode: DrawerMode, label: string, Icon: LucideIcon, badge?: ReactNode) => (
     <SimpleTooltip content={mode === "chat" ? `${label} · C` : label} side="top">
@@ -1656,6 +1761,7 @@ export function RoomPage() {
     >
       {media ? micButton("rail") : null}
       {media ? cameraButton("rail") : null}
+      {shareButton("rail")}
       {isTeacher ? (
         <RoomControlButton
           variant="rail"
@@ -1824,7 +1930,7 @@ export function RoomPage() {
               {recordingActive ? <RecordingIcon /> : null}
             </div>
           ) : null}
-          {stageArea}
+          <TileMenuContext.Provider value={tileMenu}>{stageArea}</TileMenuContext.Provider>
         </main>
         {landscapeControls}
       </div>
@@ -1904,25 +2010,7 @@ export function RoomPage() {
           {media ? micButton("pill") : null}
           {media ? cameraButton("pill") : null}
           {shareVisible || isTeacher ? <span className="mx-0.5 h-8 w-px shrink-0 bg-border" aria-hidden /> : null}
-          {shareVisible && lessonId ? (
-            <SelfScreenShareButton
-              variant="pill"
-              lessonId={lessonId}
-              preemptedSignal={screenSharePreempted}
-              priority={isTeacher}
-              encoding={
-                clientMediaSettings
-                  ? toScreenShareEncoding(
-                      clientMediaSettings.screenShareResolution,
-                      clientMediaSettings.screenShareFps,
-                      clientMediaSettings.screenShareBitrateKbps,
-                    )
-                  : undefined
-              }
-              onScreenShareStarted={() => void pipRef.current?.open()}
-              onScreenShareStopped={() => pipRef.current?.close()}
-            />
-          ) : null}
+          {shareButton("pill")}
           {isTeacher ? (
             <RoomControlButton
               variant="pill"
@@ -1970,6 +2058,7 @@ export function RoomPage() {
         <div className="flex items-stretch gap-2">
           {media ? micButton("tile") : null}
           {media ? cameraButton("tile") : null}
+          {shareButton("tile")}
           {isTeacher ? (
             <RoomControlButton
               variant="tile"
@@ -2197,6 +2286,7 @@ export function RoomPage() {
         <MediaDeviceErrorNotice />
         <RoomHotkeys />
         <ApplyAudioOutput deviceId={spkDeviceId} />
+        <ApplyParticipantVolumes />
         <MicSync enabled={self?.permissions.canSpeak ?? false} />
         <VideoSubscriptionManager participants={participants} mode={lessonMode} />
         <PoorLinkMediaAdapter />
@@ -2502,6 +2592,7 @@ type PeopleListProps = {
   participants: ParticipantSnapshot[];
   selfId: string | undefined;
   isTeacher: boolean;
+  isAdmin: boolean;
   hasMedia: boolean;
   query: string;
   micOffIds?: Set<string>;
@@ -2511,6 +2602,7 @@ type PeopleListProps = {
   onMute: (userId: string) => void;
   onTogglePin: (userId: string, pinned: boolean) => void;
   onRemove: (participant: ParticipantSnapshot) => void;
+  onSetCohost: (userId: string, cohost: boolean) => void;
 };
 
 /** Список участников с живым состоянием микрофона/связи из LiveKit (только внутри `<LiveKitRoom>`). */
@@ -2535,6 +2627,7 @@ function PeopleList({
   participants,
   selfId,
   isTeacher,
+  isAdmin,
   hasMedia,
   query,
   micOffIds,
@@ -2544,6 +2637,7 @@ function PeopleList({
   onMute,
   onTogglePin,
   onRemove,
+  onSetCohost,
 }: PeopleListProps) {
   const { id: lessonId } = useParams<{ id: string }>();
   const q = query.trim().toLowerCase();
@@ -2566,7 +2660,7 @@ function PeopleList({
       {rows.map((p) => {
         const isSelf = p.userId === selfId;
         const weak = weakIds?.has(p.userId) ?? false;
-        const roleLabel = p.kind === "staff" && p.role ? ROLE_LABEL[p.role] : undefined;
+        const roleLabel = p.kind === "staff" && p.role ? ROLE_LABEL[p.role] : p.cohost ? "учитель" : undefined;
         const hint = isSelf
           ? isTeacher
             ? "вы · ведёт урок"
@@ -2607,14 +2701,18 @@ function PeopleList({
                 <MicOff className="size-[15px]" aria-label="Микрофон выключен" />
               ) : null}
               {weak ? <SignalLow className="size-[15px] text-warning" aria-label="Плохая связь" /> : null}
-              {isTeacher && !isSelf ? (
+              {!isSelf ? (
                 <ParticipantMenu
                   participant={p}
                   hasMedia={hasMedia}
+                  manage={isTeacher}
+                  showVolume
+                  canGrantTeacher={isAdmin}
                   onTogglePermission={onTogglePermission}
                   onMute={onMute}
                   onTogglePin={onTogglePin}
                   onRemove={onRemove}
+                  onSetCohost={onSetCohost}
                 />
               ) : null}
             </span>
@@ -2701,7 +2799,7 @@ function StageContent({
         </div>
       </div>
     ) : view === "board" && lessonId ? (
-      <Board lessonId={lessonId} canDraw={canDraw} decks={decks} onClose={onBoardClose} />
+      <Board lessonId={lessonId} canDraw={canDraw} decks={decks} teacher={Boolean(onBoardClose)} onClose={onBoardClose} />
     ) : (
       <RoomVideoGrid
         participants={participants}

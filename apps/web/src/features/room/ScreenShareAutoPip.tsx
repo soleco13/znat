@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useLocalParticipant } from "@livekit/components-react";
+import { useLocalParticipant, useSpeakingParticipants } from "@livekit/components-react";
 import { Hand, LogOut, MonitorX } from "lucide-react";
 import type { ParticipantSnapshot } from "@school/shared";
 
@@ -11,6 +11,7 @@ import { RoomControlButton } from "./RoomControlButton.js";
 import { RoomVideoGrid } from "./RoomVideoGrid.js";
 import { SelfMicButton } from "./MicControls.js";
 import { stopOwnScreenShare } from "./screen-share-stop.js";
+import { TileMenuContext } from "./tile-menu-context.js";
 
 /**
  * Авто-«картинка в картинке» на время демонстрации экрана — как в Толке.
@@ -26,13 +27,8 @@ import { stopOwnScreenShare } from "./screen-share-stop.js";
  * той же дизайн-системы, никакой отдельной вёрстки под PiP не пишем.
  * Тулбар — полный набор, как у Толка: рука (только не-учителю, как в
  * основной панели), микрофон, камера, «стоп демонстрации», выйти.
- * Один участник в кадре (сам ведущий, если больше никого нет, либо
- * единственный собеседник) — та же квадратная адаптивная плитка
- * (`RoomVideoGrid variant="grid"`), что и на обычном стейдже урока:
- * пробовали растягивать плитку на всю площадь без квадрата — при
- * узком/невысоком PiP-окне видео превращалось в обрезанную «полоску»
- * (`object-cover` кадрирует по короткой стороне контейнера). Квадрат с
- * полями по краям выглядит осмысленно, узкая полоска — нет.
+ * В окне всегда две плитки (`PipTiles`): камера показывающего экран и место
+ * говорящего — пока в уроке никого нет, одна своя.
  *
  * НЕТ отдельной кнопки в интерфейсе — включается/выключается только вместе
  * с демонстрацией экрана (запрос пользователя). `open()` дёргает
@@ -56,9 +52,12 @@ declare global {
   }
 }
 
-/** Стартовый (и, за счёт `resize`-лока в `open()`, фактически неизменный) размер PiP-окна. */
-const PIP_WIDTH = 340;
-const PIP_HEIGHT = 320;
+/**
+ * Стартовый (и, за счёт `resize`-лока в `open()`, фактически неизменный)
+ * размер PiP-окна: две плитки рядом (показывающий экран + говорящий) и тулбар.
+ */
+const PIP_WIDTH = 520;
+const PIP_HEIGHT = 300;
 
 export interface ScreenShareAutoPipHandle {
   open: () => Promise<void>;
@@ -193,18 +192,12 @@ export const ScreenShareAutoPip = forwardRef<
 
   if (!container) return null;
 
-  const others = participants.filter((p) => p.userId !== selfId && p.connected);
-  // Один в конференции (никого кроме себя) — показываем СВОЮ камеру
-  // (или заглушку-аватар, если камера выключена, — то же самое поведение
-  // плитки, что и у любого другого участника, `renderTile` его не различает)
-  // вместо пустого PiP. Ровно один собеседник — его, тем же способом.
-  const self = participants.find((p) => p.userId === selfId);
-  const solo = others.length === 0 ? self : others.length === 1 ? others[0] : undefined;
-
   return createPortal(
-    <>
+    // Меню плитки (громкость, права) в PiP не показываем: выпадающий список
+    // открылся бы в главном окне, а не здесь.
+    <TileMenuContext.Provider value={null}>
       <div className="min-h-0 flex-1">
-        <RoomVideoGrid participants={solo ? [solo] : others} selfId={selfId} />
+        <PipTiles participants={participants} selfId={selfId} />
       </div>
       <div className="flex shrink-0 flex-wrap items-center justify-center gap-2 border-t border-border pt-3">
         {!isTeacher ? (
@@ -249,7 +242,32 @@ export const ScreenShareAutoPip = forwardRef<
           <span className="text-[11px] leading-none text-muted-foreground">Выйти</span>
         </div>
       </div>
-    </>,
+    </TileMenuContext.Provider>,
     container,
   );
 });
+
+/**
+ * Две постоянные плитки PiP (запрос 2026-10-13):
+ *  - слева — тот, кто показывает экран (окно открывается только у него, это
+ *    учитель или ученик с правом демонстрации);
+ *  - справа — место говорящего: кто заговорил, тот встаёт сюда и остаётся,
+ *    пока не заговорит кто-то другой. Тишина его не убирает — плитка не
+ *    прыгает между словами. Пока никто не говорил — учитель (если экран
+ *    показывает ученик), иначе первый вошедший.
+ */
+function PipTiles({ participants, selfId }: { participants: ParticipantSnapshot[]; selfId: string | undefined }) {
+  const others = participants.filter((p) => p.userId !== selfId && p.connected);
+  const speakingOther = useSpeakingParticipants().find((p) => p.identity !== selfId)?.identity;
+  const [speakerId, setSpeakerId] = useState<string | null>(null);
+  useEffect(() => {
+    if (speakingOther) setSpeakerId(speakingOther);
+  }, [speakingOther]);
+  const self = participants.find((p) => p.userId === selfId);
+  const speaker =
+    others.find((p) => p.userId === speakerId) ??
+    others.find((p) => p.kind === "staff" || p.cohost) ??
+    [...others].sort((a, b) => a.joinedAt.localeCompare(b.joinedAt))[0];
+  const tiles = [self, speaker].filter((p): p is ParticipantSnapshot => p !== undefined);
+  return <RoomVideoGrid participants={tiles} selfId={selfId} ordered />;
+}

@@ -115,6 +115,10 @@ function toDto(row: ActivityRow): ActivityDto {
 
 /** Управлять заданиями урока может только его учитель или админ. Читать построчно. */
 async function assertLessonTeacher(user: AccessTokenPayload, lessonId: string) {
+  // Гость с правами учителя — только в своём уроке (`plugins/authenticate.ts`).
+  if (user.lessonScope && user.lessonScope !== lessonId) {
+    throw new AppError(403, "forbidden", "Запускать задания в уроке может только его учитель");
+  }
   const lesson = await lessonsService.getLesson(user.schoolId, lessonId);
   if (user.role === "admin") return lesson;
   if (user.role === "teacher" && lesson.teacherId === user.sub) return lesson;
@@ -127,6 +131,9 @@ async function assertLessonTeacher(user: AccessTokenPayload, lessonId: string) {
  * Читать построчно.
  */
 async function assertActivityOwner(user: AccessTokenPayload, activity: ActivityRow): Promise<void> {
+  if (user.lessonScope && user.lessonScope !== activity.lessonId) {
+    throw new AppError(403, "forbidden", "Управлять заданием урока может только его учитель");
+  }
   if (user.role === "admin") return;
   const lesson = await lessonsService.getLesson(user.schoolId, activity.lessonId);
   if (user.role === "teacher" && lesson.teacherId === user.sub) return;

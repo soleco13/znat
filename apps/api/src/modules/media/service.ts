@@ -72,7 +72,8 @@ function buildPublishGrant(permissions: ParticipantPermissions, kind: Participan
   const sources: TrackSource[] = [];
   if (isStaff || permissions.canSpeak) sources.push(TrackSource.MICROPHONE);
   if (canPublishCamera) sources.push(TrackSource.CAMERA);
-  if (permissions.canShareScreen) sources.push(TrackSource.SCREEN_SHARE);
+  // Звук демонстрации (вкладка/система) — тем же правом, что и сама демонстрация.
+  if (permissions.canShareScreen) sources.push(TrackSource.SCREEN_SHARE, TrackSource.SCREEN_SHARE_AUDIO);
   // Пустой `canPublishSources` в LiveKit значит «любые источники» — поэтому
   // `canPublish` включается только вместе хотя бы с одним источником выше.
   return {
@@ -188,7 +189,7 @@ export async function listConnectedIdentities(livekitRoom: string): Promise<Set<
 async function muteTrackBySource(
   livekitRoom: string,
   identity: string,
-  source: TrackSource,
+  source: TrackSource | TrackSource[],
   muted: boolean,
 ): Promise<void> {
   let participant;
@@ -198,9 +199,10 @@ async function muteTrackBySource(
     if (isNotFoundError(err)) return;
     throw err;
   }
-  const track = participant.tracks.find((t) => t.source === source);
-  if (!track) return;
-  await roomService.mutePublishedTrack(livekitRoom, identity, track.sid, muted);
+  const sources = Array.isArray(source) ? source : [source];
+  for (const track of participant.tracks.filter((t) => sources.includes(t.source))) {
+    await roomService.mutePublishedTrack(livekitRoom, identity, track.sid, muted);
+  }
 }
 
 /** Учитель принудительно глушит одного участника — трек выключается сразу, но не отзывает право говорить (Э2.5). */
@@ -235,5 +237,5 @@ export async function findOtherActiveScreenShares(livekitRoom: string, excludeId
 
 /** Гасит демонстрацию экрана участника (Э7.2: приоритет учителю, максимум 1 одновременно) — не отзывает право `canShareScreen`, как и `muteParticipant` не отзывает `canSpeak`. */
 export async function muteScreenShare(livekitRoom: string, identity: string): Promise<void> {
-  await muteTrackBySource(livekitRoom, identity, TrackSource.SCREEN_SHARE, true);
+  await muteTrackBySource(livekitRoom, identity, [TrackSource.SCREEN_SHARE, TrackSource.SCREEN_SHARE_AUDIO], true);
 }

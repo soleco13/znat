@@ -207,9 +207,12 @@ export function Board({
   connectionToken,
   readOnlyChrome = false,
   followUserId,
+  teacher,
 }: {
   lessonId: string;
   canDraw: boolean;
+  /** Ведёт урок (в т.ч. гость с правами учителя). Не задано — по роли аккаунта. */
+  teacher?: boolean;
   /** Э4.6: готовые презентации урока — учитель импортирует их слайды как страницы. */
   decks?: Deck[];
   /** Э12.7 §6.5: «Скрыть доску» в шапке доски (у учителя) — возврат к плиткам. */
@@ -251,7 +254,7 @@ export function Board({
   const guestSession = useGuestSessionStore((s) => s.session);
   const isGuest = !me && !!guestSession;
   const role = me?.role;
-  const isTeacher = role === "teacher" || role === "admin";
+  const isTeacher = teacher ?? (role === "teacher" || role === "admin");
   const [followTeacher, setFollowTeacher] = useState(false);
   const boardContainerRef = useRef<HTMLDivElement>(null);
   // Обёртка непосредственно вокруг <Excalidraw> — нужна `y-excalidraw` для

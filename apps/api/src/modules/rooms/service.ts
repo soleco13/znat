@@ -62,6 +62,7 @@ function toSnapshot(participantId: string, entry: PresenceEntry): ParticipantSna
     handRaisedAt: entry.handRaised ? (entry.handRaisedAt ?? null) : null,
     pinned: entry.pinned,
     permissions: entry.permissions,
+    cohost: entry.cohost === true,
     joinedAt: entry.joinedAt,
   };
 }
@@ -388,6 +389,7 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
   )?.after;
   if (!existing && !isStaff) await assertGuestNotLockedOut(lessonId, participantId);
   const granted = existing || isStaff ? null : await presence.getGrantedPermissions(lessonId, participantId);
+  const cohost = !existing && !isStaff && (await presence.isCohost(lessonId, participantId));
   const entry: PresenceEntry = existing
     ? existing
     : {
@@ -408,6 +410,7 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
           actor.kind === "staff"
             ? presence.defaultPermissions("staff")
             : (granted ?? guestPermissionsFromSettings(lesson.settings)),
+        ...(cohost ? { cohost: true } : {}),
         joinedAt: new Date().toISOString(),
         lastSeenAt: Date.now(),
       };
@@ -488,6 +491,7 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
   const lessonMode = await presence.getLessonMode(lessonId);
   const stage = await presence.getLessonStage(lessonId);
   const entryLocked = await presence.isEntryLocked(lessonId);
+  const chatLocked = await presence.isChatLocked(lessonId);
   // Параметры школы (§10.10 ТЗ, запрос 2026-09-14) — мягкие дефолты
   // качества медиа + флаги демонстрации/PiP, и staff, и гостю.
   const clientMediaSettings = await schoolSettingsService.getClientMediaSettings(schoolId);
@@ -500,6 +504,7 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
     media,
     clientMediaSettings,
     entryLocked,
+    chatLocked,
   };
 }
 
@@ -600,7 +605,7 @@ export async function claimScreenShare(
 ): Promise<ClaimScreenShareResponse> {
   await assertMembership(actor, lessonId);
 
-  if (actor.kind === "staff") {
+  if (actor.kind === "staff" || (await presence.isCohost(lessonId, actor.participantId))) {
     const previousHolder = await presence.getScreenShareHolder(lessonId);
     await presence.forceClaimScreenShare(lessonId, actor.participantId);
     if (previousHolder && previousHolder !== actor.participantId) {
@@ -777,13 +782,14 @@ export async function setLessonMode(
  */
 export async function getLessonStateSnapshot(
   lessonId: string,
-): Promise<{ stage: LessonStage; mode: LessonMode; entryLocked: boolean }> {
-  const [stage, mode, entryLocked] = await Promise.all([
+): Promise<{ stage: LessonStage; mode: LessonMode; entryLocked: boolean; chatLocked: boolean }> {
+  const [stage, mode, entryLocked, chatLocked] = await Promise.all([
     presence.getLessonStage(lessonId),
     presence.getLessonMode(lessonId),
     presence.isEntryLocked(lessonId),
+    presence.isChatLocked(lessonId),
   ]);
-  return { stage, mode, entryLocked };
+  return { stage, mode, entryLocked, chatLocked };
 }
 
 export async function getCurrentLessonStage(lessonId: string): Promise<LessonStage> {
@@ -873,7 +879,7 @@ export async function setDrawForAllStudents(
   }
   const participants = await presence.listParticipants(lessonId);
   for (const [userId, entry] of participants) {
-    if (entry.kind !== "guest") continue;
+    if (entry.kind !== "guest" || entry.cohost) continue;
     const result = await presence.patchParticipant(lessonId, userId, { permissions: { canDraw } });
     if (!result) continue;
     await presence.setGrantedPermissions(lessonId, userId, result.after.permissions);
@@ -909,7 +915,7 @@ export async function muteAllNow(schoolId: string, lessonId: string, requester: 
   const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
   const participants = await presence.listParticipants(lessonId);
   const studentIds = [...participants.entries()]
-    .filter(([, entry]) => entry.kind === "guest")
+    .filter(([, entry]) => entry.kind === "guest" && !entry.cohost)
     .map(([userId]) => userId);
   await mediaService.muteMicrophones(livekitRoom, studentIds);
   if (studentIds.length > 0) emitRoomEvent(lessonId, { type: "microphones_muted", userIds: studentIds });
@@ -926,6 +932,69 @@ async function assertLessonTeacher(
   if (requester.role !== "admin" && !isOwnerTeacher) {
     throw new AppError(403, "forbidden", message);
   }
+}
+
+/** Гость с правами учителя — для `app.authenticate` (гейт эндпоинтов учителя). */
+export async function isLessonCohost(lessonId: string, guestId: string): Promise<boolean> {
+  return presence.isCohost(lessonId, guestId);
+}
+
+/**
+ * Выдать/забрать у гостя права учителя. Только администратор (решение
+ * владельца 2026-10-13) — ни учитель урока, ни сам гость с правами учителя
+ * (`role: "teacher"` у делегированного `request.user`) сюда не проходят.
+ * Читать построчно: это выдача прав.
+ *  - выдача: все медиаправа (LiveKit-грант обновляется до presence, как в
+ *    `updatePermissions`), рисование, приоритет демонстрации, и эндпоинты
+ *    учителя этого урока (`plugins/authenticate.ts#DELEGATED_ROUTES`);
+ *  - отзыв: права ученика по настройкам урока; эндпоинты учителя закрываются
+ *    со следующего же запроса (флаг проверяется на каждом).
+ */
+export async function setCohost(
+  schoolId: string,
+  lessonId: string,
+  requester: AccessTokenPayload,
+  targetUserId: string,
+  cohost: boolean,
+): Promise<void> {
+  if (requester.role !== "admin" || requester.lessonScope) {
+    throw new AppError(403, "forbidden", "Выдать права учителя может только администратор");
+  }
+  const lesson = await lessonsService.getLesson(schoolId, lessonId);
+  const entry = await presence.getParticipant(lessonId, targetUserId);
+  if (!entry) {
+    throw new AppError(404, "not_found", "Участник не найден в комнате");
+  }
+  if (entry.kind !== "guest") {
+    throw new AppError(409, "not_a_guest", "Права учителя выдаются только внешнему участнику");
+  }
+  const permissions: ParticipantPermissions = cohost
+    ? { canDraw: true, canSpeak: true, canShareScreen: true, canPublishVideo: true }
+    : guestPermissionsFromSettings(lesson.settings);
+  const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
+  await mediaService.updateLivePermissions(livekitRoom, targetUserId, permissions, entry.kind);
+
+  await presence.setCohost(lessonId, targetUserId, cohost);
+  const result = await presence.patchParticipant(lessonId, targetUserId, { permissions, cohost });
+  if (!result) {
+    throw new AppError(404, "not_found", "Участник не найден в комнате");
+  }
+  await presence.setGrantedPermissions(lessonId, targetUserId, permissions);
+  canvasService.setDrawPermission(lessonId, targetUserId, permissions.canDraw);
+  emitRoomEvent(lessonId, { type: "participant_updated", participant: toSnapshot(targetUserId, result.after) });
+  emitRoomEvent(lessonId, { type: "permissions_updated", userId: targetUserId, permissions: result.after.permissions });
+}
+
+/** Учитель закрыл/открыл чат ученикам: писать могут только учитель, админ и гости с правами учителя. */
+export async function setChatLocked(
+  schoolId: string,
+  lessonId: string,
+  requester: AccessTokenPayload,
+  locked: boolean,
+): Promise<void> {
+  await assertLessonTeacher(schoolId, lessonId, requester, "Только учитель урока может закрыть чат");
+  await presence.setChatLocked(lessonId, locked);
+  emitRoomEvent(lessonId, { type: "chat_locked", locked });
 }
 
 /**
@@ -964,6 +1033,7 @@ async function evictGuest(
 ): Promise<void> {
   await presence.removeParticipant(lessonId, guestId);
   await presence.clearGrantedPermissions(lessonId, guestId);
+  await presence.setCohost(lessonId, guestId, false);
   await presence.releaseScreenShare(lessonId, guestId);
   await repo.closeOpenSession(lessonId, guestId);
   // Сначала сообщение: WS удалённого закрывается по нему (rooms/ws.ts), и
@@ -1117,7 +1187,7 @@ export async function handleScreenShareStartedWebhook(livekitRoom: string, userI
   if (!lesson) return;
 
   const publisher = await presence.getParticipant(lesson.id, userId);
-  const isPublisherStaff = publisher?.kind === "staff";
+  const isPublisherStaff = publisher?.kind === "staff" || publisher?.cohost === true;
   const others = await mediaService.findOtherActiveScreenShares(livekitRoom, userId);
 
   if (others.length > 0) {
@@ -1208,6 +1278,9 @@ export async function sendChatMessage(
   const entry = await presence.getParticipant(lessonId, actor.participantId);
   if (!entry) {
     throw new AppError(409, "not_in_room", "Сначала войдите в урок");
+  }
+  if (actor.kind === "guest" && !entry.cohost && (await presence.isChatLocked(lessonId))) {
+    throw new AppError(403, "chat_locked", "Учитель закрыл чат");
   }
   // Повтор того же сообщения (ключ идемпотентности уже занят) лимит не тратит:
   // переотправка после обрыва не должна упираться в 429.

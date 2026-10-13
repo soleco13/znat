@@ -34,8 +34,17 @@ async function unpublishWithin(localParticipant: LocalParticipant, ms: number): 
   }
 }
 
+/** Звук демонстрации снимается вместе с ней — сам по себе он не нужен. */
+export function stopScreenShareAudio(localParticipant: LocalParticipant): void {
+  const audio = localParticipant.getTrackPublication(Track.Source.ScreenShareAudio)?.track;
+  if (!audio) return;
+  audio.stop();
+  void localParticipant.unpublishTrack(audio, true).catch(() => undefined);
+}
+
 /** Остановить свою демонстрацию. Не бросает: недоснятый трек дочистит `ScreenShareStopSweep`. */
 export async function stopOwnScreenShare(localParticipant: LocalParticipant): Promise<void> {
+  stopScreenShareAudio(localParticipant);
   const track = localParticipant.getTrackPublication(Track.Source.ScreenShare)?.track;
   if (!track) return;
   stopPending = true;

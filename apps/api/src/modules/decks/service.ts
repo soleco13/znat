@@ -40,6 +40,9 @@ const EXT_BY_MIME: Record<string, string> = {
 
 /** Только учитель-хозяин урока или админ — грузить/удалять презентации. */
 async function assertCanManageLesson(user: AccessTokenPayload, lessonId: string) {
+  if (user.lessonScope && user.lessonScope !== lessonId) {
+    throw new AppError(403, "forbidden", "Нет доступа к этому уроку");
+  }
   const lesson = await lessonsService.getLesson(user.schoolId, lessonId);
   if (user.role === "admin") return lesson;
   if (user.role === "teacher" && lesson.teacherId === user.sub) return lesson;
@@ -53,6 +56,9 @@ async function assertCanManageLesson(user: AccessTokenPayload, lessonId: string)
  * учителем), доступ к слайд-URL для гостя — задача Э12.7.
  */
 async function assertLessonViewer(user: AccessTokenPayload, lessonId: string) {
+  if (user.lessonScope && user.lessonScope !== lessonId) {
+    throw new AppError(403, "forbidden", "Нет доступа к этому уроку");
+  }
   const lesson = await lessonsService.getLesson(user.schoolId, lessonId);
   if (user.role === "admin") return lesson;
   if (user.role === "teacher" && lesson.teacherId === user.sub) return lesson;

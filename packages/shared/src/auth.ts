@@ -57,5 +57,11 @@ export const accessTokenPayloadSchema = z.object({
   sub: z.string().uuid(),
   schoolId: z.string().uuid(),
   role: roleSchema,
+  /**
+   * Только у гостя с правами учителя (выдаёт администратор): сервер
+   * действует от имени учителя урока, но строго внутри этого урока.
+   * В выпускаемые JWT не попадает — проставляет `app.authenticate`.
+   */
+  lessonScope: z.string().uuid().optional(),
 });
 export type AccessTokenPayload = z.infer<typeof accessTokenPayloadSchema>;

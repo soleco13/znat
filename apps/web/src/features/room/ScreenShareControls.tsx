@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocalParticipant, useTracks } from "@livekit/components-react";
-import { Track, VideoPreset, type LocalTrack } from "livekit-client";
+import { AudioPresets, Track, VideoPreset, type LocalTrack } from "livekit-client";
 import type { ClaimScreenShareResponse } from "@school/shared";
 import { MonitorUp, MonitorX } from "lucide-react";
 
 import { apiFetch } from "@/shared/api-client";
 import { RoomControlButton, type RoomControlVariant } from "./RoomControlButton.js";
 import { toast } from "@/shared/ui/sonner";
-import { clearStaleScreenShare, stopOwnScreenShare } from "./screen-share-stop.js";
+import { clearStaleScreenShare, stopOwnScreenShare, stopScreenShareAudio } from "./screen-share-stop.js";
 
 /**
  * Э7.1, §5.2 ТЗ: «1080p@5fps для документов» — дефолт, когда параметры
@@ -96,13 +96,25 @@ function captureErrorMessage(err: unknown): string {
   return "Не удалось начать демонстрацию — попробуйте ещё раз";
 }
 
+/**
+ * Браузер умеет показывать экран: на компьютере — всегда, на телефоне и
+ * планшете — только где есть `getDisplayMedia` (Chrome на Android; Safari на
+ * iPhone/iPad его не даёт — кнопку там не показываем).
+ */
+export function canShareScreenHere(): boolean {
+  return typeof navigator !== "undefined" && typeof navigator.mediaDevices?.getDisplayMedia === "function";
+}
+
 function releaseScreenShare(lessonId: string) {
   void apiFetch(`/lessons/${lessonId}/screen-share/release`, { method: "POST" }).catch(() => undefined);
 }
 
 /**
- * Демонстрация экрана (Э7.1). Аудио вкладки НЕ запрашивается (`audio:
- * false`) — стоп-лист Э7: «не делать шаринг вкладки со звуком в MVP».
+ * Демонстрация экрана (Э7.1) — со звуком (запрос 2026-10-13): в окне выбора
+ * браузер предлагает «Поделиться звуком» (вкладка; весь экран — на Windows и
+ * ChromeOS; на macOS только вкладка). Звук идёт отдельным треком
+ * `ScreenShareAudio`, без шумоподавления/эхоподавления (это не голос).
+ * Не дал звук — демонстрация идёт без него, как раньше.
  * `screenShareEncoding`, не `videoEncoding` — прочитано в типах
  * `TrackPublishDefaults` (`options.d.ts`): `videoEncoding` — это параметры
  * именно КАМЕРЫ, демонстрация экрана кодируется отдельным полем.
@@ -173,7 +185,7 @@ export function SelfScreenShareButton({
     if (!isScreenShareEnabledRef.current) return;
     onScreenShareStopped?.();
     void stopOwnScreenShare(localParticipant);
-    toast.info("Демонстрацию перехватил учитель/администратор");
+    toast.info("Демонстрацию перехватил учитель/администратор", { id: "screen-share-preempted" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preemptedSignal]);
 
@@ -251,12 +263,16 @@ export function SelfScreenShareButton({
     // остаться на сервере — снять её до новой публикации.
     await clearStaleScreenShare(localParticipant);
     let track: LocalTrack | undefined;
+    let audioTrack: LocalTrack | undefined;
     try {
-      [track] = await localParticipant.createScreenTracks({
-        audio: false,
+      const tracks = await localParticipant.createScreenTracks({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        systemAudio: "include",
         resolution: encoding.resolution,
         contentHint: "detail",
       });
+      track = tracks.find((t) => t.kind === Track.Kind.Video);
+      audioTrack = tracks.find((t) => t.kind === Track.Kind.Audio);
     } catch (e) {
       releaseScreenShare(lessonId);
       // Закрыл окно выбора — передумал, это не ошибка.
@@ -264,13 +280,28 @@ export function SelfScreenShareButton({
       return;
     }
     if (!track) {
+      audioTrack?.stop();
       releaseScreenShare(lessonId);
       return;
     }
     if (await publishScreen(track)) {
       onScreenShareStarted?.();
+      // Звук — после картинки и без повторов: не опубликовался — демонстрация
+      // идёт без звука, это не повод её снимать.
+      if (audioTrack) {
+        const sound = audioTrack;
+        // Остановили кнопкой браузера «Закрыть доступ» — звук уходит вместе с картинкой.
+        track.mediaStreamTrack.addEventListener("ended", () => stopScreenShareAudio(localParticipant), { once: true });
+        void localParticipant
+          .publishTrack(sound, { source: Track.Source.ScreenShareAudio, audioPreset: AudioPresets.music, dtx: false, red: false })
+          .catch(() => {
+            sound.stop();
+            toast.info("Экран показывается без звука — звук не удалось передать");
+          });
+      }
       return;
     }
+    audioTrack?.stop();
     releaseScreenShare(lessonId);
     toast.error("Не удалось начать демонстрацию — попробуйте ещё раз");
   }

@@ -130,6 +130,8 @@ vi.mock("./presence.js", async () => {
   const screenShareLocks = new Map<string, string>();
   const grants = new Map<string, unknown>();
   const entryLocks = new Set<string>();
+  const cohosts = new Set<string>();
+  const chatLocks = new Set<string>();
   const chatIdem = new Map<string, string>();
   const chatRate = new Map<string, number>();
   const leftMarks = new Set<string>();
@@ -218,6 +220,16 @@ vi.mock("./presence.js", async () => {
       async (lessonId: string) =>
         [...roomMap(lessonId).values()].filter((e) => (e as { kind: string }).kind === "guest").length,
     ),
+    isCohost: vi.fn(async (lessonId: string, userId: string) => cohosts.has(`${lessonId}:${userId}`)),
+    setCohost: vi.fn(async (lessonId: string, userId: string, on: boolean) => {
+      if (on) cohosts.add(`${lessonId}:${userId}`);
+      else cohosts.delete(`${lessonId}:${userId}`);
+    }),
+    isChatLocked: vi.fn(async (lessonId: string) => chatLocks.has(lessonId)),
+    setChatLocked: vi.fn(async (lessonId: string, locked: boolean) => {
+      if (locked) chatLocks.add(lessonId);
+      else chatLocks.delete(lessonId);
+    }),
     isEntryLocked: vi.fn(async (lessonId: string) => entryLocks.has(lessonId)),
     setEntryLocked: vi.fn(async (lessonId: string, locked: boolean) => {
       if (locked) entryLocks.add(lessonId);
@@ -294,6 +306,8 @@ vi.mock("./presence.js", async () => {
       screenShareLocks.clear();
       grants.clear();
       entryLocks.clear();
+      cohosts.clear();
+      chatLocks.clear();
       newGuests.clear();
     },
   };
@@ -1679,5 +1693,105 @@ describe("зачистка presence после перезапуска серве
 
       expect((await presenceModule.getParticipant(SECOND_LESSON_ID, STUDENT_ID))?.connected).toBe(false);
     });
+  });
+});
+
+describe("права учителя внешнему участнику", () => {
+  const adminToken = (): AccessTokenPayload => ({ sub: OTHER_STUDENT_ID, schoolId: SCHOOL_ID, role: "admin" });
+
+  beforeEach(() => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+  });
+
+  it("выдать может только администратор — учителю урока и делегированному учителю отказ", async () => {
+    await roomsService.join(guestActor(), LESSON_ID);
+
+    await expect(
+      roomsService.setCohost(SCHOOL_ID, LESSON_ID, teacherToken(), STUDENT_ID, true),
+    ).rejects.toMatchObject({ statusCode: 403 });
+    await expect(
+      roomsService.setCohost(SCHOOL_ID, LESSON_ID, { ...adminToken(), lessonScope: LESSON_ID }, STUDENT_ID, true),
+    ).rejects.toMatchObject({ statusCode: 403 });
+    expect(await roomsService.isLessonCohost(LESSON_ID, STUDENT_ID)).toBe(false);
+  });
+
+  it("админ выдаёт: все медиаправа вживую, флаг в снимке, переживает перезаход; отзыв возвращает права урока", async () => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson({ settings: { studentsCanSpeak: false } }));
+    await roomsService.join(guestActor(), LESSON_ID);
+
+    await roomsService.setCohost(SCHOOL_ID, LESSON_ID, adminToken(), STUDENT_ID, true);
+
+    expect(mediaServiceMock.updateLivePermissions).toHaveBeenCalledWith(
+      `lesson-${LESSON_ID}`,
+      STUDENT_ID,
+      { canDraw: true, canSpeak: true, canShareScreen: true, canPublishVideo: true },
+      "guest",
+    );
+    let me = (await roomsService.listParticipantsSnapshot(LESSON_ID)).find((p) => p.userId === STUDENT_ID);
+    expect(me?.cohost).toBe(true);
+    expect(await roomsService.isLessonCohost(LESSON_ID, STUDENT_ID)).toBe(true);
+
+    // Запись presence зачищена (уснул телефон) — при перезаходе права учителя на месте.
+    await presenceModule.removeParticipant(LESSON_ID, STUDENT_ID);
+    const rejoined = await roomsService.join(guestActor(), LESSON_ID);
+    expect(rejoined.self.cohost).toBe(true);
+
+    await roomsService.setCohost(SCHOOL_ID, LESSON_ID, adminToken(), STUDENT_ID, false);
+    me = (await roomsService.listParticipantsSnapshot(LESSON_ID)).find((p) => p.userId === STUDENT_ID);
+    expect(me?.cohost).toBe(false);
+    expect(me?.permissions.canSpeak).toBe(false);
+    expect(await roomsService.isLessonCohost(LESSON_ID, STUDENT_ID)).toBe(false);
+  });
+
+  it("права учителя выдаются только гостю", async () => {
+    await roomsService.join(staffActor(), LESSON_ID);
+    await expect(
+      roomsService.setCohost(SCHOOL_ID, LESSON_ID, adminToken(), TEACHER_ID, true),
+    ).rejects.toMatchObject({ statusCode: 409 });
+  });
+
+  it("«заглушить всех» не трогает гостя с правами учителя", async () => {
+    await roomsService.join(guestActor(), LESSON_ID);
+    await roomsService.join(guestActor(OTHER_STUDENT_ID), LESSON_ID);
+    await roomsService.setCohost(SCHOOL_ID, LESSON_ID, adminToken(), STUDENT_ID, true);
+
+    await roomsService.muteAllNow(SCHOOL_ID, LESSON_ID, teacherToken());
+
+    expect(mediaServiceMock.muteMicrophones).toHaveBeenCalledWith(`lesson-${LESSON_ID}`, [OTHER_STUDENT_ID]);
+  });
+});
+
+describe("закрытие чата учителем", () => {
+  beforeEach(() => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+    repoMock.insertChatMessage.mockResolvedValue({
+      id: "m1",
+      lessonId: LESSON_ID,
+      userId: null,
+      body: "текст",
+      createdAt: new Date(),
+    });
+  });
+
+  it("закрыть может только учитель урока; ученик в закрытый чат не пишет, учитель — пишет", async () => {
+    await roomsService.join(staffActor(), LESSON_ID);
+    await roomsService.join(guestActor(), LESSON_ID);
+
+    await expect(
+      roomsService.setChatLocked(SCHOOL_ID, LESSON_ID, studentToken(), true),
+    ).rejects.toMatchObject({ statusCode: 403 });
+
+    await roomsService.setChatLocked(SCHOOL_ID, LESSON_ID, teacherToken(), true);
+    await expect(roomsService.sendChatMessage(guestActor(), LESSON_ID, "текст")).rejects.toMatchObject({
+      statusCode: 403,
+      code: "chat_locked",
+    });
+    await roomsService.sendChatMessage(staffActor(), LESSON_ID, "текст");
+
+    const joined = await roomsService.join(guestActor(), LESSON_ID);
+    expect(joined.chatLocked).toBe(true);
+
+    await roomsService.setChatLocked(SCHOOL_ID, LESSON_ID, teacherToken(), false);
+    await roomsService.sendChatMessage(guestActor(), LESSON_ID, "текст");
   });
 });

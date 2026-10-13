@@ -6,6 +6,8 @@ import {
   pinParticipantRequestSchema,
   sendChatMessageRequestSchema,
   setDrawForAllRequestSchema,
+  setChatLockedRequestSchema,
+  setCohostRequestSchema,
   setEntryLockedRequestSchema,
   setLessonModeRequestSchema,
   setLessonStageRequestSchema,
@@ -179,6 +181,29 @@ export default async function roomsRoutes(app: FastifyInstance) {
     await roomsService.setEntryLocked(request.user.schoolId, request.params.id, request.user, body.locked);
     return reply.status(204).send();
   });
+
+  app.patch<{ Params: { id: string } }>("/lessons/:id/chat-lock", staff, async (request, reply) => {
+    const body = setChatLockedRequestSchema.parse(request.body);
+    await roomsService.setChatLocked(request.user.schoolId, request.params.id, request.user, body.locked);
+    return reply.status(204).send();
+  });
+
+  // Права учителя внешнему участнику — только администратор (см. `setCohost`).
+  app.patch<{ Params: { id: string; userId: string } }>(
+    "/lessons/:id/participants/:userId/cohost",
+    staff,
+    async (request, reply) => {
+      const body = setCohostRequestSchema.parse(request.body);
+      await roomsService.setCohost(
+        request.user.schoolId,
+        request.params.id,
+        request.user,
+        request.params.userId,
+        body.cohost,
+      );
+      return reply.status(204).send();
+    },
+  );
 
   app.post<{ Params: { id: string } }>("/lessons/:id/hands/lower", staff, async (request, reply) => {
     const body = lowerHandsRequestSchema.parse(request.body ?? {});

@@ -20,6 +20,8 @@ export interface PresenceEntry {
   /** Э6.3, §5.3 ТЗ: закреплено учителем в видимой сетке видео — не право, обычное ephemeral-состояние, как handRaised. */
   pinned: boolean;
   permissions: ParticipantPermissions;
+  /** Гость с правами учителя (выдаёт администратор). Нет у записей до 2026-10-13. */
+  cohost?: boolean;
   joinedAt: string;
   lastSeenAt: number;
 }
@@ -197,6 +199,45 @@ export async function setGrantedPermissions(
 
 export async function clearGrantedPermissions(lessonId: string, userId: string): Promise<void> {
   await redis.hdel(grantsKey(lessonId), userId);
+}
+
+function cohostsKey(lessonId: string): string {
+  return `room:${lessonId}:cohosts`;
+}
+
+/**
+ * Гости с правами учителя — отдельно от presence-записи, как и выданные
+ * права: sweep удаляет запись уснувшего телефона, а при перезаходе права
+ * учителя не должны теряться.
+ */
+export async function isCohost(lessonId: string, userId: string): Promise<boolean> {
+  return (await redis.sismember(cohostsKey(lessonId), userId)) === 1;
+}
+
+export async function setCohost(lessonId: string, userId: string, cohost: boolean): Promise<void> {
+  if (cohost) {
+    await redis.sadd(cohostsKey(lessonId), userId);
+    await redis.expire(cohostsKey(lessonId), GRANTS_TTL_SECONDS);
+  } else {
+    await redis.srem(cohostsKey(lessonId), userId);
+  }
+}
+
+function chatLockKey(lessonId: string): string {
+  return `room:${lessonId}:chatLocked`;
+}
+
+/** Учитель закрыл чат ученикам. Урок постоянный — забытый замок истекает сам. */
+export async function isChatLocked(lessonId: string): Promise<boolean> {
+  return (await redis.exists(chatLockKey(lessonId))) === 1;
+}
+
+export async function setChatLocked(lessonId: string, locked: boolean): Promise<void> {
+  if (locked) {
+    await redis.set(chatLockKey(lessonId), "1", "EX", GRANTS_TTL_SECONDS);
+  } else {
+    await redis.del(chatLockKey(lessonId));
+  }
 }
 
 const ADMIT_GUEST_SCRIPT = `

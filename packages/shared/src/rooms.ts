@@ -38,6 +38,8 @@ export const participantSnapshotSchema = z.object({
   /** Э6.3, §5.3 ТЗ: закреплено учителем в видимой сетке видео — ephemeral-состояние, не право (см. participantPermissionsSchema). */
   pinned: z.boolean(),
   permissions: participantPermissionsSchema,
+  /** Гость с правами учителя (выдаёт только администратор). Нет у старых серверов. */
+  cohost: z.boolean().optional(),
   joinedAt: z.string(),
 });
 export type ParticipantSnapshot = z.infer<typeof participantSnapshotSchema>;
@@ -76,6 +78,8 @@ export const joinLessonResponseSchema = z.object({
   clientMediaSettings: clientMediaSettingsSchema,
   /** Учитель закрыл вход: новые ученики по ссылке не попадут, вернуться может только тот, кто уже был. */
   entryLocked: z.boolean(),
+  /** Учитель закрыл чат: ученики читают, но не пишут. Нет у старых серверов. */
+  chatLocked: z.boolean().optional(),
 });
 export type JoinLessonResponse = z.infer<typeof joinLessonResponseSchema>;
 
@@ -123,6 +127,13 @@ export type PinParticipantRequest = z.infer<typeof pinParticipantRequestSchema>;
 /** Э3.8: глобальный тумблер «ученики могут рисовать» — массово меняет canDraw у всех учеников урока разом. */
 export const setDrawForAllRequestSchema = z.object({ canDraw: z.boolean() });
 
+export const setChatLockedRequestSchema = z.object({ locked: z.boolean() });
+export type SetChatLockedRequest = z.infer<typeof setChatLockedRequestSchema>;
+
+/** Администратор выдаёт/забирает права учителя у внешнего участника. */
+export const setCohostRequestSchema = z.object({ cohost: z.boolean() });
+export type SetCohostRequest = z.infer<typeof setCohostRequestSchema>;
+
 export const setEntryLockedRequestSchema = z.object({ locked: z.boolean() });
 export type SetEntryLockedRequest = z.infer<typeof setEntryLockedRequestSchema>;
 export type SetDrawForAllRequest = z.infer<typeof setDrawForAllRequestSchema>;
@@ -148,6 +159,7 @@ export const serverRoomMessageSchema = z.discriminatedUnion("type", [
     reason: z.enum(["removed", "link_rotated"]).optional(),
   }),
   z.object({ type: z.literal("entry_locked"), locked: z.boolean() }),
+  z.object({ type: z.literal("chat_locked"), locked: z.boolean() }),
   z.object({
     type: z.literal("permissions_updated"),
     userId: z.string().uuid(),
