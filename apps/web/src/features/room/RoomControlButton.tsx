@@ -7,14 +7,15 @@ import { SimpleTooltip } from "@/shared/ui/tooltip";
 import { Loader } from "@/shared/ui/loader";
 import { toast } from "@/shared/ui/sonner";
 
-export type RoomControlVariant = "circle" | "pill" | "tile" | "rail" | "menu";
+export type RoomControlVariant = "circle" | "bare" | "pill" | "tile" | "rail" | "menu";
 
 /** Кнопки урока «парят» над затемнённым фоном — белые, с мягкой тенью вместо полос шапки и подвала. */
 export const FLOATING_SHADOW = "shadow-[0_4px_14px_rgba(16,24,40,.08),0_1px_3px_rgba(16,24,40,.06)]";
 
 /**
  * Кнопка панели урока. Три вида:
- *  - `circle` — круглый тумблер с подписью в тултипе (PiP-тулбар);
+ *  - `circle` — круглый тумблер с подписью под кнопкой;
+ *  - `bare` — тот же круг без подписи (тулбар окна «картинка в картинке»);
  *  - `pill` — десктопный футер: иконка + подпись в строку, опционально
  *    сплит-кнопка «шеврон» для выбора устройства внутри той же пилюли;
  *  - `tile` — мобильный футер: крупная плитка 56px, иконка над подписью;
@@ -254,7 +255,7 @@ export function RoomControlButton({
       </span>
     </SimpleTooltip>
   );
-  if (!caption) return button;
+  if (!caption || variant === "bare") return button;
   return (
     <div className="flex flex-col items-center gap-1">
       {button}

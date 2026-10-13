@@ -4,6 +4,7 @@ import { useLocalParticipant, useSpeakingParticipants } from "@livekit/component
 import { Hand, LogOut, MonitorX } from "lucide-react";
 import type { ParticipantSnapshot } from "@school/shared";
 
+import { cn } from "@/lib/utils";
 import { apiFetch } from "@/shared/api-client";
 import { SimpleTooltip } from "@/shared/ui/tooltip";
 import { SelfCameraButton } from "./CameraControls.js";
@@ -45,7 +46,7 @@ import { TileMenuContext } from "./tile-menu-context.js";
 declare global {
   interface DocumentPictureInPicture extends EventTarget {
     readonly window: Window | null;
-    requestWindow(options?: { width?: number; height?: number }): Promise<Window>;
+    requestWindow(options?: { width?: number; height?: number; preferInitialWindowPlacement?: boolean }): Promise<Window>;
   }
   interface Window {
     documentPictureInPicture?: DocumentPictureInPicture;
@@ -56,8 +57,8 @@ declare global {
  * Стартовый (и, за счёт `resize`-лока в `open()`, фактически неизменный)
  * размер PiP-окна: две плитки рядом (показывающий экран + говорящий) и тулбар.
  */
-const PIP_WIDTH = 520;
-const PIP_HEIGHT = 300;
+const PIP_WIDTH = 340;
+const PIP_HEIGHT = 540;
 
 export interface ScreenShareAutoPipHandle {
   open: () => Promise<void>;
@@ -121,6 +122,9 @@ export const ScreenShareAutoPip = forwardRef<
       pipWindow = await window.documentPictureInPicture.requestWindow({
         width: PIP_WIDTH,
         height: PIP_HEIGHT,
+        // Иначе Chrome открывает окно размером, до которого его растянули в
+        // прошлый раз, — плитки оказывались крошечными (жалоба 2026-10-13).
+        preferInitialWindowPlacement: true,
       });
     } catch {
       // Нет свежего user activation или браузер не поддерживает — тихо
@@ -160,7 +164,7 @@ export const ScreenShareAutoPip = forwardRef<
     // Тот же чуть затемнённый фон, что и у страницы урока, — кнопки «парят» над ним.
     pipWindow.document.body.className = "bg-[var(--c-room)]";
     const root = pipWindow.document.createElement("div");
-    root.className = "flex h-full min-h-0 flex-col items-stretch gap-3 p-3";
+    root.className = "flex h-full min-h-0 flex-col items-stretch gap-2.5 p-2.5";
     pipWindow.document.body.appendChild(root);
     pipWindowRef.current = pipWindow;
     setContainer(root);
@@ -200,7 +204,7 @@ export const ScreenShareAutoPip = forwardRef<
       <div className="min-h-0 flex-1">
         <PipTiles participants={participants} selfId={selfId} />
       </div>
-      <div className="flex shrink-0 flex-wrap items-center justify-center gap-2">
+      <div className="flex shrink-0 items-center justify-center gap-2.5">
         {!isTeacher ? (
           <RoomControlButton
             tone="action"
@@ -210,11 +214,11 @@ export const ScreenShareAutoPip = forwardRef<
             activeLabel="Опустить руку"
             inactiveLabel="Поднять руку"
             onToggle={onToggleHand}
-            caption="Рука"
+            variant="bare"
           />
         ) : null}
-        <SelfMicButton />
-        <SelfCameraButton />
+        <SelfMicButton variant="bare" />
+        <SelfCameraButton variant="bare" />
         <RoomControlButton
           tone="action"
           active={false}
@@ -227,10 +231,9 @@ export const ScreenShareAutoPip = forwardRef<
             if (lessonId) void apiFetch(`/lessons/${lessonId}/screen-share/release`, { method: "POST" }).catch(() => undefined);
             pipWindowRef.current?.close();
           }}
-          caption="Стоп"
+          variant="bare"
         />
-        <div className="flex flex-col items-center gap-1">
-          <SimpleTooltip content="Выйти из урока" side="top">
+        <SimpleTooltip content="Выйти из урока" side="top">
             <button
               type="button"
               onClick={onLeave}
@@ -239,9 +242,7 @@ export const ScreenShareAutoPip = forwardRef<
             >
               <LogOut className="size-5" aria-hidden />
             </button>
-          </SimpleTooltip>
-          <span className="text-[11px] leading-none text-muted-foreground">Выйти</span>
-        </div>
+        </SimpleTooltip>
       </div>
     </TileMenuContext.Provider>,
     container,
@@ -270,5 +271,26 @@ function PipTiles({ participants, selfId }: { participants: ParticipantSnapshot[
     others.find((p) => p.kind === "staff" || p.cohost) ??
     [...others].sort((a, b) => a.joinedAt.localeCompare(b.joinedAt))[0];
   const tiles = [self, speaker].filter((p): p is ParticipantSnapshot => p !== undefined);
-  return <RoomVideoGrid participants={tiles} selfId={selfId} ordered />;
+  // Каждая плитка — во всю свою половину окна (а не сетка 16:9, где в узком
+  // окне камеры получались маленькими с полями). Окно вертикальное — плитки
+  // друг под другом; если браузер всё же дал широкое — рядом.
+  const ref = useRef<HTMLDivElement>(null);
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const view = el.ownerDocument.defaultView ?? window;
+    const ro = new view.ResizeObserver(() => setWide(el.clientWidth > el.clientHeight * 1.4));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div ref={ref} className={cn("flex size-full min-h-0 gap-2.5", wide ? "flex-row" : "flex-col")}>
+      {tiles.map((p) => (
+        <div key={p.userId} className="min-h-0 min-w-0 flex-1">
+          <RoomVideoGrid participants={[p]} selfId={selfId} />
+        </div>
+      ))}
+    </div>
+  );
 }
