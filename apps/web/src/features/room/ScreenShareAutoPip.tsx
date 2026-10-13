@@ -157,7 +157,8 @@ export const ScreenShareAutoPip = forwardRef<
     pipWindow.document.documentElement.style.height = "100%";
     pipWindow.document.body.style.height = "100%";
     pipWindow.document.body.style.margin = "0";
-    pipWindow.document.body.className = "bg-background";
+    // Тот же чуть затемнённый фон, что и у страницы урока, — кнопки «парят» над ним.
+    pipWindow.document.body.className = "bg-[var(--c-room)]";
     const root = pipWindow.document.createElement("div");
     root.className = "flex h-full min-h-0 flex-col items-stretch gap-3 p-3";
     pipWindow.document.body.appendChild(root);
@@ -199,7 +200,7 @@ export const ScreenShareAutoPip = forwardRef<
       <div className="min-h-0 flex-1">
         <PipTiles participants={participants} selfId={selfId} />
       </div>
-      <div className="flex shrink-0 flex-wrap items-center justify-center gap-2 border-t border-border pt-3">
+      <div className="flex shrink-0 flex-wrap items-center justify-center gap-2">
         {!isTeacher ? (
           <RoomControlButton
             tone="action"
@@ -233,7 +234,7 @@ export const ScreenShareAutoPip = forwardRef<
             <button
               type="button"
               onClick={onLeave}
-              className="flex size-11 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+              className="flex size-11 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-[0_4px_14px_rgba(16,24,40,.08),0_1px_3px_rgba(16,24,40,.06)] transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
               aria-label="Выйти из урока"
             >
               <LogOut className="size-5" aria-hidden />

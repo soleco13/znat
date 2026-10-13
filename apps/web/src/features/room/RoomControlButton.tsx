@@ -247,7 +247,7 @@ export function RoomControlButton({
           disabled={blocked}
           aria-disabled={explain ? true : undefined}
           aria-label={label}
-          className={cn("relative size-11", explain && "opacity-50", speaking && "ring-2 ring-success ring-offset-1")}
+          className={cn("relative size-11", FLOATING_SHADOW, explain && "opacity-50", speaking && "ring-2 ring-success ring-offset-1")}
         >
           {iconNode}
         </Toggle>

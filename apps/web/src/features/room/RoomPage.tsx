@@ -271,10 +271,9 @@ const DRAWER_TABS: { key: DrawerMode; label: string }[] = [
 const MENU_CONTENT = "w-[280px] rounded-lg p-1.5 shadow-lg";
 const MENU_ITEM = "h-9 gap-2.5 rounded-md px-2.5 text-sm [&>svg]:text-muted-foreground";
 const MENU_LABEL = "px-2.5 pb-1 pt-2 text-xs font-semibold text-text-3";
-const ICON_BTN = cn(
-  "relative flex size-11 items-center justify-center rounded-full bg-card text-text-2 transition-colors hover:bg-surface-2 hover:text-foreground [&_svg]:size-5",
-  FLOATING_SHADOW,
-);
+/** Кнопки-иконки слева внизу: без подложки, иконка 24px — по высоте с пилюлями (48px) в центре. */
+const ICON_BTN =
+  "relative flex size-12 items-center justify-center rounded-full text-text-2 transition-colors hover:bg-black/[.05] hover:text-foreground [&_svg]:size-6";
 /** Белая «парящая» подложка над фоном урока: название урока, кнопки шапки. */
 const FLOATING = cn("bg-card", FLOATING_SHADOW);
 
@@ -1712,7 +1711,7 @@ export function RoomPage() {
         onClick={() => toggleDrawer(mode)}
         aria-pressed={drawer === mode}
         aria-label={label}
-        className={cn(ICON_BTN, drawer === mode && "bg-surface-3 text-foreground")}
+        className={cn(ICON_BTN, drawer === mode && "bg-black/[.06] text-foreground")}
       >
         <Icon aria-hidden />
         {badge}
@@ -1968,7 +1967,7 @@ export function RoomPage() {
             "people",
             "Участники",
             Users,
-            <span className="absolute -right-px -top-px flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-surface-3 px-[5px] text-[11px] font-bold text-text-2">
+            <span className="absolute -right-px -top-px flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-card px-[5px] text-[11px] font-bold text-text-2">
               {connectedCount}
             </span>,
           )}
@@ -2051,7 +2050,7 @@ export function RoomPage() {
             информация, а не навигация. */}
         <div className="flex shrink-0 items-center gap-2.5">
           <div className="hidden items-center gap-2.5 xl:flex">
-            <span className={cn("inline-flex h-8 shrink-0 items-center gap-[7px] rounded-full px-3 text-[12.5px] font-semibold tabular-nums text-text-2", FLOATING)}>
+            <span className="inline-flex h-8 shrink-0 items-center gap-[7px] text-[12.5px] font-semibold tabular-nums text-text-2">
               <Clock className="size-3.5" aria-hidden />
               <ElapsedClock since={sessionStartedAt} />
             </span>
@@ -2081,7 +2080,11 @@ export function RoomPage() {
             <button
               type="button"
               aria-label="Другие кнопки урока"
-              className={cn(ICON_BTN, "size-12 rounded-2xl border border-border text-foreground data-[state=open]:[&_svg]:rotate-180 [&_svg]:transition-transform")}
+              className={cn(
+                ICON_BTN,
+                FLOATING,
+                "rounded-2xl border border-border text-foreground hover:bg-surface-2 data-[state=open]:[&_svg]:rotate-180 [&_svg]:size-[21px] [&_svg]:transition-transform",
+              )}
             >
               <ChevronUp aria-hidden />
               {phoneMoreBadge > 0 ? (
