@@ -10,6 +10,7 @@ import {
 } from "@livekit/components-react";
 import { AudioPresets, ConnectionQuality, ConnectionState, RoomEvent, Track, VideoPresets, type RoomOptions } from "livekit-client";
 import {
+  ChevronUp,
   AlertTriangle,
   ArrowLeft,
   Check,
@@ -111,7 +112,7 @@ import { DeviceCheckScreen, type DeviceCheckResult } from "./DeviceCheckScreen.j
 import { DeviceSettingsModal } from "./DeviceSettingsModal.js";
 import { formatClock, participantsCount } from "./format.js";
 import { ScreenShareAutoPip, type ScreenShareAutoPipHandle } from "./ScreenShareAutoPip.js";
-import { RoomControlButton, type RoomControlVariant } from "./RoomControlButton.js";
+import { FLOATING_SHADOW, RoomControlButton, type RoomControlVariant } from "./RoomControlButton.js";
 import { useRoomIdentity } from "./use-room-identity.js";
 import { useWakeLock } from "./use-wake-lock.js";
 import { RoomHotkeys } from "./RoomHotkeys.js";
@@ -270,8 +271,12 @@ const DRAWER_TABS: { key: DrawerMode; label: string }[] = [
 const MENU_CONTENT = "w-[280px] rounded-lg p-1.5 shadow-lg";
 const MENU_ITEM = "h-9 gap-2.5 rounded-md px-2.5 text-sm [&>svg]:text-muted-foreground";
 const MENU_LABEL = "px-2.5 pb-1 pt-2 text-xs font-semibold text-text-3";
-const ICON_BTN =
-  "relative flex size-11 items-center justify-center rounded-full text-text-2 transition-colors hover:bg-surface-3 hover:text-foreground [&_svg]:size-5";
+const ICON_BTN = cn(
+  "relative flex size-11 items-center justify-center rounded-full bg-card text-text-2 transition-colors hover:bg-surface-2 hover:text-foreground [&_svg]:size-5",
+  FLOATING_SHADOW,
+);
+/** Белая «парящая» подложка над фоном урока: название урока, кнопки шапки. */
+const FLOATING = cn("bg-card", FLOATING_SHADOW);
 
 type PermissionKey = "canDraw" | "canSpeak" | "canShareScreen" | "canPublishVideo";
 
@@ -1034,6 +1039,8 @@ export function RoomPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- реагируем только на смену набора поднявших
   }, [raisedKey, isTeacher]);
   const unreadChat = drawer === "chat" ? 0 : Math.max(0, chat.length - chatSeen);
+  /** Телефон: счётчик на кнопке «Ещё» — непрочитанный чат и (учителю) поднятые руки. */
+  const phoneMoreBadge = unreadChat + (isTeacher ? raisedHands.length : 0);
   // Планового времени у урока по сути нет (постоянная комната) — только число участников.
   const headerMeta = participantsCount(connectedCount);
   const shareVisible =
@@ -1826,23 +1833,29 @@ export function RoomPage() {
   ) : null;
 
   const content = (
-    <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+    <div className="flex h-dvh flex-col overflow-hidden bg-[var(--c-room)] text-foreground">
       {/* Шапка — десктоп */}
       {phoneLandscape ? null : (
-      <header className="hidden h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 md:flex">
-        <BrandMark className="size-[30px] text-primary" />
-        <span className="flex min-w-0 flex-col">
-          <span className="truncate text-[15px] font-bold leading-tight tracking-[-.02em]">
-            {lessonTitle ?? "Урок"}
+      <header className="hidden h-16 shrink-0 items-center gap-3 px-3.5 pt-2 md:flex">
+        <div className={cn("flex min-w-0 items-center gap-3 rounded-2xl py-1.5 pl-2 pr-3", FLOATING)}>
+          <BrandMark className="size-[30px] shrink-0 text-primary" />
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate text-[15px] font-bold leading-tight tracking-[-.02em]">
+              {lessonTitle ?? "Урок"}
+            </span>
+            <span className="truncate text-xs leading-tight text-muted-foreground">{headerMeta}</span>
           </span>
-          <span className="truncate text-xs leading-tight text-muted-foreground">{headerMeta}</span>
-        </span>
-        <StatusPill status={status} />
-        <MediaLinkPill hidden={status !== "connected"} />
-        {recordingActive ? <RecordingIcon /> : null}
+          <StatusPill status={status} />
+          <MediaLinkPill hidden={status !== "connected"} />
+          {recordingActive ? <RecordingIcon /> : null}
+        </div>
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {isTeacher && lessonJoinPath ? (
-            <Button variant="secondary" className="h-9 rounded-[10px] px-3.5 text-[13.5px]" onClick={copyJoinLink}>
+            <Button
+              variant="outline"
+              className={cn("h-10 rounded-full border-transparent px-4 text-[13.5px] hover:bg-surface-2", FLOATING)}
+              onClick={copyJoinLink}
+            >
               <LinkIcon aria-hidden />
               Пригласить
             </Button>
@@ -1853,7 +1866,10 @@ export function RoomPage() {
                 type="button"
                 onClick={openSettings}
                 aria-label="Настройки"
-                className="flex size-9 items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-surface-3 hover:text-foreground"
+                className={cn(
+                  "flex size-10 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-surface-2 hover:text-foreground",
+                  FLOATING,
+                )}
               >
                 <Settings className="size-[18px]" aria-hidden />
               </button>
@@ -1866,18 +1882,23 @@ export function RoomPage() {
 
       {/* Шапка — телефон */}
       {phoneLandscape ? null : (
-      <header className="flex shrink-0 items-center gap-2 px-3.5 pb-2.5 pt-[max(8px,env(safe-area-inset-top))] md:hidden">
-        <BrandMark className="size-[26px] text-primary" />
-        <span className="min-w-0 truncate text-[13.5px] font-bold">{lessonTitle ?? "Урок"}</span>
-        <StatusPill status={status} compact />
-        <MediaLinkPill hidden={status !== "connected"} compact />
-        {recordingActive ? <RecordingIcon /> : null}
+      <header className="flex shrink-0 items-center gap-2 px-3 pb-2.5 pt-[max(8px,env(safe-area-inset-top))] md:hidden">
+        <div className={cn("flex min-w-0 items-center gap-2 rounded-full py-1 pl-1 pr-2.5", FLOATING)}>
+          <BrandMark className="size-[26px] shrink-0 text-primary" />
+          <span className="min-w-0 truncate text-[13.5px] font-bold">{lessonTitle ?? "Урок"}</span>
+          <StatusPill status={status} compact />
+          <MediaLinkPill hidden={status !== "connected"} compact />
+          {recordingActive ? <RecordingIcon /> : null}
+        </div>
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
               aria-label="Меню урока"
-              className="ml-auto flex size-[30px] shrink-0 items-center justify-center rounded-[9px] text-muted-foreground transition-colors hover:bg-surface-3"
+              className={cn(
+                "ml-auto flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-surface-2",
+                FLOATING,
+              )}
             >
               <MoreHorizontal className="size-[18px]" aria-hidden />
             </button>
@@ -1937,7 +1958,7 @@ export function RoomPage() {
 
       {/* Футер — десктоп */}
       {phoneLandscape ? null : (
-      <footer className="hidden h-[76px] shrink-0 items-center justify-between gap-4 border-t border-border bg-card px-4 md:flex">
+      <footer className="hidden h-[76px] shrink-0 items-center justify-between gap-4 px-4 md:flex">
         {/* Слева — кнопки-меню (участники/чат/материалы/⋯): были у кнопки
             «Выйти» справа, пользователь попросил поменять местами с
             таймером (2026-09-23). В отличие от таймера — навигационные,
@@ -2030,11 +2051,11 @@ export function RoomPage() {
             информация, а не навигация. */}
         <div className="flex shrink-0 items-center gap-2.5">
           <div className="hidden items-center gap-2.5 xl:flex">
-            <span className="inline-flex h-8 shrink-0 items-center gap-[7px] rounded-full bg-surface-2 px-3 text-[12.5px] font-semibold tabular-nums text-text-2">
+            <span className={cn("inline-flex h-8 shrink-0 items-center gap-[7px] rounded-full px-3 text-[12.5px] font-semibold tabular-nums text-text-2", FLOATING)}>
               <Clock className="size-3.5" aria-hidden />
               <ElapsedClock since={sessionStartedAt} />
             </span>
-            <span className="truncate text-[12.5px] text-text-3">
+            <span className="truncate text-[12.5px] text-text-2">
               Режим: {LESSON_MODE_LABEL[lessonMode].toLowerCase()}
             </span>
           </div>
@@ -2042,7 +2063,7 @@ export function RoomPage() {
             type="button"
             variant="destructive"
             onClick={leaveRoom}
-            className="h-11 gap-2 rounded-full px-[18px] text-[15px] font-semibold [&_svg]:size-[19px]"
+            className={cn("h-11 gap-2 rounded-full px-[18px] text-[15px] font-semibold [&_svg]:size-[19px]", FLOATING_SHADOW)}
           >
             <LogOut aria-hidden />
             Выйти
@@ -2052,59 +2073,78 @@ export function RoomPage() {
 
       )}
 
-      {/* Футер — телефон */}
+      {/* Футер — телефон: на экране главное (микрофон, камера, выход), остальное — в «Ещё». */}
       {phoneLandscape ? null : (
-      <footer className="flex shrink-0 flex-col gap-2.5 px-3 pb-[max(20px,env(safe-area-inset-bottom))] pt-3.5 md:hidden">
-        <div className="flex items-stretch gap-2">
-          {media ? micButton("tile") : null}
-          {media ? cameraButton("tile") : null}
-          {shareButton("tile")}
-          {isTeacher ? (
+      <footer className="flex shrink-0 items-center justify-center gap-2.5 px-3 pb-[max(16px,env(safe-area-inset-bottom))] pt-2.5 md:hidden">
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="Другие кнопки урока"
+              className={cn(ICON_BTN, "size-12 rounded-2xl border border-border text-foreground data-[state=open]:[&_svg]:rotate-180 [&_svg]:transition-transform")}
+            >
+              <ChevronUp aria-hidden />
+              {phoneMoreBadge > 0 ? (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground">
+                  {phoneMoreBadge}
+                </span>
+              ) : null}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="start" sideOffset={10} className={MENU_CONTENT}>
+            {shareButton("menu")}
+            {isTeacher ? (
+              <RoomControlButton
+                variant="menu"
+                tone="action"
+                active={drawer === "people"}
+                activeIcon={Users}
+                inactiveIcon={Users}
+                activeLabel="Участники"
+                inactiveLabel="Участники"
+                badge={raisedHands.length || undefined}
+                onToggle={() => toggleDrawer("people")}
+              />
+            ) : (
+              <RoomControlButton
+                variant="menu"
+                tone="action"
+                active={self?.handRaised ?? false}
+                activeIcon={Hand}
+                inactiveIcon={Hand}
+                activeLabel="Опустить руку"
+                inactiveLabel="Поднять руку"
+                onToggle={toggleHand}
+              />
+            )}
             <RoomControlButton
-              variant="tile"
+              variant="menu"
               tone="action"
-              active={drawer === "people"}
-              activeIcon={Users}
-              inactiveIcon={Users}
-              activeLabel="Участники"
-              inactiveLabel="Участники"
-              onToggle={() => toggleDrawer("people")}
+              active={drawer === "chat"}
+              activeIcon={MessageSquare}
+              inactiveIcon={MessageSquare}
+              activeLabel="Чат"
+              inactiveLabel="Чат"
+              badge={unreadChat || undefined}
+              onToggle={() => toggleDrawer("chat")}
             />
-          ) : (
-            <RoomControlButton
-              variant="tile"
-              tone="action"
-              active={self?.handRaised ?? false}
-              activeIcon={Hand}
-              inactiveIcon={Hand}
-              activeLabel="Опустить руку"
-              inactiveLabel="Поднять руку"
-              caption="Рука"
-              hotkey="H"
-              onToggle={toggleHand}
-            />
-          )}
-          <RoomControlButton
-            variant="tile"
-            tone="action"
-            active={drawer === "chat"}
-            activeIcon={MessageSquare}
-            inactiveIcon={MessageSquare}
-            activeLabel="Чат"
-            inactiveLabel="Чат"
-            hotkey="C"
-            badge={unreadChat}
-            onToggle={() => toggleDrawer("chat")}
-          />
-        </div>
-        <button
-          type="button"
-          onClick={leaveRoom}
-          className="flex h-12 items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-card text-[15px] font-semibold text-destructive transition-colors hover:bg-destructive/5"
-        >
-          <LogOut className="size-[18px]" aria-hidden />
-          Выйти из урока
-        </button>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {media ? micButton("rail") : null}
+        {media ? cameraButton("rail") : null}
+        <SimpleTooltip content="Выйти из урока" side="top">
+          <button
+            type="button"
+            onClick={leaveRoom}
+            aria-label="Выйти из урока"
+            className={cn(
+              "flex size-12 shrink-0 items-center justify-center rounded-2xl bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90 [&_svg]:size-[21px]",
+              FLOATING_SHADOW,
+            )}
+          >
+            <LogOut aria-hidden />
+          </button>
+        </SimpleTooltip>
       </footer>
       )}
 

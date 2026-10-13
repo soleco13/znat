@@ -38,6 +38,8 @@
   --c-surface: #ffffff;
   --c-surface-2: #f6f7f9;
   --c-surface-3: #f0f2f5;
+  /* Фон урока под плитками и «парящими» кнопками — на тон темнее --c-bg. */
+  --c-room: #e9ecf1;
   --c-border: rgba(16, 24, 40, 0.07);
   --c-border-solid: #e7eaef;
 

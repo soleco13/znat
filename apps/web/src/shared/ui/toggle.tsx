@@ -19,7 +19,8 @@ const toggleVariants = cva(
         outline:
           "border border-border bg-card text-foreground shadow-xs hover:bg-secondary data-[state=on]:bg-primary-light data-[state=on]:text-primary data-[state=on]:border-primary-muted",
         media:
-          "shadow-sm data-[state=on]:border data-[state=on]:border-border data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:hover:bg-secondary data-[state=off]:bg-destructive data-[state=off]:text-destructive-foreground data-[state=off]:hover:bg-destructive/90",
+          // Выключено — та же белая кнопка, только иконка перечёркнута (не «ошибка устройства»).
+          "border border-border bg-card text-foreground shadow-sm hover:bg-secondary",
       },
       size: {
         default: "h-10 px-3",

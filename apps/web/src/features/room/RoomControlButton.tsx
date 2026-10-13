@@ -1,12 +1,16 @@
 import { ChevronUp, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { DropdownMenuItem } from "@/shared/ui/dropdown-menu";
 import { Toggle } from "@/shared/ui/toggle";
 import { SimpleTooltip } from "@/shared/ui/tooltip";
 import { Loader } from "@/shared/ui/loader";
 import { toast } from "@/shared/ui/sonner";
 
-export type RoomControlVariant = "circle" | "pill" | "tile" | "rail";
+export type RoomControlVariant = "circle" | "pill" | "tile" | "rail" | "menu";
+
+/** Кнопки урока «парят» над затемнённым фоном — белые, с мягкой тенью вместо полос шапки и подвала. */
+export const FLOATING_SHADOW = "shadow-[0_4px_14px_rgba(16,24,40,.08),0_1px_3px_rgba(16,24,40,.06)]";
 
 /**
  * Кнопка панели урока. Три вида:
@@ -14,11 +18,12 @@ export type RoomControlVariant = "circle" | "pill" | "tile" | "rail";
  *  - `pill` — десктопный футер: иконка + подпись в строку, опционально
  *    сплит-кнопка «шеврон» для выбора устройства внутри той же пилюли;
  *  - `tile` — мобильный футер: крупная плитка 56px, иконка над подписью;
- *  - `rail` — телефон в альбомной ориентации: квадрат 48px в колонке справа, только иконка.
- * `tone="media"`: выключено — красная заливка. `tone="quiet"`: выключено — обычная
- * кнопка с перечёркнутой иконкой (камера: выключенная камера у ученика —
- * норма, а не тревога; красная заливка весь урок выглядела как ошибка).
- * `tone="action"`: включено — синий тинт.
+ *  - `rail` — телефон в альбомной ориентации: квадрат 48px в колонке справа, только иконка;
+ *  - `menu` — пункт выпадающего меню «Ещё» на телефоне: иконка и подпись в строку.
+ * Выключенный микрофон или камера — та же белая кнопка с перечёркнутой иконкой
+ * цвета текста (запрос 2026-10-13: красная заливка выглядела как «устройство
+ * недоступно»). `tone` оставлен для совместимости: `media` и `quiet` теперь
+ * выглядят одинаково. `tone="action"`: включено — синий тинт.
  */
 export function RoomControlButton({
   active,
@@ -64,16 +69,12 @@ export function RoomControlButton({
 }) {
   const Icon = active ? ActiveIcon : InactiveIcon;
   const label = title ?? (active ? activeLabel : inactiveLabel);
-  const alarm = tone === "media" && !active;
-  const quietOff = tone === "quiet" && !active;
   const highlighted = tone === "action" && active;
-  const surface = alarm
-    ? "border-destructive bg-destructive text-destructive-foreground"
-    : highlighted
-      ? "border-primary-muted bg-primary-light text-primary"
-      : "border-border bg-card text-foreground";
-  const hover = alarm ? "hover:bg-black/10" : highlighted ? "hover:bg-black/[.04]" : "hover:bg-surface-2";
-  const iconNode = loading ? <Loader /> : <Icon aria-hidden className={quietOff ? "text-destructive" : undefined} />;
+  const surface = highlighted
+    ? "border-primary-muted bg-primary-light text-primary"
+    : "border-border bg-card text-foreground";
+  const hover = highlighted ? "hover:bg-black/[.04]" : "hover:bg-surface-2";
+  const iconNode = loading ? <Loader /> : <Icon aria-hidden />;
   const tooltip = hotkey ? `${label} · ${hotkey}` : label;
   // Недоступна, но с причиной («Микрофон выключил учитель — поднимите руку»):
   // не блокируем, а по нажатию объясняем. У настоящей disabled-кнопки
@@ -84,6 +85,31 @@ export function RoomControlButton({
     ? () => toast(explain, { position: "top-center", duration: 5000, id: "room-control-hint" })
     : onToggle;
   const blocked = disabled && !explain;
+
+  if (variant === "menu") {
+    return (
+      <DropdownMenuItem
+        onSelect={handleToggle}
+        data-hotkey={hotkey}
+        disabled={blocked}
+        aria-disabled={explain ? true : undefined}
+        aria-pressed={active}
+        className={cn(
+          "h-10 gap-2.5 rounded-md px-2.5 text-sm [&>svg]:size-[18px]",
+          highlighted ? "text-primary [&>svg]:text-primary" : "[&>svg]:text-muted-foreground",
+          explain && "opacity-50",
+        )}
+      >
+        {iconNode}
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        {badge ? (
+          <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground">
+            {badge}
+          </span>
+        ) : null}
+      </DropdownMenuItem>
+    );
+  }
 
   if (variant === "tile") {
     return (
@@ -100,7 +126,8 @@ export function RoomControlButton({
           explain && "opacity-50",
           "relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-[3px] rounded-2xl border text-[11.5px] font-semibold leading-none transition-colors disabled:opacity-50 [&_svg]:size-[21px] [&_svg]:shrink-0",
           surface,
-          alarm ? "" : hover,
+          hover,
+          FLOATING_SHADOW,
           speaking && "ring-2 ring-success ring-offset-1",
         )}
       >
@@ -130,7 +157,8 @@ export function RoomControlButton({
           explain && "opacity-50",
           "relative flex size-12 shrink-0 items-center justify-center rounded-2xl border transition-colors disabled:opacity-50 [&_svg]:size-[21px] [&_svg]:shrink-0",
           surface,
-          alarm ? "" : hover,
+          hover,
+          FLOATING_SHADOW,
           speaking && "ring-2 ring-success ring-offset-1",
         )}
       >
@@ -148,7 +176,8 @@ export function RoomControlButton({
     return (
       <span
         className={cn(
-          "inline-flex shrink-0 items-center overflow-hidden rounded-full border shadow-xs transition-colors",
+          "inline-flex shrink-0 items-center overflow-hidden rounded-full border transition-colors",
+          FLOATING_SHADOW,
           surface,
           speaking && "ring-2 ring-success ring-offset-1",
         )}
@@ -190,16 +219,13 @@ export function RoomControlButton({
         </SimpleTooltip>
         {onOpenSettings ? (
           <>
-            <span aria-hidden className={cn("h-[26px] w-px", alarm ? "bg-white/30" : "bg-border")} />
+            <span aria-hidden className="h-[26px] w-px bg-border" />
             <SimpleTooltip content={settingsLabel} side="top">
               <button
                 type="button"
                 onClick={onOpenSettings}
                 aria-label={settingsLabel}
-                className={cn(
-                  "flex h-12 w-9 items-center justify-center transition-colors [&_svg]:size-4",
-                  alarm ? "text-white/80 hover:bg-black/10" : "text-text-3 hover:bg-surface-2 hover:text-text-2",
-                )}
+                className="flex h-12 w-9 items-center justify-center text-text-3 transition-colors hover:bg-surface-2 hover:text-text-2 [&_svg]:size-4"
               >
                 <ChevronUp aria-hidden />
               </button>
