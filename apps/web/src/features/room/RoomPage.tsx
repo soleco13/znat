@@ -121,8 +121,10 @@ import { SelfMicButton } from "./MicControls.js";
 import { MicSync } from "./MicSync.js";
 import { Switch } from "@/shared/ui/switch";
 import { detectDeviceProfile, deviceProfileNow, type DeviceProfile } from "./device-profile.js";
+import { disposeBoardSessions } from "../canvas/board-session.js";
 import { ParticipantMenu } from "./ParticipantMenu.js";
 import { ApplyParticipantVolumes } from "./participant-volume.js";
+import { AudioLagGuard } from "./AudioLagGuard.js";
 import { TileMenuContext } from "./tile-menu-context.js";
 import { canShareScreenHere, ScreenShareStatusBar, SelfScreenShareButton } from "./ScreenShareControls.js";
 import { RoomVideoGrid } from "./RoomVideoGrid.js";
@@ -367,10 +369,9 @@ export function RoomPage() {
   const [lessonMode, setLessonMode] = useState<LessonMode>("lecture");
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [chatDraft, setChatDraft] = useState("");
-  /** Ключ идемпотентности последнего отправляемого текста (`sendChat`). */
-  const chatSendRef = useRef<{ body: string; id: string } | null>(null);
   /** Отправленные, но ещё не подтверждённые сервером сообщения — видны бледными. */
-  const [chatPending, setChatPending] = useState<{ id: string; body: string }[]>([]);
+  /** Свои сообщения в пути; `failed` — не ушло, ждёт «Повторить» или «Удалить». */
+  const [chatPending, setChatPending] = useState<{ id: string; body: string; failed?: boolean }[]>([]);
   const [chatSeen, setChatSeen] = useState(0);
   const [peopleQuery, setPeopleQuery] = useState("");
   const [deckStatuses, setDeckStatuses] = useState<Record<string, DeckProgressEvent>>({});
@@ -396,6 +397,11 @@ export function RoomPage() {
   }, []);
   // Перезагрузка вкладки посреди урока — сразу обратно в урок, с теми же
   // устройствами и тем, что было включено (см. `rejoin-state.ts`).
+  // Доска урока живёт между сменами стейджа (board-session.ts) — уничтожаем её при выходе из урока.
+  useEffect(() => {
+    if (!lessonId) return;
+    return () => disposeBoardSessions(lessonId);
+  }, [lessonId]);
   const [rejoin] = useState(() => readRejoinState(lessonId));
   const rejoinRef = useRef(rejoin);
   // Прошлый выбор микрофона/камеры на экране проверки — на этом устройстве.
@@ -1020,33 +1026,40 @@ export function RoomPage() {
     if (!lessonId || !chatDraft.trim()) return;
     const body = chatDraft;
     setChatDraft("");
-    // Повтор того же текста после ошибки — с тем же ключом: если первый запрос
-    // на самом деле дошёл (ответ потерялся), сервер вернёт его, а не создаст второе.
-    const pending = chatSendRef.current;
-    const clientMessageId = pending && pending.body === body ? pending.id : crypto.randomUUID();
-    chatSendRef.current = { body, id: clientMessageId };
-    setChatPending((prev) => (prev.some((m) => m.id === clientMessageId) ? prev : [...prev, { id: clientMessageId, body }]));
+    await deliverChat(crypto.randomUUID(), body);
+  }
+
+  /**
+   * Отправка (и повтор) одного сообщения. Не ушедшее остаётся в ленте с
+   * «Повторить» — раньше его текст возвращался в поле ввода, и следующее
+   * сообщение дописывалось к нему и уходило склеенным (UX-аудит 2026-10-13).
+   * Повтор — с тем же ключом: если первый запрос на самом деле дошёл (ответ
+   * потерялся), сервер вернёт его, а не создаст второе.
+   */
+  async function deliverChat(clientMessageId: string, body: string) {
+    if (!lessonId) return;
+    setChatPending((prev) =>
+      prev.some((m) => m.id === clientMessageId)
+        ? prev.map((m) => (m.id === clientMessageId ? { ...m, failed: false } : m))
+        : [...prev, { id: clientMessageId, body }],
+    );
     await apiFetch<ChatMessage>(`/lessons/${lessonId}/chat`, {
       method: "POST",
       body: JSON.stringify({ body, clientMessageId }),
     })
       .then((message) => {
-        if (chatSendRef.current?.id === clientMessageId) chatSendRef.current = null;
         // Своё сообщение — из ответа, не дожидаясь эха по каналу урока: пока
         // тот переподключается, текст пропадал из поля и нигде не появлялся,
         // и его отправляли ещё раз.
         setChat((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]));
+        setChatPending((prev) => prev.filter((m) => m.id !== clientMessageId));
       })
       .catch((err: unknown) => {
-        // Текст возвращаем в поле, если человек ещё не начал новое сообщение.
-        setChatDraft((draft) => draft || body);
-        showRoomError(
-          err instanceof ApiError && err.code === "chat_rate_limited"
-            ? "Слишком много сообщений подряд — подождите несколько секунд"
-            : "Сообщение не отправлено",
-        );
-      })
-      .finally(() => setChatPending((prev) => prev.filter((m) => m.id !== clientMessageId)));
+        setChatPending((prev) => prev.map((m) => (m.id === clientMessageId ? { ...m, failed: true } : m)));
+        if (err instanceof ApiError && err.code === "chat_rate_limited") {
+          showRoomError("Слишком много сообщений подряд — подождите несколько секунд");
+        }
+      });
   }
 
   const openSettings = () => setSettingsOpen(true);
@@ -1237,13 +1250,34 @@ export function RoomPage() {
               <div key={m.id} className="flex flex-col items-start gap-[3px]">
                 <span
                   className={cn(
-                    "whitespace-pre-wrap break-words bg-surface-2 text-sm text-foreground opacity-60 [text-wrap:pretty]",
+                    "whitespace-pre-wrap break-words bg-surface-2 text-sm text-foreground [text-wrap:pretty]",
+                    m.failed ? "ring-1 ring-inset ring-destructive/40" : "opacity-60",
                     sheet ? "rounded-xl px-[11px] py-[9px]" : "rounded-[10px] px-2.5 py-2",
                   )}
                 >
                   {m.body}
                 </span>
-                <span className="text-[11.5px] text-text-3">Отправляется…</span>
+                {m.failed ? (
+                  <span className="flex items-center gap-2 text-[11.5px]">
+                    <span className="text-destructive">Не отправлено</span>
+                    <button
+                      type="button"
+                      onClick={() => void deliverChat(m.id, m.body)}
+                      className="font-semibold text-primary hover:underline"
+                    >
+                      Повторить
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setChatPending((prev) => prev.filter((x) => x.id !== m.id))}
+                      className="text-text-3 hover:text-foreground hover:underline"
+                    >
+                      Удалить
+                    </button>
+                  </span>
+                ) : (
+                  <span className="text-[11.5px] text-text-3">Отправляется…</span>
+                )}
               </div>
             ))}
             <div ref={chatEndRef} />
@@ -1614,6 +1648,7 @@ export function RoomPage() {
             canDraw={self?.permissions.canDraw ?? false}
             decks={decks}
             teacher={isTeacher}
+            keepAlive
             onClose={isTeacher ? () => changeLessonStage("people") : undefined}
           />
         </div>
@@ -2397,6 +2432,7 @@ export function RoomPage() {
         <RoomHotkeys />
         <ApplyAudioOutput deviceId={spkDeviceId} />
         <ApplyParticipantVolumes />
+        <AudioLagGuard />
         <MicSync enabled={self?.permissions.canSpeak ?? false} />
         <VideoSubscriptionManager participants={participants} mode={lessonMode} />
         <PoorLinkMediaAdapter />
@@ -2909,7 +2945,7 @@ function StageContent({
         </div>
       </div>
     ) : view === "board" && lessonId ? (
-      <Board lessonId={lessonId} canDraw={canDraw} decks={decks} teacher={Boolean(onBoardClose)} onClose={onBoardClose} />
+      <Board lessonId={lessonId} canDraw={canDraw} decks={decks} teacher={Boolean(onBoardClose)} onClose={onBoardClose} keepAlive />
     ) : (
       <RoomVideoGrid
         participants={participants}

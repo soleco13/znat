@@ -1,0 +1,91 @@
+{
+  "T0": 1791912896038,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "   7.0"
+    },
+    {
+      "name": "s2 joins",
+      "ok": true,
+      "rel": "   9.9"
+    },
+    {
+      "name": "R-01: teacher board alive after corrupt entries",
+      "ok": true,
+      "rel": "  16.6"
+    },
+    {
+      "name": "R-01: s1 board alive after corrupt entries",
+      "ok": true,
+      "rel": "  16.6"
+    },
+    {
+      "name": "R-01: s2 board alive after corrupt entries",
+      "ok": true,
+      "rel": "  16.6"
+    },
+    {
+      "name": "R-01: teacher board still alive after drawing",
+      "ok": true,
+      "rel": "  21.6"
+    },
+    {
+      "name": "R-01: s1 board still alive after drawing",
+      "ok": true,
+      "rel": "  21.6"
+    },
+    {
+      "name": "R-01: s2 board still alive after drawing",
+      "ok": true,
+      "rel": "  21.6"
+    },
+    {
+      "name": "R-01: drawing after corruption saved",
+      "ok": true,
+      "detail": {
+        "n0": 1,
+        "n1": 3
+      },
+      "rel": "  21.6"
+    },
+    {
+      "name": "R-02: 8 added",
+      "ok": true,
+      "detail": 8,
+      "rel": "  28.8"
+    },
+    {
+      "name": "R-02: all order keys unique",
+      "ok": true,
+      "detail": [
+        "a2113s",
+        "a2QZmA",
+        "a3Nif3",
+        "a4rUmW",
+        "a4PwJi",
+        "a5XlLL",
+        "a6aUwX",
+        "a7m8YT"
+      ],
+      "rel": "  28.8"
+    },
+    {
+      "name": "UX-04: board hidden for A",
+      "ok": true,
+      "rel": "  34.3"
+    },
+    {
+      "name": "UX-04: undo after stage round-trip removes A's last shape",
+      "ok": true,
+      "detail": {
+        "u0": 11,
+        "u1": 12,
+        "u2": 11
+      },
+      "rel": "  38.5"
+    }
+  ]
+}

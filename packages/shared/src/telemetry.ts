@@ -26,6 +26,8 @@ export const CLIENT_EVENT_NAMES = [
   "media_cpu_adapt",
   /** Профиль устройства при входе: аппаратный кодек, слабый процессор (device-profile.ts). */
   "device_profile",
+  /** Звук собеседника «застрял» с задержкой после скачка сети — приём перезапущен (AudioLagGuard.tsx). */
+  "audio_lag_reset",
   "websocket_disconnected",
   "websocket_reconnect",
   "whiteboard_sync_started",

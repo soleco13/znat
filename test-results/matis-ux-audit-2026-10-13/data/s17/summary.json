@@ -1,0 +1,39 @@
+{
+  "T0": 1791907592557,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "   6.6"
+    },
+    {
+      "name": "found room (test hook)",
+      "ok": true,
+      "rel": "  12.6"
+    },
+    {
+      "name": "resubscribe resets playout delay under 250 ms within 3 s",
+      "ok": true,
+      "detail": [
+        {
+          "ms": null,
+          "kb": -144
+        },
+        {
+          "ms": 30,
+          "kb": 6
+        },
+        {
+          "ms": 30,
+          "kb": 12
+        },
+        {
+          "ms": 30,
+          "kb": 12
+        }
+      ],
+      "rel": "  34.5"
+    }
+  ]
+}

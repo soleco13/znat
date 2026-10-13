@@ -48,6 +48,8 @@ import { MobileToolRail, type RailTool } from "./MobileToolRail.js";
 import { SlideSearch } from "./SlideSearch.js";
 import { MediaLoader } from "@/shared/ui/media-loader";
 import { createCoalescingApi, paceUpstream, throttleWhen, useBoardLinkPoor } from "./board-link.js";
+import { acquireBoardSession, releaseBoardSession } from "./board-session.js";
+import { undoManagerFor } from "./board-undo.js";
 import "@excalidraw/excalidraw/index.css";
 import "./Board.css";
 import { clientSessionId, track } from "../../shared/telemetry.js";
@@ -209,11 +211,14 @@ export function Board({
   readOnlyChrome = false,
   followUserId,
   teacher,
+  keepAlive = false,
 }: {
   lessonId: string;
   canDraw: boolean;
   /** Ведёт урок (в т.ч. гость с правами учителя). Не задано — по роли аккаунта. */
   teacher?: boolean;
+  /** В уроке: подключение к доске живёт после размонтирования (board-session.ts). */
+  keepAlive?: boolean;
   /** Э4.6: готовые презентации урока — учитель импортирует их слайды как страницы. */
   decks?: Deck[];
   /** Э12.7 §6.5: «Скрыть доску» в шапке доски (у учителя) — возврат к плиткам. */
@@ -244,6 +249,29 @@ export function Board({
   followUserId?: string;
 }) {
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null);
+  /**
+   * Excalidraw закончил запуск (`isLoading` снят). До этого он асинхронно
+   * подставляет начальную сцену из `initialData` — пустую. Привязка, созданная
+   * раньше, видит эту пустую сцену как «удалили всё» и стирает элементы из
+   * общего документа. Пока документ при открытии доски был пустым (до
+   * синхронизации), это было незаметно; с сохранённой между сменами стейджа
+   * доской (board-session.ts) — стирало доску у всех (UX-аудит 2026-10-13).
+   */
+  const [excalidrawReady, setExcalidrawReady] = useState(false);
+  useEffect(() => {
+    setExcalidrawReady(false);
+    if (!excalidrawAPI) return;
+    let raf = 0;
+    const wait = () => {
+      if (!excalidrawAPI.getAppState().isLoading) {
+        setExcalidrawReady(true);
+        return;
+      }
+      raf = requestAnimationFrame(wait);
+    };
+    wait();
+    return () => cancelAnimationFrame(raf);
+  }, [excalidrawAPI]);
   // Для MobileToolRail (телефон/планшет, §см. Board.css `.App-toolbar--mobile`) —
   // какой инструмент активен сейчас, чтобы подсвечивать нужную кнопку.
   // Источник истины один: `AppState.activeTool` самого Excalidraw, синка —
@@ -328,6 +356,11 @@ export function Board({
           : null);
     if (!token) return;
 
+    // Подключение берём из сессии доски (board-session.ts): в уроке оно
+    // переживает смену стейджа — вместе с историей «Отменить» и без новой
+    // синхронизации; создаётся здесь один раз на урок и вид входа.
+    const sessionKey = `${lessonId}|${connectionToken ? "recorder" : hasAccessToken ? "staff" : "guest"}`;
+    const sessionProvider = acquireBoardSession(sessionKey, () => {
     const doc = new Y.Doc();
     const protocol = location.protocol === "https:" ? "wss:" : "ws:";
     // События доски — в серверный лог (shared/telemetry.ts); сессия вкладки
@@ -383,18 +416,26 @@ export function Board({
         track("whiteboard_disconnected", { lessonId, closeCode: event.code, online: navigator.onLine });
       },
     });
-    setProvider(nextProvider);
+    return {
+      provider: nextProvider,
+      // Единственное место, где уничтожаются провайдер и документ доски.
+      dispose: () => {
+        destroyed = true;
+        if (authRetryTimer) clearTimeout(authRetryTimer);
+        nextProvider.destroy();
+        doc.destroy();
+      },
+    };
+    });
+    setProvider(sessionProvider);
 
     return () => {
-      destroyed = true;
-      if (authRetryTimer) clearTimeout(authRetryTimer);
       setProvider(null);
       setPages([]);
       setActivePageId(null);
-      nextProvider.destroy();
-      doc.destroy();
+      releaseBoardSession(sessionKey, keepAlive);
     };
-  }, [lessonId, hasAccessToken, isGuest, connectionToken]);
+  }, [lessonId, hasAccessToken, isGuest, connectionToken, keepAlive]);
 
   // Пока клиент read-only, y-excalidraw всё равно пишет в Y.Doc (например,
   // зеркалит загруженные картинки в `assets`), и сервер эти правки отбрасывает.
@@ -521,7 +562,7 @@ export function Board({
   const revertingRef = useRef(false);
 
   useEffect(() => {
-    if (!excalidrawAPI || !ydoc || !provider?.awareness || !activePageId) return;
+    if (!excalidrawAPI || !excalidrawReady || !ydoc || !provider?.awareness || !activePageId) return;
     const yElements = ydoc.getArray<Y.Map<unknown>>(`elements:${activePageId}`);
     const yAssets = ydoc.getMap<unknown>("assets");
 
@@ -552,7 +593,11 @@ export function Board({
     const sanitize = () => {
       const corruptIndexes: number[] = [];
       yElements.forEach((entry, i) => {
-        if (!entry.get("el")) corruptIndexes.push(i);
+        // Запись без элемента или элемент без id/типа — битая. Такие роняли
+        // доску у всех (UX-аудит 2026-10-13); y-excalidraw (патч) их ещё и
+        // пропускает при чтении, а тут — убираем из документа.
+        const el = entry instanceof Y.Map ? (entry.get("el") as { id?: unknown; type?: unknown } | undefined) : undefined;
+        if (!el || typeof el !== "object" || typeof el.id !== "string" || typeof el.type !== "string") corruptIndexes.push(i);
       });
       if (corruptIndexes.length === 0) return;
       ydoc.transact(() => {
@@ -566,8 +611,9 @@ export function Board({
 
     // Э3.11, §3.4 ТЗ: undo/redo в мультиплеере через `Y.UndoManager` со
     // scope по клиенту. Scope — `Y.Array` ИМЕННО активной страницы (у
-    // каждой страницы свой массив с Э3.6), поэтому менеджер живёт и
-    // умирает вместе с привязкой, пересоздаётся при листании.
+    // каждой страницы свой массив с Э3.6), менеджер — свой у каждой
+    // страницы и живёт вместе с документом (`undoManagerFor`, board-undo.ts),
+    // а не с привязкой: смена стейджа и права рисовать историю не теряют.
     //
     // «Scope по клиенту» получается сам: `trackedOrigins: new Set()`
     // (пусто) + `y-excalidraw` внутри `setupUndoRedo` добавляет саму
@@ -592,7 +638,9 @@ export function Board({
       canDraw && excalidrawWrapperRef.current
         ? {
             excalidrawDom: excalidrawWrapperRef.current,
-            undoManager: new Y.UndoManager(yElements, { trackedOrigins: new Set<unknown>() }),
+            // Один менеджер на страницу на всю сессию доски: история «Отменить»
+            // переживает смену стейджа и права рисовать (board-undo.ts).
+            undoManager: undoManagerFor(yElements),
           }
         : undefined;
 
@@ -638,8 +686,9 @@ export function Board({
     // кнопка Redo всегда серая (поймано живой проверкой). Поэтому штатные
     // кнопки спрятаны (Board.css), а рисуем свои — от состояния менеджера.
     const undoManager = undoConfig?.undoManager ?? null;
+    let syncUndo: (() => void) | null = null;
     if (undoManager) {
-      const syncUndo = () =>
+      syncUndo = () =>
         setUndoState({ manager: undoManager, canUndo: undoManager.canUndo(), canRedo: undoManager.canRedo() });
       syncUndo();
       undoManager.on("stack-item-added", syncUndo);
@@ -653,13 +702,16 @@ export function Board({
       yElements.unobserve(sanitize);
       nextBinding.destroy();
       coalescing.dispose();
-      // `nextBinding.destroy()` только снимает свои подписи/слушатели
-      // (проверено чтением бандла — прогоняет `this.subscriptions`), но
-      // НЕ трогает переданный `Y.UndoManager`. Уничтожаем сами — это же
-      // снимает все три подписки `stack-item-*` выше.
-      undoManager?.destroy();
+      // `nextBinding.destroy()` снимает свои подписи и `removeTrackedOrigin`,
+      // но НЕ трогает `Y.UndoManager`. Сам менеджер живёт с документом
+      // (история нужна следующей привязке) — снимаем только наши подписки.
+      if (undoManager && syncUndo) {
+        undoManager.off("stack-item-added", syncUndo);
+        undoManager.off("stack-item-popped", syncUndo);
+        undoManager.off("stack-item-updated", syncUndo);
+      }
     };
-  }, [excalidrawAPI, ydoc, provider, activePageId, canDraw]);
+  }, [excalidrawAPI, excalidrawReady, ydoc, provider, activePageId, canDraw]);
 
   /**
    * Э3.12: следим за числом элементов активной страницы прямо по её

@@ -1,0 +1,59 @@
+{
+  "T0": 1791913556569,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "   7.0"
+    },
+    {
+      "name": "F-01: mic stays off after F5",
+      "ok": true,
+      "detail": false,
+      "rel": "  15.4"
+    },
+    {
+      "name": "F-01: mic stays on after re-enabling + F5",
+      "ok": true,
+      "detail": true,
+      "rel": "  21.9"
+    },
+    {
+      "name": "late joins",
+      "ok": true,
+      "rel": "  32.9"
+    },
+    {
+      "name": "F-02a: late joiner sees current activity",
+      "ok": true,
+      "detail": "LT-A 50\n3 участника\nСодержание\n1–2 из 9Все типы заданий на одном уроке\nответы сохраняются сами\n0 из 15\n100%\nДЕМОНСТРАЦИЯ",
+      "rel": "  33.3"
+    },
+    {
+      "name": "student closed activity",
+      "ok": true,
+      "rel": "  34.9"
+    },
+    {
+      "name": "F-02b: not yanked back into activity after reconnect",
+      "ok": true,
+      "rel": "  46.0"
+    },
+    {
+      "name": "teacher has 'Свернуть' on activity",
+      "ok": true,
+      "rel": "  46.0"
+    },
+    {
+      "name": "newbie joins",
+      "ok": true,
+      "rel": "  51.2"
+    },
+    {
+      "name": "F-02c: closed activity is not pushed to newcomer",
+      "ok": true,
+      "rel": "  55.2"
+    }
+  ]
+}

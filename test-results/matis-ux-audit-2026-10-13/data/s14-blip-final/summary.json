@@ -1,0 +1,38 @@
+{
+  "T0": 1791913625529,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "   6.8"
+    },
+    {
+      "name": "blip 3s: audio back within 2 s after network returns (both ways)",
+      "ok": true,
+      "detail": {
+        "sResume": 504,
+        "tResume": 504
+      },
+      "rel": "  16.6"
+    },
+    {
+      "name": "blip 5s: audio back within 2 s after network returns (both ways)",
+      "ok": true,
+      "detail": {
+        "sResume": 503,
+        "tResume": 503
+      },
+      "rel": "  30.3"
+    },
+    {
+      "name": "blip 10s: audio back within 2 s after network returns (both ways)",
+      "ok": true,
+      "detail": {
+        "sResume": 504,
+        "tResume": 504
+      },
+      "rel": "  49.1"
+    }
+  ]
+}

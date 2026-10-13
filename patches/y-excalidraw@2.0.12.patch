@@ -1,0 +1,312 @@
+diff --git a/dist/y-excalidraw.cjs b/dist/y-excalidraw.cjs
+index 169b24a1a2df8de816dfecf721e80871bebd8a15..2a90cab6c539ba18b1258d241ea6ffdcc03601e1 100644
+--- a/dist/y-excalidraw.cjs
++++ b/dist/y-excalidraw.cjs
+@@ -64,7 +64,7 @@ var areElementsSame = (els1, els2) => {
+   return true;
+ };
+ var yjsToExcalidraw = (yArray) => {
+-  let x = yArray.toArray().sort((a, b) => {
++  let x = yArray.toArray().filter((e) => e && typeof e.get === "function" && (() => { const el = e.get("el"); return !!el && typeof el === "object" && typeof el.id === "string" && typeof el.type === "string"; })()).sort((a, b) => {
+     const key1 = a.get("pos");
+     const key2 = b.get("pos");
+     return key1 > key2 ? 1 : key1 < key2 ? -1 : 0;
+@@ -75,6 +75,44 @@ var yjsToExcalidraw = (yArray) => {
+ // src/diff.ts
+ var import_fractional_indexing = require("fractional-indexing");
+ var Y = __toESM(require("yjs"), 1);
++
++// --- Матис (patch): ключи порядка и битые записи ---
++// Одновременно созданные на разных клиентах фигуры получали ОДИНАКОВЫЙ ключ
++// («после последнего»), а перестановка между двумя равными ключами и любой
++// повреждённый ключ в документе бросали «invalid order key» прямо в onChange —
++// доска падала у всех. Новые ключи получают случайный хвост, неверные ключи
++// при генерации пропускаются, записи без элемента читаются как отсутствующие.
++var __matisSuffix = () => {
++  const d = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
++  let s = "";
++  for (let i = 0; i < 3; i++) s += d[Math.floor(Math.random() * 62)];
++  return s + d[1 + Math.floor(Math.random() * 61)];
++};
++var __matisValidKey = (k) => {
++  if (typeof k !== "string" || k.length === 0) return false;
++  try { (0, import_fractional_indexing.generateKeyBetween)(k, null); return true; } catch { return false; }
++};
++var __matisKeyBetween = (a, b) => {
++  a = __matisValidKey(a) ? a : null;
++  b = __matisValidKey(b) ? b : null;
++  if (a !== null && b !== null && a >= b) b = null;
++  const k = (0, import_fractional_indexing.generateKeyBetween)(a, b);
++  const j = k + __matisSuffix();
++  return b === null || j < b ? j : k;
++};
++var __matisKeysAfter = (a, n) => {
++  const base = __matisValidKey(a) ? a : null;
++  const s = __matisSuffix();
++  return (0, import_fractional_indexing.generateNKeysBetween)(base, null, n).map((k) => k + s);
++};
++var __matisMaxValidPos = (list) => {
++  let best = null;
++  for (const x of list) if (__matisValidKey(x?.pos) && (best === null || x.pos > best)) best = x.pos;
++  return best;
++};
++var __matisElementOk = (el) => !!el && typeof el === "object" && typeof el.id === "string" && typeof el.type === "string";
++var __matisEntryOk = (x) => !!x && typeof x.get === "function" && __matisElementOk(x.get("el"));
++// --- /Матис ---
+ var getDeltaOperationsForElements = (lastKnownElements, newElements, bulkify = true) => {
+   const updateOperations = [];
+   const appendOperations = [];
+@@ -106,7 +144,7 @@ var getDeltaOperationsForElements = (lastKnownElements, newElements, bulkify = t
+       const op = {
+         id: newElement.id,
+         version: newElement.version,
+-        pos: !bulkify ? (0, import_fractional_indexing.generateKeyBetween)(opsTracker.idMap[opsTracker.elementIds[opsTracker.elementIds.length - 1]]?.pos, null) : "",
++        pos: !bulkify ? __matisKeyBetween(opsTracker.idMap[opsTracker.elementIds[opsTracker.elementIds.length - 1]]?.pos, null) : "",
+         index: opsTracker.elementIds.length
+       };
+       opsTracker.elementIds.push(op.id);
+@@ -152,7 +190,7 @@ var getDeltaOperationsForElements = (lastKnownElements, newElements, bulkify = t
+         leftSortIndex = opsTracker.idMap[opsTracker.elementIds[toIndex - 1]]?.pos || null;
+         rightSortIndex = opsTracker.idMap[opsTracker.elementIds[toIndex]]?.pos || null;
+       }
+-      const newSortIndex = (0, import_fractional_indexing.generateKeyBetween)(leftSortIndex, rightSortIndex);
++      const newSortIndex = __matisKeyBetween(leftSortIndex, rightSortIndex);
+       opsTracker.elementIds = moveArrayItem(opsTracker.elementIds, fromIndex, toIndex, true);
+       opsTracker.idMap[id].pos = newSortIndex;
+       _updateIdIndexLookup();
+@@ -163,7 +201,7 @@ var getDeltaOperationsForElements = (lastKnownElements, newElements, bulkify = t
+   const bulkDeleteOperations = [];
+   if (bulkify) {
+     if (appendOperations.length > 0) {
+-      const sortIndexes = (0, import_fractional_indexing.generateNKeysBetween)(lastKnownElements[lastKnownElements.length - 1]?.pos, null, appendOperations.length);
++      const sortIndexes = __matisKeysAfter(__matisMaxValidPos(lastKnownElements), appendOperations.length);
+       for (let [i, op] of appendOperations.entries()) {
+         opsTracker.idMap[op.id].pos = sortIndexes[i];
+       }
+@@ -216,8 +254,10 @@ var getDeltaOperationsForAssets = (lastKnownFileIds, files) => {
+ var applyElementOperations = (yElements, operations, origin) => {
+   yElements.doc.transact((tr) => {
+     const _updateYjsIndexMap = () => {
++      for (const k of Object.keys(idYjsIndexMap)) delete idYjsIndexMap[k];
+       for (let i = 0; i < yElements.length; i++) {
+         let item = yElements.get(i).get("el");
++        if (!item || typeof item.id !== "string") continue;
+         idYjsIndexMap[item.id] = i;
+       }
+     };
+@@ -226,6 +266,7 @@ var applyElementOperations = (yElements, operations, origin) => {
+     for (let op of operations) {
+       switch (op.type) {
+         case "update": {
++          if (idYjsIndexMap[op.id] === void 0) break;
+           yElements.get(idYjsIndexMap[op.id]).set("el", { ...op.element });
+           break;
+         }
+@@ -246,15 +287,19 @@ var applyElementOperations = (yElements, operations, origin) => {
+         }
+         case "delete":
+         case "bulkDelete": {
+-          if (op.type === "delete") {
+-            yElements.delete(idYjsIndexMap[op.id], 1);
+-          } else {
+-            yElements.delete(idYjsIndexMap[op.id], op.data.length);
+-          }
++          // Матис (patch): удаляем по id, с конца. Раньше «bulkDelete» удалял
++          // подряд идущий кусок массива — но порядок в Y.Array (вставки) не
++          // совпадает с порядком отрисовки (ключи pos): после перестановки или
++          // одновременных вставок стирались не те фигуры, а при выходе за
++          // длину — «Length exceeded!» и падение доски.
++          const ids = op.type === "delete" ? [op.id] : op.data.map((x) => x.id);
++          const idxs = ids.map((id) => idYjsIndexMap[id]).filter((i) => i !== void 0).sort((a, b) => b - a);
++          for (const i of idxs) yElements.delete(i, 1);
+           _updateYjsIndexMap();
+           break;
+         }
+         case "move": {
++          if (idYjsIndexMap[op.id] === void 0) break;
+           yElements.get(idYjsIndexMap[op.id]).set("pos", op.pos);
+           break;
+         }
+@@ -328,7 +373,7 @@ var ExcalidrawBinding = class {
+       }
+       const changedElementIds = new Set(event.flatMap((e) => {
+         if (e instanceof Y2.YMapEvent) {
+-          return [e.target.get("el").id];
++          const el = e.target.get("el"); return el && typeof el.id === "string" ? [el.id] : [];
+         }
+         return [];
+       }));
+@@ -339,7 +384,7 @@ var ExcalidrawBinding = class {
+         }
+         return this.api.getSceneElements().find((existingEl) => existingEl.id === el.id) || el;
+       });
+-      this.lastKnownElements = this.yElements.toArray().map((x) => ({ id: x.get("el").id, version: x.get("el").version, pos: x.get("pos") })).sort((a, b) => {
++      this.lastKnownElements = this.yElements.toArray().filter(__matisEntryOk).map((x) => ({ id: x.get("el").id, version: x.get("el").version, pos: x.get("pos") })).sort((a, b) => {
+         const key1 = a.pos;
+         const key2 = b.pos;
+         return key1 > key2 ? 1 : key1 < key2 ? -1 : 0;
+@@ -401,7 +446,7 @@ var ExcalidrawBinding = class {
+       this.setupUndoRedo(excalidrawDom);
+     }
+     const initialValue = yjsToExcalidraw(this.yElements);
+-    this.lastKnownElements = this.yElements.toArray().map((x) => ({ id: x.get("el").id, version: x.get("el").version, pos: x.get("pos") })).sort((a, b) => {
++    this.lastKnownElements = this.yElements.toArray().filter(__matisEntryOk).map((x) => ({ id: x.get("el").id, version: x.get("el").version, pos: x.get("pos") })).sort((a, b) => {
+       const key1 = a.pos;
+       const key2 = b.pos;
+       return key1 > key2 ? 1 : key1 < key2 ? -1 : 0;
+diff --git a/dist/y-excalidraw.js b/dist/y-excalidraw.js
+index 84ad536f718996f6a3ecb60468eca2a80913ace8..ecd93040fc896648a77a48cd90164ad03b957376 100644
+--- a/dist/y-excalidraw.js
++++ b/dist/y-excalidraw.js
+@@ -30,7 +30,7 @@ var areElementsSame = (els1, els2) => {
+   return true;
+ };
+ var yjsToExcalidraw = (yArray) => {
+-  let x = yArray.toArray().sort((a, b) => {
++  let x = yArray.toArray().filter((e) => e && typeof e.get === "function" && (() => { const el = e.get("el"); return !!el && typeof el === "object" && typeof el.id === "string" && typeof el.type === "string"; })()).sort((a, b) => {
+     const key1 = a.get("pos");
+     const key2 = b.get("pos");
+     return key1 > key2 ? 1 : key1 < key2 ? -1 : 0;
+@@ -41,6 +41,44 @@ var yjsToExcalidraw = (yArray) => {
+ // src/diff.ts
+ import { generateKeyBetween, generateNKeysBetween } from "fractional-indexing";
+ import * as Y from "yjs";
++
++// --- Матис (patch): ключи порядка и битые записи ---
++// Одновременно созданные на разных клиентах фигуры получали ОДИНАКОВЫЙ ключ
++// («после последнего»), а перестановка между двумя равными ключами и любой
++// повреждённый ключ в документе бросали «invalid order key» прямо в onChange —
++// доска падала у всех. Новые ключи получают случайный хвост, неверные ключи
++// при генерации пропускаются, записи без элемента читаются как отсутствующие.
++var __matisSuffix = () => {
++  const d = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
++  let s = "";
++  for (let i = 0; i < 3; i++) s += d[Math.floor(Math.random() * 62)];
++  return s + d[1 + Math.floor(Math.random() * 61)];
++};
++var __matisValidKey = (k) => {
++  if (typeof k !== "string" || k.length === 0) return false;
++  try { generateKeyBetween(k, null); return true; } catch { return false; }
++};
++var __matisKeyBetween = (a, b) => {
++  a = __matisValidKey(a) ? a : null;
++  b = __matisValidKey(b) ? b : null;
++  if (a !== null && b !== null && a >= b) b = null;
++  const k = generateKeyBetween(a, b);
++  const j = k + __matisSuffix();
++  return b === null || j < b ? j : k;
++};
++var __matisKeysAfter = (a, n) => {
++  const base = __matisValidKey(a) ? a : null;
++  const s = __matisSuffix();
++  return generateNKeysBetween(base, null, n).map((k) => k + s);
++};
++var __matisMaxValidPos = (list) => {
++  let best = null;
++  for (const x of list) if (__matisValidKey(x?.pos) && (best === null || x.pos > best)) best = x.pos;
++  return best;
++};
++var __matisElementOk = (el) => !!el && typeof el === "object" && typeof el.id === "string" && typeof el.type === "string";
++var __matisEntryOk = (x) => !!x && typeof x.get === "function" && __matisElementOk(x.get("el"));
++// --- /Матис ---
+ var getDeltaOperationsForElements = (lastKnownElements, newElements, bulkify = true) => {
+   const updateOperations = [];
+   const appendOperations = [];
+@@ -72,7 +110,7 @@ var getDeltaOperationsForElements = (lastKnownElements, newElements, bulkify = t
+       const op = {
+         id: newElement.id,
+         version: newElement.version,
+-        pos: !bulkify ? generateKeyBetween(opsTracker.idMap[opsTracker.elementIds[opsTracker.elementIds.length - 1]]?.pos, null) : "",
++        pos: !bulkify ? __matisKeyBetween(opsTracker.idMap[opsTracker.elementIds[opsTracker.elementIds.length - 1]]?.pos, null) : "",
+         index: opsTracker.elementIds.length
+       };
+       opsTracker.elementIds.push(op.id);
+@@ -118,7 +156,7 @@ var getDeltaOperationsForElements = (lastKnownElements, newElements, bulkify = t
+         leftSortIndex = opsTracker.idMap[opsTracker.elementIds[toIndex - 1]]?.pos || null;
+         rightSortIndex = opsTracker.idMap[opsTracker.elementIds[toIndex]]?.pos || null;
+       }
+-      const newSortIndex = generateKeyBetween(leftSortIndex, rightSortIndex);
++      const newSortIndex = __matisKeyBetween(leftSortIndex, rightSortIndex);
+       opsTracker.elementIds = moveArrayItem(opsTracker.elementIds, fromIndex, toIndex, true);
+       opsTracker.idMap[id].pos = newSortIndex;
+       _updateIdIndexLookup();
+@@ -129,7 +167,7 @@ var getDeltaOperationsForElements = (lastKnownElements, newElements, bulkify = t
+   const bulkDeleteOperations = [];
+   if (bulkify) {
+     if (appendOperations.length > 0) {
+-      const sortIndexes = generateNKeysBetween(lastKnownElements[lastKnownElements.length - 1]?.pos, null, appendOperations.length);
++      const sortIndexes = __matisKeysAfter(__matisMaxValidPos(lastKnownElements), appendOperations.length);
+       for (let [i, op] of appendOperations.entries()) {
+         opsTracker.idMap[op.id].pos = sortIndexes[i];
+       }
+@@ -182,8 +220,10 @@ var getDeltaOperationsForAssets = (lastKnownFileIds, files) => {
+ var applyElementOperations = (yElements, operations, origin) => {
+   yElements.doc.transact((tr) => {
+     const _updateYjsIndexMap = () => {
++      for (const k of Object.keys(idYjsIndexMap)) delete idYjsIndexMap[k];
+       for (let i = 0; i < yElements.length; i++) {
+         let item = yElements.get(i).get("el");
++        if (!item || typeof item.id !== "string") continue;
+         idYjsIndexMap[item.id] = i;
+       }
+     };
+@@ -192,6 +232,7 @@ var applyElementOperations = (yElements, operations, origin) => {
+     for (let op of operations) {
+       switch (op.type) {
+         case "update": {
++          if (idYjsIndexMap[op.id] === void 0) break;
+           yElements.get(idYjsIndexMap[op.id]).set("el", { ...op.element });
+           break;
+         }
+@@ -212,15 +253,19 @@ var applyElementOperations = (yElements, operations, origin) => {
+         }
+         case "delete":
+         case "bulkDelete": {
+-          if (op.type === "delete") {
+-            yElements.delete(idYjsIndexMap[op.id], 1);
+-          } else {
+-            yElements.delete(idYjsIndexMap[op.id], op.data.length);
+-          }
++          // Матис (patch): удаляем по id, с конца. Раньше «bulkDelete» удалял
++          // подряд идущий кусок массива — но порядок в Y.Array (вставки) не
++          // совпадает с порядком отрисовки (ключи pos): после перестановки или
++          // одновременных вставок стирались не те фигуры, а при выходе за
++          // длину — «Length exceeded!» и падение доски.
++          const ids = op.type === "delete" ? [op.id] : op.data.map((x) => x.id);
++          const idxs = ids.map((id) => idYjsIndexMap[id]).filter((i) => i !== void 0).sort((a, b) => b - a);
++          for (const i of idxs) yElements.delete(i, 1);
+           _updateYjsIndexMap();
+           break;
+         }
+         case "move": {
++          if (idYjsIndexMap[op.id] === void 0) break;
+           yElements.get(idYjsIndexMap[op.id]).set("pos", op.pos);
+           break;
+         }
+@@ -294,7 +339,7 @@ var ExcalidrawBinding = class {
+       }
+       const changedElementIds = new Set(event.flatMap((e) => {
+         if (e instanceof Y2.YMapEvent) {
+-          return [e.target.get("el").id];
++          const el = e.target.get("el"); return el && typeof el.id === "string" ? [el.id] : [];
+         }
+         return [];
+       }));
+@@ -305,7 +350,7 @@ var ExcalidrawBinding = class {
+         }
+         return this.api.getSceneElements().find((existingEl) => existingEl.id === el.id) || el;
+       });
+-      this.lastKnownElements = this.yElements.toArray().map((x) => ({ id: x.get("el").id, version: x.get("el").version, pos: x.get("pos") })).sort((a, b) => {
++      this.lastKnownElements = this.yElements.toArray().filter(__matisEntryOk).map((x) => ({ id: x.get("el").id, version: x.get("el").version, pos: x.get("pos") })).sort((a, b) => {
+         const key1 = a.pos;
+         const key2 = b.pos;
+         return key1 > key2 ? 1 : key1 < key2 ? -1 : 0;
+@@ -367,7 +412,7 @@ var ExcalidrawBinding = class {
+       this.setupUndoRedo(excalidrawDom);
+     }
+     const initialValue = yjsToExcalidraw(this.yElements);
+-    this.lastKnownElements = this.yElements.toArray().map((x) => ({ id: x.get("el").id, version: x.get("el").version, pos: x.get("pos") })).sort((a, b) => {
++    this.lastKnownElements = this.yElements.toArray().filter(__matisEntryOk).map((x) => ({ id: x.get("el").id, version: x.get("el").version, pos: x.get("pos") })).sort((a, b) => {
+       const key1 = a.pos;
+       const key2 = b.pos;
+       return key1 > key2 ? 1 : key1 < key2 ? -1 : 0;

@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  y-excalidraw@2.0.12:
+    hash: adae1843708d7d69e43f30d7a062ebe840025517f613e5927d9ece937e4d506b
+    path: patches/y-excalidraw@2.0.12.patch
+
 importers:
 
   .:
@@ -281,7 +286,7 @@ importers:
         version: 1.0.7(tailwindcss@3.4.19(tsx@4.23.12))
       y-excalidraw:
         specifier: ^2.0.12
-        version: 2.0.12(@excalidraw/excalidraw@0.18.1(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(yjs@13.6.32)
+        version: 2.0.12(patch_hash=adae1843708d7d69e43f30d7a062ebe840025517f613e5927d9ece937e4d506b)(@excalidraw/excalidraw@0.18.1(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(yjs@13.6.32)
       yjs:
         specifier: ^13.6.32
         version: 13.6.32
@@ -10178,7 +10183,7 @@ snapshots:
 
   xtend@4.0.2: {}
 
-  y-excalidraw@2.0.12(@excalidraw/excalidraw@0.18.1(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(yjs@13.6.32):
+  y-excalidraw@2.0.12(patch_hash=adae1843708d7d69e43f30d7a062ebe840025517f613e5927d9ece937e4d506b)(@excalidraw/excalidraw@0.18.1(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(yjs@13.6.32):
     dependencies:
       '@excalidraw/excalidraw': 0.18.1(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       fractional-indexing: 3.2.0

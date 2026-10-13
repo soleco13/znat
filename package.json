@@ -19,6 +19,13 @@
     "typescript": "^5.9.2"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["argon2", "esbuild", "sharp"]
+    "onlyBuiltDependencies": [
+      "argon2",
+      "esbuild",
+      "sharp"
+    ],
+    "patchedDependencies": {
+      "y-excalidraw@2.0.12": "patches/y-excalidraw@2.0.12.patch"
+    }
   }
 }
