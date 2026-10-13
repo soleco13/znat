@@ -40,6 +40,9 @@ export type DeviceCheckResult = {
   spkDeviceId: string | null;
   micEnabled: boolean;
   camEnabled: boolean;
+  /** Положение переключателей (без учёта доступа) — запоминается для следующего входа. */
+  micToggle: boolean;
+  camToggle: boolean;
 };
 
 /**
@@ -101,16 +104,19 @@ export function DeviceCheckScreen({
   onContinue,
   lessonTitle,
   defaultCameraOn = false,
+  defaultMicOn = true,
 }: {
   onContinue: (result: DeviceCheckResult) => void;
   lessonTitle?: string | null;
-  /** Учителю/админу камера включается сразу (они всегда публикуют видео); ученику — по кнопке. */
+  /** Учителю/админу камера включается сразу (они всегда публикуют видео); ученику — по кнопке. Прошлый выбор человека важнее. */
   defaultCameraOn?: boolean;
+  /** Как в прошлый раз на этом устройстве (`readJoinDefaults`); впервые — включён. */
+  defaultMicOn?: boolean;
 }) {
   const [micPermission, setMicPermission] = useState<PermissionState>("idle");
   const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
   const [micId, setMicId] = useState<string>("");
-  const [micEnabled, setMicEnabled] = useState(true);
+  const [micEnabled, setMicEnabled] = useState(defaultMicOn);
   const [micError, setMicError] = useState<string | null>(null);
   const [echoState, setEchoState] = useState<EchoState>("idle");
   const [voiceDetected, setVoiceDetected] = useState(false);
@@ -408,6 +414,8 @@ export function DeviceCheckScreen({
       spkDeviceId: spkId || null,
       micEnabled: micOn,
       camEnabled: camOn,
+      micToggle: micEnabled,
+      camToggle: camEnabled,
     });
   }
 

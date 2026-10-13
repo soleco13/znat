@@ -137,7 +137,14 @@ import { PoorLinkMediaAdapter } from "./PoorLinkMedia.js";
 import { CpuLoadAdapter } from "./cpu-load.js";
 import { ScreenShareStopSweep } from "./screen-share-stop.js";
 import { MEDIA_CONNECT_OPTIONS, MEDIA_RECONNECT_POLICY, MediaRecovery } from "./MediaRecovery.js";
-import { clearRejoinState, readRejoinState, rememberJoinPath, writeRejoinState } from "./rejoin-state.js";
+import {
+  clearRejoinState,
+  readJoinDefaults,
+  readRejoinState,
+  rememberJoinPath,
+  writeJoinDefaults,
+  writeRejoinState,
+} from "./rejoin-state.js";
 import { MediaTelemetry, reportLiveKitConnectionFailed } from "./MediaTelemetry.js";
 import { MediaDeviceErrorNotice } from "./media-device-errors.js";
 
@@ -388,6 +395,8 @@ export function RoomPage() {
   // Перезагрузка вкладки посреди урока — сразу обратно в урок, с теми же
   // устройствами и тем, что было включено (см. `rejoin-state.ts`).
   const [rejoin] = useState(() => readRejoinState(lessonId));
+  // Прошлый выбор микрофона/камеры на экране проверки — на этом устройстве.
+  const [joinDefaults] = useState(readJoinDefaults);
   const [deviceCheckDone, setDeviceCheckDone] = useState(rejoin !== null);
   const [micDeviceId, setMicDeviceId] = useState<string | null>(rejoin?.micId ?? null);
   const [camDeviceId, setCamDeviceId] = useState<string | null>(rejoin?.camId ?? null);
@@ -2296,8 +2305,10 @@ export function RoomPage() {
     return (
       <DeviceCheckScreen
         lessonTitle={lessonTitle}
-        defaultCameraOn={isTeacher}
+        defaultCameraOn={joinDefaults?.cam ?? isTeacher}
+        defaultMicOn={joinDefaults?.mic ?? true}
         onContinue={(r: DeviceCheckResult) => {
+          writeJoinDefaults({ mic: r.micToggle, cam: r.camToggle });
           setMicDeviceId(r.micDeviceId);
           setCamDeviceId(r.camDeviceId);
           setSpkDeviceId(r.spkDeviceId);

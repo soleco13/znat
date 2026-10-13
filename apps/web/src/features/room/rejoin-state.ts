@@ -132,3 +132,35 @@ export function clearRejoinState(lessonId: string | undefined) {
     // нечего чистить
   }
 }
+
+/**
+ * С чем человек обычно входит (микрофон/камера на экране проверки) — общее
+ * для всех уроков на этом устройстве (запрос 2026-10-13: «каждый раз
+ * приходится выключать звук сразу после входа»). То же исключение из правила
+ * «без localStorage»: только два флага.
+ */
+export interface JoinDefaults {
+  mic: boolean;
+  cam: boolean;
+}
+
+const JOIN_DEFAULTS_KEY = "matis.room.join-defaults";
+
+export function readJoinDefaults(): JoinDefaults | null {
+  try {
+    const raw = window.localStorage.getItem(JOIN_DEFAULTS_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw) as Partial<JoinDefaults>;
+    return typeof v.mic === "boolean" && typeof v.cam === "boolean" ? { mic: v.mic, cam: v.cam } : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeJoinDefaults(defaults: JoinDefaults) {
+  try {
+    window.localStorage.setItem(JOIN_DEFAULTS_KEY, JSON.stringify(defaults));
+  } catch {
+    // Нет хранилища — в следующий раз обычные значения по умолчанию.
+  }
+}
