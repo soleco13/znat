@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-// ─── IVF (VP8) с явными метками времени ────────────────────────────────────
+// ─── IVF (VP8 или H.264) с явными метками времени ────────────────────────────────────
 // pion/ivfwriter ставит номер кадра вместо времени — видео шло бы с
 // неверной скоростью (об этом прямо сказано в примере filesaver
 // server-sdk-go). Здесь pts — мс от начала шкалы записи.
@@ -18,7 +18,7 @@ type ivfWriter struct {
 	frames uint32
 }
 
-func createIVF(path string, width, height uint16) (*ivfWriter, error) {
+func createIVF(path, fourcc string, width, height uint16) (*ivfWriter, error) {
 	f, err := os.Create(path)
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func createIVF(path string, width, height uint16) (*ivfWriter, error) {
 	copy(h[0:4], "DKIF")
 	binary.LittleEndian.PutUint16(h[4:6], 0)
 	binary.LittleEndian.PutUint16(h[6:8], 32)
-	copy(h[8:12], "VP80")
+	copy(h[8:12], fourcc)
 	binary.LittleEndian.PutUint16(h[12:14], width)
 	binary.LittleEndian.PutUint16(h[14:16], height)
 	binary.LittleEndian.PutUint32(h[16:20], 1000) // timebase: 1/1000 с

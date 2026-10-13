@@ -217,12 +217,19 @@ func convertTrack(dir, outDir string, meta dump.TrackMeta, t0Ms int64) (*Track, 
 		track.Supported = true
 		track.File = meta.Key + ".ivf"
 		err = writeVP8(pkts, filepath.Join(outDir, track.File), relMs, track)
+	case mime == "video/h264":
+		// Участники со слабым процессором публикуют H.264, если его сжимает
+		// видеокарта (apps/web device-profile.ts). Тот же IVF с метками
+		// времени, кодек — 'H264' (ffmpeg читает его из IVF как H.264).
+		track.Supported = true
+		track.File = meta.Key + ".ivf"
+		err = writeH264(pkts, filepath.Join(outDir, track.File), relMs, track)
 	case mime == "audio/opus":
 		track.Supported = true
 		track.File = meta.Key + ".ogg"
 		err = writeOpus(pkts, filepath.Join(outDir, track.File), relMs, track)
 	default:
-		// VP9/H.264/AV1 рекордер пишет как есть, но сборка пока только VP8/Opus.
+		// VP9/AV1 рекордер пишет как есть, но сборка пока только VP8/H.264/Opus.
 		track.Supported = false
 	}
 	return track, err
@@ -320,6 +327,12 @@ func writeVP8(pkts []packet, path string, relMs func(packet) int64, track *Track
 		needKey = false
 		frames = append(frames, frame{ptsMs: relMs(group[0]), key: key, data: data})
 	}
+	return writeFrames(frames, path, "VP80", track)
+}
+
+// writeFrames — общий хвост VP8/H.264: отбросить служебный хвост SFU,
+// выровнять метки, записать IVF с оглавлением ключевых кадров.
+func writeFrames(frames []frame, path, fourcc string, track *Track) error {
 	// Служебные кадры SFU при закрытии дорожки (LiveKit шлёт «пустые» кадры
 	// с продолжением старых меток) — короткий хвост после долгой паузы.
 	keep := keepBeforeTrailingBurst(len(frames), func(k int) int64 { return frames[k].ptsMs })
@@ -334,7 +347,7 @@ func writeVP8(pkts []packet, path string, relMs func(packet) int64, track *Track
 			frames[k].ptsMs = frames[k-1].ptsMs + 1
 		}
 	}
-	w, err := createIVF(path, track.Width, track.Height)
+	w, err := createIVF(path, fourcc, track.Width, track.Height)
 	if err != nil {
 		return err
 	}

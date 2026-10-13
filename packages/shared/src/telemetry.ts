@@ -24,6 +24,8 @@ export const CLIENT_EVENT_NAMES = [
   "media_quality",
   /** Своё устройство не успевает: смена ступени камеры/демонстрации ради звука (cpu-governor.ts). */
   "media_cpu_adapt",
+  /** Профиль устройства при входе: аппаратный кодек, слабый процессор (device-profile.ts). */
+  "device_profile",
   "websocket_disconnected",
   "websocket_reconnect",
   "whiteboard_sync_started",

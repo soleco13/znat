@@ -32,9 +32,12 @@ export function VideoSubscriptionManager({
   participants: ParticipantSnapshot[];
   mode: LessonMode;
 }) {
-  const tracks = useTracks([Track.Source.Microphone, Track.Source.Camera, Track.Source.ScreenShare], {
-    onlySubscribed: false,
-  });
+  // Звук демонстрации — тоже: без него ученики не слышали звук показанного
+  // видео (2026-10-13), трек публиковался, но на него никто не подписывался.
+  const tracks = useTracks(
+    [Track.Source.Microphone, Track.Source.Camera, Track.Source.ScreenShare, Track.Source.ScreenShareAudio],
+    { onlySubscribed: false },
+  );
 
   useEffect(() => {
     for (const t of tracks) {

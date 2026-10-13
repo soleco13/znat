@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocalParticipant, useTracks } from "@livekit/components-react";
-import { AudioPresets, Track, VideoPreset, type LocalTrack } from "livekit-client";
+import { Track, VideoPreset, type LocalTrack } from "livekit-client";
 import type { ClaimScreenShareResponse } from "@school/shared";
 import { MonitorUp, MonitorX } from "lucide-react";
 
@@ -8,6 +8,7 @@ import { apiFetch } from "@/shared/api-client";
 import { RoomControlButton, type RoomControlVariant } from "./RoomControlButton.js";
 import { toast } from "@/shared/ui/sonner";
 import { clearStaleScreenShare, stopOwnScreenShare, stopScreenShareAudio } from "./screen-share-stop.js";
+import { deviceProfileNow } from "./device-profile.js";
 
 /**
  * Э7.1, §5.2 ТЗ: «1080p@5fps для документов» — дефолт, когда параметры
@@ -53,6 +54,34 @@ function screenShareExtraLayers(encoding: VideoPreset): VideoPreset[] {
     layers.push(new VideoPreset(mid.w, mid.h, midBitrate, 15, "medium"));
   }
   return layers;
+}
+
+/**
+ * Слабый процессор (`device-profile.ts`): экран сразу захватывается в 720p
+ * и 5 кадр/с и идёт одним потоком — захват крупного кадра и три слоя сжатия
+ * съедали процессор, и у учителя рвался голос (урок 2026-10-13, Pentium N3700).
+ */
+const WEAK_SCREEN_CAPTURE = { width: 1280, height: 720, frameRate: 5 };
+const WEAK_SCREEN_MAX_BITRATE = 600_000;
+
+/**
+ * Звук демонстрации: моно, без отправки тишины (DTX). Слабому устройству —
+ * ниже битрейт. Приоритет ниже голоса учителя.
+ */
+function screenAudioPreset(weak: boolean) {
+  return { maxBitrate: weak ? 32_000 : 48_000, priority: "medium" as const };
+}
+
+/**
+ * Звук «всего экрана» (Windows/ChromeOS) включает и то, что играет сам урок:
+ * голоса учеников уходили второй раз через демонстрацию — в записи и у
+ * учеников звук задваивался. `restrictOwnAudio` просит браузер вырезать звук
+ * своей вкладки; где браузер этого не умеет, звук всего экрана не передаём
+ * (вкладку или окно со звуком — передаём как обычно).
+ */
+function supportsRestrictOwnAudio(): boolean {
+  const supported = navigator.mediaDevices?.getSupportedConstraints?.() as Record<string, boolean> | undefined;
+  return supported?.restrictOwnAudio === true;
 }
 
 /** Сколько ждать публикации демонстрации, прежде чем считать её зависшей. */
@@ -208,15 +237,28 @@ export function SelfScreenShareButton({
    * («publish time out» в логах LiveKit); одним слоем она проходит.
    */
   function publish(track: LocalTrack, withLowLayer: boolean): Promise<unknown> {
+    const profile = deviceProfileNow();
+    const weak = profile?.weak ?? false;
+    // Картинка демонстрации уступает голосу, если ресурсов не хватает.
+    const screenEncoding = weak
+      ? {
+          ...encoding.encoding,
+          maxBitrate: Math.min(encoding.encoding.maxBitrate, WEAK_SCREEN_MAX_BITRATE),
+          maxFramerate: WEAK_SCREEN_CAPTURE.frameRate,
+          priority: "low" as const,
+        }
+      : { ...encoding.encoding, priority: "low" as const };
+    const codec = profile?.codec === "h264" ? { videoCodec: "h264" as const, backupCodec: false } : {};
     return localParticipant.publishTrack(
       track,
-      withLowLayer
+      withLowLayer && !weak
         ? {
-            screenShareEncoding: encoding.encoding,
+            screenShareEncoding: screenEncoding,
             screenShareSimulcastLayers: screenShareExtraLayers(encoding),
             simulcast: true,
+            ...codec,
           }
-        : { screenShareEncoding: encoding.encoding, simulcast: false },
+        : { screenShareEncoding: screenEncoding, simulcast: false, ...codec },
     );
   }
 
@@ -264,15 +306,36 @@ export function SelfScreenShareButton({
     await clearStaleScreenShare(localParticipant);
     let track: LocalTrack | undefined;
     let audioTrack: LocalTrack | undefined;
+    const weak = deviceProfileNow()?.weak ?? false;
+    const restrictOwn = supportsRestrictOwnAudio();
     try {
       const tracks = await localParticipant.createScreenTracks({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        // `restrictOwnAudio` — ограничение getDisplayMedia, которого ещё нет в
+        // типах; livekit-client передаёт объект `audio` браузеру как есть.
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: 1,
+          ...(restrictOwn ? { restrictOwnAudio: true } : {}),
+        } as MediaTrackConstraints,
         systemAudio: "include",
-        resolution: encoding.resolution,
+        // Вкладку самого урока показывать незачем, а её звук — это и есть двоение.
+        selfBrowserSurface: "exclude",
+        resolution: weak ? WEAK_SCREEN_CAPTURE : encoding.resolution,
         contentHint: "detail",
       });
       track = tracks.find((t) => t.kind === Track.Kind.Video);
       audioTrack = tracks.find((t) => t.kind === Track.Kind.Audio);
+      const surface = (track?.mediaStreamTrack.getSettings() as MediaTrackSettings & { displaySurface?: string })
+        ?.displaySurface;
+      const ownAudioRemoved =
+        (audioTrack?.mediaStreamTrack.getSettings() as (MediaTrackSettings & { restrictOwnAudio?: boolean }) | undefined)
+          ?.restrictOwnAudio === true;
+      if (audioTrack && surface === "monitor" && !ownAudioRemoved) {
+        audioTrack.stop();
+        audioTrack = undefined;
+      }
     } catch (e) {
       releaseScreenShare(lessonId);
       // Закрыл окно выбора — передумал, это не ошибка.
@@ -293,7 +356,13 @@ export function SelfScreenShareButton({
         // Остановили кнопкой браузера «Закрыть доступ» — звук уходит вместе с картинкой.
         track.mediaStreamTrack.addEventListener("ended", () => stopScreenShareAudio(localParticipant), { once: true });
         void localParticipant
-          .publishTrack(sound, { source: Track.Source.ScreenShareAudio, audioPreset: AudioPresets.music, dtx: false, red: false })
+          .publishTrack(sound, {
+            source: Track.Source.ScreenShareAudio,
+            audioPreset: screenAudioPreset(weak),
+            forceStereo: false,
+            dtx: true,
+            red: false,
+          })
           .catch(() => {
             sound.stop();
             toast.info("Экран показывается без звука — звук не удалось передать");

@@ -120,6 +120,7 @@ import { useIsNarrowViewport, useIsPhoneLandscape, useMinViewportWidth } from ".
 import { SelfMicButton } from "./MicControls.js";
 import { MicSync } from "./MicSync.js";
 import { Switch } from "@/shared/ui/switch";
+import { detectDeviceProfile, deviceProfileNow, type DeviceProfile } from "./device-profile.js";
 import { ParticipantMenu } from "./ParticipantMenu.js";
 import { ApplyParticipantVolumes } from "./participant-volume.js";
 import { TileMenuContext } from "./tile-menu-context.js";
@@ -169,10 +170,24 @@ const FALLBACK_ROOM_OPTIONS: RoomOptions = {
  * отдаёт ~2 Мбит/с. Голос ученика — `speech` (24 кбит/с) вместо `music`
  * (48, с RED ~80): на слабом канале его хватает.
  */
-function buildRoomOptions(settings: ClientMediaSettings | null, isTeacher: boolean): RoomOptions {
+/**
+ * Профиль устройства (`device-profile.ts`) — молча, при входе: H.264, если
+ * его сжимает видеокарта, а VP8 — процессор; на слабом процессоре камера
+ * учителя стартует с 360p (дальше её ведёт `cpu-load-engine`). Голос — с
+ * приоритетом: при нехватке ресурсов браузер первой урежет картинку.
+ */
+function buildRoomOptions(
+  settings: ClientMediaSettings | null,
+  isTeacher: boolean,
+  profile: DeviceProfile | null,
+): RoomOptions {
   if (!settings) return FALLBACK_ROOM_OPTIONS;
+  const weak = profile?.weak ?? false;
+  const voice = isTeacher || settings.micHighQuality ? AudioPresets.music : AudioPresets.speech;
   return {
-    videoCaptureDefaults: { resolution: toVideoResolution(settings.cameraResolution, settings.cameraFps) },
+    videoCaptureDefaults: {
+      resolution: weak ? WEAK_CAMERA_RESOLUTION : toVideoResolution(settings.cameraResolution, settings.cameraFps),
+    },
     // Тот же дефолт, что ниже в `audio={...}` — нужен здесь ОТДЕЛЬНО, потому
     // что ручной повторный тогл микрофона (`MicControls.tsx`) вызывает
     // `setMicrophoneEnabled` без options и падает на этот дефолт комнаты, а
@@ -183,8 +198,10 @@ function buildRoomOptions(settings: ClientMediaSettings | null, isTeacher: boole
     },
     publishDefaults: {
       simulcast: true,
-      videoEncoding: isTeacher ? toVideoEncoding(settings.cameraFps, settings.cameraBitrateKbps) : VideoPresets.h360.encoding,
-      audioPreset: isTeacher || settings.micHighQuality ? AudioPresets.music : AudioPresets.speech,
+      videoEncoding:
+        isTeacher && !weak ? toVideoEncoding(settings.cameraFps, settings.cameraBitrateKbps) : VideoPresets.h360.encoding,
+      audioPreset: { ...voice, priority: "high" },
+      ...(profile?.codec === "h264" ? { videoCodec: "h264" as const, backupCodec: false } : {}),
     },
     adaptiveStream: true,
     dynacast: true,
@@ -198,6 +215,9 @@ function buildRoomOptions(settings: ClientMediaSettings | null, isTeacher: boole
  * над сеткой камер: занимали место в сетке и висели, пока их не закроют.
  */
 const ROOM_TOAST = { position: "top-center" as const, duration: 6000 };
+
+/** Камера на слабом процессоре: 360p, 15 кадр/с — дальше её ведёт `cpu-load-engine`. */
+const WEAK_CAMERA_RESOLUTION = { ...VideoPresets.h360.resolution, frameRate: 15 };
 
 /** Сколько держится пузырь нового сообщения на плитке автора. */
 const CHAT_BUBBLE_MS = 5_000;
@@ -360,6 +380,11 @@ export function RoomPage() {
   const [removeTarget, setRemoveTarget] = useState<ParticipantSnapshot | null>(null);
   const [media, setMedia] = useState<MediaConnection | null>(null);
   const [clientMediaSettings, setClientMediaSettings] = useState<ClientMediaSettings | null>(null);
+  // Профиль устройства — молча, пока человек на экране проверки устройств.
+  const [deviceProfile, setDeviceProfile] = useState<DeviceProfile | null>(deviceProfileNow);
+  useEffect(() => {
+    void detectDeviceProfile().then(setDeviceProfile);
+  }, []);
   // Перезагрузка вкладки посреди урока — сразу обратно в урок, с теми же
   // устройствами и тем, что было включено (см. `rejoin-state.ts`).
   const [rejoin] = useState(() => readRejoinState(lessonId));
@@ -1651,14 +1676,18 @@ export function RoomPage() {
         variant={variant}
         onOpenSettings={variant === "pill" ? openSettings : undefined}
         maxResolution={
-          clientMediaSettings
-            ? toVideoResolution(clientMediaSettings.cameraResolution, clientMediaSettings.cameraFps)
-            : undefined
+          deviceProfile?.weak
+            ? WEAK_CAMERA_RESOLUTION
+            : clientMediaSettings
+              ? toVideoResolution(clientMediaSettings.cameraResolution, clientMediaSettings.cameraFps)
+              : undefined
         }
         encoding={
-          clientMediaSettings
-            ? toVideoEncoding(clientMediaSettings.cameraFps, clientMediaSettings.cameraBitrateKbps)
-            : undefined
+          deviceProfile?.weak
+            ? VideoPresets.h360.encoding
+            : clientMediaSettings
+              ? toVideoEncoding(clientMediaSettings.cameraFps, clientMediaSettings.cameraBitrateKbps)
+              : undefined
         }
       />
     ) : (
@@ -2288,7 +2317,7 @@ export function RoomPage() {
         serverUrl={media.url}
         token={media.token}
         connect
-        options={buildRoomOptions(clientMediaSettings, isTeacher)}
+        options={buildRoomOptions(clientMediaSettings, isTeacher, deviceProfile)}
         connectOptions={MEDIA_CONNECT_OPTIONS}
         audio={
           self?.permissions.canSpeak && joinMicEnabled
@@ -2313,7 +2342,9 @@ export function RoomPage() {
             ? {
                 resolution: !isTeacher
                   ? VideoPresets.h360.resolution
-                  : clientMediaSettings
+                  : deviceProfile?.weak
+                    ? WEAK_CAMERA_RESOLUTION
+                    : clientMediaSettings
                     ? toVideoResolution(clientMediaSettings.cameraResolution, clientMediaSettings.cameraFps)
                     : VideoPresets.h720.resolution,
                 deviceId: camDeviceId ?? undefined,
