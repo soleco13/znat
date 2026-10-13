@@ -335,6 +335,11 @@ export function SelfScreenShareButton({
       if (audioTrack && surface === "monitor" && !ownAudioRemoved) {
         audioTrack.stop();
         audioTrack = undefined;
+        // Иначе человек думает, что звук идёт, а его не слышат.
+        toast.info("Звук всего экрана в этом браузере не передаётся — чтобы был звук, покажите вкладку", {
+          id: "screen-share-no-system-audio",
+          duration: 7000,
+        });
       }
     } catch (e) {
       releaseScreenShare(lessonId);

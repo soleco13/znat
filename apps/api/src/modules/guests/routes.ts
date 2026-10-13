@@ -47,7 +47,18 @@ export default async function guestsRoutes(app: FastifyInstance) {
       const body = guestEnterRequestSchema.parse(request.body);
       let session;
       try {
-        session = await guestsService.enterAsGuest(request.params.token, body.name);
+        // Ученик вышел и вошёл по ссылке снова — прежняя личность (права,
+        // права учителя, чат, посещаемость), а не новый человек «Юля2»
+        // (урок 2026-10-13). Только если прежняя сейчас не в уроке: вторая
+        // вкладка того же браузера должна быть отдельным участником, иначе
+        // она выбила бы первую.
+        const previous = request.cookies?.[GUEST_COOKIE_NAME];
+        session = await guestsService.enterAsGuest(request.params.token, body.name, async (lessonId) => {
+          if (!previous) return null;
+          const actor = await guestsService.resolveGuestSession(previous).catch(() => null);
+          if (!actor || actor.lessonId !== lessonId) return null;
+          return (await roomsService.isParticipantConnected(lessonId, actor.participantId)) ? null : actor.participantId;
+        });
         setLogContext({ lessonId: session.payload.lessonId, participantId: session.payload.guestId });
         // Новый гость в уроке ещё не был — при закрытом входе куку не выдаём.
         await roomsService.assertGuestNotLockedOut(session.payload.lessonId, session.payload.guestId);

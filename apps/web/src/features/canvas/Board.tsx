@@ -8,6 +8,7 @@ import { ExcalidrawBinding } from "y-excalidraw";
 import * as Y from "yjs";
 import {
   ImagePlus,
+  Maximize2,
   MoreHorizontal,
   Navigation,
   Plus,
@@ -675,6 +676,57 @@ export function Board({
   }, [ydoc, activePageId]);
 
   /**
+   * Доска у каждого прокручивается сама по себе: 2026-10-13 ученица рисовала
+   * за краем экрана учителя, и он не видел её фигур, хотя они были на доске.
+   * Чужая правка вне видимой области — подсказка «Показать» на 8 с;
+   * в меню «Ещё» — «Показать всё на доске».
+   */
+  const [offscreenEdit, setOffscreenEdit] = useState(false);
+  useEffect(() => {
+    if (!ydoc || !activePageId || !excalidrawAPI) return;
+    const yElements = ydoc.getArray(`elements:${activePageId}`);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onChange = (events: Y.YEvent<Y.AbstractType<unknown>>[], tx: Y.Transaction) => {
+      if (tx.local) return;
+      const app = excalidrawAPI.getAppState();
+      const zoom = app.zoom.value || 1;
+      const left = -app.scrollX;
+      const top = -app.scrollY;
+      const right = left + app.width / zoom;
+      const bottom = top + app.height / zoom;
+      const changed: { x: number; y: number; width: number; height: number }[] = [];
+      const take = (item: unknown) => {
+        const el = item instanceof Y.Map ? (item.get("el") as typeof changed[number] | undefined) : undefined;
+        if (el && typeof el.x === "number") changed.push(el);
+      };
+      for (const ev of events) {
+        if (ev.target instanceof Y.Map) take(ev.target);
+        else for (const it of ev.changes.added) for (const c of it.content.getContent()) take(c);
+      }
+      const outside = changed.some((el) => {
+        const x1 = Math.min(el.x, el.x + el.width);
+        const y1 = Math.min(el.y, el.y + el.height);
+        const x2 = Math.max(el.x, el.x + el.width);
+        const y2 = Math.max(el.y, el.y + el.height);
+        return x2 < left || x1 > right || y2 < top || y1 > bottom;
+      });
+      if (!outside) return;
+      setOffscreenEdit(true);
+      clearTimeout(timer);
+      timer = setTimeout(() => setOffscreenEdit(false), 8_000);
+    };
+    yElements.observeDeep(onChange);
+    return () => {
+      yElements.unobserveDeep(onChange);
+      clearTimeout(timer);
+    };
+  }, [ydoc, activePageId, excalidrawAPI]);
+  const showAll = () => {
+    setOffscreenEdit(false);
+    excalidrawAPI?.scrollToContent(undefined, { fitToViewport: true, viewportZoomFactor: 0.9, animate: true });
+  };
+
+  /**
    * Э3.9, §3.4 ТЗ: awareness → курсоры собеседников. `y-excalidraw` сам
    * строит `Collaborator`-ов из `state.user?.name`/`color` (см. заметку в
    * Э3.5/Э3.8 про безусловный `getStates()`), но не публикует его САМ —
@@ -1266,6 +1318,10 @@ export function Board({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuItem onSelect={showAll}>
+                <Maximize2 aria-hidden />
+                Показать всё на доске
+              </DropdownMenuItem>
               {!isTeacher && (
                 <DropdownMenuItem onSelect={() => setFollowTeacher((v) => !v)}>
                   <Navigation aria-hidden />
@@ -1415,6 +1471,18 @@ export function Board({
         {!readOnlyChrome && canDraw && excalidrawAPI && (
           <div className="mobile-tool-rail pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2">
             <MobileToolRail excalidrawAPI={excalidrawAPI} activeTool={railActiveTool} locked={railLocked} />
+          </div>
+        )}
+        {offscreenEdit && !readOnlyChrome && (
+          <div className="absolute inset-x-3 top-16 z-20 flex justify-center">
+            <button
+              type="button"
+              onClick={showAll}
+              className="inline-flex h-9 items-center gap-2 rounded-full bg-card px-3.5 text-[13px] font-semibold text-foreground shadow-[0_4px_14px_rgba(16,24,40,.12)] hover:bg-surface-2"
+            >
+              <Maximize2 className="size-4 text-primary" aria-hidden />
+              Кто-то рисует за краем экрана — показать
+            </button>
           </div>
         )}
         {(importNote || uploadError || pageElementCount >= PAGE_ELEMENT_WARN_AT) && (

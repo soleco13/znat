@@ -540,6 +540,7 @@ export function startCpuLoadAdapter(
         pressure,
         sharing: !!screen?.sender,
         hasVideo: (!!camera?.sender && !camera.isMuted) || !!screen?.sender,
+        hidden: document.visibilityState === "hidden",
       };
       const decision = governor.update(sample);
       if (governor.level > 0 || (decision.changed && decision.reason !== "recovery")) lastCpuConstrainedAt = sample.now;

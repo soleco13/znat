@@ -106,6 +106,20 @@ describe("enterAsGuest → гостевой JWT (реальная подпись
     expect(a.payload.guestId).not.toBe(b.payload.guestId);
   });
 
+  it("вернувшийся гость (решение маршрута) — та же личность, новое имя", async () => {
+    lessonsServiceMock.resolveJoinToken.mockResolvedValue(lessonRow());
+    const first = await enterAsGuest(JOIN_TOKEN, "Юля");
+
+    const again = await enterAsGuest(JOIN_TOKEN, "Юля 2", async (lessonId) =>
+      lessonId === LESSON_ID ? first.payload.guestId : null,
+    );
+    const fresh = await enterAsGuest(JOIN_TOKEN, "Юля", async () => null);
+
+    expect(again.payload.guestId).toBe(first.payload.guestId);
+    expect(again.payload.name).toBe("Юля 2");
+    expect(fresh.payload.guestId).not.toBe(first.payload.guestId);
+  });
+
   it("guestAccessEnabled=false у школы — отказ 403, сессия не минтится (параметры школы, запрос 2026-09-14)", async () => {
     lessonsServiceMock.resolveJoinToken.mockResolvedValue(lessonRow());
     schoolSettingsServiceMock.getSchoolSettings.mockResolvedValueOnce({ guestAccessEnabled: false });

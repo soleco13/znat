@@ -934,6 +934,12 @@ async function assertLessonTeacher(
   }
 }
 
+/** Участник сейчас в уроке (есть в presence и на связи). */
+export async function isParticipantConnected(lessonId: string, participantId: string): Promise<boolean> {
+  const entry = await presence.getParticipant(lessonId, participantId);
+  return entry?.connected === true;
+}
+
 /** Гость с правами учителя — для `app.authenticate` (гейт эндпоинтов учителя). */
 export async function isLessonCohost(lessonId: string, guestId: string): Promise<boolean> {
   return presence.isCohost(lessonId, guestId);

@@ -45,6 +45,8 @@ export interface LoadSample {
   sharing: boolean;
   /** Своя камера или демонстрация публикуются — есть что облегчать. */
   hasVideo: boolean;
+  /** Вкладка урока свёрнута (обычно — во время демонстрации другого окна). */
+  hidden?: boolean;
 }
 
 export interface Decision {
@@ -71,9 +73,23 @@ const RECOVER_HOLD_MS = 60_000;
 const RECOVER_HOLD_MAX_MS = 8 * 60_000;
 const PROBATION_MS = 45_000;
 
+/**
+ * «Видео упёрлось в процессор» в свёрнутой вкладке — не повод снижать
+ * качество, если сам процессор спокоен: Chrome притормаживает фоновые
+ * вкладки, и кодировщик отстаёт без всякой перегрузки. Урок 2026-10-13:
+ * на 12 потоках при демонстрации камера пять раз прыгала 720p ↔ 180p при
+ * Compute Pressure «nominal»/«fair». Провалы звука и «serious»/«critical»
+ * по-прежнему считаются.
+ */
+function videoCpuLimitTrusted(s: LoadSample): boolean {
+  if (!s.videoCpuLimited) return false;
+  if (!s.hidden) return true;
+  return s.pressure === "serious" || s.pressure === "critical";
+}
+
 function overloadReason(s: LoadSample): string | null {
   if (s.audioCapture !== null && s.audioCapture < AUDIO_BAD) return "audio_degradation";
-  if (s.videoCpuLimited) return "cpu_overload";
+  if (videoCpuLimitTrusted(s)) return "cpu_overload";
   if (s.pressure === "critical") return "cpu_pressure";
   return null;
 }
@@ -86,7 +102,7 @@ function overloadReason(s: LoadSample): string | null {
 function isHealthy(s: LoadSample): boolean {
   return (
     (s.audioCapture === null || s.audioCapture >= AUDIO_GOOD) &&
-    !s.videoCpuLimited &&
+    !videoCpuLimitTrusted(s) &&
     s.pressure !== "serious" &&
     s.pressure !== "critical"
   );

@@ -99,7 +99,12 @@ export interface GuestSessionIssued {
  * возобновляется, §1.6 план-ТЗ), поэтому переподключение работает только
  * пока жива та же кука.
  */
-export async function enterAsGuest(joinToken: string, name: string): Promise<GuestSessionIssued> {
+export async function enterAsGuest(
+  joinToken: string,
+  name: string,
+  /** Вернувшийся гость (кука этого урока, сейчас не в уроке) — та же личность. */
+  reuseGuestId?: (lessonId: string) => Promise<string | null>,
+): Promise<GuestSessionIssued> {
   const lesson = await lessonsService.resolveJoinToken(joinToken);
   // Параметры школы (§10.10 ТЗ, запрос 2026-09-14): admin может закрыть вход
   // без аккаунта целиком. Карточку урока (`getPublicLessonInfo`) не гейтим —
@@ -116,7 +121,7 @@ export async function enterAsGuest(joinToken: string, name: string): Promise<Gue
   const payload: GuestTokenPayload = {
     typ: "guest",
     lessonId: lesson.id,
-    guestId: randomUUID(),
+    guestId: (await reuseGuestId?.(lesson.id)) ?? randomUUID(),
     name,
     lt: hashJoinToken(lesson.joinToken),
   };

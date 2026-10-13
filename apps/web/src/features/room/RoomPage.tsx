@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   LiveKitRoom,
@@ -479,6 +479,13 @@ export function RoomPage() {
   // Гость с правами учителя (выдаёт администратор) ведёт урок наравне с учителем.
   const selfCohost = identity?.kind === "guest" && participants.some((p) => p.userId === selfId && p.cohost === true);
   const isTeacher = identity?.role === "teacher" || isAdmin || selfCohost;
+  // Настройки комнаты — один раз на подключение (токен). `<LiveKitRoom>`
+  // пересоздаёт Room при ЛЮБОЙ смене `options`: выдача гостю прав учителя
+  // (2026-10-13, 13:24:17) и поздно определённый профиль устройства рвали
+  // человеку звук и видео и закрывали его сессию в журнале посещений.
+  // Новое качество учителя применяется со следующего входа.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const roomOptions = useMemo(() => buildRoomOptions(clientMediaSettings, isTeacher, deviceProfile), [media?.token]);
   soundsRef.current = isTeacher;
 
   const handleMessage = useCallback((message: ServerRoomMessage) => {
@@ -2317,7 +2324,7 @@ export function RoomPage() {
         serverUrl={media.url}
         token={media.token}
         connect
-        options={buildRoomOptions(clientMediaSettings, isTeacher, deviceProfile)}
+        options={roomOptions}
         connectOptions={MEDIA_CONNECT_OPTIONS}
         audio={
           self?.permissions.canSpeak && joinMicEnabled
