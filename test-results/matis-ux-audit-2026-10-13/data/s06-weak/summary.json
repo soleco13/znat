@@ -1,0 +1,84 @@
+{
+  "T0": 1791903140829,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "   6.8"
+    },
+    {
+      "name": "weak CPU: student still hears teacher",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 54354,
+        "inAudioEnergy": 1.425426430470436,
+        "outAudioBytes": 17538,
+        "outVideoBytes": 147881,
+        "inVideoFrames": 122,
+        "remoteVideoPlaying": 2
+      },
+      "rel": "  33.8"
+    },
+    {
+      "name": "weak CPU: chat send works",
+      "ok": true,
+      "detail": {
+        "ms": 727
+      },
+      "rel": "  34.5"
+    },
+    {
+      "name": "weak CPU + share: student hears teacher",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 47105,
+        "inAudioEnergy": 1.3665942133234523,
+        "outAudioBytes": 16278,
+        "outVideoBytes": 137727,
+        "inVideoFrames": 165,
+        "remoteVideoPlaying": 3
+      },
+      "rel": "  58.2"
+    },
+    {
+      "name": "weak CPU + share: student sees screen",
+      "ok": true,
+      "rel": "  58.2"
+    },
+    {
+      "name": "bad net + weak CPU: student still hears teacher",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 42855,
+        "inAudioEnergy": 1.0909525038882606,
+        "outAudioBytes": 17293,
+        "outVideoBytes": 12465,
+        "inVideoFrames": 52,
+        "remoteVideoPlaying": 3
+      },
+      "rel": "  91.5"
+    },
+    {
+      "name": "teacher sees that student's link is bad",
+      "ok": true,
+      "detail": [
+        "Плохая связь"
+      ],
+      "rel": "  91.5"
+    },
+    {
+      "name": "after recovery: student video back",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 47207,
+        "inAudioEnergy": 1.1672326364002572,
+        "outAudioBytes": 18452,
+        "outVideoBytes": 11453,
+        "inVideoFrames": 39,
+        "remoteVideoPlaying": 3
+      },
+      "rel": " 124.9"
+    }
+  ]
+}

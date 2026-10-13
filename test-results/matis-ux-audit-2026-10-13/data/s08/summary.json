@@ -1,0 +1,147 @@
+{
+  "T0": 1791904204026,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "3G: student reaches room",
+      "ok": true,
+      "detail": {
+        "tFormMs": 7231,
+        "tRoomMs": 18538
+      },
+      "rel": "  22.7"
+    },
+    {
+      "name": "3G: activity opens",
+      "ok": false,
+      "detail": {
+        "ms": 120155
+      },
+      "rel": " 142.9"
+    },
+    {
+      "name": "BAD_3G: student reaches room",
+      "ok": true,
+      "detail": {
+        "tFormMs": 2069,
+        "tRoomMs": 6436
+      },
+      "rel": " 149.6"
+    },
+    {
+      "name": "BAD_3G: activity opens",
+      "ok": false,
+      "detail": {
+        "ms": 120125
+      },
+      "rel": " 269.8"
+    },
+    {
+      "name": "phone: joins",
+      "ok": false,
+      "rel": " 318.2"
+    },
+    {
+      "name": "phone: no horizontal scroll",
+      "ok": true,
+      "detail": {
+        "sw": 360,
+        "cw": 360
+      },
+      "rel": " 321.2"
+    },
+    {
+      "name": "phone: footer buttons visible and ≥44px",
+      "ok": true,
+      "detail": [
+        {
+          "l": "Другие кнопки урока",
+          "w": 48,
+          "h": 48
+        },
+        {
+          "l": "Микрофон",
+          "w": 48,
+          "h": 48
+        },
+        {
+          "l": "Камера",
+          "w": 48,
+          "h": 48
+        },
+        {
+          "l": "Выйти из урока",
+          "w": 48,
+          "h": 48
+        }
+      ],
+      "rel": " 321.2"
+    },
+    {
+      "name": "phone: 'more' menu lists hand/chat",
+      "ok": true,
+      "detail": [
+        "Поднять руку",
+        "Чат"
+      ],
+      "rel": " 322.0"
+    },
+    {
+      "name": "phone: chat opens from menu",
+      "ok": true,
+      "rel": " 323.1"
+    },
+    {
+      "name": "teacher: every visible icon button has an accessible name",
+      "ok": true,
+      "detail": [],
+      "rel": " 323.9"
+    },
+    {
+      "name": "hotkey M toggles mic",
+      "ok": true,
+      "detail": {
+        "before": true,
+        "after": false
+      },
+      "rel": " 325.5"
+    },
+    {
+      "name": "Tab reaches mic/camera/leave",
+      "ok": true,
+      "detail": [
+        "Прогресс",
+        "0 ответили0 в работе",
+        "Действия — Ученик Телефон",
+        "Участники",
+        "Чат",
+        "Материалы урока",
+        "Ещё",
+        "Микрофон",
+        "Выбрать микрофон",
+        "Камера",
+        "Выбрать камеру",
+        "Демонстрация",
+        "Доска",
+        "Выйти",
+        "LT-A 502 участникаПр",
+        "Пригласить",
+        "Настройки",
+        "Свернуть",
+        "Прогресс",
+        "0 ответили0 в работе",
+        "Действия — Ученик Телефон",
+        "Участники",
+        "Чат",
+        "Материалы урока",
+        "Ещё"
+      ],
+      "rel": " 326.7"
+    },
+    {
+      "name": "focused element has visible focus ring",
+      "ok": true,
+      "rel": " 326.7"
+    }
+  ]
+}

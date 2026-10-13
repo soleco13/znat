@@ -1,0 +1,17 @@
+import { resetLesson, openBrowsers, P, teacherJoin, guestEnter, check, waitFor, finish, sleep, shot, inRoom, text, LID, teacherApi, log } from "./lib.mjs";
+await openBrowsers(["teacher", "s2"]);
+const T = P.teacher, S2 = P.s2;
+await teacherJoin(T); await resetLesson(T);
+await guestEnter(S2, "Ученик Два");
+await sleep(3000);
+const sess = await S2.eval(`(async () => { const r = await fetch("/api/v1/guest/session", {credentials:"include"}); return r.status + " " + (await r.text()).slice(0, 200); })()`);
+log({ kind: "info", text: "guest session: " + sess });
+const ids = await T.eval(`[...document.querySelectorAll('button[aria-label^="Действия — "]')].map(b => b.getAttribute('aria-label'))`);
+log({ kind: "info", text: "tile menus: " + JSON.stringify(ids) });
+const gid = JSON.parse(sess.slice(4)).guestId;
+const st = await teacherApi(T, "POST", `/lessons/${LID}/participants/${gid}/remove`);
+log({ kind: "info", text: "remove status " + st });
+const rm = await waitFor(async () => /удалил/i.test(await text(S2)), 15000);
+check("removed student sees removal screen", rm.ok, { ms: rm.ms, txt: (await text(S2)).slice(0, 200) });
+await shot(S2, "removed");
+await finish();

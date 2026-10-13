@@ -1,0 +1,85 @@
+{
+  "T0": 1791903734690,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "join 500: understandable message + retry",
+      "ok": true,
+      "detail": "LT-A 50\n0 участников\nПодключение…\nНе удалось войти в урок — проверьте соединение.\nПовторить\n0\nПоднять руку\n0:07\nРежим: лекция\nВыйти",
+      "rel": "  45.3"
+    },
+    {
+      "name": "join 500: retry button recovers",
+      "ok": true,
+      "rel": "  45.4"
+    },
+    {
+      "name": "chat 500: error shown",
+      "ok": true,
+      "detail": [
+        "Сообщение не отправлено"
+      ],
+      "rel": "  49.0"
+    },
+    {
+      "name": "chat 500: text returned to input (not lost)",
+      "ok": true,
+      "detail": "err500-80105",
+      "rel": "  49.0"
+    },
+    {
+      "name": "chat 500: teacher did not get phantom message",
+      "ok": true,
+      "rel": "  49.0"
+    },
+    {
+      "name": "chat abort+resend: exactly one copy at teacher",
+      "ok": false,
+      "detail": {
+        "n": 0
+      },
+      "rel": "  56.6"
+    },
+    {
+      "name": "responses 500: student told answers not saved",
+      "ok": false,
+      "detail": null,
+      "rel": "  82.7"
+    },
+    {
+      "name": "submit 500: not shown as submitted",
+      "ok": true,
+      "rel": "  86.7"
+    },
+    {
+      "name": "submit 500: understandable error near button",
+      "ok": true,
+      "detail": " Смоук\n14:33\nsmoke-20999\nУченик Сеть\n14:41\nnet-cut5-70934\nnet-cut15-92896\nnet-cut30-36332\nnet-cut60-12267\noffline-46272net-app-down-88037\nУченик Слабый\n14:52\ncpu-74638\nУченик Ошибки\n15:03\nerr500-80105lost-83693\nЗагружаем задание…\nТимур Учителев\n3\nПоднять руку\nМикрофон\nКамера\n0:41\nРежим: лекция\nВыйти",
+      "rel": "  86.7"
+    },
+    {
+      "name": "after server recovers: answers saved by retry",
+      "ok": false,
+      "detail": null,
+      "rel": "  97.8"
+    },
+    {
+      "name": "permissions 500: teacher sees error toast",
+      "ok": true,
+      "detail": [
+        "Internal Server Error"
+      ],
+      "rel": " 101.2"
+    },
+    {
+      "name": "slow claim: share button shows progress",
+      "ok": false,
+      "detail": {
+        "disabled": false,
+        "busy": null,
+        "spin": false
+      },
+      "rel": " 103.3"
+    }
+  ]
+}

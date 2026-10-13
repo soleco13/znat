@@ -1,0 +1,187 @@
+{
+  "T0": 1791902063798,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "teacher joins",
+      "ok": true,
+      "rel": "   3.7"
+    },
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "   6.8"
+    },
+    {
+      "name": "s1 mic off before reload",
+      "ok": true,
+      "rel": "  11.3"
+    },
+    {
+      "name": "s1 back in room after F5 without device check",
+      "ok": true,
+      "detail": {
+        "ms": 442,
+        "ui": {
+          "path": "/j/758e82a0bbca21932a07183e3f35a90f630d8f7a1ce8c3a21f575af8fadb8ca2",
+          "inRoom": true,
+          "deviceCheck": false,
+          "overlayReconnect": false,
+          "pills": [],
+          "takenOver": false,
+          "blocked": null,
+          "error": null,
+          "toasts": [],
+          "spinners": 0
+        }
+      },
+      "rel": "  11.8"
+    },
+    {
+      "name": "s1 mic still off after F5",
+      "ok": false,
+      "detail": true,
+      "rel": "  15.8"
+    },
+    {
+      "name": "teacher sees one tile of s1 after F5",
+      "ok": true,
+      "detail": {
+        "n": 1
+      },
+      "rel": "  15.8"
+    },
+    {
+      "name": "teacher header count = 2 after s1 F5",
+      "ok": true,
+      "detail": "LT-A 50\n2 участника\nПригласить",
+      "rel": "  15.8"
+    },
+    {
+      "name": "teacher back after F5",
+      "ok": true,
+      "detail": {
+        "ms": 455
+      },
+      "rel": "  16.3"
+    },
+    {
+      "name": "tab2 reaches device check or room",
+      "ok": true,
+      "rel": "  17.0"
+    },
+    {
+      "name": "first tab shows 'Урок открыт в другом окне'",
+      "ok": true,
+      "detail": {
+        "path": "/j/758e82a0bbca21932a07183e3f35a90f630d8f7a1ce8c3a21f575af8fadb8ca2",
+        "inRoom": true,
+        "deviceCheck": false,
+        "overlayReconnect": false,
+        "pills": [
+          "Восстанавливаем звук и видео…"
+        ],
+        "takenOver": true,
+        "blocked": null,
+        "error": null,
+        "toasts": [],
+        "spinners": 0
+      },
+      "rel": "  23.7"
+    },
+    {
+      "name": "first tab offers 'Продолжить здесь'",
+      "ok": true,
+      "rel": "  23.8"
+    },
+    {
+      "name": "after resume, tab2 shows taken-over",
+      "ok": true,
+      "detail": {
+        "path": "/j/758e82a0bbca21932a07183e3f35a90f630d8f7a1ce8c3a21f575af8fadb8ca2",
+        "inRoom": true,
+        "deviceCheck": false,
+        "overlayReconnect": false,
+        "pills": [
+          "Восстанавливаем звук и видео…"
+        ],
+        "takenOver": true,
+        "blocked": null,
+        "error": null,
+        "toasts": [],
+        "spinners": 0
+      },
+      "rel": "  34.8"
+    },
+    {
+      "name": "s2 in room after double click",
+      "ok": true,
+      "rel": "  39.1"
+    },
+    {
+      "name": "teacher sees exactly one 'Ученик Два'",
+      "ok": true,
+      "detail": {
+        "n": 1
+      },
+      "rel": "  43.1"
+    },
+    {
+      "name": "double submit of name form makes one /enter",
+      "ok": true,
+      "detail": {
+        "enters": 1
+      },
+      "rel": "  43.1"
+    },
+    {
+      "name": "bad link shows understandable message",
+      "ok": true,
+      "detail": "Ссылка недействительна\n\nСсылка на урок устарела или введена с ошибкой. Попросите учителя прислать её заново.",
+      "rel": "  48.2"
+    },
+    {
+      "name": "lock entry",
+      "ok": true,
+      "rel": "  48.3"
+    },
+    {
+      "name": "new guest sees 'вход закрыт'",
+      "ok": true,
+      "detail": "Вход в урок\n\nLT-A 50\nКак вас представить на уроке?\n\nУчитель увидит это имя в списке участников и в заданиях.\n\nДаю согласие на обработку персональных данных в соответствии с политикой обработки персона",
+      "rel": "  55.1"
+    },
+    {
+      "name": "existing s1 returns while entry locked",
+      "ok": true,
+      "detail": {
+        "path": "/j/758e82a0bbca21932a07183e3f35a90f630d8f7a1ce8c3a21f575af8fadb8ca2",
+        "inRoom": false,
+        "deviceCheck": false,
+        "overlayReconnect": false,
+        "pills": [],
+        "takenOver": false,
+        "blocked": null,
+        "error": null,
+        "toasts": [],
+        "spinners": 0
+      },
+      "rel": "  55.2"
+    },
+    {
+      "name": "removed student sees removal screen",
+      "ok": false,
+      "detail": "Матис\nС возвращением\n\nВойдите, чтобы вести уроки и проверять работы.\n\nEmail\nПароль\nЗабыли пароль?\nВойти\n\nНет аккаунта? Зарегистрироваться\n\nКласс уже\nсобирается.",
+      "rel": "  58.3"
+    },
+    {
+      "name": "removed student can re-enter only as new person (form shown), not silently back",
+      "ok": true,
+      "detail": {
+        "inRoom": false,
+        "txt": "Вход в урок\n\nLT-A 50\nКак вас представить на уроке?\n\nУчитель увидит это имя в списке участников и в заданиях.\n\nДаю согласие на обработку персональных данных в со"
+      },
+      "rel": "  63.3"
+    }
+  ]
+}

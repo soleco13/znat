@@ -1,0 +1,76 @@
+{
+  "T0": 1791903078070,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "   7.0"
+    },
+    {
+      "name": "s2 joins",
+      "ok": true,
+      "rel": "  10.0"
+    },
+    {
+      "name": "teacher board ready",
+      "ok": true,
+      "rel": "  10.5"
+    },
+    {
+      "name": "s1 board ready",
+      "ok": true,
+      "rel": "  10.5"
+    },
+    {
+      "name": "s2 board ready",
+      "ok": true,
+      "rel": "  10.6"
+    },
+    {
+      "name": "round 0: 8 added, none removed",
+      "ok": true,
+      "detail": {
+        "added": 8,
+        "byRow": {
+          "s2": 3,
+          "s1": 3,
+          "teacher": 2
+        },
+        "removed": 0,
+        "posDupes": 2
+      },
+      "rel": "  19.9"
+    },
+    {
+      "name": "round 1: 8 added, none removed",
+      "ok": true,
+      "detail": {
+        "added": 8,
+        "byRow": {
+          "s2": 3,
+          "s1": 3,
+          "teacher": 2
+        },
+        "removed": 0,
+        "posDupes": 5
+      },
+      "rel": "  26.9"
+    },
+    {
+      "name": "round 2: 8 added, none removed",
+      "ok": true,
+      "detail": {
+        "added": 8,
+        "byRow": {
+          "s2": 3,
+          "s1": 3,
+          "teacher": 2
+        },
+        "removed": 0,
+        "posDupes": 4
+      },
+      "rel": "  33.9"
+    }
+  ]
+}

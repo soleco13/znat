@@ -1,0 +1,17 @@
+import { resetLesson, openBrowsers, P, teacherJoin, guestEnter, flow, hears, check, sendChat, waitFor, countText, ui, finish, sleep, shot } from "./lib.mjs";
+await openBrowsers(["teacher", "s1"]);
+const T = P.teacher, S = P.s1;
+check("teacher joins", await teacherJoin(T));
+await resetLesson(T);
+check("student joins", await guestEnter(S, "Ученик Смоук"));
+await sleep(6000);
+const [ft, fs_] = await Promise.all([flow(T), flow(S)]);
+check("teacher hears student", hears(ft), ft);
+check("student hears teacher", hears(fs_), fs_);
+check("student sees teacher video", fs_.remoteVideoPlaying > 0, fs_);
+const msg = `smoke-${Date.now() % 100000}`;
+await sendChat(S, msg);
+check("chat delivered once", (await waitFor(async () => (await countText(T, msg)) === 1, 10000)).ok);
+console.log(JSON.stringify(await ui(T)), JSON.stringify(await ui(S)));
+await shot(T, "smoke"); await shot(S, "smoke");
+await finish();

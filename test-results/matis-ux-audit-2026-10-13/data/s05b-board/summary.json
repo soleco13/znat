@@ -1,0 +1,77 @@
+{
+  "T0": 1791903005635,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "   6.9"
+    },
+    {
+      "name": "s2 joins",
+      "ok": true,
+      "rel": "   9.8"
+    },
+    {
+      "name": "teacher board ready",
+      "ok": true,
+      "rel": "  10.4"
+    },
+    {
+      "name": "s1 board ready",
+      "ok": true,
+      "rel": "  10.4"
+    },
+    {
+      "name": "s2 board ready",
+      "ok": true,
+      "rel": "  10.4"
+    },
+    {
+      "name": "teacher: sequential 2 shapes saved",
+      "ok": true,
+      "detail": {
+        "before": 7,
+        "after": 9
+      },
+      "rel": "  17.5"
+    },
+    {
+      "name": "s1: sequential 3 shapes saved",
+      "ok": true,
+      "detail": {
+        "before": 9,
+        "after": 12
+      },
+      "rel": "  23.1"
+    },
+    {
+      "name": "s2: sequential 3 shapes saved",
+      "ok": true,
+      "detail": {
+        "before": 12,
+        "after": 15
+      },
+      "rel": "  28.6"
+    },
+    {
+      "name": "concurrent 8 shapes saved",
+      "ok": false,
+      "detail": {
+        "c0": 15,
+        "c1": 21
+      },
+      "rel": "  35.2"
+    },
+    {
+      "name": "undo right after drawing removes it",
+      "ok": true,
+      "detail": {
+        "u0": 21,
+        "u1": 22,
+        "u2": 21
+      },
+      "rel": "  40.0"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "T0": 1791905482867,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "   6.7"
+    },
+    {
+      "name": "lost response + resend: one message in DB",
+      "ok": true,
+      "detail": [
+        "1"
+      ],
+      "rel": "  13.6"
+    },
+    {
+      "name": "teacher sees it once",
+      "ok": true,
+      "rel": "  14.2"
+    },
+    {
+      "name": "activity shown (no interception)",
+      "ok": true,
+      "detail": "LT-A 50\n2 участника\nУчастники\nЧат\nМатериалы\nВнешний\n08:43\nот гостя-учителя\nможно\nУченик Смоук\n14:33\nsmoke-20999\nУченик С",
+      "rel": "  15.2"
+    },
+    {
+      "name": "responses 500: student told answers not saved",
+      "ok": true,
+      "detail": "ответы не сохранились, повторим",
+      "rel": "  21.2"
+    },
+    {
+      "name": "after server recovers: answers saved by retry",
+      "ok": true,
+      "detail": {
+        "ms": 9227
+      },
+      "rel": "  30.5"
+    },
+    {
+      "name": "slow claim: share button shows progress",
+      "ok": true,
+      "detail": {
+        "disabled": false,
+        "svgLoader": true,
+        "html": "<svg viewBox=\"0 0 325 325\" class=\"size-5 shrink-0 loader-rotate\" aria-hidden=\"true\" focusable=\"false\"><defs><mask id=\"loader-_r_2n_\" maskUnits=\"userSpaceOnUse\" "
+      },
+      "rel": "  32.0"
+    }
+  ]
+}

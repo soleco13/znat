@@ -1,0 +1,78 @@
+{
+  "T0": 1791902960223,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "   7.0"
+    },
+    {
+      "name": "s2 joins",
+      "ok": true,
+      "rel": "   9.9"
+    },
+    {
+      "name": "teacher board ready",
+      "ok": true,
+      "rel": "  10.4"
+    },
+    {
+      "name": "s1 board ready",
+      "ok": true,
+      "rel": "  10.4"
+    },
+    {
+      "name": "s2 board ready",
+      "ok": true,
+      "rel": "  10.5"
+    },
+    {
+      "name": "all 8 concurrent shapes saved on server",
+      "ok": false,
+      "detail": {
+        "before": {
+          "page": "board-page-1",
+          "live": 0,
+          "total": 0,
+          "types": {}
+        },
+        "after": {
+          "page": "board-page-1",
+          "live": 6,
+          "total": 6,
+          "types": {
+            "rectangle": 6
+          }
+        }
+      },
+      "rel": "  20.6"
+    },
+    {
+      "name": "student A's board closed by teacher stage switch",
+      "ok": true,
+      "rel": "  24.2"
+    },
+    {
+      "name": "board content intact after stage round-trip",
+      "ok": true,
+      "detail": {
+        "s1": 6,
+        "s2": 7
+      },
+      "rel": "  26.9"
+    },
+    {
+      "name": "undo removes exactly one element (own), others intact",
+      "ok": false,
+      "detail": {
+        "s2": 7,
+        "s3": 7,
+        "types": {
+          "rectangle": 7
+        }
+      },
+      "rel": "  29.4"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "T0": 1791904727271,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "mic stays off after early mute (no auto re-enable)",
+      "ok": true,
+      "detail": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "rel": "  24.4"
+    },
+    {
+      "name": "no audio actually sent",
+      "ok": true,
+      "detail": 224,
+      "rel": "  24.4"
+    }
+  ]
+}

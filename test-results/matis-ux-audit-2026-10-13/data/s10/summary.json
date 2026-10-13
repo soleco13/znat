@@ -1,0 +1,28 @@
+{
+  "T0": 1791904648511,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "denied: device check explains how to allow access",
+      "ok": false,
+      "detail": "Подключение к уроку\n\nLT-A 50\n\nКамера выключена\n\nКамера выключена\nКамера\n\nМикрофон включён\n\nСлышим вас\n\nУстройство ввода\nFake Default Audio Input\nЗаписать голос\nПрослушать\n\nДинамики\n\nУстройство вывода звука\nFake Default Audio Output\nПроверить звук\n\nОборудование можно переключить и во время урока\n\nПри",
+      "rel": "   7.9"
+    },
+    {
+      "name": "denied: can still join (listen only)",
+      "ok": true,
+      "rel": "   8.1"
+    },
+    {
+      "name": "denied: pressing mic explains why it does not work",
+      "ok": true,
+      "detail": [],
+      "rel": "  13.1"
+    },
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "  16.1"
+    }
+  ]
+}

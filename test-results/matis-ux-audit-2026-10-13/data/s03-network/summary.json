@@ -1,0 +1,331 @@
+{
+  "T0": 1791902451013,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "   6.6"
+    },
+    {
+      "name": "cut 5s: student sees some connection state",
+      "ok": false,
+      "detail": [],
+      "rel": "  16.8"
+    },
+    {
+      "name": "cut5: UI recovered",
+      "ok": true,
+      "detail": {
+        "ms": 2,
+        "ui": {
+          "path": "/j/758e82a0bbca21932a07183e3f35a90f630d8f7a1ce8c3a21f575af8fadb8ca2",
+          "inRoom": true,
+          "deviceCheck": false,
+          "overlayReconnect": false,
+          "pills": [],
+          "takenOver": false,
+          "blocked": null,
+          "error": null,
+          "toasts": [],
+          "spinners": 0
+        }
+      },
+      "rel": "  19.9"
+    },
+    {
+      "name": "cut5: student hears teacher",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 23266,
+        "inAudioEnergy": 0.21783943086592722,
+        "outAudioBytes": 14779,
+        "outVideoBytes": 145929,
+        "inVideoFrames": 147,
+        "remoteVideoPlaying": 1
+      },
+      "rel": "  19.9"
+    },
+    {
+      "name": "cut5: teacher hears student",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 14779,
+        "inAudioEnergy": 0.6010133311233057,
+        "outAudioBytes": 23266,
+        "outVideoBytes": 176949,
+        "inVideoFrames": 60,
+        "remoteVideoPlaying": 1
+      },
+      "rel": "  19.9"
+    },
+    {
+      "name": "cut5: chat works after",
+      "ok": true,
+      "rel": "  20.5"
+    },
+    {
+      "name": "cut 15s: student sees some connection state",
+      "ok": false,
+      "detail": [],
+      "rel": "  38.7"
+    },
+    {
+      "name": "cut15: UI recovered",
+      "ok": true,
+      "detail": {
+        "ms": 1,
+        "ui": {
+          "path": "/j/758e82a0bbca21932a07183e3f35a90f630d8f7a1ce8c3a21f575af8fadb8ca2",
+          "inRoom": true,
+          "deviceCheck": false,
+          "overlayReconnect": false,
+          "pills": [],
+          "takenOver": false,
+          "blocked": null,
+          "error": null,
+          "toasts": [],
+          "spinners": 0
+        }
+      },
+      "rel": "  41.9"
+    },
+    {
+      "name": "cut15: student hears teacher",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 29289,
+        "inAudioEnergy": 0.6450308476356814,
+        "outAudioBytes": 12098,
+        "outVideoBytes": 120735,
+        "inVideoFrames": 13,
+        "remoteVideoPlaying": 1
+      },
+      "rel": "  41.9"
+    },
+    {
+      "name": "cut15: teacher hears student",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 10846,
+        "inAudioEnergy": 0.3403535538540625,
+        "outAudioBytes": 29289,
+        "outVideoBytes": 186812,
+        "inVideoFrames": 57,
+        "remoteVideoPlaying": 1
+      },
+      "rel": "  41.9"
+    },
+    {
+      "name": "cut15: chat works after",
+      "ok": true,
+      "rel": "  42.4"
+    },
+    {
+      "name": "cut 30s: student sees some connection state",
+      "ok": true,
+      "detail": [
+        "Восстанавливаем звук и видео…"
+      ],
+      "rel": "  75.6"
+    },
+    {
+      "name": "cut30: UI recovered",
+      "ok": true,
+      "detail": {
+        "ms": 6518,
+        "ui": {
+          "path": "/j/758e82a0bbca21932a07183e3f35a90f630d8f7a1ce8c3a21f575af8fadb8ca2",
+          "inRoom": true,
+          "deviceCheck": false,
+          "overlayReconnect": false,
+          "pills": [],
+          "takenOver": false,
+          "blocked": null,
+          "error": null,
+          "toasts": [],
+          "spinners": 0
+        }
+      },
+      "rel": "  85.3"
+    },
+    {
+      "name": "cut30: student hears teacher",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 29011,
+        "inAudioEnergy": 0.4669281762913222,
+        "outAudioBytes": 16346,
+        "outVideoBytes": 141816,
+        "inVideoFrames": 60,
+        "remoteVideoPlaying": 1
+      },
+      "rel": "  85.3"
+    },
+    {
+      "name": "cut30: teacher hears student",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 16211,
+        "inAudioEnergy": 0.5521411592521357,
+        "outAudioBytes": 28770,
+        "outVideoBytes": 56775,
+        "inVideoFrames": 60,
+        "remoteVideoPlaying": 1
+      },
+      "rel": "  85.3"
+    },
+    {
+      "name": "cut30: chat works after",
+      "ok": true,
+      "rel": "  85.9"
+    },
+    {
+      "name": "cut 60s: student sees some connection state",
+      "ok": true,
+      "detail": [
+        "Переподключение…",
+        "overlay:Связь прервалась"
+      ],
+      "rel": " 149.2"
+    },
+    {
+      "name": "cut60: UI recovered",
+      "ok": true,
+      "detail": {
+        "ms": 9027,
+        "ui": {
+          "path": "/j/758e82a0bbca21932a07183e3f35a90f630d8f7a1ce8c3a21f575af8fadb8ca2",
+          "inRoom": true,
+          "deviceCheck": false,
+          "overlayReconnect": false,
+          "pills": [],
+          "takenOver": false,
+          "blocked": null,
+          "error": null,
+          "toasts": [],
+          "spinners": 0
+        }
+      },
+      "rel": " 161.3"
+    },
+    {
+      "name": "cut60: student hears teacher",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 30155,
+        "inAudioEnergy": 0.6620332914513867,
+        "outAudioBytes": 17598,
+        "outVideoBytes": 143577,
+        "inVideoFrames": 59,
+        "remoteVideoPlaying": 1
+      },
+      "rel": " 161.3"
+    },
+    {
+      "name": "cut60: teacher hears student",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 17707,
+        "inAudioEnergy": 0.868370506783176,
+        "outAudioBytes": 30388,
+        "outVideoBytes": 58485,
+        "inVideoFrames": 62,
+        "remoteVideoPlaying": 1
+      },
+      "rel": " 161.3"
+    },
+    {
+      "name": "cut60: chat works after",
+      "ok": true,
+      "rel": " 161.8"
+    },
+    {
+      "name": "app-down: media keeps flowing (student hears teacher)",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 29844,
+        "inAudioEnergy": 0.5703380136952294,
+        "outAudioBytes": 17726,
+        "outVideoBytes": 142045,
+        "inVideoFrames": 61,
+        "remoteVideoPlaying": 1
+      },
+      "rel": " 195.0"
+    },
+    {
+      "name": "app-down: chat shows pending/error state",
+      "ok": true,
+      "detail": [],
+      "rel": " 203.8"
+    },
+    {
+      "name": "app-down: message either delivered after recovery or returned to input",
+      "ok": true,
+      "detail": {
+        "delivered": false,
+        "draft": "offline-46272"
+      },
+      "rel": " 234.0"
+    },
+    {
+      "name": "app-down: no duplicate after recovery",
+      "ok": true,
+      "detail": {
+        "n": 0
+      },
+      "rel": " 234.0"
+    },
+    {
+      "name": "app-down: UI recovered",
+      "ok": true,
+      "detail": {
+        "ms": 1,
+        "ui": {
+          "path": "/j/758e82a0bbca21932a07183e3f35a90f630d8f7a1ce8c3a21f575af8fadb8ca2",
+          "inRoom": true,
+          "deviceCheck": false,
+          "overlayReconnect": false,
+          "pills": [],
+          "takenOver": false,
+          "blocked": null,
+          "error": null,
+          "toasts": [],
+          "spinners": 0
+        }
+      },
+      "rel": " 237.0"
+    },
+    {
+      "name": "app-down: student hears teacher",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 36253,
+        "inAudioEnergy": 0.5414851658142439,
+        "outAudioBytes": 17386,
+        "outVideoBytes": 137620,
+        "inVideoFrames": 60,
+        "remoteVideoPlaying": 1
+      },
+      "rel": " 237.0"
+    },
+    {
+      "name": "app-down: teacher hears student",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 17386,
+        "inAudioEnergy": 0.6426818084738173,
+        "outAudioBytes": 36253,
+        "outVideoBytes": 56886,
+        "inVideoFrames": 60,
+        "remoteVideoPlaying": 1
+      },
+      "rel": " 237.0"
+    },
+    {
+      "name": "app-down: chat works after",
+      "ok": true,
+      "rel": " 237.6"
+    }
+  ]
+}

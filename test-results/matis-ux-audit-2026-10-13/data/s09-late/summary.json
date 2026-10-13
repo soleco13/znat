@@ -1,0 +1,17 @@
+{
+  "T0": 1791904558483,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "late student joins",
+      "ok": true,
+      "rel": "  16.8"
+    },
+    {
+      "name": "late joiner sees the current activity",
+      "ok": false,
+      "detail": "LT-A 50\n3 участника\nговорит\nТимур Учителев · учитель\nговорит\nУченик Телефон\nговорит\nУченик Опоздал (вы)\n3\nПоднять руку\nМикрофон\nКамера\n0:15\nРежим: лекция\nВыйти",
+      "rel": "  32.1"
+    }
+  ]
+}
