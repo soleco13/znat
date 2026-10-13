@@ -187,6 +187,8 @@ function EgressStage({
         setActiveActivityId(null);
         break;
       case "activity_started":
+      // Запись началась, когда задание уже шло — показать его и в записи.
+      case "activity_current":
         setActiveActivityId(message.activityId);
         break;
       case "presence":

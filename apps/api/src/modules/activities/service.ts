@@ -234,6 +234,7 @@ export async function createActivity(
 
   // Сигнал «откройте задание» — по WS-каналу урока, НЕ через Y.Doc. Сам
   // материал и ответы этот канал не переносит (см. докстринг файла).
+  await roomsService.setCurrentActivity(lessonId, id);
   roomsService.broadcastToLesson(lessonId, { type: "activity_started", activityId: id });
 
   return toDto(row);

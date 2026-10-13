@@ -33,6 +33,7 @@ const {
   materialsServiceMock: { getLatestMaterial: vi.fn(), getMaterialVersion: vi.fn(), gradeResponse: vi.fn() },
   roomsServiceMock: {
     broadcastToLesson: vi.fn(),
+    setCurrentActivity: vi.fn(),
     ensureParticipant: vi.fn(),
     listLessonParticipants: vi.fn(),
     getParticipantNames: vi.fn(),
@@ -232,6 +233,8 @@ describe("createActivity (Э8.6 → Э12.5)", () => {
     expect(repoMock.insertActivity).toHaveBeenCalledWith(
       expect.objectContaining({ materialVersionId: VERSION, lessonId: LESSON, assignedBy: TEACHER }),
     );
+    // Текущее задание урока — для вошедших позже (UX-аудит 2026-10-13).
+    expect(roomsServiceMock.setCurrentActivity).toHaveBeenCalledWith(LESSON, dto.id);
     expect(roomsServiceMock.broadcastToLesson).toHaveBeenCalledWith(LESSON, {
       type: "activity_started",
       activityId: ACTIVITY,

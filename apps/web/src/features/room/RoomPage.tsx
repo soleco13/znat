@@ -376,6 +376,8 @@ export function RoomPage() {
   const [deckStatuses, setDeckStatuses] = useState<Record<string, DeckProgressEvent>>({});
   const [decks, setDecks] = useState<Deck[]>([]);
   const [activeActivityId, setActiveActivityId] = useState<string | null>(null);
+  /** Задания, о которых этот экран уже знает (`activity_current` открывает только новые). */
+  const seenActivitiesRef = useRef<Set<string>>(new Set());
   const [reviewSignal, setReviewSignal] = useState(0);
   const [recordingActive, setRecordingActive] = useState(false);
   const [joinFailed, setJoinFailed] = useState(false);
@@ -395,6 +397,7 @@ export function RoomPage() {
   // Перезагрузка вкладки посреди урока — сразу обратно в урок, с теми же
   // устройствами и тем, что было включено (см. `rejoin-state.ts`).
   const [rejoin] = useState(() => readRejoinState(lessonId));
+  const rejoinRef = useRef(rejoin);
   // Прошлый выбор микрофона/камеры на экране проверки — на этом устройстве.
   const [joinDefaults] = useState(readJoinDefaults);
   const [deviceCheckDone, setDeviceCheckDone] = useState(rejoin !== null);
@@ -579,7 +582,16 @@ export function RoomPage() {
       case "deck_status":
         setDeckStatuses((prev) => ({ ...prev, [message.deck.deckId]: message.deck }));
         break;
+      case "activity_current":
+        // Текущее задание при (пере)подключении: открыть, только если ещё не
+        // видели (вошёл позже выдачи). После F5 — как было до перезагрузки.
+        if (seenActivitiesRef.current.has(message.activityId)) break;
+        seenActivitiesRef.current.add(message.activityId);
+        setActiveActivityId(message.activityId);
+        if (!rejoinRef.current || rejoinRef.current.act) setStageView("activity");
+        break;
       case "activity_started":
+        seenActivitiesRef.current.add(message.activityId);
         setActiveActivityId(message.activityId);
         // §7.3 ТЗ: выданный материал сразу выходит на стейдж (плитки — в ленту).
         setStageView("activity");
@@ -1586,7 +1598,13 @@ export function RoomPage() {
           onShowAll={() => setDrawer("people")}
           solo={soloCard}
           onScreenShareStopped={() => pipRef.current?.close()}
-          onActivityClose={() => setStageView(sharedStage)}
+          onActivityClose={() => {
+            setStageView(sharedStage);
+            // Учитель закрыл задание — оно больше не «текущее»: вошедшим позже
+            // его не открывать. Ученики, которые в задании, остаются в нём
+            // (`stage_changed` их вид «задание» не перебивает).
+            if (isTeacher) void changeLessonStage(sharedStage);
+          }}
           onBoardClose={isTeacher ? () => changeLessonStage("people") : undefined}
         />
       ) : stageView === "board" && lessonId ? (

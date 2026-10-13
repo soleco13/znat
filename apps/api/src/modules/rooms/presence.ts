@@ -408,6 +408,22 @@ export async function setLessonStage(lessonId: string, stage: LessonStage): Prom
   await redis.set(stageKey(lessonId), stage);
 }
 
+function currentActivityKey(lessonId: string): string {
+  return `room:${lessonId}:currentActivity`;
+}
+/** Сколько помнить выданное задание без смены стейджа — дольше любого урока. */
+const CURRENT_ACTIVITY_TTL_SECONDS = 4 * 60 * 60;
+
+/** Задание, которое учитель выдал и ещё не сменил стейдж: его открывают и вошедшие позже. */
+export async function getCurrentActivity(lessonId: string): Promise<string | null> {
+  return redis.get(currentActivityKey(lessonId));
+}
+
+export async function setCurrentActivity(lessonId: string, activityId: string | null): Promise<void> {
+  if (activityId) await redis.set(currentActivityKey(lessonId), activityId, "EX", CURRENT_ACTIVITY_TTL_SECONDS);
+  else await redis.del(currentActivityKey(lessonId));
+}
+
 /** Отдельная функция без Redis-эффектов — детерминированное правило зачистки, легко тестируется. */
 export function isStaleEntry(entry: PresenceEntry, now: number, graceMs: number, heartbeatTimeoutMs: number): boolean {
   if (!entry.connected) return now - entry.lastSeenAt > graceMs;

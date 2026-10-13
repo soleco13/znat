@@ -133,12 +133,13 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
       }
 
       try {
-        // Стейдж сразу при подключении — если запись стартовала при уже
-        // открытой доске, recorder не должен ждать следующего stage_changed.
-        // «Активность уже идёт» так восстановить нечем (§ докстринг
-        // EgressPage.tsx) — тот же пробел, что и у живого участника,
-        // подключившегося без initial join().
-        send({ type: "stage_changed", stage: await roomsService.getCurrentLessonStage(lessonId) });
+        // Стейдж и текущее задание сразу при подключении — если запись
+        // стартовала при уже открытой доске или идущем задании, recorder не
+        // должен ждать следующего события (раньше задание в такую запись не
+        // попадало — UX-аудит 2026-10-13).
+        const state = await roomsService.getLessonStateSnapshot(lessonId);
+        send({ type: "stage_changed", stage: state.stage });
+        if (state.currentActivityId) send({ type: "activity_current", activityId: state.currentActivityId });
         // Presence сразу при подключении — recorder должен видеть уже
         // сидящих в уроке участников (лента камер в EgressPage.tsx), а не
         // ждать их participant_joined (тот шлётся только НОВЫМ входам). Тот
@@ -242,6 +243,7 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
       send({ type: "lesson_mode", mode: state.mode });
       send({ type: "entry_locked", locked: state.entryLocked });
       send({ type: "chat_locked", locked: state.chatLocked });
+      if (state.currentActivityId) send({ type: "activity_current", activityId: state.currentActivityId });
 
       // Э10.3, 152-ФЗ: зашли в уже идущий урок, где запись уже стартовала —
       // сразу показать баннер согласия, не дожидаясь следующего старта/стопа.

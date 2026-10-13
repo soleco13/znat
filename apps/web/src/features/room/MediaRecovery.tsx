@@ -128,8 +128,8 @@ export function MediaRecovery({
     const timers = new Set<ReturnType<typeof setTimeout>>();
 
     // Что было включено, пока связь была: при обрыве публикации уже сняты.
-    const remember = () => {
-      if (room.state !== ConnectionState.Connected || Date.now() < settleUntil) return;
+    const remember = (force = false) => {
+      if (room.state !== ConnectionState.Connected || (!force && Date.now() < settleUntil)) return;
       const next = {
         camera: room.localParticipant.isCameraEnabled,
         microphone: room.localParticipant.isMicrophoneEnabled,
@@ -167,6 +167,14 @@ export function MediaRecovery({
         }, ms);
         timers.add(timer);
       }
+    };
+    // Человек сам выключил/включил микрофон или камеру (или их выключил
+    // учитель) — запоминаем сразу, не дожидаясь окончания «успокоения» после
+    // подключения: выключил микрофон в первые 15 с, нажал F5 — и микрофон
+    // снова включался (UX-аудит 2026-10-13). Переподключение такие события
+    // не порождает, поэтому окно `settleUntil` тут не нужно.
+    const onLocalMute = (_pub: unknown, participant: unknown) => {
+      if (participant === room.localParticipant) remember(true);
     };
     const onReconnecting = () => {
       remember();
@@ -245,8 +253,16 @@ export function MediaRecovery({
     room.on(RoomEvent.SignalReconnecting, onReconnecting);
     room.on(RoomEvent.Reconnected, settle);
     room.on(RoomEvent.Connected, settle);
-    room.on(RoomEvent.LocalTrackPublished, remember);
-    room.on(RoomEvent.LocalTrackUnpublished, remember);
+    const rememberAfterSettle = () => remember();
+    // Новая дорожка — это человек включил микрофон/камеру (после F5 с
+    // выключенным микрофоном он публикуется заново, а не снимается с паузы).
+    // Переподключение тоже публикует — запомнить «включено» тогда безвредно.
+    // Снятие дорожки — по-прежнему только вне окна успокоения.
+    const rememberPublished = () => remember(true);
+    room.on(RoomEvent.LocalTrackPublished, rememberPublished);
+    room.on(RoomEvent.LocalTrackUnpublished, rememberAfterSettle);
+    room.on(RoomEvent.TrackMuted, onLocalMute);
+    room.on(RoomEvent.TrackUnmuted, onLocalMute);
     room.on(RoomEvent.Disconnected, onDisconnected);
     // Эффект перезапустился на уже подключённой комнате («Продолжить здесь»).
     if (room.state === ConnectionState.Connected) settle();
@@ -268,8 +284,10 @@ export function MediaRecovery({
       room.off(RoomEvent.SignalReconnecting, onReconnecting);
       room.off(RoomEvent.Reconnected, settle);
       room.off(RoomEvent.Connected, settle);
-      room.off(RoomEvent.LocalTrackPublished, remember);
-      room.off(RoomEvent.LocalTrackUnpublished, remember);
+      room.off(RoomEvent.LocalTrackPublished, rememberPublished);
+      room.off(RoomEvent.LocalTrackUnpublished, rememberAfterSettle);
+      room.off(RoomEvent.TrackMuted, onLocalMute);
+      room.off(RoomEvent.TrackUnmuted, onLocalMute);
       room.off(RoomEvent.Disconnected, onDisconnected);
     };
   }, [room, lessonId, resumeSignal]);

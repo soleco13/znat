@@ -782,14 +782,15 @@ export async function setLessonMode(
  */
 export async function getLessonStateSnapshot(
   lessonId: string,
-): Promise<{ stage: LessonStage; mode: LessonMode; entryLocked: boolean; chatLocked: boolean }> {
-  const [stage, mode, entryLocked, chatLocked] = await Promise.all([
+): Promise<{ stage: LessonStage; mode: LessonMode; entryLocked: boolean; chatLocked: boolean; currentActivityId: string | null }> {
+  const [stage, mode, entryLocked, chatLocked, currentActivityId] = await Promise.all([
     presence.getLessonStage(lessonId),
     presence.getLessonMode(lessonId),
     presence.isEntryLocked(lessonId),
     presence.isChatLocked(lessonId),
+    presence.getCurrentActivity(lessonId),
   ]);
-  return { stage, mode, entryLocked, chatLocked };
+  return { stage, mode, entryLocked, chatLocked, currentActivityId };
 }
 
 export async function getCurrentLessonStage(lessonId: string): Promise<LessonStage> {
@@ -808,7 +809,20 @@ export async function setLessonStage(
     throw new AppError(403, "forbidden", "Только учитель урока может переключать стейдж");
   }
   await presence.setLessonStage(lessonId, stage);
+  // Учитель перешёл к доске или участникам — выданное раньше задание больше
+  // не «текущее»: вошедшим позже его не открываем.
+  await presence.setCurrentActivity(lessonId, null);
   emitRoomEvent(lessonId, { type: "stage_changed", stage });
+}
+
+/**
+ * Учитель выдал задание — запомнить как текущее урока. Сигнал
+ * `activity_started` получают только те, кто уже в уроке; вошедшие позже
+ * (опоздали, переподключились с другого устройства) раньше задания не
+ * видели — оно было только в «Материалах» (UX-аудит 2026-10-13).
+ */
+export async function setCurrentActivity(lessonId: string, activityId: string): Promise<void> {
+  await presence.setCurrentActivity(lessonId, activityId);
 }
 
 /**

@@ -186,6 +186,10 @@ export const serverRoomMessageSchema = z.discriminatedUnion("type", [
   // задание» — сам материал и ответы идут индивидуально по HTTP
   // (`GET /activities/:id/my`), НЕ через этот канал и НЕ через Y.Doc урока.
   z.object({ type: z.literal("activity_started"), activityId: z.string().uuid() }),
+  // Текущее задание урока — при (пере)подключении канала. В отличие от
+  // `activity_started`, клиент открывает его, только если ещё не видел:
+  // переподключение не должно выдёргивать в задание того, кто его закрыл.
+  z.object({ type: z.literal("activity_current"), activityId: z.string().uuid() }),
   // Э8.10: учитель начал разбор задания. Тоже только СИГНАЛ — полный
   // материал (с правильными ответами) идёт отдельным HTTP-запросом
   // (`GET /activities/:id/review`), не через этот канал.

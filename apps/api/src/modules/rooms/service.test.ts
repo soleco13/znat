@@ -131,6 +131,7 @@ vi.mock("./presence.js", async () => {
   const grants = new Map<string, unknown>();
   const entryLocks = new Set<string>();
   const cohosts = new Set<string>();
+  const currentActivities = new Map<string, string>();
   const chatLocks = new Set<string>();
   const chatIdem = new Map<string, string>();
   const chatRate = new Map<string, number>();
@@ -220,6 +221,11 @@ vi.mock("./presence.js", async () => {
       async (lessonId: string) =>
         [...roomMap(lessonId).values()].filter((e) => (e as { kind: string }).kind === "guest").length,
     ),
+    getCurrentActivity: vi.fn(async (lessonId: string) => currentActivities.get(lessonId) ?? null),
+    setCurrentActivity: vi.fn(async (lessonId: string, id: string | null) => {
+      if (id) currentActivities.set(lessonId, id);
+      else currentActivities.delete(lessonId);
+    }),
     isCohost: vi.fn(async (lessonId: string, userId: string) => cohosts.has(`${lessonId}:${userId}`)),
     setCohost: vi.fn(async (lessonId: string, userId: string, on: boolean) => {
       if (on) cohosts.add(`${lessonId}:${userId}`);
@@ -307,6 +313,7 @@ vi.mock("./presence.js", async () => {
       grants.clear();
       entryLocks.clear();
       cohosts.clear();
+      currentActivities.clear();
       chatLocks.clear();
       newGuests.clear();
     },
@@ -1793,5 +1800,20 @@ describe("закрытие чата учителем", () => {
 
     await roomsService.setChatLocked(SCHOOL_ID, LESSON_ID, teacherToken(), false);
     await roomsService.sendChatMessage(guestActor(), LESSON_ID, "текст");
+  });
+});
+
+describe("текущее задание урока (вошедшие позже)", () => {
+  const ACT = "88888888-8888-4888-8888-888888888888";
+  beforeEach(() => {
+    lessonsServiceMock.getLesson.mockResolvedValue(baseLesson());
+  });
+
+  it("выданное задание попадает в снимок состояния, смена стейджа учителем его снимает", async () => {
+    await roomsService.setCurrentActivity(LESSON_ID, ACT);
+    expect((await roomsService.getLessonStateSnapshot(LESSON_ID)).currentActivityId).toBe(ACT);
+
+    await roomsService.setLessonStage(SCHOOL_ID, LESSON_ID, teacherToken(), "people");
+    expect((await roomsService.getLessonStateSnapshot(LESSON_ID)).currentActivityId).toBeNull();
   });
 });

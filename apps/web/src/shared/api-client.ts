@@ -144,6 +144,18 @@ export async function getFreshAccessToken(): Promise<string | null> {
   return useAuthStore.getState().accessToken;
 }
 
+/**
+ * Текст ошибки для человека. Сервер на 500 пишет «Internal server error», на
+ * ошибки разбора запроса — технический текст Fastify/Zod, прокси на 502 —
+ * «Bad Gateway»; всё это показывалось учителю как есть (UX-аудит 2026-10-13).
+ * Понятные русские сообщения сервера (AppError с кодом) не трогаем.
+ */
+function humanMessage(status: number, code: string, message: string): string {
+  if (status >= 500) return "Сервер не смог выполнить действие — попробуйте ещё раз через минуту";
+  if (code === "request_error" || code === "unknown_error") return "Не удалось выполнить действие — обновите страницу и попробуйте ещё раз";
+  return message;
+}
+
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
@@ -187,7 +199,8 @@ export async function apiFetch<T>(
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({ error: "unknown_error", message: res.statusText }));
-      throw new ApiError(res.status, body.error ?? "unknown_error", body.message ?? res.statusText);
+      const code: string = body.error ?? "unknown_error";
+      throw new ApiError(res.status, code, humanMessage(res.status, code, body.message ?? res.statusText));
     }
 
     if (res.status === 204) return undefined as T;
