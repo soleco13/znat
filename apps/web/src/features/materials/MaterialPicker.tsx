@@ -92,9 +92,9 @@ export function MaterialPicker({
         ) : null}
         {drafts.length > 0 ? (
           <SelectGroup>
-            <SelectLabel>Черновики</SelectLabel>
+            <SelectLabel>Черновики — выдать можно после публикации</SelectLabel>
             {drafts.map((m) => (
-              <SelectItem key={m.id} value={m.id}>
+              <SelectItem key={m.id} value={m.id} disabled>
                 {m.title}
                 {STATUS_SUFFIX[m.status]}
               </SelectItem>

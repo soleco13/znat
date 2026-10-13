@@ -87,7 +87,15 @@ export async function getLatestMaterial(schoolId: string, materialId: string): P
     const platformId = await foreignPlatformSchoolId(schoolId);
     if (platformId) row = await repo.findPublishedMaterialVersion(platformId, materialId);
   }
-  if (!row) throw new AppError(404, "material_not_found", "Материал не найден");
+  if (!row) {
+    // Черновик своей школы выдать нельзя (его правят автосохранением — у
+    // учеников менялось бы задание прямо на уроке), но и «не найден» тут
+    // неправда: человек видел его в библиотеке и не понимал, что делать.
+    if (await repo.findLatestMaterialVersionForEdit(schoolId, materialId)) {
+      throw new AppError(409, "material_not_published", "Материал ещё не опубликован — опубликуйте его в редакторе, затем выдайте");
+    }
+    throw new AppError(404, "material_not_found", "Материал не найден");
+  }
   return parseVersion(row);
 }
 

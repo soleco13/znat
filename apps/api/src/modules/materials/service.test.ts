@@ -563,6 +563,13 @@ describe("материалы «Матис»: чтение для всех про
     await expect(assertMaterialInSchool(SCHOOL, "p-draft")).rejects.toMatchObject({ statusCode: 404 });
   });
 
+  it("запуск задания по неопубликованному черновику своей школы — 409 с понятной причиной, а не «не найден»", async () => {
+    repoMock.findPublishedMaterialVersion.mockResolvedValue(null);
+    repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(versionRow());
+    await expect(getLatestMaterial(SCHOOL, "draft1")).rejects.toMatchObject({ statusCode: 409, code: "material_not_published" });
+    repoMock.findPublishedMaterialVersion.mockReset();
+  });
+
   it("для самого служебного пространства Матис не «чужой»: второй раз в БД не ходим", async () => {
     repoMock.findPublishedMaterialVersion.mockResolvedValueOnce(null);
     await expect(getLatestMaterial(PLATFORM, "nope")).rejects.toMatchObject({ statusCode: 404 });
