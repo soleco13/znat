@@ -18,6 +18,8 @@ import { track } from "@/shared/telemetry";
  */
 export interface DeviceProfile {
   codec: VideoCodec;
+  /** Браузер обещает аппаратный H.264 (VP8 при этом программный) — только для журнала, см. `detect`. */
+  h264Hw: boolean;
   weak: boolean;
   /** Условные операции за мс одного потока (i7-8700 ≈ 66, Pentium N3700 ≈ 17). */
   score: number;
@@ -39,7 +41,7 @@ export function deviceProfileNow(): DeviceProfile | null {
 export function detectDeviceProfile(): Promise<DeviceProfile> {
   if (cached) return Promise.resolve(cached);
   pending ??= detect()
-    .catch((): DeviceProfile => ({ codec: "vp8", weak: false, score: 0, cores: navigator.hardwareConcurrency ?? 0 }))
+    .catch((): DeviceProfile => ({ codec: "vp8", h264Hw: false, weak: false, score: 0, cores: navigator.hardwareConcurrency ?? 0 }))
     .then((profile) => {
       cached = profile;
       track("device_profile", { ...profile });
@@ -55,8 +57,14 @@ async function detect(): Promise<DeviceProfile> {
   const score = cpuScore();
   const weak = score > 0 && (score < WEAK_SCORE || (cores > 0 && cores <= 2));
   const [vp8, h264] = await Promise.all([encoderInfo("video/VP8"), encoderInfo(H264_CONTENT_TYPE)]);
-  const codec: VideoCodec = !vp8.powerEfficient && h264.supported && h264.powerEfficient ? "h264" : "vp8";
-  return { codec, weak, score: Math.round(score * 10) / 10, cores };
+  const h264Hw = !vp8.powerEfficient && h264.supported && h264.powerEfficient;
+  // H.264 пока не включаем (урок 2026-10-13): у ученицы с Pentium-уровнем
+  // браузер пообещал аппаратный H.264, опубликовал демонстрацию в H.264 и
+  // через секунду сам переключился на VP8 — LiveKit такую смену кодека без
+  // запасного не переживает («can't regress codec»), и демонстрацию не видел
+  // никто. Вернуть — только с проверкой фактического кодека после публикации.
+  const codec: VideoCodec = "vp8";
+  return { codec, h264Hw, weak, score: Math.round(score * 10) / 10, cores };
 }
 
 /** Тот же профиль H.264, что согласует WebRTC в Chrome/Safari (baseline, packetization-mode=1). */
