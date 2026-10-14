@@ -134,24 +134,42 @@ export function clearRejoinState(lessonId: string | undefined) {
 }
 
 /**
- * С чем человек обычно входит (микрофон/камера на экране проверки) — общее
- * для всех уроков на этом устройстве (запрос 2026-10-13: «каждый раз
- * приходится выключать звук сразу после входа»). То же исключение из правила
- * «без localStorage»: только два флага.
+ * С чем человек обычно входит — общее для всех уроков на этом устройстве
+ * (запрос 2026-10-13: «каждый раз приходится выключать звук сразу после
+ * входа»; 2026-10-15: запоминать и выбранные устройства, и что доступ к ним
+ * уже дан — чтобы страница проверки не спрашивала каждый раз). То же
+ * исключение из правила «без localStorage»: только выбор устройств и флаги.
  */
 export interface JoinDefaults {
   mic: boolean;
   cam: boolean;
+  micId?: string | null;
+  camId?: string | null;
+  spkId?: string | null;
+  /** Браузер уже давал доступ к микрофону / камере на этом устройстве. */
+  micGranted?: boolean;
+  camGranted?: boolean;
 }
 
 const JOIN_DEFAULTS_KEY = "matis.room.join-defaults";
+
+const optId = (v: unknown) => (typeof v === "string" && v ? v : null);
 
 export function readJoinDefaults(): JoinDefaults | null {
   try {
     const raw = window.localStorage.getItem(JOIN_DEFAULTS_KEY);
     if (!raw) return null;
     const v = JSON.parse(raw) as Partial<JoinDefaults>;
-    return typeof v.mic === "boolean" && typeof v.cam === "boolean" ? { mic: v.mic, cam: v.cam } : null;
+    if (typeof v.mic !== "boolean" || typeof v.cam !== "boolean") return null;
+    return {
+      mic: v.mic,
+      cam: v.cam,
+      micId: optId(v.micId),
+      camId: optId(v.camId),
+      spkId: optId(v.spkId),
+      micGranted: v.micGranted === true,
+      camGranted: v.camGranted === true,
+    };
   } catch {
     return null;
   }
@@ -159,7 +177,16 @@ export function readJoinDefaults(): JoinDefaults | null {
 
 export function writeJoinDefaults(defaults: JoinDefaults) {
   try {
-    window.localStorage.setItem(JOIN_DEFAULTS_KEY, JSON.stringify(defaults));
+    const prev = readJoinDefaults();
+    // Доступ, однажды выданный, не теряем, если в этот раз устройство не открывали.
+    window.localStorage.setItem(
+      JOIN_DEFAULTS_KEY,
+      JSON.stringify({
+        ...defaults,
+        micGranted: defaults.micGranted || prev?.micGranted || false,
+        camGranted: defaults.camGranted || prev?.camGranted || false,
+      }),
+    );
   } catch {
     // Нет хранилища — в следующий раз обычные значения по умолчанию.
   }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Link2Off, WifiOff } from "lucide-react";
 import { lessonJoinCodeSchema } from "@school/shared";
 
@@ -7,7 +7,6 @@ import { ApiError, apiFetch, hasStaffSession, setGuestMode } from "@/shared/api-
 import { useAuthStore } from "@/shared/auth-store";
 import { useAsync } from "@/shared/hooks/use-async";
 import { Button } from "@/shared/ui/button";
-import { PersonalDataConsent } from "@/shared/PersonalDataConsent";
 import { CenteredSpinner } from "@/shared/ui/spinner";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/shared/ui/empty";
 import { StatusScreen } from "@/shared/ui/status-screen";
@@ -137,14 +136,14 @@ export function GuestJoinPage() {
   }, []);
 
   const [name, setName] = useState("");
-  const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    // Имя необязательно (2026-10-15): пустое — сервер подпишет «Ученик N».
     const trimmed = name.trim();
-    if (!trimmed || !info.data) return;
+    if (!info.data) return;
     setError(null);
     setSubmitting(true);
     try {
@@ -204,14 +203,12 @@ export function GuestJoinPage() {
                   maxLength={NAME_MAX}
                   aria-invalid={error != null}
                   autoFocus
-                  required
                 />
                 <p className="text-xs text-muted-foreground">
-                  Учитель увидит это имя в списке участников и в заданиях.
+                  Учитель увидит это имя в списке участников и в заданиях. Можно не вводить — подпишем «Ученик» с
+                  номером.
                 </p>
               </div>
-
-              <PersonalDataConsent checked={consent} onChange={setConsent} />
 
               {error ? (
                 <p className="text-sm font-medium text-destructive" role="alert">
@@ -224,10 +221,18 @@ export function GuestJoinPage() {
                 size="lg"
                 className="mt-1 w-full"
                 loading={submitting}
-                disabled={!name.trim() || !consent}
               >
                 {submitting ? "Входим…" : "Продолжить"}
               </Button>
+
+              {/* Согласие — нажатием «Продолжить» (решение владельца 2026-10-15), без галочки. */}
+              <p className="text-xs text-muted-foreground">
+                Нажимая «Продолжить», вы даёте согласие на обработку персональных данных в соответствии с{" "}
+                <Link to="/privacy" target="_blank" className="font-medium text-primary hover:underline">
+                  политикой обработки персональных данных
+                </Link>
+                .
+              </p>
             </form>
 
             <p className="mt-5 text-center text-xs text-muted-foreground">

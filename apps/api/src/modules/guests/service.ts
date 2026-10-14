@@ -104,6 +104,8 @@ export async function enterAsGuest(
   name: string,
   /** Вернувшийся гость (кука этого урока, сейчас не в уроке) — та же личность. */
   reuseGuestId?: (lessonId: string) => Promise<string | null>,
+  /** Имя не ввели — какое дать (прежнее имя вернувшегося гостя или «Ученик N»). */
+  autoName?: (lessonId: string, reusedGuestId: string | null) => Promise<string>,
 ): Promise<GuestSessionIssued> {
   const lesson = await lessonsService.resolveJoinToken(joinToken);
   // Параметры школы (§10.10 ТЗ, запрос 2026-09-14): admin может закрыть вход
@@ -118,11 +120,12 @@ export async function enterAsGuest(
   const issuedAtSec = Math.floor(Date.now() / 1000);
   const expiresAt = new Date((issuedAtSec + ttlSeconds) * 1000);
 
+  const reused = (await reuseGuestId?.(lesson.id)) ?? null;
   const payload: GuestTokenPayload = {
     typ: "guest",
     lessonId: lesson.id,
-    guestId: (await reuseGuestId?.(lesson.id)) ?? randomUUID(),
-    name,
+    guestId: reused ?? randomUUID(),
+    name: name || (await autoName?.(lesson.id, reused)) || "Ученик",
     lt: hashJoinToken(lesson.joinToken),
   };
 

@@ -117,7 +117,7 @@ import { useRoomIdentity } from "./use-room-identity.js";
 import { useWakeLock } from "./use-wake-lock.js";
 import { RoomHotkeys } from "./RoomHotkeys.js";
 import { useIsNarrowViewport, useIsPhoneLandscape, useMinViewportWidth } from "./use-narrow-viewport.js";
-import { SelfMicButton } from "./MicControls.js";
+import { MicPrewarm, SelfMicButton } from "./MicControls.js";
 import { MicSync } from "./MicSync.js";
 import { Switch } from "@/shared/ui/switch";
 import { detectDeviceProfile, deviceProfileNow, type DeviceProfile } from "./device-profile.js";
@@ -420,6 +420,8 @@ export function RoomPage() {
   const [spkDeviceId, setSpkDeviceId] = useState<string | null>(rejoin?.spkId ?? null);
   const [joinMicEnabled, setJoinMicEnabled] = useState(rejoin ? rejoin.mic : true);
   const [joinCamEnabled, setJoinCamEnabled] = useState(rejoin ? rejoin.cam : true);
+  /** Доступ к микрофону есть — выключенный при входе микрофон можно подключить заранее заглушённым (`MicPrewarm`). */
+  const [micPermitted, setMicPermitted] = useState(joinDefaults?.micGranted === true);
   const [lessonTitle, setLessonTitle] = useState<string | null>(null);
   const [lessonJoinPath, setLessonJoinPath] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -2368,18 +2370,29 @@ export function RoomPage() {
         lessonTitle={lessonTitle}
         defaultCameraOn={joinDefaults?.cam ?? isTeacher}
         defaultMicOn={joinDefaults?.mic ?? true}
+        saved={joinDefaults}
         onContinue={(r: DeviceCheckResult) => {
-          writeJoinDefaults({ mic: r.micToggle, cam: r.camToggle });
-          setMicDeviceId(r.micDeviceId);
-          setCamDeviceId(r.camDeviceId);
+          writeJoinDefaults({
+            mic: r.micToggle,
+            cam: r.camToggle,
+            micId: r.micChoice,
+            camId: r.camChoice,
+            spkId: r.spkDeviceId,
+            micGranted: r.micGranted,
+            camGranted: r.camGranted,
+          });
+          // Выбранные устройства — и для выключенных: их потом включают кнопкой в уроке.
+          setMicDeviceId(r.micChoice);
+          setCamDeviceId(r.camChoice);
+          setMicPermitted(r.micGranted);
           setSpkDeviceId(r.spkDeviceId);
           setJoinMicEnabled(r.micEnabled);
           setJoinCamEnabled(r.camEnabled);
           writeRejoinState(lessonId, {
             mic: r.micEnabled,
             cam: r.camEnabled,
-            micId: r.micDeviceId,
-            camId: r.camDeviceId,
+            micId: r.micChoice,
+            camId: r.camChoice,
             spkId: r.spkDeviceId,
           });
           setDeviceCheckDone(true);
@@ -2446,6 +2459,10 @@ export function RoomPage() {
         <ApplyParticipantVolumes />
         <AudioLagGuard />
         <MicSync enabled={self?.permissions.canSpeak ?? false} />
+        <MicPrewarm
+          enabled={(self?.permissions.canSpeak ?? false) && !joinMicEnabled && micPermitted}
+          deviceId={micDeviceId}
+        />
         <VideoSubscriptionManager participants={participants} mode={lessonMode} />
         <PoorLinkMediaAdapter />
         <CpuLoadAdapter />

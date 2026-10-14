@@ -43,7 +43,39 @@ export type DeviceCheckResult = {
   /** Положение переключателей (без учёта доступа) — запоминается для следующего входа. */
   micToggle: boolean;
   camToggle: boolean;
+  /** Выбранные устройства — запоминаются, даже если сейчас выключены. */
+  micChoice: string | null;
+  camChoice: string | null;
+  /** Доступ к микрофону / камере есть (выдан сейчас или раньше). */
+  micGranted: boolean;
+  camGranted: boolean;
 };
+
+type BrowserPermission = "granted" | "denied" | "prompt" | "unknown";
+
+/** Permissions API (Chrome, Edge, Safari 16+, Firefox): выдан ли доступ, без запроса. */
+async function queryPermission(name: "microphone" | "camera"): Promise<BrowserPermission> {
+  try {
+    const status = await navigator.permissions?.query({ name: name as PermissionName });
+    return status?.state ?? "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+/** Сохранённое устройство пропало (отключили) — берём системное. */
+async function getStreamWithFallback(constraints: { audio: string | null | false; video: string | null | false }): Promise<MediaStream> {
+  const build = (id: string | null | false, useId: boolean): MediaTrackConstraints | boolean =>
+    id === false ? false : useId && id ? { deviceId: { exact: id } } : true;
+  try {
+    return await navigator.mediaDevices.getUserMedia({ audio: build(constraints.audio, true), video: build(constraints.video, true) });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "OverconstrainedError") {
+      return navigator.mediaDevices.getUserMedia({ audio: build(constraints.audio, false), video: build(constraints.video, false) });
+    }
+    throw err;
+  }
+}
 
 /**
  * Устройство есть и доступ разрешён, но его держит другая программа (Zoom,
@@ -105,9 +137,12 @@ export function DeviceCheckScreen({
   lessonTitle,
   defaultCameraOn = false,
   defaultMicOn = true,
+  saved = null,
 }: {
   onContinue: (result: DeviceCheckResult) => void;
   lessonTitle?: string | null;
+  /** Что человек выбрал на этом устройстве в прошлый раз (`readJoinDefaults`). */
+  saved?: { micId?: string | null; camId?: string | null; spkId?: string | null; micGranted?: boolean; camGranted?: boolean } | null;
   /** Учителю/админу камера включается сразу (они всегда публикуют видео); ученику — по кнопке. Прошлый выбор человека важнее. */
   defaultCameraOn?: boolean;
   /** Как в прошлый раз на этом устройстве (`readJoinDefaults`); впервые — включён. */
@@ -115,7 +150,7 @@ export function DeviceCheckScreen({
 }) {
   const [micPermission, setMicPermission] = useState<PermissionState>("idle");
   const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
-  const [micId, setMicId] = useState<string>("");
+  const [micId, setMicId] = useState<string>(saved?.micId ?? "");
   const [micEnabled, setMicEnabled] = useState(defaultMicOn);
   const [micError, setMicError] = useState<string | null>(null);
   const [echoState, setEchoState] = useState<EchoState>("idle");
@@ -123,12 +158,12 @@ export function DeviceCheckScreen({
 
   const [camPermission, setCamPermission] = useState<PermissionState>("idle");
   const [camDevices, setCamDevices] = useState<MediaDeviceInfo[]>([]);
-  const [camId, setCamId] = useState<string>("");
+  const [camId, setCamId] = useState<string>(saved?.camId ?? "");
   const [camEnabled, setCamEnabled] = useState(defaultCameraOn);
   const [camError, setCamError] = useState<string | null>(null);
 
   const [spkDevices, setSpkDevices] = useState<MediaDeviceInfo[]>([]);
-  const [spkId, setSpkId] = useState<string>("");
+  const [spkId, setSpkId] = useState<string>(saved?.spkId ?? "");
 
   const streamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -249,9 +284,7 @@ export function DeviceCheckScreen({
     setMicError(null);
     setMicPermission("requesting");
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: deviceId ? { deviceId: { exact: deviceId } } : true,
-      });
+      const stream = await getStreamWithFallback({ audio: deviceId, video: false });
       stopStream();
       streamRef.current = stream;
       setMicPermission("granted");
@@ -283,9 +316,7 @@ export function DeviceCheckScreen({
     setCamError(null);
     setCamPermission("requesting");
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: deviceId ? { deviceId: { exact: deviceId } } : true,
-      });
+      const stream = await getStreamWithFallback({ audio: false, video: deviceId });
       stopCamStream();
       camStreamRef.current = stream;
       setCamPermission("granted");
@@ -312,10 +343,86 @@ export function DeviceCheckScreen({
     }
   }
 
+  /**
+   * Старт (2026-10-15): раньше микрофон открывался всегда и принудительно
+   * включался — сохранённое «выключен» не действовало, а камеру ученика
+   * (по умолчанию выключена) не запрашивали вовсе, и разрешение на неё браузер
+   * не спрашивал. Теперь: доступ, уже выданный (Permissions API или наша
+   * отметка с прошлого раза), заново не запрашиваем и открываем только
+   * включённые устройства — для превью; впервые — один общий запрос на
+   * микрофон и камеру сразу, а выключенное потом закрываем.
+   */
+  async function start(cancelled: () => boolean) {
+    const [micPerm, camPerm] = await Promise.all([queryPermission("microphone"), queryPermission("camera")]);
+    if (cancelled()) return;
+    const micKnown = micPerm === "granted" || (saved?.micGranted === true && micPerm !== "denied");
+    const camKnown = camPerm === "granted" || (saved?.camGranted === true && camPerm !== "denied");
+    const askMic = defaultMicOn || (!micKnown && micPerm !== "denied");
+    const askCam = defaultCameraOn || (!camKnown && camPerm !== "denied");
+    if (micKnown && !askMic) setMicPermission("granted");
+    if (camKnown && !askCam) setCamPermission("granted");
+    if (!askMic && !askCam) {
+      await refreshDeviceLists();
+      return;
+    }
+    if (askMic) setMicPermission("requesting");
+    if (askCam) setCamPermission("requesting");
+    let stream: MediaStream | null = null;
+    try {
+      stream = await getStreamWithFallback({ audio: askMic ? micId || null : false, video: askCam ? camId || null : false });
+    } catch {
+      // Общий запрос не прошёл (нет камеры, отказ в одном из двух) — по
+      // отдельности: тогда каждое устройство покажет своё состояние.
+      if (cancelled()) return;
+      if (askMic) {
+        await openMic(micId || null);
+        if (!defaultMicOn) {
+          stopStream();
+          stopMeter();
+          setMicEnabled(false);
+        }
+      }
+      if (askCam) {
+        await openCam(camId || null);
+        if (!defaultCameraOn) {
+          stopCamStream();
+          setCamEnabled(false);
+        }
+      }
+      return;
+    }
+    if (cancelled()) {
+      stream.getTracks().forEach((t) => t.stop());
+      return;
+    }
+    const audio = stream.getAudioTracks()[0];
+    const video = stream.getVideoTracks()[0];
+    if (audio) {
+      setMicPermission("granted");
+      const id = audio.getSettings().deviceId;
+      if (id) setMicId(id);
+      if (defaultMicOn) {
+        streamRef.current = new MediaStream([audio]);
+        startMeter(streamRef.current);
+      } else audio.stop();
+    }
+    if (video) {
+      setCamPermission("granted");
+      const id = video.getSettings().deviceId;
+      if (id) setCamId(id);
+      if (defaultCameraOn) {
+        camStreamRef.current = new MediaStream([video]);
+        if (camVideoRef.current) camVideoRef.current.srcObject = camStreamRef.current;
+      } else video.stop();
+    }
+    await refreshDeviceLists();
+  }
+
   useEffect(() => {
-    openMic(null);
-    if (defaultCameraOn) openCam(null);
+    let cancelled = false;
+    void start(() => cancelled);
     return () => {
+      cancelled = true;
       stopMeter();
       stopStream();
       stopCamStream();
@@ -416,6 +523,10 @@ export function DeviceCheckScreen({
       camEnabled: camOn,
       micToggle: micEnabled,
       camToggle: camEnabled,
+      micChoice: micId || null,
+      camChoice: camId || null,
+      micGranted: micPermission === "granted",
+      camGranted: camPermission === "granted",
     });
   }
 

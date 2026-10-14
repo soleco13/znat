@@ -53,12 +53,31 @@ export default async function guestsRoutes(app: FastifyInstance) {
         // вкладка того же браузера должна быть отдельным участником, иначе
         // она выбила бы первую.
         const previous = request.cookies?.[GUEST_COOKIE_NAME];
-        session = await guestsService.enterAsGuest(request.params.token, body.name, async (lessonId) => {
-          if (!previous) return null;
-          const actor = await guestsService.resolveGuestSession(previous).catch(() => null);
-          if (!actor || actor.lessonId !== lessonId) return null;
-          return (await roomsService.isParticipantConnected(lessonId, actor.participantId)) ? null : actor.participantId;
-        });
+        const previousActor = previous ? await guestsService.resolveGuestSession(previous).catch(() => null) : null;
+        session = await guestsService.enterAsGuest(
+          request.params.token,
+          body.name,
+          async (lessonId) => {
+            if (!previousActor || previousActor.lessonId !== lessonId) return null;
+            return (await roomsService.isParticipantConnected(lessonId, previousActor.participantId))
+              ? null
+              : previousActor.participantId;
+          },
+          // Имя не ввели (2026-10-15: имя необязательно) — вернувшемуся гостю
+          // его прежнее имя, новому — «Ученик N»: наименьший номер, которого
+          // нет у тех, кто сейчас в уроке (в постоянной комнате номера не растут).
+          async (lessonId, reusedGuestId) => {
+            if (reusedGuestId && previousActor?.participantId === reusedGuestId) return previousActor.displayName;
+            const taken = new Set<number>();
+            for (const p of await roomsService.listParticipantsSnapshot(lessonId)) {
+              const m = /^Ученик (\d+)$/.exec(p.fullName);
+              if (m) taken.add(Number(m[1]));
+            }
+            let n = 1;
+            while (taken.has(n)) n++;
+            return `Ученик ${n}`;
+          },
+        );
         setLogContext({ lessonId: session.payload.lessonId, participantId: session.payload.guestId });
         // Новый гость в уроке ещё не был — при закрытом входе куку не выдаём.
         await roomsService.assertGuestNotLockedOut(session.payload.lessonId, session.payload.guestId);

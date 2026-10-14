@@ -48,9 +48,13 @@ export const guestLessonInfoSchema = z.object({
 });
 export type GuestLessonInfo = z.infer<typeof guestLessonInfoSchema>;
 
-/** Тело `POST /j/:token/enter` — только имя. «Свободный вход»: любое имя, без выбора из списка (решение №3, §2 план-ТЗ). */
+/**
+ * Тело `POST /j/:token/enter` — только имя. «Свободный вход»: любое имя, без
+ * выбора из списка (решение №3, §2 план-ТЗ). Имя необязательно (решение
+ * владельца 2026-10-15): пустое — сервер подпишет «Ученик N».
+ */
 export const guestEnterRequestSchema = z.object({
-  name: z.string().trim().min(1, "Введите имя").max(80),
+  name: z.string().trim().max(80).default(""),
   personalDataConsent: personalDataConsentSchema,
 });
 export type GuestEnterRequest = z.infer<typeof guestEnterRequestSchema>;
