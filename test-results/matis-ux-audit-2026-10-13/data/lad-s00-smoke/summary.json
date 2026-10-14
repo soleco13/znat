@@ -1,0 +1,60 @@
+{
+  "T0": 1792007379023,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "teacher joins",
+      "ok": true,
+      "rel": "   3.7"
+    },
+    {
+      "name": "student joins",
+      "ok": true,
+      "rel": "   6.8"
+    },
+    {
+      "name": "teacher hears student",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 9610,
+        "inAudioEnergy": 0.1133728626003061,
+        "outAudioBytes": 24020,
+        "outVideoBytes": 187584,
+        "inVideoFrames": 60,
+        "remoteVideoPlaying": 1
+      },
+      "rel": "  15.8"
+    },
+    {
+      "name": "student hears teacher",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 23914,
+        "inAudioEnergy": 0.7293975943153195,
+        "outAudioBytes": 9608,
+        "outVideoBytes": 144442,
+        "inVideoFrames": 60,
+        "remoteVideoPlaying": 1
+      },
+      "rel": "  15.8"
+    },
+    {
+      "name": "student sees teacher video",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 23914,
+        "inAudioEnergy": 0.7293975943153195,
+        "outAudioBytes": 9608,
+        "outVideoBytes": 144442,
+        "inVideoFrames": 60,
+        "remoteVideoPlaying": 1
+      },
+      "rel": "  15.8"
+    },
+    {
+      "name": "chat delivered once",
+      "ok": true,
+      "rel": "  16.5"
+    }
+  ]
+}

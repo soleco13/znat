@@ -1,0 +1,126 @@
+{
+  "T0": 1792007396906,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "   6.7"
+    },
+    {
+      "name": "mic: UI state matches what is sent",
+      "ok": true,
+      "detail": {
+        "uiMic": false,
+        "outAudioBytes": 175
+      },
+      "rel": "  17.6"
+    },
+    {
+      "name": "cam: teacher UI state matches what is sent",
+      "ok": true,
+      "detail": {
+        "uiCam": false,
+        "outVideo": 0
+      },
+      "rel": "  30.6"
+    },
+    {
+      "name": "cam: student sees teacher video iff teacher camera on",
+      "ok": true,
+      "detail": {
+        "uiCam": false,
+        "remote": 0
+      },
+      "rel": "  30.6"
+    },
+    {
+      "name": "mute api",
+      "ok": true,
+      "rel": "  33.2"
+    },
+    {
+      "name": "student mic shows off after teacher mute",
+      "ok": true,
+      "detail": false,
+      "rel": "  35.7"
+    },
+    {
+      "name": "student told who muted",
+      "ok": true,
+      "detail": [
+        "Учитель выключил ваш микрофон"
+      ],
+      "rel": "  35.7"
+    },
+    {
+      "name": "student actually not sending audio after mute",
+      "ok": true,
+      "detail": 42,
+      "rel": "  38.7"
+    },
+    {
+      "name": "share started",
+      "ok": true,
+      "detail": {
+        "ms": 405,
+        "ui": {
+          "path": "/j/758e82a0bbca21932a07183e3f35a90f630d8f7a1ce8c3a21f575af8fadb8ca2",
+          "inRoom": true,
+          "deviceCheck": false,
+          "overlayReconnect": false,
+          "pills": [],
+          "takenOver": false,
+          "blocked": null,
+          "error": null,
+          "toasts": [
+            "Звук всего экрана в этом браузере не передаётся — чтобы был звук, покажите вкладку"
+          ],
+          "spinners": 0
+        }
+      },
+      "rel": "  39.2"
+    },
+    {
+      "name": "student sees 'показывает экран'",
+      "ok": true,
+      "rel": "  43.2"
+    },
+    {
+      "name": "after system stop: teacher button back to 'Демонстрация'",
+      "ok": true,
+      "detail": {
+        "stopped": 2
+      },
+      "rel": "  47.2"
+    },
+    {
+      "name": "after system stop: student no longer sees share",
+      "ok": true,
+      "rel": "  47.2"
+    },
+    {
+      "name": "lock released after system stop (student can claim)",
+      "ok": false,
+      "detail": "200 {\"granted\":false,\"holderName\":\"Тимур Учителев\"}",
+      "rel": "  47.2"
+    },
+    {
+      "name": "rapid share toggle: teacher UI and student view agree",
+      "ok": true,
+      "detail": {
+        "lbl": "Остановить демонстрацию",
+        "studentSees": true
+      },
+      "rel": "  57.0"
+    },
+    {
+      "name": "rapid share toggle: at most one live capture",
+      "ok": true,
+      "detail": {
+        "liveCaptures": 1
+      },
+      "rel": "  57.0"
+    }
+  ]
+}

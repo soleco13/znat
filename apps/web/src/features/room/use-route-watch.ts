@@ -16,8 +16,21 @@ export function refreshMediaPath(room: Room): void {
   void room.simulateScenario("signal-reconnect").catch(() => undefined);
 }
 
+/**
+ * Проверка маршрута подтвердила: медиа идёт через текущую сеть устройства.
+ * Тогда перевыбор пути по плохой оценке связи (`PoorLinkMedia`) не нужен —
+ * сеть не менялась, а каждый перевыбор — обрыв звука на 1–5 с (урок
+ * 2026-10-14, Саня, iPhone на слабом мобильном канале: перевыбор каждые
+ * 1,5–4 мин, адрес медиа и маршрута при этом совпадал).
+ */
+let routeConfirmed = false;
+
+export function mediaRouteConfirmed(): boolean {
+  return routeConfirmed;
+}
+
 /** Safari и любой браузер на iOS (все на WebKit). Chrome на Android сам предпочитает Wi-Fi. */
-function isWebKitRouting(): boolean {
+export function isWebKitRouting(): boolean {
   const ua = navigator.userAgent;
   const ios = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
   return ios || (/Safari\//.test(ua) && !/Chrome|Chromium|Edg|OPR|Android/.test(ua));
@@ -153,6 +166,7 @@ export function useRouteWatch(): void {
         const route = await probeRouteAddress();
         if (disposed || room.state !== ConnectionState.Connected) return;
         if (!route) {
+          routeConfirmed = false;
           if (!reportedNoRoute) {
             // Адрес маршрута скрыт (*.local) или не собрался — одна строка в лог.
             reportedNoRoute = true;
@@ -167,6 +181,7 @@ export function useRouteWatch(): void {
           reportedReady = true;
           track("media_route_switch", { ...base(), stage: "ready", mediaAddress: mediaRoute, routeAddress: route });
         }
+        routeConfirmed = route === mediaRoute && !mediaAmbiguous;
         if (route === mediaRoute && !mediaAmbiguous) {
           if (attempts > 0) track("media_route_switch", { ...base(), stage: "settled", mediaAddress: route, attempts });
           mismatches = 0;
@@ -199,6 +214,7 @@ export function useRouteWatch(): void {
     const interval = setInterval(() => void tick(), ROUTE_CHECK_MS);
     return () => {
       disposed = true;
+      routeConfirmed = false;
       room.off(RoomEvent.ConnectionStateChanged, onState);
       clearInterval(interval);
     };

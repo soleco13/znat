@@ -13,7 +13,7 @@ import {
 import { linkQuality, useLinkPoor, useLinkProbe } from "@/shared/link-quality";
 import { requestLessonPrecache } from "@/shared/service-worker";
 import { useIsNarrowViewport, useIsPhoneLandscape } from "./use-narrow-viewport.js";
-import { refreshMediaPath, useRouteWatch } from "./use-route-watch.js";
+import { isWebKitRouting, mediaRouteConfirmed, refreshMediaPath, useRouteWatch } from "./use-route-watch.js";
 import { cpuConstrainedRecently, useCpuHeavy } from "./cpu-load.js";
 import { useCameraBitrateBySize } from "./camera-bitrate.js";
 
@@ -87,6 +87,13 @@ const PATH_CPU_QUIET_MS = 120_000;
  * Если сеть не менялась, это короткая пауза на уже плохой связи; повторы
  * с нарастающей паузой. Молча, в интерфейсе ничего.
  *
+ * Только там, где эта беда и была (WebKit: iPhone, Safari), и только пока
+ * проверка маршрута (`useRouteWatch`) не подтвердила, что медиа идёт через
+ * текущую сеть: подтвердила — сеть не менялась, а перевыбор лишь рвёт звук на
+ * 1–5 с. Урок 2026-10-14 (Саня, iPhone, слабый мобильный канал): оценка
+ * «плохая» держалась почти всё время, и перевыбор шёл каждые 1,5–4 мин.
+ * Смену сети ловит сама проверка маршрута.
+ *
  * Не перевыбираем, пока своё устройство недавно не справлялось
  * (`cpu-load.ts`): урок 2026-10-09 — у учителя на слабом компьютере
  * потери от перегрузки процессора LiveKit оценил как плохую связь, и три
@@ -96,13 +103,14 @@ const PATH_CPU_QUIET_MS = 120_000;
 function useMediaPathRefresh(): void {
   const room = useRoomContext();
   useEffect(() => {
+    if (!isWebKitRouting()) return;
     let badSince = 0;
     let goodSince = 0;
     let retryMs = PATH_RETRY_MIN_MS;
     let lastAttemptAt = 0;
     const tick = () => {
       const now = Date.now();
-      if (room.state !== ConnectionState.Connected || document.hidden) {
+      if (room.state !== ConnectionState.Connected || document.hidden || mediaRouteConfirmed()) {
         badSince = 0;
         return;
       }
