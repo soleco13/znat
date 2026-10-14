@@ -501,8 +501,9 @@ export function startCpuLoadAdapter(
     onChange?: (change: CpuLoadChange) => void;
     onReopen?: (result: "done" | "failed", low: boolean) => void;
   } = {},
+  initialLevel = 0,
 ): () => void {
-  const governor = new CpuGovernor();
+  const governor = new CpuGovernor(initialLevel);
   const adjusted = new Set<LocalVideoTrack>();
   let pressure: PressureLevel | null = null;
   const stopPressure = watchPressure((s) => (pressure = s));

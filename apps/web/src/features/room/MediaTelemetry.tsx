@@ -180,7 +180,7 @@ class MediaStatsSampler {
   private lastPathKey: string | null = null;
   private lastBytesSent: { at: number; bytes: number } | null = null;
   private lastFreezes = new Map<string, number>();
-  private lastAudio = new Map<string, { concealed: number; total: number }>();
+  private lastAudio = new Map<string, { concealed: number; total: number; jbDelay: number; jbEmitted: number }>();
   private running = false;
 
   constructor(
@@ -304,7 +304,9 @@ class MediaStatsSampler {
     this.lastFreezes = freezes;
     let concealed = 0;
     let total = 0;
-    const audio = new Map<string, { concealed: number; total: number }>();
+    // Задержка воспроизведения чужого звука (буфер джиттера), мс — худшая из дорожек.
+    let recvAudioDelayMs: number | null = null;
+    const audio = new Map<string, { concealed: number; total: number; jbDelay: number; jbEmitted: number }>();
     for (const { sid, report } of remoteAudio) {
       for (const i of statsOfType(report, "inbound-rtp")) {
         // Тишину собеседника (DTX: в паузах Opus почти не шлёт пакеты) браузер
@@ -313,12 +315,20 @@ class MediaStatsSampler {
         const cur = {
           concealed: Math.max(0, (num(i.concealedSamples) ?? 0) - (num(i.silentConcealedSamples) ?? 0)),
           total: num(i.totalSamplesReceived) ?? 0,
+          jbDelay: num(i.jitterBufferDelay) ?? 0,
+          jbEmitted: num(i.jitterBufferEmittedCount) ?? 0,
         };
         audio.set(sid, cur);
         const prev = this.lastAudio.get(sid);
-        if (prev && cur.total >= prev.total) {
+        // Переподписка (AudioLagGuard) создаёт новый приёмник — счётчики
+        // начинаются заново, и разность уходила в минус («−2,3 %»).
+        if (prev && cur.total >= prev.total && cur.concealed >= prev.concealed) {
           concealed += cur.concealed - prev.concealed;
           total += cur.total - prev.total;
+        }
+        if (prev && cur.jbEmitted > prev.jbEmitted && cur.jbDelay >= prev.jbDelay) {
+          const ms = Math.round((1000 * (cur.jbDelay - prev.jbDelay)) / (cur.jbEmitted - prev.jbEmitted));
+          recvAudioDelayMs = Math.max(recvAudioDelayMs ?? 0, ms);
         }
       }
     }
@@ -341,6 +351,7 @@ class MediaStatsSampler {
       recvMinFps,
       recvFreezes,
       recvAudioConcealedPct: total > 0 ? Math.round((concealed / total) * 1000) / 10 : null,
+      recvAudioDelayMs,
       hidden: document.visibilityState === "hidden",
     });
   }

@@ -1,4 +1,4 @@
-# livekit-server v1.13.9 с отчётами TWCC по времени.
+# livekit-server v1.13.9 с отчётами TWCC по времени и пробой канала заглушками.
 #
 # Зачем: ответчик TWCC в mediatransportutil шлёт отчёт только когда накоплено
 # > 20 видеопакетов. На просевшем канале (~6 пак/с) отчёты идут раз в 3–5 с,
@@ -38,6 +38,14 @@ RUN sed -i 's/disconnectCleanupDuration          = 5 \* time.Second/disconnectCl
 COPY twcc-report-by-time.patch /src/
 RUN patch -d mediatransportutil -p1 < twcc-report-by-time.patch \
  && grep -q 'PacketsHeld() > 0 &&' mediatransportutil/pkg/twcc/twcc.go
+
+# Проба канала заглушками, когда повторять нечего: видео, долго стоявшее на
+# паузе из-за провала канала, иначе не возвращалось до перезахода (оценка
+# застревала на ~20 кбит/с, проба уходила пустой). Стенд 2026-10-14,
+# test-results/kontur-research-2026-10-14. В апстриме (master 2026-10-14) нет.
+COPY probe-padding-fallback.patch /src/
+RUN patch -d livekit -p1 < probe-padding-fallback.patch \
+ && grep -q 'WriteProbePadding' livekit/pkg/sfu/streamallocator/streamallocator.go
 
 WORKDIR /src/livekit
 RUN go mod edit -replace github.com/livekit/mediatransportutil=../mediatransportutil \

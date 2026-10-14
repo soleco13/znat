@@ -125,11 +125,11 @@ services:
     # Обновлять осознанно, с проверкой урока (CLAUDE.md: конфиги LiveKit — читать построчно).
     # Своя сборка: v1.13.9 (фикс dynacast #4907, allow_pause на пути с одним
     # PeerConnection #4957) + отчёты TWCC по времени + 30 с на возврат после
-    # обрыва (services/livekit/Dockerfile).
-    # Откат: image znat/livekit-server:v1.13.9-twcc / v1.13.8-twcc (собраны,
-    # лежат локально) или livekit/livekit-server:v1.13.6 без build и
-    # `docker compose up -d livekit`.
-    image: znat/livekit-server:v1.13.9-twcc-r30
+    # обрыва + проба канала заглушками (services/livekit/Dockerfile).
+    # Откат: image znat/livekit-server:v1.13.9-twcc-r30 (без пробы заглушками),
+    # v1.13.9-twcc / v1.13.8-twcc (собраны, лежат локально) или
+    # livekit/livekit-server:v1.13.6 без build и `docker compose up -d livekit`.
+    image: znat/livekit-server:v1.13.9-twcc-r30-probe
     build: services/livekit
     restart: unless-stopped
     network_mode: host
@@ -228,8 +228,18 @@ services:
           # При нехватке канала даже на нижние слои сервер ставит часть видео
           # на паузу, звук не трогает (индикатор паузы в плитке уже есть).
           # Работает для клиентов на одном PeerConnection только с 1.13.9.
+          #
+          # use_send_side_bwe (2026-10-14): канал до ученика оценивает сам
+          # сервер по отчётам TWCC (как Jitsi Videobridge у Контур Толка), а не
+          # браузер ученика (REMB). Стенд с сетью ученицы Елены (вход
+          # 0,75 Мбит/с, скачки RTT до 0,5 с, 30 с провала до 0,12 Мбит/с):
+          # с REMB видео после провала не возвращалось или возвращалось за
+          # 40–70 с, в обычные минуты — 10 кадр/с; с оценкой сервера — за
+          # 6–8 с (у Толка 6 с) и 20 кадр/с. Отчёт и данные:
+          # test-results/kontur-research-2026-10-14.
           congestion_control:
             allow_pause: true
+            use_send_side_bwe: true
         # Safari принимает RED, но сам не отправляет: голос с iPhone и с Mac/
         # iPad учителя шёл без избыточности. Сервер сам добавляет в пакет два
         # предыдущих — поток такого голоса у получателей ~×3, поэтому ученики

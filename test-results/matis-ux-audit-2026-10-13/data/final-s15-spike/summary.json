@@ -1,0 +1,151 @@
+{
+  "T0": 1791990423053,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "   7.0"
+    },
+    {
+      "name": "latency 1500±500 ms: playout delay back under 250 ms within 10 s after network normalises",
+      "ok": true,
+      "detail": {
+        "settledAtS": 9,
+        "rows": [
+          {
+            "s": 1,
+            "delayMs": 808,
+            "kb": 13
+          },
+          {
+            "s": 2,
+            "delayMs": 779,
+            "kb": 28
+          },
+          {
+            "s": 3,
+            "delayMs": 1215,
+            "kb": 14
+          },
+          {
+            "s": 4,
+            "delayMs": 1793,
+            "kb": 14
+          },
+          {
+            "s": 5,
+            "delayMs": 1808,
+            "kb": 12
+          },
+          {
+            "s": 6,
+            "delayMs": 1763,
+            "kb": 10
+          },
+          {
+            "s": 7,
+            "delayMs": 1720,
+            "kb": 14
+          },
+          {
+            "s": 8,
+            "delayMs": null,
+            "kb": -294
+          },
+          {
+            "s": 9,
+            "delayMs": 38,
+            "kb": 14
+          },
+          {
+            "s": 10,
+            "delayMs": 30,
+            "kb": 10
+          },
+          {
+            "s": 11,
+            "delayMs": 30,
+            "kb": 13
+          },
+          {
+            "s": 12,
+            "delayMs": 30,
+            "kb": 13
+          }
+        ]
+      },
+      "rel": "  45.3"
+    },
+    {
+      "name": "loss 30%: playout delay back under 250 ms within 10 s after network normalises",
+      "ok": true,
+      "detail": {
+        "settledAtS": 1,
+        "rows": [
+          {
+            "s": 1,
+            "delayMs": 64,
+            "kb": 14
+          },
+          {
+            "s": 2,
+            "delayMs": 66,
+            "kb": 12
+          },
+          {
+            "s": 3,
+            "delayMs": 65,
+            "kb": 14
+          },
+          {
+            "s": 4,
+            "delayMs": 63,
+            "kb": 9
+          },
+          {
+            "s": 5,
+            "delayMs": 65,
+            "kb": 14
+          },
+          {
+            "s": 6,
+            "delayMs": 65,
+            "kb": 14
+          },
+          {
+            "s": 7,
+            "delayMs": 65,
+            "kb": 14
+          },
+          {
+            "s": 8,
+            "delayMs": 65,
+            "kb": 10
+          },
+          {
+            "s": 9,
+            "delayMs": 64,
+            "kb": 11
+          },
+          {
+            "s": 10,
+            "delayMs": 65,
+            "kb": 14
+          },
+          {
+            "s": 11,
+            "delayMs": 66,
+            "kb": 12
+          },
+          {
+            "s": 12,
+            "delayMs": 65,
+            "kb": 14
+          }
+        ]
+      },
+      "rel": "  78.5"
+    }
+  ]
+}

@@ -192,7 +192,12 @@ function buildRoomOptions(
 ): RoomOptions {
   if (!settings) return FALLBACK_ROOM_OPTIONS;
   const weak = profile?.weak ?? false;
-  const voice = isTeacher || settings.micHighQuality ? AudioPresets.music : AudioPresets.speech;
+  // Учитель — 32 кбит/с (было music, 48): с RED на сервере голос учителя
+  // занимал у каждого ученика ~86 кбит/с входящего канала, у Контур Толка —
+  // 28 (стенд 2026-10-14). На канале ученика 0,12–0,75 Мбит/с это заметная
+  // доля; Opus 32 кбит/с моно для речи на слух не отличить от 48. «Высокое
+  // качество микрофона» в настройках школы по-прежнему даёт music.
+  const voice = settings.micHighQuality ? AudioPresets.music : isTeacher ? TEACHER_VOICE_PRESET : AudioPresets.speech;
   return {
     videoCaptureDefaults: {
       resolution: weak ? WEAK_CAMERA_RESOLUTION : toVideoResolution(settings.cameraResolution, settings.cameraFps),
@@ -224,6 +229,9 @@ function buildRoomOptions(
  * над сеткой камер: занимали место в сетке и висели, пока их не закроют.
  */
 const ROOM_TOAST = { position: "top-center" as const, duration: 6000 };
+
+/** Голос учителя без «высокого качества микрофона» (см. `buildRoomOptions`). */
+const TEACHER_VOICE_PRESET = { maxBitrate: 32_000 };
 
 /** Камера на слабом процессоре: 360p, 15 кадр/с — дальше её ведёт `cpu-load-engine`. */
 const WEAK_CAMERA_RESOLUTION = { ...VideoPresets.h360.resolution, frameRate: 15 };

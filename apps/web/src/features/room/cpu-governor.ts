@@ -25,10 +25,20 @@
  * Состояния: NORMAL (ступень 0), CONSTRAINED (1), CRITICAL (2–3), RECOVERY —
  * ступень только что поднята, идёт проверка. Вниз — после ≥ 4 с устойчивой
  * перегрузки (в том числе через тик), не чаще раза в 6 с. Вверх — по одной ступени после минуты
- * без признаков перегрузки; перегрузка в течение 45 с после подъёма —
- * сразу назад, а следующая попытка ждёт вдвое дольше (до 8 мин), так что
+ * без признаков перегрузки; перегрузка в течение 3 мин после подъёма —
+ * сразу назад, а следующая попытка ждёт вдвое дольше (до 15 мин), так что
  * слабое устройство не дёргается каждую минуту, но и не застревает внизу:
  * удачный подъём сбрасывает паузу к минуте.
+ *
+ * Урок 2026-10-14 (Елена, 4 потока, score 26,7): проверка подъёма была 45 с,
+ * перегрузка возвращалась через 67 с — подъём засчитывался удачным, пауза
+ * сбрасывалась к минуте, и камера 7 минут качалась 360p ↔ 180p (8 смен):
+ * каждая смена — перенастройка кодировщика и всплеск трафика на и так
+ * слабом канале. Как у Jitsi (QualityController: неудачный подъём блокирует
+ * следующие), проверка теперь 3 мин, потолок паузы — 15 мин.
+ *
+ * Слабое устройство (`device-profile.ts`) начинает со ступени 1 — одного
+ * слоя камеры (`initialLevel`), а не с двух, которые потом снимает автомат.
  */
 
 export type GovernorState = "NORMAL" | "CONSTRAINED" | "CRITICAL" | "RECOVERY";
@@ -70,8 +80,8 @@ const OVERLOAD_PERSIST_MS = 4_000;
 const OVERLOAD_GAP_MS = 3_000;
 const STEP_SETTLE_MS = 6_000;
 const RECOVER_HOLD_MS = 60_000;
-const RECOVER_HOLD_MAX_MS = 8 * 60_000;
-const PROBATION_MS = 45_000;
+const RECOVER_HOLD_MAX_MS = 15 * 60_000;
+const PROBATION_MS = 180_000;
 
 /**
  * «Видео упёрлось в процессор» в свёрнутой вкладке — не повод снижать
@@ -109,7 +119,7 @@ function isHealthy(s: LoadSample): boolean {
 }
 
 export class CpuGovernor {
-  level = 0;
+  level: number;
   private overloadSince = 0;
   private lastOverloadAt = 0;
   private healthySince = 0;
@@ -117,6 +127,11 @@ export class CpuGovernor {
   private holdMs = RECOVER_HOLD_MS;
   private probationUntil = 0;
   private wasSharing = false;
+
+  /** `initialLevel` — ступень с самого начала (слабое устройство — 1). */
+  constructor(initialLevel = 0) {
+    this.level = Math.max(0, Math.min(MAX_LEVEL, initialLevel));
+  }
 
   update(s: LoadSample): Decision {
     const decision = this.step(s);

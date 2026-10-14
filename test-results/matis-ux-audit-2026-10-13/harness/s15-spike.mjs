@@ -21,7 +21,10 @@ for (const [name, p] of [["latency 1500±500 ms", { down: 10000, up: 5000, lat: 
   await clearNet("s1");
   const rows = await watch(`after ${name}: student playout delay per second`, S, 20);
   const settled = rows.findIndex((r) => r.delayMs !== null && r.delayMs < 250);
-  check(`${name}: playout delay back under 250 ms within 5 s after network normalises`, settled >= 0 && settled < 5, { settledAtS: settled + 1, rows: rows.slice(0, 8) });
+  // 2026-10-14: AudioLagGuard ждёт 3 с спокойной сети (без скачков RTT), чтобы
+  // не сбрасывать буфер на волнистой сети (урок Елены) — порог 5 → 10 с;
+  // без сброса задержка держится 15–20 с.
+  check(`${name}: playout delay back under 250 ms within 10 s after network normalises`, settled >= 0 && settled < 10, { settledAtS: settled + 1, rows: rows.slice(0, 12) });
   await sleep(5000);
 }
 await finish();

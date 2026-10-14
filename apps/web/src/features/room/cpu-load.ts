@@ -2,6 +2,7 @@ import { useEffect, useSyncExternalStore } from "react";
 import { useRoomContext } from "@livekit/components-react";
 
 import { track } from "../../shared/telemetry.js";
+import { deviceProfileNow } from "./device-profile.js";
 import { RECEIVE_LOW_LEVEL, cpuLoadLevel, startCpuLoadAdapter, subscribeCpuLoadLevel } from "./cpu-load-engine.js";
 
 export { cpuConstrainedRecently } from "./cpu-load-engine.js";
@@ -44,7 +45,9 @@ export function CpuLoadAdapter() {
           hidden: document.visibilityState === "hidden",
         }),
       onReopen: (result, low) => track("media_cpu_adapt", { ...base(), reason: low ? "camera_reopen_low" : "camera_reopen_target", result }),
-    });
+    },
+    // Слабое устройство — сразу один слой камеры (ступень 1), не ждём перегрузки.
+    deviceProfileNow()?.weak ? 1 : 0);
   }, [room]);
 
   return null;

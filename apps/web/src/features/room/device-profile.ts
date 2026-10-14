@@ -15,6 +15,11 @@ import { track } from "@/shared/telemetry";
  *    потоком 5 кадр/с, звук демонстрации моно и тише по битрейту), а не через
  *    минуту лагов, пока его найдёт `cpu-load-engine`.
  * У нормальных устройств профиль ничего не меняет.
+ *
+ * VP9 SVC для камеры пробовали (стенд 2026-10-14, по образцу Контур Толка):
+ * ученик на канале 0,75 Мбит/с получал камеру учителя 360p даже дороже, чем
+ * в VP8 (~400 против ~340 кбит/с), а после провала канала видео
+ * возвращалось хуже. Оставлен VP8.
  */
 export interface DeviceProfile {
   codec: VideoCodec;
@@ -44,10 +49,43 @@ export function detectDeviceProfile(): Promise<DeviceProfile> {
     .catch((): DeviceProfile => ({ codec: "vp8", h264Hw: false, weak: false, score: 0, cores: navigator.hardwareConcurrency ?? 0 }))
     .then((profile) => {
       cached = profile;
-      track("device_profile", { ...profile });
+      // Браузер, ОС и сеть — чтобы по журналу урока сразу видеть, на чём
+      // человек сидел (разбор 2026-10-14: модель ПК и тип сети узнать было неоткуда).
+      track("device_profile", { ...profile, ...environmentInfo() });
       return profile;
     });
   return pending;
+}
+
+interface NetworkInformationLike {
+  effectiveType?: string;
+  type?: string;
+  downlink?: number;
+  rtt?: number;
+  saveData?: boolean;
+}
+
+/** Браузер/ОС (User-Agent Client Hints, где есть) и оценка сети браузером. */
+function environmentInfo(): Record<string, string | number | boolean | null> {
+  const nav = navigator as Navigator & {
+    connection?: NetworkInformationLike;
+    userAgentData?: { platform?: string; mobile?: boolean; brands?: { brand: string; version: string }[] };
+    deviceMemory?: number;
+  };
+  const brands = nav.userAgentData?.brands?.filter((b) => !/not.?a.?brand/i.test(b.brand)) ?? [];
+  const c = nav.connection;
+  return {
+    ua: navigator.userAgent.slice(0, 200),
+    browser: brands.length ? brands.map((b) => `${b.brand} ${b.version}`).join(", ").slice(0, 100) : null,
+    platform: nav.userAgentData?.platform ?? null,
+    mobile: nav.userAgentData?.mobile ?? null,
+    memoryGb: nav.deviceMemory ?? null,
+    netType: c?.type ?? null,
+    netEffective: c?.effectiveType ?? null,
+    netDownlinkMbps: c?.downlink ?? null,
+    netRttMs: c?.rtt ?? null,
+    saveData: c?.saveData ?? null,
+  };
 }
 
 async function detect(): Promise<DeviceProfile> {

@@ -1,0 +1,111 @@
+{
+  "T0": 1791989375228,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "   6.9"
+    },
+    {
+      "name": "latency 1500±500 ms: playout delay back under 250 ms within 5 s after network normalises",
+      "ok": false,
+      "detail": {
+        "settledAtS": 0,
+        "rows": [
+          {
+            "s": 1,
+            "delayMs": 773,
+            "kb": 10
+          },
+          {
+            "s": 2,
+            "delayMs": 815,
+            "kb": 11
+          },
+          {
+            "s": 3,
+            "delayMs": 1282,
+            "kb": 8
+          },
+          {
+            "s": 4,
+            "delayMs": 1386,
+            "kb": 8
+          },
+          {
+            "s": 5,
+            "delayMs": 1353,
+            "kb": 8
+          },
+          {
+            "s": 6,
+            "delayMs": 1303,
+            "kb": 3
+          },
+          {
+            "s": 7,
+            "delayMs": 1259,
+            "kb": 8
+          },
+          {
+            "s": 8,
+            "delayMs": 1212,
+            "kb": 8
+          }
+        ]
+      },
+      "rel": "  45.1"
+    },
+    {
+      "name": "loss 30%: playout delay back under 250 ms within 5 s after network normalises",
+      "ok": false,
+      "detail": {
+        "settledAtS": 10,
+        "rows": [
+          {
+            "s": 1,
+            "delayMs": 353,
+            "kb": 8
+          },
+          {
+            "s": 2,
+            "delayMs": 343,
+            "kb": 8
+          },
+          {
+            "s": 3,
+            "delayMs": 310,
+            "kb": 8
+          },
+          {
+            "s": 4,
+            "delayMs": 310,
+            "kb": 4
+          },
+          {
+            "s": 5,
+            "delayMs": 306,
+            "kb": 8
+          },
+          {
+            "s": 6,
+            "delayMs": 277,
+            "kb": 8
+          },
+          {
+            "s": 7,
+            "delayMs": 266,
+            "kb": 8
+          },
+          {
+            "s": 8,
+            "delayMs": 259,
+            "kb": 6
+          }
+        ]
+      },
+      "rel": "  78.4"
+    }
+  ]
+}

@@ -1,0 +1,500 @@
+{"who": "a", "t": 1791983194873, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983196873, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983198876, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983200877, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 4, "h": 180, "ql": "none", "bytes": 4500, "enc": 0.015, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 533, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 515415, "rx": 1780, "tx": 11547}}
+{"who": "a", "t": 1791983202879, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 44, "h": 180, "ql": "none", "bytes": 23311, "enc": 0.046, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 8002, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 4004, "tx": 43975}}
+{"who": "a", "t": 1791983204878, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 84, "h": 180, "ql": "none", "bytes": 49519, "enc": 0.077, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 15789, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 6228, "tx": 84026}}
+{"who": "a", "t": 1791983206879, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 124, "h": 180, "ql": "none", "bytes": 79103, "enc": 0.108, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 21525, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 8412, "tx": 124694}}
+{"who": "a", "t": 1791983208880, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 164, "h": 180, "ql": "none", "bytes": 108234, "enc": 0.138, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 29509, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 10636, "tx": 168190}}
+{"who": "a", "t": 1791983210883, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 204, "h": 180, "ql": "none", "bytes": 134304, "enc": 0.166, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 34952, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 12933, "tx": 205099}}
+{"who": "a", "t": 1791983212882, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 244, "h": 180, "ql": "none", "bytes": 162637, "enc": 0.198, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 42717, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 15157, "tx": 247313}}
+{"who": "a", "t": 1791983214887, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 284, "h": 180, "ql": "none", "bytes": 191115, "enc": 0.228, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 48492, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 17385, "tx": 286898}}
+{"who": "a", "t": 1791983216886, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 324, "h": 180, "ql": "none", "bytes": 218604, "enc": 0.264, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 56403, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 19770, "tx": 328639}}
+{"who": "a", "t": 1791983218886, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 364, "h": 180, "ql": "none", "bytes": 244686, "enc": 0.293, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 63259, "codec": "audio/opus"}], "pair": {"rtt": 0.011, "outBw": 518419, "rx": 21978, "tx": 367513}}
+{"who": "a", "t": 1791983220889, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 404, "h": 180, "ql": "none", "bytes": 271722, "enc": 0.324, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 69736, "codec": "audio/opus"}], "pair": {"rtt": 0.011, "outBw": 518419, "rx": 24283, "tx": 407051}}
+{"who": "a", "t": 1791983222889, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 444, "h": 180, "ql": "none", "bytes": 299676, "enc": 0.354, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 77574, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 26507, "tx": 449147}}
+{"who": "a", "t": 1791983224893, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 484, "h": 180, "ql": "none", "bytes": 327093, "enc": 0.385, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 83317, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 28735, "tx": 487579}}
+{"who": "a", "t": 1791983226893, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 524, "h": 180, "ql": "none", "bytes": 355807, "enc": 0.415, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 91344, "codec": "audio/opus"}], "pair": {"rtt": 0.011, "outBw": 518419, "rx": 30959, "tx": 530644}}
+{"who": "a", "t": 1791983228896, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 564, "h": 180, "ql": "none", "bytes": 383049, "enc": 0.442, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 96723, "codec": "audio/opus"}], "pair": {"rtt": 0.011, "outBw": 518419, "rx": 33183, "tx": 568601}}
+{"who": "a", "t": 1791983230895, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 584, "h": 180, "ql": "none", "bytes": 396747, "enc": 0.459, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 104668, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 35025, "tx": 595898}}
+{"who": "a", "t": 1791983232896, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 584, "h": 180, "ql": "none", "bytes": 396747, "enc": 0.459, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 110649, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 35953, "tx": 605167}}
+{"who": "a", "t": 1791983234898, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 584, "ql": "none", "bytes": 396747, "enc": 0.459, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 118579, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 37025, "tx": 617437}}
+{"who": "a", "t": 1791983236900, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 584, "ql": "none", "bytes": 396747, "enc": 0.459, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 125366, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 38001, "tx": 627964}}
+{"who": "a", "t": 1791983238901, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 584, "ql": "none", "bytes": 396747, "enc": 0.459, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 131963, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 39021, "tx": 638237}}
+{"who": "a", "t": 1791983240901, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 584, "ql": "none", "bytes": 396747, "enc": 0.459, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 139813, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 40110, "tx": 650708}}
+{"who": "a", "t": 1791983242905, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 584, "ql": "none", "bytes": 396747, "enc": 0.459, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 145512, "codec": "audio/opus"}], "pair": {"rtt": 0.011, "outBw": 518419, "rx": 41038, "tx": 659627}}
+{"who": "a", "t": 1791983243091, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 584, "ql": "none", "bytes": 396747, "enc": 0.459, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 146316, "codec": "audio/opus"}], "pair": {"rtt": 0.011, "outBw": 518419, "rx": 41086, "tx": 660819}}
+{"who": "a", "t": 1791983244905, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 584, "ql": "none", "bytes": 396747, "enc": 0.459, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 153502, "codec": "audio/opus"}], "pair": {"rtt": 0.011, "outBw": 518419, "rx": 42110, "tx": 671957}}
+{"who": "a", "t": 1791983245093, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 584, "ql": "none", "bytes": 396747, "enc": 0.459, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 154180, "codec": "audio/opus"}], "pair": {"rtt": 0.011, "outBw": 518419, "rx": 42206, "tx": 672995}}
+{"who": "a", "t": 1791983246907, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 584, "ql": "none", "bytes": 396747, "enc": 0.459, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 158844, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 42990, "tx": 680543}}
+{"who": "a", "t": 1791983247093, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 584, "ql": "none", "bytes": 396747, "enc": 0.459, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 159508, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 43086, "tx": 681643}}
+{"who": "a", "t": 1791983248907, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 584, "ql": "none", "bytes": 396747, "enc": 0.459, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 166694, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 44062, "tx": 692705}}
+{"who": "a", "t": 1791983249093, "inA": [], "inV": [], "outV": [{"id": 1551213555, "fe": 584, "ql": "none", "bytes": 396747, "enc": 0.459, "codec": "video/VP9", "sm": "L1T3"}], "outA": [{"id": 2195491684, "bytes": 167440, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 518419, "rx": 44158, "tx": 693887}}
+{"who": "a", "t": 1791983250908, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983251096, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983252909, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983253095, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983254909, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983255096, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983256913, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983257100, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983258913, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983259099, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983260914, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983261102, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983262916, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983263102, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983264919, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983265105, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983266917, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983267105, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983268923, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983269105, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983270922, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983271111, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983272923, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983273109, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983274924, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983275110, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983276924, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983277112, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983278929, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983279113, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983280928, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983281114, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983282928, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983283114, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983284931, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983285117, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983286931, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983287120, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983288933, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983289122, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983290937, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983291123, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983292935, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983293121, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983294940, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983295124, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983296938, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983297125, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983298940, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983299127, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983300941, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983301128, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983302942, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983303129, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983304942, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983305131, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983306943, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983307130, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983308946, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983309132, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983310946, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983311134, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983312951, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983313136, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983314951, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983315137, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983316952, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983317136, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983318954, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983319139, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983320952, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983321142, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983322957, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983323141, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983324956, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983325141, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983326958, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983327145, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983328958, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983329144, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983330959, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983331147, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983332961, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983333148, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983334965, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983335151, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983336963, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983337151, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983338965, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983339150, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983340967, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983341154, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983342968, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983343155, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983344968, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983345156, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983346969, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983347157, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983348973, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983349157, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983350974, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983351158, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983352974, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983353160, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983354975, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983355162, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983356980, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983357163, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983358978, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983359164, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983360980, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983361165, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983362981, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983363166, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983364982, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983365169, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983366985, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983367169, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983368986, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983369172, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983370989, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983371174, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983372988, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983373174, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983374989, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983375176, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983376989, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983377178, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983378993, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983379178, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983380994, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983381183, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983382993, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983383182, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983384995, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983385182, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983386998, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983387185, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983389004, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983389186, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983391000, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983391187, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983393000, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983393188, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983395002, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983395190, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983397003, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983397191, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983399004, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983399192, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983401008, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983401192, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983403006, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983403193, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983405007, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983405196, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983407012, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983407195, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983409012, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983409198, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983411011, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983411199, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983413015, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983413202, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983415014, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983415201, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983417016, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983417201, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983419020, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983419205, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983421018, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983421209, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983423024, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983423206, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983425024, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983425208, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983427024, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983427208, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983429023, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983429209, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983431027, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983431213, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983433027, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983433215, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983435029, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983435214, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983437032, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983437216, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983439031, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983439216, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983441032, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983441218, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983443033, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983443219, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983445222, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983447225, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983449225, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983451225, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983453229, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983455229, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983457230, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983459233, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983461232, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983463236, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983465234, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983467236, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983469242, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983471242, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983473240, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983475241, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983477242, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983479244, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983481245, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983483246, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983485248, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983487248, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983489249, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983491252, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983685964, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983685964, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983687964, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983687966, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983689968, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983689970, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983691967, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983691968, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983693969, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983693970, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983695971, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983695971, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983697971, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983697971, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983699973, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983699976, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983701976, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983701976, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983703974, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983703976, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983705976, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983705978, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983707979, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983707979, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983709978, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983709980, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983711982, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983711984, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983713983, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983713983, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983715987, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983715988, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983717986, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983717987, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983719989, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983719990, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983721988, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983721989, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983723988, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983723988, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983725989, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983725991, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983727991, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983727992, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983729995, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983729995, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983731997, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983731998, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983733999, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983734000, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983735995, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983735997, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983737998, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983737998, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983739999, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983740000, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983742001, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983742003, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983744000, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983744001, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983746001, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983746001, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983748003, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983748004, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983750007, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983750008, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983752008, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983752008, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983754009, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983754010, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983756010, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983756010, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983758011, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983758011, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983760012, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983760012, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983762013, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983762013, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983764015, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983764017, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983766016, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983766016, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983768016, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983768019, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983770017, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983770020, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983772021, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983772021, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983774022, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983774023, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983776025, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983776025, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983778025, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983778025, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983780028, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983780028, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983782026, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983782027, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983784029, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983784029, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983786029, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983786030, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983788030, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983788031, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983790033, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983790033, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983792033, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983792034, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983794034, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983794037, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983796036, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983796036, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983798036, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983798036, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983800040, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983800042, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983802039, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983802040, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983804041, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983804041, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983806042, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983806042, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983808045, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983808045, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983810045, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983810045, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983812045, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983812045, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983814048, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983814051, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983816051, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983816051, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983818050, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983818050, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983820050, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983820050, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983822052, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983822053, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983824053, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983824053, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983826054, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983826056, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983828057, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983828056, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983830057, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983830058, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983832058, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983832061, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983834061, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983834061, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983836062, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983836062, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983838064, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983838064, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983840066, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983840066, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983842066, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983842067, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983844069, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983844069, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983846068, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983846069, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983848073, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983848072, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983850072, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983850073, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983852075, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983852075, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983854074, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983854074, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983856075, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983856076, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983858077, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983858077, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983860079, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983860079, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983862080, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983862081, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983864080, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983864080, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983866081, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983866083, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983868083, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983868644, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983870087, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "b", "t": 1791983870149, "inA": [], "inV": [], "outV": [], "outA": [], "pair": null}
+{"who": "a", "t": 1791983872086, "inA": [{"id": 3057416933, "conc": 1452, "silConc": 0, "tot": 2400, "jbd": 9.6, "jbe": 960, "lost": 0, "rcv": 1, "ce": 1, "bytes": 86, "energy": 9.656541833159547e-06}], "inV": [], "outV": [{"id": 91558493, "fe": 25, "h": 360, "ql": "none", "bytes": 13105, "enc": 0.041, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 4879, "codec": "audio/opus"}], "pair": {"rtt": 0.011, "outBw": 2000000, "rx": 3959, "tx": 28734}}
+{"who": "b", "t": 1791983872245, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 0, "jbd": 0, "jbe": 0, "lost": 0, "rcv": 40, "ce": 0, "bytes": 3133, "energy": 0}], "inV": [], "outV": [{"id": 3292396203, "fe": 1, "ql": "none", "bytes": 595, "enc": 0.102, "codec": "video/AV1", "sm": "L3T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 326, "codec": "audio/opus"}], "pair": null}
+{"who": "a", "t": 1791983874087, "inA": [{"id": 3057416933, "conc": 31896, "silConc": 14902, "tot": 98400, "jbd": 5385.6, "jbe": 32640, "lost": 0, "rcv": 44, "ce": 4, "bytes": 3257, "energy": 0.08186135783240708}], "inV": [{"id": 25772984, "fd": 9, "h": 360, "fz": 0, "fzd": 0, "bytes": 11623, "codec": "video/AV1", "dec": 0.004004, "lost": 0, "rcv": 16}], "outV": [{"id": 91558493, "fe": 98, "h": 360, "ql": "none", "bytes": 54456, "enc": 0.157, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 12406, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 72293, "tx": 100673}}
+{"who": "b", "t": 1791983874144, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 6240, "jbd": 393.6, "jbe": 6720, "lost": 0, "rcv": 20, "ce": 0, "bytes": 1424, "energy": 0.00895291493207223}], "inV": [{"id": 2531485442, "fd": 1, "h": 360, "fz": 0, "fzd": 0, "bytes": 21226, "codec": "video/VP9", "dec": 0.10015099999999999, "lost": 0, "rcv": 28}], "outV": [{"id": 3292396203, "fe": 27, "h": 360, "ql": "none", "bytes": 17186, "enc": 2.708, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 3465, "codec": "audio/opus"}], "pair": {"rtt": 0.013, "outBw": 438019, "rx": 98084, "tx": 43930}}
+{"who": "a", "t": 1791983876089, "inA": [{"id": 3057416933, "conc": 96044, "silConc": 69993, "tot": 193920, "jbd": 13363.2, "jbe": 64320, "lost": 0, "rcv": 100, "ce": 5, "bytes": 7656, "energy": 0.5750340274954143}], "inV": [{"id": 25772984, "fd": 31, "h": 360, "fz": 0, "fzd": 0, "bytes": 41418, "codec": "video/AV1", "dec": 0.012185, "lost": 0, "rcv": 54}], "outV": [{"id": 91558493, "fe": 178, "h": 360, "ql": "none", "bytes": 105341, "enc": 0.273, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 17831, "codec": "audio/opus"}], "pair": {"rtt": 0.011, "outBw": 2000000, "rx": 112371, "tx": 169674}}
+{"who": "b", "t": 1791983876143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 67680, "jbd": 14409.6, "jbe": 65280, "lost": 0, "rcv": 94, "ce": 0, "bytes": 6822, "energy": 0.1832708678080904}], "inV": [{"id": 2531485442, "fd": 33, "h": 360, "fz": 0, "fzd": 0, "bytes": 55807, "codec": "video/VP9", "dec": 0.20280199999999998, "lost": 0, "rcv": 75}], "outV": [{"id": 3292396203, "fe": 69, "h": 360, "ql": "none", "bytes": 55437, "enc": 4.831, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 7724, "codec": "audio/opus"}], "pair": {"rtt": 0.013, "outBw": 438019, "rx": 143939, "tx": 96249}}
+{"who": "a", "t": 1791983878093, "inA": [{"id": 3057416933, "conc": 96044, "silConc": 69993, "tot": 291360, "jbd": 63715.2, "jbe": 147840, "lost": 0, "rcv": 154, "ce": 5, "bytes": 11684, "energy": 1.2780887038570021}], "inV": [{"id": 25772984, "fd": 52, "h": 360, "fz": 1, "fzd": 0.316, "bytes": 84479, "codec": "video/AV1", "dec": 0.020419, "lost": 0, "rcv": 104}], "outV": [{"id": 91558493, "fe": 258, "h": 360, "ql": "none", "bytes": 155902, "enc": 0.399, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 24966, "codec": "audio/opus"}], "pair": {"rtt": 0.011, "outBw": 2000000, "rx": 165700, "tx": 240623}}
+{"who": "b", "t": 1791983878143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 123360, "jbd": 45465.6, "jbe": 123840, "lost": 0, "rcv": 187, "ce": 0, "bytes": 13605, "energy": 0.4082968672413331}], "inV": [{"id": 2531485442, "fd": 71, "h": 360, "fz": 0, "fzd": 0, "bytes": 89417, "codec": "video/VP9", "dec": 0.2165, "lost": 0, "rcv": 121}], "outV": [{"id": 3292396203, "fe": 121, "h": 360, "ql": "none", "bytes": 117376, "enc": 7.181, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 11752, "codec": "audio/opus"}], "pair": {"rtt": 0.013, "outBw": 451753, "rx": 192810, "tx": 168979}}
+{"who": "a", "t": 1791983880094, "inA": [{"id": 3057416933, "conc": 96566, "silConc": 70515, "tot": 386880, "jbd": 75907.2, "jbe": 205440, "lost": 0, "rcv": 214, "ce": 6, "bytes": 16297, "energy": 1.8535067641043952}], "inV": [{"id": 25772984, "fd": 83, "h": 360, "fz": 1, "fzd": 0.316, "bytes": 135069, "codec": "video/AV1", "dec": 0.032445, "lost": 0, "rcv": 163}], "outV": [{"id": 91558493, "fe": 338, "h": 360, "ql": "none", "bytes": 204877, "enc": 0.508, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 28252, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 227759, "tx": 310173}}
+{"who": "b", "t": 1791983880143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 163200, "jbd": 79017.6, "jbe": 166080, "lost": 0, "rcv": 238, "ce": 0, "bytes": 17233, "energy": 0.46790370306855117}], "inV": [{"id": 2531485442, "fd": 108, "h": 360, "fz": 0, "fzd": 0, "bytes": 124805, "codec": "video/VP9", "dec": 0.23061399999999999, "lost": 0, "rcv": 168}], "outV": [{"id": 3292396203, "fe": 175, "h": 360, "ql": "none", "bytes": 185693, "enc": 9.865, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 16495, "codec": "audio/opus"}], "pair": {"rtt": 0.013, "outBw": 517001, "rx": 234688, "tx": 249543}}
+{"who": "a", "t": 1791983882093, "inA": [{"id": 3057416933, "conc": 145341, "silConc": 110593, "tot": 482880, "jbd": 110611.2, "jbe": 248640, "lost": 0, "rcv": 284, "ce": 7, "bytes": 21500, "energy": 2.0251823851816524}], "inV": [{"id": 25772984, "fd": 104, "h": 360, "fz": 1, "fzd": 0.316, "bytes": 179149, "codec": "video/AV1", "dec": 0.040978, "lost": 0, "rcv": 210}], "outV": [{"id": 91558493, "fe": 418, "h": 360, "ql": "none", "bytes": 255495, "enc": 0.619, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 35978, "codec": "audio/opus"}], "pair": {"rtt": 0.012, "outBw": 2000000, "rx": 284345, "tx": 382408}}
+{"who": "b", "t": 1791983882143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 206400, "jbd": 135619.2, "jbe": 212160, "lost": 0, "rcv": 338, "ce": 0, "bytes": 25017, "energy": 0.6804795204898124}], "inV": [{"id": 2531485442, "fd": 146, "h": 360, "fz": 0, "fzd": 0, "bytes": 159835, "codec": "video/VP9", "dec": 0.34357, "lost": 0, "rcv": 216}], "outV": [{"id": 3292396203, "fe": 221, "h": 360, "ql": "none", "bytes": 251194, "enc": 13.179, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 21568, "codec": "audio/opus"}], "pair": {"rtt": 0.058, "outBw": 528496, "rx": 284753, "tx": 328885}}
+{"who": "a", "t": 1791983884096, "inA": [{"id": 3057416933, "conc": 145341, "silConc": 110593, "tot": 578880, "jbd": 146784, "jbe": 299520, "lost": 0, "rcv": 335, "ce": 7, "bytes": 25270, "energy": 2.2059283927988473}], "inV": [{"id": 25772984, "fd": 133, "h": 360, "fz": 1, "fzd": 0.316, "bytes": 238506, "codec": "video/AV1", "dec": 0.052915, "lost": 0, "rcv": 278}], "outV": [{"id": 91558493, "fe": 498, "h": 360, "ql": "none", "bytes": 305908, "enc": 0.726, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 40978, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 354288, "tx": 453523}}
+{"who": "b", "t": 1791983884143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 266880, "jbd": 223795.2, "jbe": 274560, "lost": 0, "rcv": 408, "ce": 0, "bytes": 29956, "energy": 0.8840106897526918}], "inV": [{"id": 2531485442, "fd": 186, "h": 360, "fz": 0, "fzd": 0, "bytes": 194912, "codec": "video/VP9", "dec": 0.45869099999999996, "lost": 0, "rcv": 264}], "outV": [{"id": 3292396203, "fe": 279, "h": 360, "ql": "none", "bytes": 327944, "enc": 15.246, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 25526, "codec": "audio/opus"}], "pair": {"rtt": 0.058, "outBw": 581610, "rx": 330473, "tx": 416299}}
+{"who": "a", "t": 1791983886096, "inA": [{"id": 3057416933, "conc": 147722, "silConc": 110593, "tot": 674400, "jbd": 182380.8, "jbe": 381120, "lost": 0, "rcv": 403, "ce": 8, "bytes": 30323, "energy": 2.409289547065713}], "inV": [{"id": 25772984, "fd": 160, "h": 360, "fz": 1, "fzd": 0.316, "bytes": 289315, "codec": "video/AV1", "dec": 0.063652, "lost": 0, "rcv": 335}], "outV": [{"id": 91558493, "fe": 578, "h": 360, "ql": "none", "bytes": 356698, "enc": 0.844, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 48596, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 417310, "tx": 524687}}
+{"who": "b", "t": 1791983886142, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 328800, "jbd": 366489.6, "jbe": 344640, "lost": 0, "rcv": 508, "ce": 0, "bytes": 37557, "energy": 1.0894912328458821}], "inV": [{"id": 2531485442, "fd": 224, "h": 360, "fz": 0, "fzd": 0, "bytes": 229309, "codec": "video/VP9", "dec": 0.531585, "lost": 0, "rcv": 314}], "outV": [{"id": 3292396203, "fe": 329, "h": 360, "ql": "none", "bytes": 398178, "enc": 17.678, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 30391, "codec": "audio/opus"}], "pair": {"rtt": 0.072, "outBw": 589952, "rx": 379331, "tx": 499234}}
+{"who": "a", "t": 1791983888098, "inA": [{"id": 3057416933, "conc": 160205, "silConc": 120691, "tot": 770400, "jbd": 190982.4, "jbe": 401280, "lost": 0, "rcv": 447, "ce": 8, "bytes": 33513, "energy": 2.409312385131746}], "inV": [{"id": 25772984, "fd": 189, "h": 360, "fz": 1, "fzd": 0.316, "bytes": 338680, "codec": "video/AV1", "dec": 0.074891, "lost": 0, "rcv": 392}], "outV": [{"id": 91558493, "fe": 658, "h": 360, "ql": "none", "bytes": 408207, "enc": 0.965, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 55274, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 476037, "tx": 593193}}
+{"who": "b", "t": 1791983888144, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 375360, "jbd": 482016, "jbe": 393600, "lost": 0, "rcv": 594, "ce": 0, "bytes": 44103, "energy": 1.1284794683120776}], "inV": [{"id": 2531485442, "fd": 264, "h": 360, "fz": 0, "fzd": 0, "bytes": 263769, "codec": "video/VP9", "dec": 0.6955629999999999, "lost": 0, "rcv": 362}], "outV": [{"id": 3292396203, "fe": 387, "h": 360, "ql": "none", "bytes": 470161, "enc": 19.539, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 34034, "codec": "audio/opus"}], "pair": {"rtt": 0.013, "outBw": 596505, "rx": 426689, "tx": 582088}}
+{"who": "a", "t": 1791983890098, "inA": [{"id": 3057416933, "conc": 160205, "silConc": 120691, "tot": 866400, "jbd": 239577.6, "jbe": 496320, "lost": 0, "rcv": 531, "ce": 8, "bytes": 40131, "energy": 3.087265995821943}], "inV": [{"id": 25772984, "fd": 211, "h": 360, "fz": 1, "fzd": 0.316, "bytes": 383014, "codec": "video/AV1", "dec": 0.083801, "lost": 0, "rcv": 444}], "outV": [{"id": 91558493, "fe": 738, "h": 360, "ql": "none", "bytes": 461023, "enc": 1.082, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 60212, "codec": "audio/opus"}], "pair": {"rtt": 0.011, "outBw": 2000000, "rx": 534702, "tx": 664898}}
+{"who": "b", "t": 1791983890144, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 422400, "jbd": 599731.2, "jbe": 445440, "lost": 0, "rcv": 666, "ce": 0, "bytes": 49169, "energy": 1.328749860415334}], "inV": [{"id": 2531485442, "fd": 304, "h": 360, "fz": 0, "fzd": 0, "bytes": 299409, "codec": "video/VP9", "dec": 0.710401, "lost": 0, "rcv": 410}], "outV": [{"id": 3292396203, "fe": 433, "h": 360, "ql": "none", "bytes": 529288, "enc": 21.985, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 40473, "codec": "audio/opus"}], "pair": {"rtt": 0.084, "outBw": 596505, "rx": 473376, "tx": 655834}}
+{"who": "a", "t": 1791983892099, "inA": [{"id": 3057416933, "conc": 160205, "silConc": 120691, "tot": 961920, "jbd": 262454.4, "jbe": 546240, "lost": 0, "rcv": 598, "ce": 8, "bytes": 45078, "energy": 3.3715039501165536}], "inV": [{"id": 25772984, "fd": 237, "h": 360, "fz": 1, "fzd": 0.316, "bytes": 426603, "codec": "video/AV1", "dec": 0.093868, "lost": 0, "rcv": 497}], "outV": [{"id": 91558493, "fe": 818, "h": 360, "ql": "none", "bytes": 515085, "enc": 1.202, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 66851, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 590882, "tx": 738283}}
+{"who": "b", "t": 1791983892144, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 461760, "jbd": 605635.2, "jbe": 480960, "lost": 0, "rcv": 754, "ce": 0, "bytes": 55804, "energy": 1.3901646152400036}], "inV": [{"id": 2531485442, "fd": 339, "h": 360, "fz": 0, "fzd": 0, "bytes": 335167, "codec": "video/VP9", "dec": 0.799967, "lost": 0, "rcv": 460}], "outV": [{"id": 3292396203, "fe": 485, "h": 360, "ql": "none", "bytes": 594595, "enc": 24.721, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 45146, "codec": "audio/opus"}], "pair": {"rtt": 0.084, "outBw": 596505, "rx": 523124, "tx": 733794}}
+{"who": "a", "t": 1791983894102, "inA": [{"id": 3057416933, "conc": 160205, "silConc": 120691, "tot": 1058880, "jbd": 307123.2, "jbe": 638400, "lost": 0, "rcv": 678, "ce": 8, "bytes": 51456, "energy": 4.294779233482713}], "inV": [{"id": 25772984, "fd": 261, "h": 360, "fz": 1, "fzd": 0.316, "bytes": 473250, "codec": "video/AV1", "dec": 0.10317499999999999, "lost": 0, "rcv": 551}], "outV": [{"id": 91558493, "fe": 898, "h": 360, "ql": "none", "bytes": 566319, "enc": 1.31, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 69901, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 651440, "tx": 806477}}
+{"who": "b", "t": 1791983894143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 510240, "jbd": 638803.2, "jbe": 532800, "lost": 0, "rcv": 797, "ce": 0, "bytes": 58569, "energy": 1.5845823877088514}], "inV": [{"id": 2531485442, "fd": 370, "h": 360, "fz": 0, "fzd": 0, "bytes": 368251, "codec": "video/VP9", "dec": 0.874185, "lost": 0, "rcv": 504}], "outV": [{"id": 3292396203, "fe": 533, "h": 360, "ql": "none", "bytes": 657394, "enc": 27.155, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 51524, "codec": "audio/opus"}], "pair": {"rtt": 0.181, "outBw": 601070, "rx": 565809, "tx": 810968}}
+{"who": "a", "t": 1791983896102, "inA": [{"id": 3057416933, "conc": 160205, "silConc": 120691, "tot": 1154880, "jbd": 339484.8, "jbe": 699840, "lost": 0, "rcv": 751, "ce": 8, "bytes": 56991, "energy": 4.616095982054393}], "inV": [{"id": 25772984, "fd": 289, "h": 360, "fz": 1, "fzd": 0.316, "bytes": 526844, "codec": "video/AV1", "dec": 0.113618, "lost": 0, "rcv": 613}], "outV": [{"id": 91558493, "fe": 978, "h": 360, "ql": "none", "bytes": 620698, "enc": 1.419, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 77877, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 718005, "tx": 878845}}
+{"who": "b", "t": 1791983896143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 556800, "jbd": 681696, "jbe": 582720, "lost": 0, "rcv": 896, "ce": 0, "bytes": 66509, "energy": 1.6136519983631674}], "inV": [{"id": 2531485442, "fd": 405, "h": 360, "fz": 0, "fzd": 0, "bytes": 404637, "codec": "video/VP9", "dec": 0.8880549999999999, "lost": 0, "rcv": 552}], "outV": [{"id": 3292396203, "fe": 593, "h": 360, "ql": "none", "bytes": 737509, "enc": 29.502, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 57249, "codec": "audio/opus"}], "pair": {"rtt": 0.101, "outBw": 601070, "rx": 617273, "tx": 905444}}
+{"who": "a", "t": 1791983898104, "inA": [{"id": 3057416933, "conc": 190881, "silConc": 141827, "tot": 1250880, "jbd": 361497.6, "jbe": 762240, "lost": 0, "rcv": 808, "ce": 10, "bytes": 61529, "energy": 5.173620878657571}], "inV": [{"id": 25772984, "fd": 316, "h": 360, "fz": 1, "fzd": 0.316, "bytes": 577696, "codec": "video/AV1", "dec": 0.124304, "lost": 0, "rcv": 670}], "outV": [{"id": 91558493, "fe": 1058, "h": 360, "ql": "none", "bytes": 674544, "enc": 1.526, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 83792, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 780083, "tx": 950387}}
+{"who": "b", "t": 1791983898143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 610080, "jbd": 738902.4, "jbe": 637440, "lost": 0, "rcv": 974, "ce": 0, "bytes": 72451, "energy": 1.9391609641386058}], "inV": [{"id": 2531485442, "fd": 443, "h": 360, "fz": 0, "fzd": 0, "bytes": 441824, "codec": "video/VP9", "dec": 1.001132, "lost": 0, "rcv": 601}], "outV": [{"id": 3292396203, "fe": 641, "h": 360, "ql": "none", "bytes": 802139, "enc": 32.226, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 61597, "codec": "audio/opus"}], "pair": {"rtt": 0.175, "outBw": 615566, "rx": 665428, "tx": 981679}}
+{"who": "a", "t": 1791983900108, "inA": [{"id": 3057416933, "conc": 210367, "silConc": 161313, "tot": 1346400, "jbd": 386179.2, "jbe": 803520, "lost": 0, "rcv": 862, "ce": 10, "bytes": 65531, "energy": 5.339164102095586}], "inV": [{"id": 25772984, "fd": 339, "h": 360, "fz": 1, "fzd": 0.316, "bytes": 625690, "codec": "video/AV1", "dec": 0.13314299999999998, "lost": 0, "rcv": 724}], "outV": [{"id": 91558493, "fe": 1139, "h": 360, "ql": "none", "bytes": 727007, "enc": 1.644, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 91753, "codec": "audio/opus"}], "pair": {"rtt": 0.012, "outBw": 2000000, "rx": 838708, "tx": 1019964}}
+{"who": "b", "t": 1791983900143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 659520, "jbd": 824515.2, "jbe": 688320, "lost": 0, "rcv": 1078, "ce": 0, "bytes": 80681, "energy": 2.2886938271857447}], "inV": [{"id": 2531485442, "fd": 480, "h": 360, "fz": 0, "fzd": 0, "bytes": 477634, "codec": "video/VP9", "dec": 1.015039, "lost": 0, "rcv": 648}], "outV": [{"id": 3292396203, "fe": 689, "h": 360, "ql": "none", "bytes": 868112, "enc": 34.947, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 65599, "codec": "audio/opus"}], "pair": {"rtt": 0.175, "outBw": 615566, "rx": 715506, "tx": 1058626}}
+{"who": "a", "t": 1791983902107, "inA": [{"id": 3057416933, "conc": 212905, "silConc": 163851, "tot": 1443360, "jbd": 432393.6, "jbe": 884160, "lost": 0, "rcv": 928, "ce": 11, "bytes": 70709, "energy": 5.972493867562744}], "inV": [{"id": 25772984, "fd": 364, "h": 360, "fz": 1, "fzd": 0.316, "bytes": 673311, "codec": "video/AV1", "dec": 0.143193, "lost": 0, "rcv": 780}], "outV": [{"id": 91558493, "fe": 1218, "h": 360, "ql": "none", "bytes": 781373, "enc": 1.761, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 97148, "codec": "audio/opus"}], "pair": {"rtt": 0.012, "outBw": 2000000, "rx": 899014, "tx": 1091480}}
+{"who": "b", "t": 1791983902143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 703200, "jbd": 917721.6, "jbe": 735360, "lost": 0, "rcv": 1152, "ce": 0, "bytes": 86144, "energy": 2.391411408685758}], "inV": [{"id": 2531485442, "fd": 517, "h": 360, "fz": 0, "fzd": 0, "bytes": 514790, "codec": "video/VP9", "dec": 1.029134, "lost": 0, "rcv": 697}], "outV": [{"id": 3292396203, "fe": 737, "h": 360, "ql": "none", "bytes": 931997, "enc": 38.363, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 70777, "codec": "audio/opus"}], "pair": {"rtt": 0.15, "outBw": 615566, "rx": 764644, "tx": 1135303}}
+{"who": "a", "t": 1791983904107, "inA": [{"id": 3057416933, "conc": 247598, "silConc": 191867, "tot": 1539360, "jbd": 465360, "jbe": 938880, "lost": 0, "rcv": 997, "ce": 12, "bytes": 75840, "energy": 6.291083949484537}], "inV": [{"id": 25772984, "fd": 391, "h": 360, "fz": 1, "fzd": 0.316, "bytes": 720084, "codec": "video/AV1", "dec": 0.153977, "lost": 0, "rcv": 836}], "outV": [{"id": 91558493, "fe": 1298, "h": 360, "ql": "none", "bytes": 834418, "enc": 1.872, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 105051, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 957970, "tx": 1163107}}
+{"who": "b", "t": 1791983904143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 755520, "jbd": 950524.8, "jbe": 787200, "lost": 0, "rcv": 1252, "ce": 0, "bytes": 94011, "energy": 2.6973960450382886}], "inV": [{"id": 2531485442, "fd": 555, "h": 360, "fz": 0, "fzd": 0, "bytes": 550441, "codec": "video/VP9", "dec": 1.154919, "lost": 0, "rcv": 745}], "outV": [{"id": 3292396203, "fe": 791, "h": 360, "ql": "none", "bytes": 1000878, "enc": 40.82, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 76354, "codec": "audio/opus"}], "pair": {"rtt": 0.014, "outBw": 615566, "rx": 814958, "tx": 1218014}}
+{"who": "a", "t": 1791983906110, "inA": [{"id": 3057416933, "conc": 247598, "silConc": 191867, "tot": 1635360, "jbd": 516288, "jbe": 1020480, "lost": 0, "rcv": 1072, "ce": 12, "bytes": 81771, "energy": 7.083182412627573}], "inV": [{"id": 25772984, "fd": 415, "h": 360, "fz": 1, "fzd": 0.316, "bytes": 768651, "codec": "video/AV1", "dec": 0.16350499999999998, "lost": 0, "rcv": 889}], "outV": [{"id": 91558493, "fe": 1380, "h": 360, "ql": "none", "bytes": 884334, "enc": 1.999, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 111742, "codec": "audio/opus"}], "pair": {"rtt": 0.011, "outBw": 2000000, "rx": 1019708, "tx": 1232105}}
+{"who": "b", "t": 1791983906143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 804960, "jbd": 980332.8, "jbe": 839040, "lost": 0, "rcv": 1338, "ce": 0, "bytes": 100571, "energy": 3.027173194228922}], "inV": [{"id": 2531485442, "fd": 594, "h": 360, "fz": 0, "fzd": 0, "bytes": 583667, "codec": "video/VP9", "dec": 1.245248, "lost": 0, "rcv": 790}], "outV": [{"id": 3292396203, "fe": 843, "h": 360, "ql": "none", "bytes": 1069293, "enc": 43.257, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 81949, "codec": "audio/opus"}], "pair": {"rtt": 0.013, "outBw": 615566, "rx": 861566, "tx": 1300195}}
+{"who": "a", "t": 1791983908112, "inA": [{"id": 3057416933, "conc": 291878, "silConc": 232787, "tot": 1731360, "jbd": 533414.4, "jbe": 1068480, "lost": 0, "rcv": 1135, "ce": 13, "bytes": 86442, "energy": 7.47106047437363}], "inV": [{"id": 25772984, "fd": 433, "h": 360, "fz": 2, "fzd": 0.863, "bytes": 797821, "codec": "video/AV1", "dec": 0.171047, "lost": 0, "rcv": 925}], "outV": [{"id": 91558493, "fe": 1460, "h": 360, "ql": "none", "bytes": 935458, "enc": 2.108, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 118866, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 1059593, "tx": 1303385}}
+{"who": "b", "t": 1791983908142, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 852480, "jbd": 1035408, "jbe": 888960, "lost": 0, "rcv": 1425, "ce": 0, "bytes": 107491, "energy": 3.2886682251115444}], "inV": [{"id": 2531485442, "fd": 630, "h": 360, "fz": 0, "fzd": 0, "bytes": 617995, "codec": "video/VP9", "dec": 1.3576279999999998, "lost": 0, "rcv": 836}], "outV": [{"id": 3292396203, "fe": 875, "h": 360, "ql": "none", "bytes": 1107000, "enc": 45.798, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 86510, "codec": "audio/opus"}], "pair": null}
+{"who": "a", "t": 1791983910115, "inA": [{"id": 3057416933, "conc": 291878, "silConc": 232787, "tot": 1828320, "jbd": 583948.8, "jbe": 1141440, "lost": 0, "rcv": 1203, "ce": 13, "bytes": 91844, "energy": 7.804083602790696}], "inV": [{"id": 25772984, "fd": 464, "h": 360, "fz": 2, "fzd": 0.863, "bytes": 850619, "codec": "video/AV1", "dec": 0.183051, "lost": 0, "rcv": 990}], "outV": [{"id": 91558493, "fe": 1540, "h": 360, "ql": "none", "bytes": 987502, "enc": 2.223, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 126690, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 1125129, "tx": 1375156}}
+{"who": "b", "t": 1791983910142, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 900000, "jbd": 1097846.4, "jbe": 938880, "lost": 0, "rcv": 1529, "ce": 0, "bytes": 115584, "energy": 3.436726972024973}], "inV": [{"id": 2531485442, "fd": 670, "h": 360, "fz": 0, "fzd": 0, "bytes": 655318, "codec": "video/VP9", "dec": 1.371916, "lost": 0, "rcv": 886}], "outV": [{"id": 3292396203, "fe": 939, "h": 360, "ql": "none", "bytes": 1179974, "enc": 48.346, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 91912, "codec": "audio/opus"}], "pair": {"rtt": 0.1, "outBw": 615897, "rx": 960748, "tx": 1437769}}
+{"who": "a", "t": 1791983912112, "inA": [{"id": 3057416933, "conc": 291878, "silConc": 232787, "tot": 1923840, "jbd": 601200, "jbe": 1213440, "lost": 0, "rcv": 1267, "ce": 13, "bytes": 96680, "energy": 8.265134372144148}], "inV": [{"id": 25772984, "fd": 490, "h": 360, "fz": 2, "fzd": 0.863, "bytes": 903557, "codec": "video/AV1", "dec": 0.19357, "lost": 0, "rcv": 1050}], "outV": [{"id": 91558493, "fe": 1620, "h": 360, "ql": "none", "bytes": 1037522, "enc": 2.335, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 132237, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 1190558, "tx": 1445201}}
+{"who": "b", "t": 1791983912143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 958080, "jbd": 1208016, "jbe": 998400, "lost": 0, "rcv": 1604, "ce": 0, "bytes": 121159, "energy": 3.726209405747606}], "inV": [{"id": 2531485442, "fd": 712, "h": 360, "fz": 0, "fzd": 0, "bytes": 689774, "codec": "video/VP9", "dec": 1.387691, "lost": 0, "rcv": 934}], "outV": [{"id": 3292396203, "fe": 993, "h": 360, "ql": "none", "bytes": 1253546, "enc": 50.881, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 96922, "codec": "audio/opus"}], "pair": {"rtt": 0.044, "outBw": 632840, "rx": 1007342, "tx": 1524941}}
+{"who": "a", "t": 1791983914115, "inA": [{"id": 3057416933, "conc": 292420, "silConc": 233172, "tot": 2019840, "jbd": 626659.2, "jbe": 1276800, "lost": 0, "rcv": 1344, "ce": 14, "bytes": 102779, "energy": 8.628644493303215}], "inV": [{"id": 25772984, "fd": 518, "h": 360, "fz": 2, "fzd": 0.863, "bytes": 952174, "codec": "video/AV1", "dec": 0.205347, "lost": 0, "rcv": 1107}], "outV": [{"id": 91558493, "fe": 1700, "h": 360, "ql": "none", "bytes": 1088941, "enc": 2.444, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 140129, "codec": "audio/opus"}], "pair": {"rtt": 0.011, "outBw": 2000000, "rx": 1252658, "tx": 1515342}}
+{"who": "b", "t": 1791983914144, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 1017120, "jbd": 1364572.8, "jbe": 1062720, "lost": 0, "rcv": 1704, "ce": 0, "bytes": 129025, "energy": 3.9986147749882797}], "inV": [{"id": 2531485442, "fd": 751, "h": 360, "fz": 0, "fzd": 0, "bytes": 725209, "codec": "video/VP9", "dec": 1.47061, "lost": 0, "rcv": 981}], "outV": [{"id": 3292396203, "fe": 1051, "h": 360, "ql": "none", "bytes": 1324693, "enc": 53.245, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 102847, "codec": "audio/opus"}], "pair": {"rtt": 0.1, "outBw": 634905, "rx": 1060876, "tx": 1610932}}
+{"who": "a", "t": 1791983916115, "inA": [{"id": 3057416933, "conc": 337850, "silConc": 269522, "tot": 2115840, "jbd": 641817.6, "jbe": 1324800, "lost": 0, "rcv": 1408, "ce": 15, "bytes": 107542, "energy": 9.044384601614393}], "inV": [{"id": 25772984, "fd": 546, "h": 360, "fz": 2, "fzd": 0.863, "bytes": 1007013, "codec": "video/AV1", "dec": 0.216639, "lost": 0, "rcv": 1169}], "outV": [{"id": 91558493, "fe": 1780, "h": 360, "ql": "none", "bytes": 1141045, "enc": 2.559, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 145982, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 1319364, "tx": 1587583}}
+{"who": "b", "t": 1791983916143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 1078560, "jbd": 1391798.4, "jbe": 1114560, "lost": 0, "rcv": 1775, "ce": 0, "bytes": 134462, "energy": 4.1447308482472955}], "inV": [{"id": 2531485442, "fd": 787, "h": 360, "fz": 0, "fzd": 0, "bytes": 759901, "codec": "video/VP9", "dec": 1.4840309999999999, "lost": 0, "rcv": 1028}], "outV": [{"id": 3292396203, "fe": 1101, "h": 360, "ql": "none", "bytes": 1394429, "enc": 55.369, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 107682, "codec": "audio/opus"}], "pair": {"rtt": 0.1, "outBw": 634905, "rx": 1105501, "tx": 1692412}}
+{"who": "a", "t": 1791983918119, "inA": [{"id": 3057416933, "conc": 337850, "silConc": 269522, "tot": 2211360, "jbd": 695827.2, "jbe": 1397760, "lost": 0, "rcv": 1473, "ce": 15, "bytes": 112573, "energy": 9.513644887653927}], "inV": [{"id": 25772984, "fd": 573, "h": 360, "fz": 2, "fzd": 0.863, "bytes": 1053948, "codec": "video/AV1", "dec": 0.227066, "lost": 0, "rcv": 1221}], "outV": [{"id": 91558493, "fe": 1860, "h": 360, "ql": "none", "bytes": 1191590, "enc": 2.664, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 153841, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 1378130, "tx": 1656179}}
+{"who": "b", "t": 1791983918143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 1128480, "jbd": 1417344, "jbe": 1166400, "lost": 0, "rcv": 1880, "ce": 0, "bytes": 142759, "energy": 4.372819706629447}], "inV": [{"id": 2531485442, "fd": 826, "h": 360, "fz": 0, "fzd": 0, "bytes": 796415, "codec": "video/VP9", "dec": 1.4984899999999999, "lost": 0, "rcv": 1079}], "outV": [{"id": 3292396203, "fe": 1153, "h": 360, "ql": "none", "bytes": 1462231, "enc": 58.014, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 112641, "codec": "audio/opus"}], "pair": {"rtt": 0.1, "outBw": 634905, "rx": 1155287, "tx": 1772761}}
+{"who": "a", "t": 1791983920117, "inA": [{"id": 3057416933, "conc": 358349, "silConc": 282245, "tot": 2307360, "jbd": 716102.4, "jbe": 1468800, "lost": 0, "rcv": 1548, "ce": 16, "bytes": 118418, "energy": 9.993317765155624}], "inV": [{"id": 25772984, "fd": 593, "h": 360, "fz": 2, "fzd": 0.863, "bytes": 1097950, "codec": "video/AV1", "dec": 0.235313, "lost": 0, "rcv": 1271}], "outV": [{"id": 91558493, "fe": 1940, "h": 360, "ql": "none", "bytes": 1242704, "enc": 2.781, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 159305, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 1434997, "tx": 1727187}}
+{"who": "b", "t": 1791983920143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 1188480, "jbd": 1475865.6, "jbe": 1226880, "lost": 0, "rcv": 1954, "ce": 0, "bytes": 148224, "energy": 4.623552486526023}], "inV": [{"id": 2531485442, "fd": 862, "h": 360, "fz": 0, "fzd": 0, "bytes": 831698, "codec": "video/VP9", "dec": 1.6117469999999998, "lost": 0, "rcv": 1126}], "outV": [{"id": 3292396203, "fe": 1193, "h": 360, "ql": "none", "bytes": 1518924, "enc": 60.646, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 118486, "codec": "audio/opus"}], "pair": {"rtt": 0.013, "outBw": 634905, "rx": 1201759, "tx": 1842539}}
+{"who": "a", "t": 1791983922121, "inA": [{"id": 3057416933, "conc": 365422, "silConc": 289318, "tot": 2403360, "jbd": 756220.8, "jbe": 1536960, "lost": 0, "rcv": 1620, "ce": 16, "bytes": 124114, "energy": 10.179006931976756}], "inV": [{"id": 25772984, "fd": 615, "h": 360, "fz": 2, "fzd": 0.863, "bytes": 1136850, "codec": "video/AV1", "dec": 0.244408, "lost": 0, "rcv": 1315}], "outV": [{"id": 91558493, "fe": 2020, "h": 360, "ql": "none", "bytes": 1295803, "enc": 2.887, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 167171, "codec": "audio/opus"}], "pair": {"rtt": 0.011, "outBw": 2000000, "rx": 1486904, "tx": 1799719}}
+{"who": "b", "t": 1791983922142, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 1234560, "jbd": 1545542.4, "jbe": 1274880, "lost": 0, "rcv": 2051, "ce": 0, "bytes": 155856, "energy": 4.819119797894667}], "inV": [{"id": 2531485442, "fd": 898, "h": 360, "fz": 0, "fzd": 0, "bytes": 867787, "codec": "video/VP9", "dec": 1.725476, "lost": 0, "rcv": 1174}], "outV": [{"id": 3292396203, "fe": 1237, "h": 360, "ql": "none", "bytes": 1575023, "enc": 64.246, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 124182, "codec": "audio/opus"}], "pair": {"rtt": 0.1, "outBw": 634905, "rx": 1253702, "tx": 1912024}}
+{"who": "a", "t": 1791983924121, "inA": [{"id": 3057416933, "conc": 386911, "silConc": 302928, "tot": 2498880, "jbd": 775084.8, "jbe": 1608000, "lost": 0, "rcv": 1689, "ce": 17, "bytes": 129279, "energy": 10.529623155066282}], "inV": [{"id": 25772984, "fd": 642, "h": 360, "fz": 2, "fzd": 0.863, "bytes": 1192215, "codec": "video/AV1", "dec": 0.2554, "lost": 0, "rcv": 1381}], "outV": [{"id": 91558493, "fe": 2100, "h": 360, "ql": "none", "bytes": 1349854, "enc": 3.001, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 173826, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 1554862, "tx": 1869301}}
+{"who": "b", "t": 1791983924143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 1283520, "jbd": 1625049.6, "jbe": 1327680, "lost": 0, "rcv": 2140, "ce": 0, "bytes": 162655, "energy": 5.002593403652959}], "inV": [{"id": 2531485442, "fd": 940, "h": 360, "fz": 0, "fzd": 0, "bytes": 905676, "codec": "video/VP9", "dec": 1.746597, "lost": 0, "rcv": 1226}], "outV": [{"id": 3292396203, "fe": 1297, "h": 360, "ql": "none", "bytes": 1648924, "enc": 66.982, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 129347, "codec": "audio/opus"}], "pair": null}
+{"who": "a", "t": 1791983926123, "inA": [{"id": 3057416933, "conc": 387353, "silConc": 303370, "tot": 2595840, "jbd": 799814.4, "jbe": 1656000, "lost": 0, "rcv": 1739, "ce": 18, "bytes": 133328, "energy": 10.666653555259833}], "inV": [{"id": 25772984, "fd": 670, "h": 360, "fz": 2, "fzd": 0.863, "bytes": 1237420, "codec": "video/AV1", "dec": 0.266765, "lost": 0, "rcv": 1434}], "outV": [{"id": 91558493, "fe": 2180, "h": 360, "ql": "none", "bytes": 1405194, "enc": 3.111, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 180949, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 1610452, "tx": 1941118}}
+{"who": "b", "t": 1791983926143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 1327200, "jbd": 1706928, "jbe": 1372800, "lost": 0, "rcv": 2231, "ce": 0, "bytes": 169847, "energy": 5.2743121648651705}], "inV": [{"id": 2531485442, "fd": 977, "h": 360, "fz": 0, "fzd": 0, "bytes": 943652, "codec": "video/VP9", "dec": 1.7610439999999998, "lost": 0, "rcv": 1275}], "outV": [{"id": 3292396203, "fe": 1349, "h": 360, "ql": "none", "bytes": 1714892, "enc": 69.241, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 133396, "codec": "audio/opus"}], "pair": {"rtt": 0.1, "outBw": 634905, "rx": 1355591, "tx": 2077103}}
+{"who": "a", "t": 1791983928126, "inA": [{"id": 3057416933, "conc": 412385, "silConc": 314947, "tot": 2691840, "jbd": 815443.2, "jbe": 1721280, "lost": 0, "rcv": 1818, "ce": 20, "bytes": 139448, "energy": 11.063962084702416}], "inV": [{"id": 25772984, "fd": 696, "h": 360, "fz": 2, "fzd": 0.863, "bytes": 1285857, "codec": "video/AV1", "dec": 0.277105, "lost": 0, "rcv": 1490}], "outV": [{"id": 91558493, "fe": 2260, "h": 360, "ql": "none", "bytes": 1462143, "enc": 3.236, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 188781, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 1672461, "tx": 2015071}}
+{"who": "b", "t": 1791983928143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 1387680, "jbd": 1723584, "jbe": 1433280, "lost": 0, "rcv": 2331, "ce": 0, "bytes": 177676, "energy": 5.553933505371453}], "inV": [{"id": 2531485442, "fd": 1016, "h": 360, "fz": 0, "fzd": 0, "bytes": 982826, "codec": "video/VP9", "dec": 1.7757349999999998, "lost": 0, "rcv": 1326}], "outV": [{"id": 3292396203, "fe": 1399, "h": 360, "ql": "none", "bytes": 1780159, "enc": 71.689, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 139589, "codec": "audio/opus"}], "pair": {"rtt": 0.113, "outBw": 635905, "rx": 1409526, "tx": 2165637}}
+{"who": "a", "t": 1791983930127, "inA": [{"id": 3057416933, "conc": 422850, "silConc": 325412, "tot": 2787840, "jbd": 862934.4, "jbe": 1784640, "lost": 0, "rcv": 1886, "ce": 20, "bytes": 144840, "energy": 11.2570429130246}], "inV": [{"id": 25772984, "fd": 721, "h": 360, "fz": 2, "fzd": 0.863, "bytes": 1335684, "codec": "video/AV1", "dec": 0.287099, "lost": 0, "rcv": 1547}], "outV": [{"id": 91558493, "fe": 2340, "h": 360, "ql": "none", "bytes": 1515757, "enc": 3.353, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 194228, "codec": "audio/opus"}], "pair": {"rtt": 0.011, "outBw": 2000000, "rx": 1734700, "tx": 2082406}}
+{"who": "b", "t": 1791983930143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 1431840, "jbd": 1753190.4, "jbe": 1479360, "lost": 0, "rcv": 2405, "ce": 0, "bytes": 183147, "energy": 5.661641163289198}], "inV": [{"id": 2531485442, "fd": 1056, "h": 360, "fz": 0, "fzd": 0, "bytes": 1019774, "codec": "video/VP9", "dec": 1.91177, "lost": 0, "rcv": 1376}], "outV": [{"id": 3292396203, "fe": 1449, "h": 360, "ql": "none", "bytes": 1848122, "enc": 74.031, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 144908, "codec": "audio/opus"}], "pair": {"rtt": 0.05, "outBw": 635905, "rx": 1457857, "tx": 2237193}}
+{"who": "a", "t": 1791983932128, "inA": [{"id": 3057416933, "conc": 447221, "silConc": 341898, "tot": 2883360, "jbd": 889420.8, "jbe": 1853760, "lost": 0, "rcv": 1943, "ce": 21, "bytes": 149322, "energy": 11.767225273240605}], "inV": [{"id": 25772984, "fd": 742, "h": 360, "fz": 2, "fzd": 0.863, "bytes": 1375690, "codec": "video/AV1", "dec": 0.295526, "lost": 0, "rcv": 1595}], "outV": [{"id": 91558493, "fe": 2420, "h": 360, "ql": "none", "bytes": 1570648, "enc": 3.467, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 202181, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 1786051, "tx": 2154730}}
+{"who": "b", "t": 1791983932143, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 1477920, "jbd": 1789824, "jbe": 1528320, "lost": 0, "rcv": 2505, "ce": 0, "bytes": 191010, "energy": 5.910884964024753}], "inV": [{"id": 2531485442, "fd": 1091, "h": 360, "fz": 0, "fzd": 0, "bytes": 1057123, "codec": "video/VP9", "dec": 1.9254129999999998, "lost": 0, "rcv": 1424}], "outV": [{"id": 3292396203, "fe": 1495, "h": 360, "ql": "none", "bytes": 1906101, "enc": 77.244, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 149458, "codec": "audio/opus"}], "pair": {"rtt": 0.015, "outBw": 635905, "rx": 1510380, "tx": 2307278}}
+{"who": "a", "t": 1791983934128, "inA": [{"id": 3057416933, "conc": 470873, "silConc": 365550, "tot": 2980320, "jbd": 928147.2, "jbe": 1907520, "lost": 0, "rcv": 2017, "ce": 21, "bytes": 154843, "energy": 11.952017560592667}], "inV": [{"id": 25772984, "fd": 769, "h": 360, "fz": 2, "fzd": 0.863, "bytes": 1430955, "codec": "video/AV1", "dec": 0.306316, "lost": 0, "rcv": 1657}], "outV": [{"id": 91558493, "fe": 2500, "h": 360, "ql": "none", "bytes": 1626458, "enc": 3.583, "codec": "video/VP9", "sm": "L2T3_KEY"}], "outA": [{"id": 2738991130, "bytes": 207984, "codec": "audio/opus"}], "pair": {"rtt": 0.01, "outBw": 2000000, "rx": 1854325, "tx": 2224994}}
+{"who": "b", "t": 1791983934142, "inA": [{"id": 4132397750, "conc": 0, "silConc": 0, "tot": 1523040, "jbd": 1850563.2, "jbe": 1576320, "lost": 0, "rcv": 2576, "ce": 0, "bytes": 196403, "energy": 6.197945273456621}], "inV": [{"id": 2531485442, "fd": 1128, "h": 360, "fz": 0, "fzd": 0, "bytes": 1093327, "codec": "video/VP9", "dec": 1.9398369999999998, "lost": 0, "rcv": 1472}], "outV": [{"id": 3292396203, "fe": 1551, "h": 360, "ql": "none", "bytes": 1978376, "enc": 79.329, "codec": "video/AV1", "sm": "L2T3_KEY"}], "outA": [{"id": 3037995577, "bytes": 154911, "codec": "audio/opus"}], "pair": {"rtt": 0.015, "outBw": 635905, "rx": 1560357, "tx": 2397683}}
