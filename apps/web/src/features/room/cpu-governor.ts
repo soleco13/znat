@@ -76,6 +76,14 @@ export const AUDIO_BAD = 0.93;
 /** Не ниже — звук отдаётся полностью. */
 export const AUDIO_GOOD = 0.98;
 const OVERLOAD_PERSIST_MS = 4_000;
+/**
+ * Мощное устройство при спокойном процессоре (Compute Pressure nominal/fair):
+ * «кодировщик упёрся в процессор» без провалов звука — часто короткий всплеск
+ * на старте камеры. Урок 2026-10-14: у учителя на 12 потоках (Edge, pressure
+ * nominal) камера через 12 с после входа ушла в 360p, потом в 180p/10 и
+ * держалась так почти весь урок. Такой признак должен держаться дольше.
+ */
+const STRONG_VIDEO_ONLY_PERSIST_MS = 20_000;
 /** Без признаков перегрузки дольше — она закончилась. */
 const OVERLOAD_GAP_MS = 3_000;
 const STEP_SETTLE_MS = 6_000;
@@ -127,10 +135,15 @@ export class CpuGovernor {
   private holdMs = RECOVER_HOLD_MS;
   private probationUntil = 0;
   private wasSharing = false;
+  private readonly strongDevice: boolean;
 
-  /** `initialLevel` — ступень с самого начала (слабое устройство — 1). */
-  constructor(initialLevel = 0) {
+  /**
+   * `initialLevel` — ступень с самого начала (слабое устройство — 1);
+   * `strongDevice` — не слабое по профилю (см. STRONG_VIDEO_ONLY_PERSIST_MS).
+   */
+  constructor(initialLevel = 0, strongDevice = false) {
     this.level = Math.max(0, Math.min(MAX_LEVEL, initialLevel));
+    this.strongDevice = strongDevice;
   }
 
   update(s: LoadSample): Decision {
@@ -170,7 +183,11 @@ export class CpuGovernor {
     const reason = overloadReason(s);
     if (reason) {
       this.healthySince = 0;
-      if (this.probationUntil && this.level < MAX_LEVEL) {
+      const calmStrong =
+        this.strongDevice && reason === "cpu_overload" && (s.pressure === "nominal" || s.pressure === "fair");
+      // Мощное устройство при спокойном процессоре — и после подъёма не по
+      // первому тику, а только устойчивой перегрузкой (ниже).
+      if (this.probationUntil && this.level < MAX_LEVEL && !calmStrong) {
         // Подняли рано — сразу назад, следующая попытка позже.
         this.probationUntil = 0;
         this.holdMs = Math.min(this.holdMs * 2, RECOVER_HOLD_MAX_MS);
@@ -178,9 +195,14 @@ export class CpuGovernor {
       }
       if (!this.overloadSince) this.overloadSince = now;
       this.lastOverloadAt = now;
-      const persistent = now - this.overloadSince >= OVERLOAD_PERSIST_MS;
+      const persistent = now - this.overloadSince >= (calmStrong ? STRONG_VIDEO_ONLY_PERSIST_MS : OVERLOAD_PERSIST_MS);
       const settled = now - this.changedAt >= STEP_SETTLE_MS;
       if (s.hasVideo && this.level < MAX_LEVEL && persistent && settled) {
+        if (this.probationUntil) {
+          // Подъём не выдержал — следующая попытка позже (как recovery_failed).
+          this.probationUntil = 0;
+          this.holdMs = Math.min(this.holdMs * 2, RECOVER_HOLD_MAX_MS);
+        }
         const target = s.sharing ? Math.max(this.level + 1, SHARE_LEVEL) : this.level + 1;
         return this.change(Math.min(target, MAX_LEVEL), now, reason);
       }

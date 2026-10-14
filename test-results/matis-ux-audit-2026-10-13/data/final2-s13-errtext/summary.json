@@ -1,0 +1,19 @@
+{
+  "T0": 1791995751029,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "  11.0"
+    },
+    {
+      "name": "F-03: error toast is human Russian text",
+      "ok": true,
+      "detail": [
+        "Сервер не смог выполнить действие — попробуйте ещё раз через минуту"
+      ],
+      "rel": "  16.8"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+<!doctype html><title>heavy</title><style>html,body{margin:0;background:#000}canvas{width:100vw;height:100vh;display:block}</style>
+<canvas id=c></canvas><script>
+// «Приложение поверх урока»: полноэкранная анимация с шумом — тяжело и для процессора, и для кодировщика демонстрации.
+const c=document.getElementById('c');c.width=innerWidth;c.height=innerHeight;const x=c.getContext('2d');let t=0;
+function f(){const w=c.width,h=c.height;const img=x.createImageData(w,h);const d=img.data;for(let i=0;i<d.length;i+=4){const v=(Math.random()*255)|0;d[i]=v;d[i+1]=(v*t)&255;d[i+2]=(i+t)&255;d[i+3]=255}x.putImageData(img,0,0);t++;requestAnimationFrame(f)}f();
+</script>

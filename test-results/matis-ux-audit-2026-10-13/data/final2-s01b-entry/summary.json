@@ -1,0 +1,62 @@
+{
+  "T0": 1791995518461,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "teacher joins",
+      "ok": true,
+      "rel": "   6.5"
+    },
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "  10.6"
+    },
+    {
+      "name": "s2 joins",
+      "ok": true,
+      "rel": "  13.6"
+    },
+    {
+      "name": "A: mic stays off after F5 (muted 20 s after join, waited 7 s)",
+      "ok": true,
+      "detail": false,
+      "rel": "  42.1"
+    },
+    {
+      "name": "B: mic stays off after immediate F5",
+      "ok": true,
+      "detail": false,
+      "rel": "  67.7"
+    },
+    {
+      "name": "C: existing student back in room while entry locked",
+      "ok": true,
+      "detail": {
+        "path": "/j/758e82a0bbca21932a07183e3f35a90f630d8f7a1ce8c3a21f575af8fadb8ca2",
+        "inRoom": true,
+        "deviceCheck": false,
+        "overlayReconnect": false,
+        "pills": [],
+        "takenOver": false,
+        "blocked": null,
+        "error": null,
+        "toasts": [],
+        "spinners": 0
+      },
+      "rel": "  68.3"
+    },
+    {
+      "name": "D: removed student sees removal screen",
+      "ok": true,
+      "detail": "Вас удалили из урока\n\nУчитель удалил вас из урока. Если это ошибка — напишите учителю.",
+      "rel": "  68.5"
+    },
+    {
+      "name": "D: after removal, link shows name form (new person), not silent return",
+      "ok": true,
+      "detail": "Вход в урок\n\nLT-A 50\nКак вас представить на уроке?\n\nУчитель увидит это имя в списке участников и в заданиях.\n\nДаю соглас",
+      "rel": "  73.5"
+    }
+  ]
+}

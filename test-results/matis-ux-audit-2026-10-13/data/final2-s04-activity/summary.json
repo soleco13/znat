@@ -1,0 +1,105 @@
+{
+  "T0": 1791995592772,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "  10.5"
+    },
+    {
+      "name": "activity started",
+      "ok": true,
+      "detail": {
+        "id": "db307652-f792-4e01-9af2-47d8af90e547",
+        "lessonId": "7df1a7ae-fa77-4ab4-acb7-db7943e9188d",
+        "materialId": "78fb5acf-eb79-428c-8830-878400353fe0",
+        "materialVersion": 1,
+        "deadline": null,
+        "timerSeconds": null,
+        "revealResults": true,
+        "createdAt": "2026-10-14T16:33:25.270Z",
+        "reviewedAt": null
+      },
+      "rel": "  12.7"
+    },
+    {
+      "name": "student sees activity",
+      "ok": true,
+      "detail": {
+        "ms": 402
+      },
+      "rel": "  13.1"
+    },
+    {
+      "name": "autosave shows 'ответы сохранены'",
+      "ok": true,
+      "detail": "ответы сохранены",
+      "rel": "  18.4"
+    },
+    {
+      "name": "answer stored on server",
+      "ok": true,
+      "detail": [
+        "69eb22aa-10fd-4bf3-9be6-efb392a0f772|{\"type\": \"single_choice\", \"selectedOptionId\": \"b953bb44-79c6-492a-b40b-7269ce3542b3\"}"
+      ],
+      "rel": "  18.6"
+    },
+    {
+      "name": "after F5 the chosen answer is still selected",
+      "ok": true,
+      "detail": "56",
+      "rel": "  21.5"
+    },
+    {
+      "name": "offline: student sees 'не сохранились, повторим' (not 'сохранены')",
+      "ok": true,
+      "detail": "сохраняем ответы…",
+      "rel": "  33.8"
+    },
+    {
+      "name": "after recovery autosave catches up",
+      "ok": true,
+      "detail": {
+        "ms": 6418,
+        "st": "ответы сохранены"
+      },
+      "rel": "  40.4"
+    },
+    {
+      "name": "submit button reachable",
+      "ok": true,
+      "rel": "  43.6"
+    },
+    {
+      "name": "student sees 'Работа сдана'",
+      "ok": true,
+      "detail": "LT-A 50\n2 участника\nСодержание\n9 из 9Готово!\n2 из 15\n100%\nДЕМОНСТРАЦИЯ\nГОТОВО!\nГотово!\n\nВы прошли все типы заданий. Нажмите «Сдать», чтобы учитель увидел результат.\n\nРабота сдана\n\n14 октября в 16:33\n\n",
+      "rel": "  45.1"
+    },
+    {
+      "name": "double submit -> single attempt",
+      "ok": true,
+      "detail": [
+        "1|15"
+      ],
+      "rel": "  45.3"
+    },
+    {
+      "name": "student switched to new activity (or told)",
+      "ok": true,
+      "detail": "LT-A 50\n2 участника\nСодержание\n1–2 из 9Все типы заданий на одном уроке\nответы сохраняются сами\n0 из 15\n100%\nДЕМОНСТРАЦИЯ\nВСЕ ТИПЫ ЗАДАНИЙ НА ОДНОМ УРО",
+      "rel": "  50.4"
+    },
+    {
+      "name": "first activity answers preserved",
+      "ok": true,
+      "detail": [
+        "15"
+      ],
+      "rel": "  50.5"
+    }
+  ],
+  "act": "db307652-f792-4e01-9af2-47d8af90e547",
+  "act2": "eac8355f-28dc-493c-9d97-63f577cd4e53"
+}

@@ -1,4 +1,4 @@
-import { ConnectionState, LocalAudioTrack, LocalVideoTrack, Track, type Room, type VideoCaptureOptions } from "livekit-client";
+import { ConnectionState, LocalAudioTrack, LocalVideoTrack, Track, type Room } from "livekit-client";
 
 import { CpuGovernor, SHARE_LEVEL, type Decision, type LoadSample, type PressureLevel } from "./cpu-governor.js";
 
@@ -16,11 +16,23 @@ import { CpuGovernor, SHARE_LEVEL, type Decision, type LoadSample, type Pressure
  * Ступени (`cpu-governor.ts`) — только пока устройство не справляется;
  * справилось — качество по ступеням возвращается к настройкам школы:
  *  0 — как задала школа;
- *  1 — камера 360p одним слоем (захват уменьшается на месте, `applyConstraints`);
- *  2 — камера 180p/10 одним слоем, камера один раз переоткрывается в
- *      640×360 — тогда и сама камера отдаёт меньше пикселей; демонстрация
- *      одним слоем 5 кадр/с; чужие камеры — нижним слоем (`PoorLinkMedia`);
+ *  1 — камера 360p одним слоем;
+ *  2 — камера 180p/10 одним слоем, демонстрация одним слоем 5 кадр/с; чужие
+ *      камеры — нижним слоем (`PoorLinkMedia`);
  *  3 — минимум: камера 144p/5. Камера не выключается никогда.
+ *
+ * Облегчение не видно на уроке (решение владельца 2026-10-14): меняется только
+ * кодировщик — число слоёв, `scaleResolutionDownBy`, `maxFramerate`,
+ * `maxBitrate`. Камера не переоткрывается и захват не меняется: раньше
+ * ступени делали `applyConstraints` и переоткрывали камеру в 640×360 — у
+ * зрителей мигал кадр, а на iPhone вертикальный кадр 360×640 после
+ * `applyConstraints` становился горизонтальным 320×180, и плитка ученика то
+ * растягивалась на всю ширину, то становилась узкой вертикальной (урок
+ * 2026-10-14, Саня, iPhone). Уменьшение в кодировщике сохраняет и
+ * ориентацию, и пропорцию, своё превью не меняется. Тяжёлый захват
+ * (720p) слабому устройству не достаётся вовсе: профиль устройства
+ * определяется до проверки устройств, и такая камера сразу открывается в
+ * 360p/15 (`RoomPage`).
  *
  * Слои: лишние слои simulcast выключаются, оставшийся растягивается на
  * размер захвата (без этого Chrome при захвате 360p сам выбрасывает верхний
@@ -34,25 +46,31 @@ interface CameraProfile {
   short: number;
   layers: number;
   fps: number;
-  /** Переоткрыть камеру в низком разрешении (а не только уменьшить кадр после захвата). */
-  reopen: boolean;
 }
 
 const CAMERA_PROFILES: (CameraProfile | null)[] = [
   null,
-  { short: 360, layers: 1, fps: 24, reopen: false },
-  { short: 180, layers: 1, fps: 10, reopen: true },
-  { short: 144, layers: 1, fps: 5, reopen: true },
+  { short: 360, layers: 1, fps: 24 },
+  { short: 180, layers: 1, fps: 10 },
+  { short: 144, layers: 1, fps: 5 },
 ];
 
-/** Камера, переоткрытая на тяжёлой ступени: 640×360 — хватает и ступени 1. */
-const REOPEN_RESOLUTION = { width: 640, height: 360 };
-/** Переоткрытие видно ученикам (кадр-два без изображения) — не чаще. */
-const REOPEN_MIN_INTERVAL_MS = 120_000;
-
-/** Демонстрация на тяжёлых ступенях: один слой, частота документа. */
+/**
+ * Демонстрация на тяжёлых ступенях — и всегда, пока ведущий ушёл с вкладки
+ * урока в показываемое окно: один слой, частота документа, как у Контур Толка
+ * (у него демонстрация по умолчанию 5 кадр/с одним слоем, `contentHint:
+ * detail`). Жалоба 2026-10-14: на слабом ПК с плохим каналом голос ведущего
+ * зависал и пропадал, сильнее — когда он сворачивал урок или открывал
+ * приложение поверх. Стенд (ведущий 0,5 ядра, выход 1 Мбит/с, поверх —
+ * тяжёлое окно): захват микрофона 70 % при демонстрации по настройкам школы
+ * (1080p/15, три слоя), 83 % одним слоем 5 кадр/с; у Толка 61 %.
+ * Исключение — демонстрация со звуком вкладки (почти всегда видео): там нужна
+ * плавность, облегчаем только по перегрузке.
+ */
 const SCREEN_REDUCED_FPS = 5;
-const SCREEN_SINGLE_LAYER_MAX_BITRATE = 1_500_000;
+/** Короткая сторона облегчённой демонстрации и её битрейт (Толк: 720p/5 — 1 Мбит/с). */
+const SCREEN_REDUCED_SHORT = 720;
+const SCREEN_SINGLE_LAYER_MAX_BITRATE = 1_000_000;
 
 const TICK_MS = 2_000;
 
@@ -189,101 +207,6 @@ interface EncodingSnapshot {
 /** Исходные параметры слоёв (до первой ступени) — по отправителю. */
 const snapshots = new WeakMap<RTCRtpSender, EncodingSnapshot[]>();
 
-function even(n: number): number {
-  return Math.max(2, Math.round(n / 2) * 2);
-}
-
-/** Захват до первой ступени — по трекам камеры (после смены камеры трек новый). */
-const captureOriginals = new WeakMap<MediaStreamTrack, { short: number; fps: number }>();
-
-async function captureTo(videoTrack: LocalVideoTrack, short: number, maxFps: number): Promise<void> {
-  const mst = videoTrack.mediaStreamTrack;
-  const { width, height, frameRate } = mst.getSettings();
-  if (!width || !height) return;
-  const curShort = Math.min(width, height);
-  if (!captureOriginals.has(mst)) captureOriginals.set(mst, { short: curShort, fps: frameRate ?? maxFps });
-  const original = captureOriginals.get(mst)!;
-  const target = Math.min(short, original.short);
-  const fps = Math.min(maxFps, original.fps);
-  if (Math.abs(curShort - target) <= 1 && Math.abs((frameRate ?? fps) - fps) <= 0.5) return;
-  const w = width >= height ? even((target * width) / height) : target;
-  const h = width >= height ? target : even((target * height) / width);
-  try {
-    await mst.applyConstraints({ width: { ideal: w, max: w }, height: { ideal: h, max: h }, frameRate: { ideal: fps, max: fps } });
-  } catch {
-    // Строгие пределы камера не приняла — пусть подберёт ближайшее.
-    await mst.applyConstraints({ width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: fps } }).catch(() => undefined);
-  }
-}
-
-/**
- * Переоткрытие камеры: `applyConstraints` уменьшает кадр уже после захвата
- * — камера продолжает отдавать 720p, и браузер разбирает каждый такой кадр.
- * На тяжёлых ступенях камера открывается заново в 640×360 (LiveKit
- * `restartTrack`: тот же путь, что при каждом включении камеры кнопкой;
- * отправитель и соединение те же, микрофон не трогается). При возврате к
- * настройкам школы — заново в исходном разрешении. Не удалось — пробуем
- * прежние параметры, а переоткрытие больше не используем.
- */
-interface ReopenState {
-  /** Как камера была открыта до первого переоткрытия. */
-  original: VideoCaptureOptions;
-  low: boolean;
-}
-const reopened = new WeakMap<LocalVideoTrack, ReopenState>();
-let lastReopenAt = 0;
-let reopenBroken = false;
-
-function captureOptions(videoTrack: LocalVideoTrack): VideoCaptureOptions {
-  const c = videoTrack.constraints;
-  const pick = (v: ConstrainULong | ConstrainDouble | undefined): number | undefined =>
-    typeof v === "number" ? v : (v?.ideal ?? v?.exact ?? v?.max);
-  const width = pick(c.width);
-  const height = pick(c.height);
-  const frameRate = pick(c.frameRate);
-  const deviceId = typeof c.deviceId === "string" ? c.deviceId : Array.isArray(c.deviceId) ? c.deviceId[0] : c.deviceId?.exact ?? c.deviceId?.ideal;
-  return {
-    ...(width && height ? { resolution: { width, height, ...(frameRate ? { frameRate } : {}) } } : {}),
-    ...(typeof deviceId === "string" ? { deviceId } : {}),
-  };
-}
-
-async function reopenCamera(videoTrack: LocalVideoTrack, low: boolean): Promise<"done" | "skipped" | "failed"> {
-  if (reopenBroken || videoTrack.isMuted) return "skipped";
-  const state = reopened.get(videoTrack);
-  if ((state?.low ?? false) === low) return "skipped";
-  if (Date.now() - lastReopenAt < REOPEN_MIN_INTERVAL_MS) return "skipped";
-  // Камера и так отдаёт не больше 360p — переоткрывать незачем. Смотрим на
-  // захват до ступеней: после ступени 1 кадр уже уменьшен на месте.
-  const { width, height } = videoTrack.mediaStreamTrack.getSettings();
-  const deviceShort = captureOriginals.get(videoTrack.mediaStreamTrack)?.short ?? (width && height ? Math.min(width, height) : undefined);
-  if (low && deviceShort !== undefined && deviceShort <= REOPEN_RESOLUTION.height) return "skipped";
-  const original = state?.original ?? captureOptions(videoTrack);
-  lastReopenAt = Date.now();
-  try {
-    await videoTrack.restartTrack(
-      low ? { deviceId: original.deviceId, resolution: { ...REOPEN_RESOLUTION, frameRate: original.resolution?.frameRate } } : original,
-    );
-    if (low) reopened.set(videoTrack, { original, low: true });
-    else reopened.delete(videoTrack);
-    captureOriginals.delete(videoTrack.mediaStreamTrack);
-    return "done";
-  } catch {
-    reopenBroken = true;
-    reopened.delete(videoTrack);
-    // Камера не открылась в новом режиме — прежние параметры, затем как есть.
-    await videoTrack.restartTrack(original).catch(() => videoTrack.restartTrack().catch(() => undefined));
-    return "failed";
-  }
-}
-
-/** Вернуть захват к тому, что просил LiveKit при включении камеры. */
-async function restoreCapture(videoTrack: LocalVideoTrack): Promise<void> {
-  const { deviceId: _d, facingMode: _f, ...rest } = videoTrack.constraints;
-  captureOriginals.delete(videoTrack.mediaStreamTrack);
-  await videoTrack.mediaStreamTrack.applyConstraints(rest).catch(() => undefined);
-}
-
 /**
  * Слои отправителя: `layers` нижних, каждый следующий вдвое больше,
  * верхний — в размер захвата; остальные выключены через ограничитель.
@@ -294,6 +217,8 @@ async function setLayers(
   layers: number,
   bitrate: (scale: number) => number,
   fps: number | undefined,
+  /** Во сколько раз уменьшить верхний слой относительно захвата (кодировщиком). */
+  baseScale = 1,
 ): Promise<void> {
   const sender = videoTrack.sender;
   if (!sender) return;
@@ -321,7 +246,7 @@ async function setLayers(
   encodings.forEach((e, i) => {
     assign(e, "active", active[i]!);
     if (i >= allowed) return;
-    const scale = 2 ** (allowed - 1 - i);
+    const scale = baseScale * 2 ** (allowed - 1 - i);
     const topFps = original[original.length - 1]?.maxFramerate;
     const layerFps = fps === undefined ? topFps : Math.min(fps, topFps ?? fps);
     const cap = original[original.length - 1]?.maxBitrate;
@@ -353,48 +278,56 @@ async function restoreLayers(videoTrack: LocalVideoTrack): Promise<void> {
 }
 
 /**
- * Камера — по профилю ступени. Вниз: сначала захват меньше, потом слои
- * (иначе миг 720p на верхнем слое). К школе: сначала слои, потом захват.
+ * Камера — по профилю ступени: только кодировщик (см. шапку). Верхний слой
+ * уменьшается до короткой стороны профиля от фактического захвата, какой бы
+ * ни была ориентация кадра.
  */
-async function applyCamera(
-  videoTrack: LocalVideoTrack,
-  profile: CameraProfile | null,
-  adjusted: Set<LocalVideoTrack>,
-  onReopen: (result: "done" | "failed", low: boolean) => void,
-): Promise<void> {
+async function applyCamera(videoTrack: LocalVideoTrack, profile: CameraProfile | null, adjusted: Set<LocalVideoTrack>): Promise<void> {
   if (!profile) {
     if (!adjusted.has(videoTrack)) return;
-    await restoreLayers(videoTrack);
-    if (reopened.get(videoTrack)?.low) {
-      const r = await reopenCamera(videoTrack, false);
-      // Рано переоткрывать ещё раз — следующий тик; кадр пока уменьшен на месте.
-      if (r === "skipped") return;
-      onReopen(r, false);
-    }
     adjusted.delete(videoTrack);
-    await restoreCapture(videoTrack);
+    await restoreLayers(videoTrack);
     return;
   }
   adjusted.add(videoTrack);
-  if (profile.reopen) {
-    const r = await reopenCamera(videoTrack, true);
-    if (r !== "skipped") onReopen(r, true);
-  }
-  await captureTo(videoTrack, profile.short, profile.fps);
   const { width, height } = videoTrack.mediaStreamTrack.getSettings();
-  const short = width && height ? Math.min(width, height) : profile.short;
-  await setLayers(videoTrack, profile.layers, (scale) => bitrateFor(short / scale, profile.fps), profile.fps);
+  const captured = width && height ? Math.min(width, height) : profile.short;
+  const baseScale = Math.max(1, captured / profile.short);
+  await setLayers(videoTrack, profile.layers, (scale) => bitrateFor(captured / scale, profile.fps), profile.fps, baseScale);
 }
 
+/** Частота захвата демонстрации до облегчения — по трекам экрана. */
+const screenCaptureFps = new WeakMap<MediaStreamTrack, number>();
+
+/**
+ * Облегчённая демонстрация: один слой не больше 720p и 5 кадр/с — и в
+ * кодировщике, и в захвате экрана (для экрана это незаметно: зритель и так
+ * получает 5 кадр/с). Раньше оставшийся слой растягивался до размера захвата —
+ * 1080p, хотя сервер до этого включал только 360p: «облегчение» утяжеляло
+ * кодирование (стенд 2026-10-14).
+ */
 async function applyScreen(videoTrack: LocalVideoTrack, reduced: boolean, adjusted: Set<LocalVideoTrack>): Promise<void> {
+  const mst = videoTrack.mediaStreamTrack;
   if (!reduced) {
     if (!adjusted.has(videoTrack)) return;
     adjusted.delete(videoTrack);
     await restoreLayers(videoTrack);
+    const fps = screenCaptureFps.get(mst);
+    if (fps) {
+      screenCaptureFps.delete(mst);
+      await mst.applyConstraints({ ...mst.getConstraints(), frameRate: fps }).catch(() => undefined);
+    }
     return;
   }
   adjusted.add(videoTrack);
-  await setLayers(videoTrack, 1, () => SCREEN_SINGLE_LAYER_MAX_BITRATE, SCREEN_REDUCED_FPS);
+  const { width, height, frameRate } = mst.getSettings();
+  if (!screenCaptureFps.has(mst) && frameRate && frameRate > SCREEN_REDUCED_FPS) {
+    screenCaptureFps.set(mst, frameRate);
+    await mst.applyConstraints({ ...mst.getConstraints(), frameRate: SCREEN_REDUCED_FPS }).catch(() => undefined);
+  }
+  const short = width && height ? Math.min(width, height) : SCREEN_REDUCED_SHORT;
+  const baseScale = Math.max(1, short / SCREEN_REDUCED_SHORT);
+  await setLayers(videoTrack, 1, () => SCREEN_SINGLE_LAYER_MAX_BITRATE, SCREEN_REDUCED_FPS, baseScale);
 }
 
 // ---------- признаки перегрузки ----------
@@ -491,19 +424,18 @@ export interface CpuLoadChange {
 
 /**
  * Запустить автомат для комнаты: тик раз в 2 с, ступени применяются к своей
- * камере и демонстрации. `onChange` — смена ступени, `onReopen` — камера
- * переоткрыта (оба для лога). Возвращает остановку: всё возвращается к
- * исходному.
+ * камере и демонстрации. `onChange` — смена ступени (для лога). Возвращает
+ * остановку: всё возвращается к исходному.
  */
 export function startCpuLoadAdapter(
   room: Room,
   handlers: {
     onChange?: (change: CpuLoadChange) => void;
-    onReopen?: (result: "done" | "failed", low: boolean) => void;
   } = {},
   initialLevel = 0,
+  strongDevice = false,
 ): () => void {
-  const governor = new CpuGovernor(initialLevel);
+  const governor = new CpuGovernor(initialLevel, strongDevice);
   const adjusted = new Set<LocalVideoTrack>();
   let pressure: PressureLevel | null = null;
   const stopPressure = watchPressure((s) => (pressure = s));
@@ -550,9 +482,12 @@ export function startCpuLoadAdapter(
       // Каждый тик: после переподключения, смены камеры или нового включения
       // трек приходит с исходными параметрами — ступень применяется заново.
       if (camera?.sender && !camera.isMuted) {
-        await applyCamera(camera, CAMERA_PROFILES[governor.level] ?? null, adjusted, (r, low) => handlers.onReopen?.(r, low));
+        await applyCamera(camera, CAMERA_PROFILES[governor.level] ?? null, adjusted);
       }
-      if (screen?.sender) await applyScreen(screen, governor.level >= SHARE_LEVEL, adjusted);
+      if (screen?.sender) {
+        const away = document.visibilityState === "hidden" && !room.localParticipant.getTrackPublication(Track.Source.ScreenShareAudio);
+        await applyScreen(screen, governor.level >= SHARE_LEVEL || away, adjusted);
+      }
       for (const t of adjusted) {
         if (t !== camera && t !== screen) adjusted.delete(t);
       }
@@ -584,21 +519,17 @@ export function startCpuLoadAdapter(
   };
 
   const interval = setInterval(() => void tick(), TICK_MS);
+  // Ушёл с вкладки / вернулся — сразу, не ждём таймер (в скрытой вкладке
+  // браузер таймеры замедляет).
+  const onVisibility = () => void tick();
+  document.addEventListener("visibilitychange", onVisibility);
   return () => {
     disposed = true;
     clearInterval(interval);
+    document.removeEventListener("visibilitychange", onVisibility);
     stopPressure();
     setCurrentLevel(0);
-    for (const t of adjusted) {
-      void restoreLayers(t).then(async () => {
-        if (t.source !== Track.Source.Camera) return;
-        if (reopened.get(t)?.low) {
-          lastReopenAt = 0;
-          await reopenCamera(t, false);
-        }
-        await restoreCapture(t);
-      });
-    }
+    for (const t of adjusted) void restoreLayers(t);
     adjusted.clear();
   };
 }

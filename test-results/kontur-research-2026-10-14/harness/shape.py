@@ -55,7 +55,11 @@ DROP = dict(BASE, down=120)
 # (начало, с; профиль) — скачки RTT ~0,5 с и провал входа до 120 кбит/с, как у Елены
 SCHEDULE = [(0, BASE), (60, SPIKE), (66, BASE), (120, DROP), (150, BASE), (180, SPIKE), (186, BASE), (240, None)]
 
-if mode == "bad3g":
+if mode == "share":
+    # Ведущий демонстрации на слабом канале: вход 2 Мбит/с, выход 1 Мбит/с — до 300 с
+    tree(); apply(dict(down=2000, up=1000, lat=60, jit=15, loss=0.5)); print("share", flush=True)
+    time.sleep(300); clear(); print("done")
+elif mode == "bad3g":
     # Постоянно плохая сеть (как BAD_3G стенда UX-аудита) — 240 с
     tree(); apply(dict(down=384, up=128, lat=300, jit=100, loss=5)); print("bad3g", flush=True)
     time.sleep(240); clear(); print("done")

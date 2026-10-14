@@ -1,0 +1,27 @@
+{
+  "T0": 1791994806843,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "teacher joins",
+      "ok": true,
+      "rel": "   6.8"
+    },
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "  11.0"
+    },
+    {
+      "name": "share on",
+      "ok": true,
+      "rel": "  52.1"
+    },
+    {
+      "name": "room tab hidden",
+      "ok": true,
+      "detail": "hidden",
+      "rel": "  94.2"
+    }
+  ]
+}

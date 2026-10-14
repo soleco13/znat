@@ -16,7 +16,7 @@ export function useCpuHeavy(): boolean {
  * Автомат нагрузки своего устройства на уроке (`cpu-governor.ts` решает,
  * `cpu-load-engine.ts` применяет к своей камере и демонстрации, приём чужих
  * камер — `PoorLinkMedia`). На уроке ничего не показывается: переключения
- * молча, каждая смена ступени и переоткрытие камеры — в лог
+ * молча, каждая смена ступени — в лог
  * (`media_cpu_adapt`).
  */
 export function CpuLoadAdapter() {
@@ -44,10 +44,10 @@ export function CpuLoadAdapter() {
           cores: navigator.hardwareConcurrency ?? null,
           hidden: document.visibilityState === "hidden",
         }),
-      onReopen: (result, low) => track("media_cpu_adapt", { ...base(), reason: low ? "camera_reopen_low" : "camera_reopen_target", result }),
     },
     // Слабое устройство — сразу один слой камеры (ступень 1), не ждём перегрузки.
-    deviceProfileNow()?.weak ? 1 : 0);
+    deviceProfileNow()?.weak ? 1 : 0,
+    deviceProfileNow()?.weak === false);
   }, [room]);
 
   return null;

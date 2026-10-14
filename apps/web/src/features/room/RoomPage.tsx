@@ -1771,7 +1771,7 @@ export function RoomPage() {
       <SelfCameraButton
         variant={variant}
         onOpenSettings={variant === "pill" ? openSettings : undefined}
-        maxResolution={VideoPresets.h360.resolution}
+        maxResolution={deviceProfile?.weak ? WEAK_CAMERA_RESOLUTION : VideoPresets.h360.resolution}
         encoding={VideoPresets.h360.encoding}
         disabled={!self?.permissions.canPublishVideo}
         disabledReason="Камеру включает учитель — поднимите руку"
@@ -2419,8 +2419,12 @@ export function RoomPage() {
         video={
           joinCamEnabled && (isTeacher || self?.permissions.canPublishVideo)
             ? {
+                // Слабое устройство (определено ещё до проверки устройств) —
+                // сразу лёгкий захват: на уроке камеру не переоткрываем.
                 resolution: !isTeacher
-                  ? VideoPresets.h360.resolution
+                  ? deviceProfile?.weak
+                    ? WEAK_CAMERA_RESOLUTION
+                    : VideoPresets.h360.resolution
                   : deviceProfile?.weak
                     ? WEAK_CAMERA_RESOLUTION
                     : clientMediaSettings
@@ -2463,7 +2467,11 @@ export function RoomPage() {
                 : participant.setCameraEnabled(
                     true,
                     {
-                      resolution: isTeacher ? VideoPresets.h720.resolution : VideoPresets.h360.resolution,
+                      resolution: deviceProfileNow()?.weak
+                        ? WEAK_CAMERA_RESOLUTION
+                        : isTeacher
+                          ? VideoPresets.h720.resolution
+                          : VideoPresets.h360.resolution,
                       deviceId: camDeviceId ?? undefined,
                     },
                     { videoEncoding: isTeacher ? undefined : VideoPresets.h360.encoding },

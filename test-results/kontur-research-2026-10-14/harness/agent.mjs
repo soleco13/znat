@@ -46,6 +46,8 @@ http.createServer(async (req, res) => {
     else if (u.pathname === "/type") { await page.send("Input.insertText", { text: body }); out = "ok"; }
     else if (u.pathname === "/key") { for (const type of ["keyDown", "keyUp"]) await page.send("Input.dispatchKeyEvent", { type, key: body, code: body, windowsVirtualKeyCode: body === "Enter" ? 13 : 0 }); out = "ok"; }
     else if (u.pathname === "/shot") { const r = await page.send("Page.captureScreenshot", { format: "png" }); fs.mkdirSync(`${OUT}/shots`, { recursive: true }); fs.writeFileSync(`${OUT}/shots/${body || "shot"}.png`, Buffer.from(r.data, "base64")); out = `${OUT}/shots/${body || "shot"}.png`; }
+    else if (u.pathname === "/heavy") { const { targetId } = await browser.call("Target.createTarget", { url: body }); globalThis.__heavy = targetId; await browser.call("Target.activateTarget", { targetId }); out = targetId; }
+    else if (u.pathname === "/front") { await browser.call("Target.activateTarget", { targetId: page.targetId }); if (globalThis.__heavy) await browser.call("Target.closeTarget", { targetId: globalThis.__heavy }).catch(() => {}); out = "ok"; }
     else if (u.pathname === "/cdp") { const { m, p } = JSON.parse(body); out = await page.send(m, p); }
     res.end(JSON.stringify(out ?? null));
   } catch (e) { res.statusCode = 500; res.end(String(e.stack || e)); }
