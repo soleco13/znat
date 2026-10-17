@@ -244,6 +244,9 @@ function useMediaPathRefresh(): void {
  * а по каждой стороне — ровно слой 640×360.
  */
 const PHONE_CAMERA_MAX = { width: 360, height: 360 };
+/** Частота чужих камер, когда своё устройство перегружено (`cpu-load` ступень 2+). */
+const CPU_HEAVY_CAMERA_FPS = 10;
+const FULL_CAMERA_FPS = 30;
 
 function useIsPhone(): boolean {
   const narrow = useIsNarrowViewport();
@@ -355,6 +358,10 @@ export function PoorLinkMediaAdapter() {
       if (!video || !pub.isSubscribed || !pub.simulcasted) return;
       const camera = pub.source === Track.Source.Camera;
       const quality = camera && cpuHeavy ? VideoQuality.LOW : receiveLevel;
+      // Своё устройство не справляется — чужие камеры ещё и реже: сервер
+      // отдаёт нижние временные слои VP8 (у Chrome их три в каждом слое
+      // simulcast), декодировать вдвое меньше кадров.
+      if (camera) pub.setVideoFPS(cpuHeavy ? CPU_HEAVY_CAMERA_FPS : FULL_CAMERA_FPS);
       if (phone && camera && quality === VideoQuality.HIGH) pub.setVideoDimensions(PHONE_CAMERA_MAX);
       else pub.setVideoQuality(quality);
     };

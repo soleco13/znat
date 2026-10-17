@@ -236,6 +236,11 @@ function buildRoomOptions(
  * (sonner, `position: "top-center"`), исчезают сами. Раньше это были полосы
  * над сеткой камер: занимали место в сетке и висели, пока их не закроют.
  */
+/** Ученик входит с выключенным микрофоном, если других участников больше. */
+const BIG_CLASS_MIC_OFF = 10;
+/** …и с выключенной камерой, если больше этого. */
+const BIG_CLASS_CAM_OFF = 50;
+
 /** Голос учителя без «высокого качества микрофона» (см. `buildRoomOptions`). */
 const TEACHER_VOICE_PRESET = { maxBitrate: 32_000 };
 
@@ -468,6 +473,8 @@ export function RoomPage() {
   const [screenSharePreempted, setScreenSharePreempted] = useState(0);
   const selfIdRef = useRef(selfId);
   selfIdRef.current = selfId;
+  const identityKindRef = useRef(identity?.kind);
+  identityKindRef.current = identity?.kind;
   // Сигналы входа/выхода — только учителю: ученику 30 сигналов о входе
   // одноклассников ни к чему (частоту ограничивает `playParticipantSound`).
   const soundsRef = useRef(false);
@@ -732,6 +739,27 @@ export function RoomPage() {
       body: JSON.stringify({ invisible: invisibleRef.current, tabId: currentTabId() }),
     })
       .then((data) => {
+        // Большой класс (как у Контур Толка): ученик входит с выключенным
+        // микрофоном при >10 участниках на уроке и без камеры при >50 — не
+        // шумит при входе и не грузит канал и процессор остальных. Только
+        // при первом входе ученика; после F5 — как было (rejoin-state).
+        if (!joinedRef.current && !initialJoin && identityKindRef.current === "guest") {
+          const others = data.participants.filter((p) => p.connected && p.userId !== selfIdRef.current && !p.hidden).length;
+          if (others > BIG_CLASS_MIC_OFF) {
+            setJoinMicEnabled(false);
+            writeRejoinState(lessonId, { mic: false });
+            if (others > BIG_CLASS_CAM_OFF) {
+              setJoinCamEnabled(false);
+              writeRejoinState(lessonId, { cam: false });
+            }
+            notify.info(
+              others > BIG_CLASS_CAM_OFF
+                ? "В уроке много участников — микрофон и камера выключены. Включите их кнопками внизу, когда понадобится."
+                : "В уроке много участников — микрофон выключен. Включите его кнопкой внизу, когда понадобится.",
+              { id: "big-class-muted", duration: 8_000 },
+            );
+          }
+        }
         joinedRef.current = true;
         setParticipants(data.participants);
         setLessonMode(data.lessonMode);
