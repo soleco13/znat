@@ -45,6 +45,12 @@ export type GuestTokenPayload = z.infer<typeof guestTokenPayloadSchema>;
 export const guestLessonInfoSchema = z.object({
   lessonTitle: z.string(),
   settings: lessonSettingsSchema,
+  /**
+   * Имя, под которым ученик входил раньше с этого браузера (в любой урок) —
+   * подставляется в поле, чтобы не вводить заново (2026-10-15). Из httpOnly-
+   * куки `guest_name`; `null` — не входил или вводил пустое.
+   */
+  rememberedName: z.string().nullable().optional(),
 });
 export type GuestLessonInfo = z.infer<typeof guestLessonInfoSchema>;
 

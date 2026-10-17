@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { guestEnterRequestSchema, type GuestEnterResponse } from "@school/shared";
 import { env } from "../../plugins/env.js";
-import { GUEST_COOKIE_NAME } from "./service.js";
+import { GUEST_COOKIE_NAME, GUEST_NAME_COOKIE, GUEST_NAME_COOKIE_MAX_AGE_S, readRememberedName } from "./service.js";
 import * as guestsService from "./service.js";
 import * as roomsService from "../rooms/service.js";
 import { AppError } from "../../plugins/errors.js";
@@ -24,7 +24,9 @@ export default async function guestsRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { token: string } }>("/j/:token", rateLimited, async (request, reply) => {
     const info = await guestsService.getPublicLessonInfo(request.params.token);
-    return reply.send(info);
+    // Ответ зависит от куки браузера — не кешировать.
+    reply.header("cache-control", "no-store");
+    return reply.send({ ...info, rememberedName: readRememberedName(request.cookies?.[GUEST_NAME_COOKIE]) });
   });
 
   /** Ссылка ученика, открытая сотрудником с действующим входом: его ли это урок. */
@@ -95,6 +97,17 @@ export default async function guestsRoutes(app: FastifyInstance) {
         path: "/",
         maxAge: session.ttlSeconds,
       });
+      // Имя, которое ученик ввёл сам, — запомнить для следующих входов
+      // (любой урок). Автоматическое «Ученик N» не запоминаем: номер — на один урок.
+      if (body.name) {
+        reply.setCookie(GUEST_NAME_COOKIE, encodeURIComponent(body.name), {
+          httpOnly: true,
+          secure: env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+          maxAge: GUEST_NAME_COOKIE_MAX_AGE_S,
+        });
+      }
 
       const response: GuestEnterResponse = {
         lessonId: session.payload.lessonId,

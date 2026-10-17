@@ -1,6 +1,6 @@
 import { ConnectionState, LocalAudioTrack, LocalVideoTrack, Track, type Room } from "livekit-client";
 
-import { CpuGovernor, SHARE_LEVEL, type Decision, type LoadSample, type PressureLevel } from "./cpu-governor.js";
+import { CpuGovernor, SHARE_LEVEL, cameraFpsStarved, type Decision, type LoadSample, type PressureLevel } from "./cpu-governor.js";
 
 /**
  * Слабый процессор учителя (урок 2026-10-09, Pentium N3700): камера и
@@ -332,19 +332,16 @@ async function applyScreen(videoTrack: LocalVideoTrack, reduced: boolean, adjust
 
 // ---------- признаки перегрузки ----------
 
-/** Камера кодирует меньше этой доли кадров захвата — кодировщик не успевает. */
-const CAMERA_FPS_STARVED = 0.5;
-
-async function videoCpuLimited(videoTrack: LocalVideoTrack | undefined): Promise<boolean> {
+async function videoCpuLimited(videoTrack: LocalVideoTrack | undefined, encoderFpsCap?: number): Promise<boolean> {
   if (!videoTrack || videoTrack.isMuted || !videoTrack.sender) return false;
   try {
     const stats = await videoTrack.getSenderStats();
     if (stats.some((s) => s.qualityLimitationReason === "cpu")) return true;
     // Узкий канал браузер тоже отрабатывает частотой кадров — это сеть, не процессор.
     if (videoTrack.source !== Track.Source.Camera || stats.some((s) => s.qualityLimitationReason === "bandwidth")) return false;
-    const expected = videoTrack.mediaStreamTrack.getSettings().frameRate ?? 0;
+    const captureFps = videoTrack.mediaStreamTrack.getSettings().frameRate ?? 0;
     const fps = Math.max(0, ...stats.map((s) => s.framesPerSecond ?? 0));
-    return expected > 0 && fps > 0 && fps < expected * CAMERA_FPS_STARVED;
+    return cameraFpsStarved(captureFps, encoderFpsCap, fps);
   } catch {
     return false;
   }
@@ -465,7 +462,7 @@ export function startCpuLoadAdapter(
       }
       prevMic = mic && cur ? { track: mic, ...cur } : null;
 
-      const [cameraCpu, screenCpu] = await Promise.all([videoCpuLimited(camera), videoCpuLimited(screen)]);
+      const [cameraCpu, screenCpu] = await Promise.all([videoCpuLimited(camera, CAMERA_PROFILES[governor.level]?.fps), videoCpuLimited(screen)]);
       const sample: LoadSample = {
         now: Date.now(),
         audioCapture,

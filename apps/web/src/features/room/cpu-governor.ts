@@ -68,6 +68,22 @@ export interface Decision {
 }
 
 export const MAX_LEVEL = 3;
+
+/** Камера кодирует меньше этой доли кадров, которые ей положены, — кодировщик не успевает. */
+export const CAMERA_FPS_STARVED = 0.5;
+
+/**
+ * Кодировщик камеры «голодает» по частоте кадров. Положенная частота — это
+ * меньшее из частоты захвата и потолка, который сам автомат поставил
+ * кодировщику на текущей ступени (`maxFramerate`). Урок 2026-10-16 (Елена):
+ * сравнивали с одним захватом (20 кадр/с), а потолок ступени 2–3 — 10 и 5 кадр/с,
+ * поэтому собственное ограничение читалось как перегрузка процессора —
+ * камера за 22 с ушла с ступени 2 на 3 (144p/5) и не вернулась до конца урока.
+ */
+export function cameraFpsStarved(captureFps: number, encoderCap: number | undefined, sentFps: number): boolean {
+  const expected = Math.min(captureFps, encoderCap ?? Infinity);
+  return expected > 0 && sentFps > 0 && sentFps < expected * CAMERA_FPS_STARVED;
+}
 /** Ступень, с которой демонстрация идёт одним слоем, а камера — 180p. */
 export const SHARE_LEVEL = 2;
 

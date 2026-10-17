@@ -31,6 +31,25 @@ import * as schoolSettingsService from "../school-settings/service.js";
  */
 
 export const GUEST_COOKIE_NAME = "guest_session";
+/**
+ * Имя ученика для следующих входов (2026-10-15: «чтобы не переименовывались»):
+ * отдельная долгая httpOnly-кука, общая для всех уроков на этом браузере.
+ * Не пропуск в урок — только подсказка для поля имени.
+ */
+export const GUEST_NAME_COOKIE = "guest_name";
+export const GUEST_NAME_COOKIE_MAX_AGE_S = 365 * 24 * 3600;
+const GUEST_NAME_MAX = 80;
+
+/** Значение куки имени → имя (или null, если пусто/битое). */
+export function readRememberedName(raw: string | undefined): string | null {
+  if (!raw) return null;
+  try {
+    const name = decodeURIComponent(raw).trim();
+    return name && name.length <= GUEST_NAME_MAX ? name : null;
+  } catch {
+    return null;
+  }
+}
 
 const guestSecret = new TextEncoder().encode(env.JWT_GUEST_SECRET);
 

@@ -136,6 +136,13 @@ export function GuestJoinPage() {
   }, []);
 
   const [name, setName] = useState("");
+  // Имя с прошлого входа (любой урок, этот браузер) — в поле, его можно поменять.
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current || !info.data) return;
+    prefilled.current = true;
+    if (info.data.rememberedName) setName((cur) => cur || info.data!.rememberedName!);
+  }, [info.data]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

@@ -248,3 +248,15 @@ describe("getGuestSessionInfo (GET /guest/session) — восстановлен�
     });
   });
 });
+
+describe("readRememberedName (кука имени ученика, 2026-10-15)", () => {
+  it("читает имя из куки, пустое и битое — null", async () => {
+    const { readRememberedName } = await import("./service.js");
+    expect(readRememberedName(encodeURIComponent("Юля Петрова"))).toBe("Юля Петрова");
+    expect(readRememberedName(encodeURIComponent("  Саня  "))).toBe("Саня");
+    expect(readRememberedName(undefined)).toBeNull();
+    expect(readRememberedName("")).toBeNull();
+    expect(readRememberedName("%E0%A4%A")).toBeNull();
+    expect(readRememberedName(encodeURIComponent("я".repeat(81)))).toBeNull();
+  });
+});
