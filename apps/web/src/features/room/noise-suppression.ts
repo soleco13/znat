@@ -15,10 +15,14 @@ import { track } from "../../shared/telemetry.js";
 import { cpuLoadLevel, subscribeCpuLoadLevel } from "./cpu-load-engine.js";
 import { deviceProfileNow, type DeviceProfile } from "./device-profile.js";
 import workletUrl from "./rnnoise-worklet.ts?worker&url";
+import RnnoiseWorker from "./rnnoise-worker.ts?worker";
 
 /**
  * Шумоподавление микрофона по силе устройства (запрос 2026-10-17):
- *  - сильное устройство — RNNoise (WASM в AudioWorklet, `rnnoise-worklet.ts`),
+ *  - сильное устройство — RNNoise (WASM в отдельном Worker `rnnoise-worker.ts`,
+ *    AudioWorklet `rnnoise-worklet.ts` лишь обменивается кадрами и при опоздании
+ *    Worker пропускает необработанный звук; не успевает в половине кадров за
+ *    минуту — переходим на встроенное),
  *    встроенный фильтр браузера при этом выключен, чтобы звук не чистился дважды;
  *  - слабое — встроенное шумоподавление браузера (часть его же эхоподавления,
  *    почти бесплатно);
@@ -139,6 +143,7 @@ class RnnoiseProcessor implements TrackProcessor<Track.Kind.Audio, AudioProcesso
   private moduleLoaded = false;
   private source: MediaStreamAudioSourceNode | null = null;
   private node: AudioWorkletNode | null = null;
+  private worker: Worker | null = null;
 
   async init(opts: AudioProcessorOptions) {
     await this.build(opts.track);
@@ -180,9 +185,17 @@ class RnnoiseProcessor implements TrackProcessor<Track.Kind.Audio, AudioProcesso
         } else if (e.data?.type === "error") {
           clearTimeout(timer);
           reject(new Error(e.data.message ?? "rnnoise_error"));
+        } else if (e.data?.type === "fallback") {
+          // Worker не успевал в половине кадров за минуту — до конца урока встроенное.
+          blockStrong("rnnoise_late");
         }
       };
     });
+    const worker = new RnnoiseWorker();
+    const channel = new MessageChannel();
+    worker.postMessage({ type: "port", port: channel.port2 }, [channel.port2]);
+    node.port.postMessage({ type: "port", port: channel.port1 }, [channel.port1]);
+    this.worker = worker;
     const source = ctx.createMediaStreamSource(new MediaStream([input]));
     const dest = ctx.createMediaStreamDestination();
     dest.channelCount = 1;
@@ -199,6 +212,8 @@ class RnnoiseProcessor implements TrackProcessor<Track.Kind.Audio, AudioProcesso
 
   private teardownGraph() {
     this.node?.port.postMessage({ type: "stop" });
+    this.worker?.terminate();
+    this.worker = null;
     this.source?.disconnect();
     this.node?.disconnect();
     this.source = null;

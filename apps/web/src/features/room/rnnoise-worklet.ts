@@ -1,28 +1,15 @@
 /**
- * AudioWorklet шумоподавления RNNoise (запрос 2026-10-17, «сильное»
- * шумоподавление). Собирается Vite отдельным файлом (`?worker&url`), WASM
- * встроен в сам скрипт — ничего не качается с чужих адресов.
+ * AudioWorklet шумоподавления RNNoise. С 2026-10-17 расчёт RNNoise — в
+ * отдельном Worker (`rnnoise-worker.ts`), как у Контур Толка: раньше WASM
+ * считался прямо в аудиопотоке, и на перегруженном процессоре звук рвался.
  *
- * RNNoise работает кадрами по 480 отсчётов (10 мс при 48 кГц), а worklet
- * получает звук по 128: входные отсчёты копятся в кадр, обработанные кадры
- * ложатся в кольцевой буфер выхода. Выход заранее заполнен одним кадром
- * тишины — так он никогда не пустеет (задержка +10 мс). Пока WASM грузится,
- * звук проходит как есть.
+ * Здесь: вход копится кадрами по 480 отсчётов (10 мс при 48 кГц), кадр уходит
+ * в Worker, выход отстаёт на `DELAY_FRAMES` кадров. К моменту воспроизведения
+ * кадра берём обработанный, если Worker успел, иначе — необработанный
+ * (переход между ними — косинусный, `FADE` отсчётов, без щелчков). Если за
+ * окно `WINDOW_FRAMES` обработано меньше `MIN_DENOISED` кадров — сообщаем
+ * `fallback`: контроллер переключит на встроенное шумоподавление.
  */
-
-import { Rnnoise, type DenoiseState } from "@shiguredo/rnnoise-wasm";
-
-// Сборка emscripten при `Rnnoise.load()` проверяет окружение (`window` или
-// `WorkerGlobalScope`), в AudioWorkletGlobalScope нет ни того, ни другого —
-// без заглушки бросает «not compiled for this environment». Больше ничего из
-// окружения ей не нужно (WASM встроен base64, декодер свой). `import.meta.url`
-// в сборке воркера Vite превращает в `self.location.href` — в worklet нет ни
-// `self`, ни `location`; адрес там нужен лишь для поиска .wasm рядом (у нас он
-// встроен), так что подойдёт пустой.
-const scope = globalThis as unknown as Record<string, unknown>;
-scope.WorkerGlobalScope ??= function WorkerGlobalScope() {};
-scope.self ??= globalThis;
-scope.location ??= { href: "" };
 
 declare abstract class AudioWorkletProcessor {
   readonly port: MessagePort;
@@ -32,40 +19,61 @@ declare function registerProcessor(name: string, ctor: new () => AudioWorkletPro
 
 /** RNNoise ждёт 16-битный диапазон, Web Audio даёт [-1, 1]. */
 const PCM_SCALE = 32768;
-const RING = 4096;
-
-let rnnoise: Promise<Rnnoise> | null = null;
+const FRAME = 480;
+/** Задержка выхода: столько кадров ждём ответа Worker (≈ 30 мс с накоплением). */
+const DELAY_FRAMES = 2;
+const SLOTS = 16;
+const FADE = 128;
+/** Окно оценки «успевает ли Worker»: 60 с кадров по 10 мс. */
+const WINDOW_FRAMES = 6000;
+const MIN_DENOISED = 0.5;
 
 class MatisRnnoiseProcessor extends AudioWorkletProcessor {
-  private denoise: DenoiseState | null = null;
-  private frameSize = 480;
-  private frame = new Float32Array(480);
-  private filled = 0;
-  private ring = new Float32Array(RING);
-  private readAt = 0;
-  private writeAt = 0;
+  private worker: MessagePort | null = null;
+  private ready = false;
   private stopped = false;
+  private fellBack = false;
+  private input = new Float32Array(FRAME);
+  private filled = 0;
+  private seq = 0;
+  /** Кольцо кадров: необработанный (в шкале [-1,1]) и обработанный, если пришёл. */
+  private raw: Float32Array[] = Array.from({ length: SLOTS }, () => new Float32Array(FRAME));
+  private den: (Float32Array | null)[] = Array.from({ length: SLOTS }, () => null);
+  private slotSeq: number[] = Array.from({ length: SLOTS }, () => -1);
+  /** Воспроизводимый кадр и позиция в нём. */
+  private playSeq = -DELAY_FRAMES;
+  private playPos = 0;
+  /** 1 — обработанный, 0 — сырой; плавно движется к цели. */
+  private mix = 0;
+  private denoisedFrames = 0;
+  private totalFrames = 0;
 
   constructor() {
     super();
-    rnnoise ??= Rnnoise.load();
-    rnnoise.then(
-      (lib) => {
-        if (this.stopped) return;
-        this.denoise = lib.createDenoiseState();
-        this.frameSize = lib.frameSize;
-        this.frame = new Float32Array(this.frameSize);
-        // Один кадр тишины вперёд — см. комментарий в начале файла.
-        this.writeAt = this.frameSize;
-        this.port.postMessage({ type: "ready" });
-      },
-      (err: unknown) => this.port.postMessage({ type: "error", message: String(err).slice(0, 200) }),
-    );
-    this.port.onmessage = (e: MessageEvent<{ type?: string }>) => {
-      if (e.data?.type !== "stop") return;
-      this.stopped = true;
-      this.denoise?.destroy();
-      this.denoise = null;
+    this.port.onmessage = (e: MessageEvent<{ type?: string; port?: MessagePort }>) => {
+      if (e.data?.type === "port" && e.data.port) {
+        this.worker = e.data.port;
+        this.worker.onmessage = (m: MessageEvent<{ type?: string; seq?: number; frame?: Float32Array; message?: string }>) => {
+          const d = m.data;
+          if (d.type === "ready") {
+            this.ready = true;
+            this.port.postMessage({ type: "ready" });
+          } else if (d.type === "error") {
+            this.port.postMessage({ type: "error", message: d.message });
+          } else if (typeof d.seq === "number" && d.frame) {
+            const slot = d.seq % SLOTS;
+            if (this.slotSeq[slot] === d.seq && d.seq >= this.playSeq) {
+              const f = d.frame;
+              for (let i = 0; i < FRAME; i++) f[i] = f[i]! / PCM_SCALE;
+              this.den[slot] = f;
+            }
+          }
+        };
+      } else if (e.data?.type === "stop") {
+        this.stopped = true;
+        this.worker?.postMessage({ type: "stop" });
+        this.worker = null;
+      }
     };
   }
 
@@ -78,27 +86,60 @@ class MatisRnnoiseProcessor extends AudioWorkletProcessor {
       output.fill(0);
       return true;
     }
-    const denoise = this.denoise;
-    if (!denoise) {
-      output.set(input);
-      return true;
-    }
+    // Вход → кадры → Worker.
     for (let i = 0; i < input.length; i++) {
-      this.frame[this.filled++] = input[i]! * PCM_SCALE;
-      if (this.filled === this.frameSize) {
-        denoise.processFrame(this.frame);
-        for (let j = 0; j < this.frameSize; j++) {
-          this.ring[this.writeAt] = this.frame[j]! / PCM_SCALE;
-          this.writeAt = (this.writeAt + 1) % RING;
+      this.input[this.filled++] = input[i]!;
+      if (this.filled === FRAME) {
+        const seq = this.seq++;
+        const slot = seq % SLOTS;
+        this.raw[slot]!.set(this.input);
+        this.den[slot] = null;
+        this.slotSeq[slot] = seq;
+        if (this.ready && this.worker) {
+          const copy = new Float32Array(FRAME);
+          for (let j = 0; j < FRAME; j++) copy[j] = this.input[j]! * PCM_SCALE;
+          this.worker.postMessage({ seq, frame: copy }, [copy.buffer]);
         }
         this.filled = 0;
       }
     }
+    // Выход: кадр playSeq, отстающий на DELAY_FRAMES.
     for (let i = 0; i < output.length; i++) {
-      output[i] = this.ring[this.readAt]!;
-      this.readAt = (this.readAt + 1) % RING;
+      if (this.playSeq < 0) {
+        output[i] = 0;
+      } else {
+        const slot = this.playSeq % SLOTS;
+        const raw = this.raw[slot]!;
+        const den = this.den[slot];
+        const target = den ? 1 : 0;
+        if (this.mix !== target) this.mix += target > this.mix ? 1 / FADE : -1 / FADE;
+        if (this.mix < 0) this.mix = 0;
+        if (this.mix > 1) this.mix = 1;
+        const w = 0.5 - 0.5 * Math.cos(Math.PI * this.mix);
+        const r = raw[this.playPos]!;
+        output[i] = den ? den[this.playPos]! * w + r * (1 - w) : r;
+      }
+      this.playPos++;
+      if (this.playPos === FRAME) {
+        this.playPos = 0;
+        if (this.playSeq >= 0) this.countFrame(this.den[this.playSeq % SLOTS] !== null);
+        this.playSeq++;
+      }
     }
     return true;
+  }
+
+  private countFrame(denoised: boolean) {
+    if (!this.ready || this.fellBack) return;
+    this.totalFrames++;
+    if (denoised) this.denoisedFrames++;
+    if (this.totalFrames < WINDOW_FRAMES) return;
+    if (this.denoisedFrames / this.totalFrames < MIN_DENOISED) {
+      this.fellBack = true;
+      this.port.postMessage({ type: "fallback", denoised: this.denoisedFrames, total: this.totalFrames });
+    }
+    this.totalFrames = 0;
+    this.denoisedFrames = 0;
   }
 }
 
