@@ -752,12 +752,11 @@ export function RoomPage() {
               setJoinCamEnabled(false);
               writeRejoinState(lessonId, { cam: false });
             }
-            notify.info(
-              others > BIG_CLASS_CAM_OFF
-                ? "В уроке много участников — микрофон и камера выключены. Включите их кнопками внизу, когда понадобится."
-                : "В уроке много участников — микрофон выключен. Включите его кнопкой внизу, когда понадобится.",
-              { id: "big-class-muted", duration: 8_000 },
-            );
+            notify.info(others > BIG_CLASS_CAM_OFF ? "Микрофон и камера выключены" : "Микрофон выключен", {
+              id: "big-class-muted",
+              text: "В уроке много участников. Включите кнопкой внизу, когда понадобится.",
+              duration: 8_000,
+            });
           }
         }
         joinedRef.current = true;
