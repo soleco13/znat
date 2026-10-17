@@ -2,7 +2,8 @@
 # Стенд UX-аудита 2026-10-13: три headless Chrome (teacher / s1 / s2) в отдельных
 # контейнерах сети ux-net (172.31.0.0/24) + netctl.py, который портит сеть ТОЛЬКО
 # внутри netns браузеров. Приложение — тестовый стенд znat-stage (своя БД/Redis),
-# доступен из ux-net по 172.31.0.1:3100. Прод, его .env и БД не затрагиваются.
+# доступен из ux-net по 172.31.0.1:3100, LiveKit стенда — lk-test 172.31.0.50
+# (с 2026-10-17, /root/loadtest/stage). Прод, его .env, БД и LiveKit не затрагиваются.
 #   stand.sh up | down
 #   stand.sh run <script.mjs> <out-name> [ENV=VAL ...]
 set -u
@@ -23,7 +24,8 @@ up)
   PIDS=""
   for n in $WHO; do
     voice=voice-student.wav; [ "$n" = teacher ] && voice=voice-teacher.wav
-    docker run -d --name ux-$n --network ux-net --shm-size=1g --cap-add NET_ADMIN ${CPUS_FLAG:-} \
+    # Ядра 1,2,7,8 — LiveKit прода, 3,9 — app прода: браузеры стенда туда не пускаем.
+    docker run -d --name ux-$n --network ux-net --shm-size=1g --cap-add NET_ADMIN --cpuset-cpus="${UX_CPUSET:-0,4,5,6,10,11}" ${CPUS_FLAG:-} \
       -v "$H/$voice":/media/voice.wav:ro --entrypoint /usr/bin/google-chrome znat/raw-recorder:dev \
       $FLAGS --use-file-for-fake-audio-capture=/media/voice.wav --user-data-dir=/tmp/prof-$n about:blank >/dev/null
     docker run -d --name ux-$n-fwd --network container:ux-$n -v "$H":/w node:22 node /w/fwd.mjs >/dev/null

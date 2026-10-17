@@ -1,0 +1,17 @@
+# Cherry-pick livekit/livekit#5013 (master 2026-10-14, после v1.13.10): проба паддингом,
+# когда RTX-пробе повторять нечего. Заменяет свой probe-padding-fallback.patch.
+--- a/pkg/sfu/downtrack.go
++++ b/pkg/sfu/downtrack.go
+@@ -2590,6 +2590,12 @@
+ 				break
+ 			}
+ 		}
++
++		// recent packets may be gone from the publisher buffer, for example while
++		// paused, so probe with padding to keep the probe cluster progressing
++		if bytesSent == 0 {
++			return d.WriteProbePackets(bytesToSend, true)
++		}
+ 	}
+ 
+ 	return bytesSent

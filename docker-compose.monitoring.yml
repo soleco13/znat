@@ -10,6 +10,11 @@ services:
   prometheus:
     image: prom/prometheus:v3.1.0
     restart: unless-stopped
+    # Ядра ОС (0,6): не трогает LiveKit (1,2,7,8), app (3,9) и запись (4,5,10,11).
+    # Минимальный запуск на проде — только он, ради истории метрик LiveKit:
+    #   COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml:docker-compose.monitoring.yml \
+    #     docker compose up -d --no-deps prometheus
+    cpuset: "0,6"
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
@@ -20,7 +25,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
-      - "127.0.0.1:9090:9090"
+      # 9090 на хосте занят egress (network_mode: host).
+      - "127.0.0.1:9091:9090"
 
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.16.0
