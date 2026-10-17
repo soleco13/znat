@@ -49,6 +49,8 @@ const WEAK_MAX_PAGE = 16;
 const PAGE_CAP =
   typeof navigator !== "undefined" && (navigator.hardwareConcurrency ?? 8) <= 4 ? WEAK_MAX_PAGE : MAX_PAGE;
 const RAIL_VISIBLE = 5;
+/** Окно, в котором возврат ёмкости к прежнему значению считается колебанием. */
+const CAPACITY_FLIP_MS = 1000;
 const STRIP_VISIBLE = 4;
 
 const ROLE_SUFFIX: Record<string, string> = {
@@ -206,8 +208,26 @@ export function RoomVideoGrid({
 
   const gridRef = useRef<HTMLDivElement>(null);
   const grid = useAdaptiveGrid(gridRef, gridCells, { gap: GAP, aspect: 16 / 9, minTileW: MIN_TILE_W, maxCapacity: PAGE_CAP });
+  // Ёмкость и страницы зависят друг от друга: меньше ёмкость → появляется
+  // строка страниц и съедает высоту → ёмкость пересчитывается → строка
+  // пропадает → ёмкость снова больше… Около 25 участников это зацикливалось
+  // в layout-эффектах и урок падал (React #185, стенд T3 2026-10-17, класс на
+  // 30). Возврат к значению, которое было шагом раньше, в пределах секунды —
+  // это колебание: оставляем меньшую ёмкость и останавливаемся.
+  const capacityHistory = useRef<{ value: number; at: number }[]>([]);
   useLayoutEffect(() => {
-    if (desktopGrid && grid.capacity !== capacity) setCapacity(grid.capacity);
+    if (!desktopGrid || grid.capacity === capacity) return;
+    const now = performance.now();
+    const history = capacityHistory.current.filter((h) => now - h.at < CAPACITY_FLIP_MS);
+    const flip = history.length >= 2 && history[history.length - 2]!.value === grid.capacity;
+    history.push({ value: grid.capacity, at: now });
+    capacityHistory.current = history.slice(-4);
+    if (flip) {
+      const stable = Math.min(grid.capacity, capacity);
+      if (stable !== capacity) setCapacity(stable);
+      return;
+    }
+    setCapacity(grid.capacity);
   }, [desktopGrid, grid.capacity, capacity]);
 
   // Плитки, где камера включена, а кадра нет (или поток на паузе): ключи для
