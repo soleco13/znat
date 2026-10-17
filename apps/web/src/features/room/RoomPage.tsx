@@ -58,6 +58,7 @@ import type {
 } from "@school/shared";
 
 import { cn } from "@/lib/utils";
+import { useLockPageZoom } from "@/shared/hooks/use-lock-page-zoom";
 import { ApiError, apiFetch } from "@/shared/api-client";
 import { errorFields, track } from "@/shared/telemetry";
 import {
@@ -359,6 +360,7 @@ function blockedScreenFor(err: unknown): { title: string; text: string } | null 
 }
 
 export function RoomPage() {
+  useLockPageZoom();
   const { id: lessonId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const identity = useRoomIdentity();

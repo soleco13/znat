@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { DoorClosed, Link2Off, WifiOff } from "lucide-react";
 import { lessonJoinCodeSchema } from "@school/shared";
 
+import { useLockPageZoom } from "@/shared/hooks/use-lock-page-zoom";
 import { ApiError, apiFetch, hasStaffSession, setGuestMode } from "@/shared/api-client";
 import { useAuthStore } from "@/shared/auth-store";
 import { useAsync } from "@/shared/hooks/use-async";
@@ -84,6 +85,7 @@ export function ShortJoinPage() {
  * устройств живёт внутри `RoomPage`).
  */
 export function GuestJoinPage() {
+  useLockPageZoom();
   const { token = "" } = useParams<{ token: string }>();
   // Ссылка, по которой вошли (`/<код>` или `/j/<token>`): комната покажет её
   // в адресной строке вместо `/lessons/<uuid>/room`.

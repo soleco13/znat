@@ -344,6 +344,16 @@
 }
 
 /*
+  Урок на телефоне/планшете без масштаба страницы (use-lock-page-zoom.ts):
+  щипок и двойной тап выключены, прокрутка остаётся. Холст доски со своим
+  touch-action: none приближает сам.
+*/
+html.no-page-zoom,
+html.no-page-zoom body {
+  touch-action: pan-x pan-y;
+}
+
+/*
   Кабинет учителя крупнее на 20%: TeacherShell ставит zoom на <html> и
   атрибут data-teacher-zoom. Radix считает позицию всплывающих окон
   (меню, подсказки, выпадающие списки) в экранных пикселях, а translate
