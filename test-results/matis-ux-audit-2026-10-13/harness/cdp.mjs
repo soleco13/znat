@@ -119,11 +119,11 @@ export async function openPage(browser, name, log, browserContextId) {
     switch (method) {
       case "Runtime.consoleAPICalled":
         if (process.env.LKDEBUG && (p.type === "debug" || p.type === "log" || p.type === "info")) {
-          const text = p.args.map((a) => a.value ?? (a.preview ? JSON.stringify(Object.fromEntries((a.preview.properties || []).map((x) => [x.name, x.value]))) : a.description) ?? "").join(" ").slice(0, 600);
+          const text = p.args.map((a) => a.value ?? (a.preview ? JSON.stringify(Object.fromEntries((a.preview.properties || []).map((x) => [x.name, x.value]))) : a.description) ?? "").join(" ").slice(0, Number(process.env.CONSOLE_MAX || 600));
           log({ who: name, kind: "console.debug", text, quiet: true });
         }
         if (p.type === "error" || p.type === "warning") {
-          const text = p.args.map((a) => a.value ?? a.description ?? "").join(" ").slice(0, 400);
+          const text = p.args.map((a) => a.value ?? a.description ?? "").join(" ").slice(0, Number(process.env.CONSOLE_MAX || 400));
           log({ who: name, kind: p.type === "error" ? "console.error" : "console.warn", text });
         }
         break;

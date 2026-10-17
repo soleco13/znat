@@ -5,7 +5,7 @@ LID=7df1a7ae-fa77-4ab4-acb7-db7943e9188d; CODE=758e82a0bbca21932a07183e3f35a90f6
 TEACHER=6e81c5b6-964a-4e1e-8577-3e05e1d18f49
 docker update --cpus=$CPU ux-s1 >/dev/null
 rm -f ctl/start-shape
-./stand.sh run s25-class.mjs $NAME > /dev/null 2>&1 &
+./stand.sh run s25-class.mjs $NAME CONSOLE_MAX=${CONSOLE_MAX:-600} > /dev/null 2>&1 &
 DRV=$!
 until [ -f ctl/start-shape ] || ! kill -0 $DRV 2>/dev/null; do sleep 0.5; done
 OUT=../data/$NAME
