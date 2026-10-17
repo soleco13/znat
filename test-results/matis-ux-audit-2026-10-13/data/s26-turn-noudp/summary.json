@@ -1,0 +1,68 @@
+{
+  "T0": 1792261658974,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "teacher joins",
+      "ok": true,
+      "rel": "   3.7"
+    },
+    {
+      "name": "s2 joins (noudp)",
+      "ok": true,
+      "rel": "   8.3"
+    },
+    {
+      "name": "s2 hears teacher",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 27014,
+        "inAudioEnergy": 0.2807240425516859,
+        "outAudioBytes": 11476,
+        "outVideoBytes": 148369,
+        "inVideoFrames": 120,
+        "remoteVideoPlaying": 2
+      },
+      "rel": "  86.3"
+    },
+    {
+      "name": "teacher hears s2",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 22979,
+        "inAudioEnergy": 0.007821878182497244,
+        "outAudioBytes": 15236,
+        "outVideoBytes": 179790,
+        "inVideoFrames": 120,
+        "remoteVideoPlaying": 2
+      },
+      "rel": "  86.3"
+    },
+    {
+      "name": "s2 sees teacher video",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 27014,
+        "inAudioEnergy": 0.2807240425516859,
+        "outAudioBytes": 11476,
+        "outVideoBytes": 148369,
+        "inVideoFrames": 120,
+        "remoteVideoPlaying": 2
+      },
+      "rel": "  86.3"
+    },
+    {
+      "name": "teacher sees s2 video",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 22979,
+        "inAudioEnergy": 0.007821878182497244,
+        "outAudioBytes": 15236,
+        "outVideoBytes": 179790,
+        "inVideoFrames": 120,
+        "remoteVideoPlaying": 2
+      },
+      "rel": "  86.3"
+    }
+  ]
+}

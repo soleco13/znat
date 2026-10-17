@@ -1,0 +1,2 @@
+-P OUTPUT ACCEPT
+-A OUTPUT -p udp -j DROP

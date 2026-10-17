@@ -1,0 +1,7 @@
+-P OUTPUT ACCEPT
+-A OUTPUT -o lo -j ACCEPT
+-A OUTPUT -p tcp -m state --state RELATED,ESTABLISHED -j ACCEPT
+-A OUTPUT -d 172.31.0.1/32 -p tcp -m tcp --dport 3100 -j ACCEPT
+-A OUTPUT -d 172.31.0.50/32 -p tcp -m tcp --dport 7880 -j ACCEPT
+-A OUTPUT -p tcp -m tcp --dport 443 -j ACCEPT
+-A OUTPUT -j DROP
