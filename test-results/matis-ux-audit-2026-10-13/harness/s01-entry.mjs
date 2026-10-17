@@ -80,6 +80,10 @@ if (await G.eval(`!!document.querySelector('input[placeholder="Имя и фам�
   await G.click(`document.querySelector('input[placeholder="Имя и фамилия"]')`); await G.type("Новый");
   await G.click(`document.querySelector('[role=checkbox]')`); await G.click("document.querySelector('button[type=submit]')");
 }
+// Проверка устройств — до входа (2026-10-17), закрытый вход выясняется после неё.
+await waitFor(() => G.eval(`!![...document.querySelectorAll('button')].find(b => b.innerText.includes('Присоединиться'))`), 20000);
+await sleep(1200);
+await G.click(`[...document.querySelectorAll('button')].find(b => b.innerText.includes('Присоединиться'))`);
 await sleep(4000);
 const lockedTxt = await text(G);
 check("new guest sees 'вход закрыт'", /закрыл вход|Вход закрыт|вход в урок.*закрыт|Ждём, когда учитель впустит/i.test(lockedTxt), lockedTxt.slice(0, 200));

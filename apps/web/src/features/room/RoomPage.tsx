@@ -109,6 +109,7 @@ import { playParticipantSound } from "./participant-sound.js";
 import { SelfCameraButton } from "./CameraControls.js";
 import { toScreenShareEncoding, toVideoEncoding, toVideoResolution } from "./media-quality.js";
 import { DeviceCheckScreen, type DeviceCheckResult } from "./DeviceCheckScreen.js";
+import { readDeviceCheckHandoff } from "./device-check-handoff.js";
 import { DeviceSettingsModal } from "./DeviceSettingsModal.js";
 import { formatClock, participantsCount } from "./format.js";
 import { ScreenShareAutoPip, type ScreenShareAutoPipHandle } from "./ScreenShareAutoPip.js";
@@ -424,18 +425,27 @@ export function RoomPage() {
     if (!lessonId) return;
     return () => disposeBoardSessions(lessonId);
   }, [lessonId]);
+  const location = useLocation();
+  // Гость уже прошёл проверку устройств на экране входа (`device-check-handoff.ts`).
+  const [preChecked] = useState(() => readDeviceCheckHandoff(location.state));
   const [rejoin] = useState(() => readRejoinState(lessonId));
   const rejoinRef = useRef(rejoin);
+  // С чем входим: после F5 — как было, после проверки на экране входа — её выбор.
+  const initialJoin =
+    rejoin ??
+    (preChecked
+      ? { mic: preChecked.micEnabled, cam: preChecked.camEnabled, micId: preChecked.micChoice, camId: preChecked.camChoice, spkId: preChecked.spkDeviceId }
+      : null);
   // Прошлый выбор микрофона/камеры на экране проверки — на этом устройстве.
   const [joinDefaults] = useState(readJoinDefaults);
-  const [deviceCheckDone, setDeviceCheckDone] = useState(rejoin !== null);
-  const [micDeviceId, setMicDeviceId] = useState<string | null>(rejoin?.micId ?? null);
-  const [camDeviceId, setCamDeviceId] = useState<string | null>(rejoin?.camId ?? null);
-  const [spkDeviceId, setSpkDeviceId] = useState<string | null>(rejoin?.spkId ?? null);
-  const [joinMicEnabled, setJoinMicEnabled] = useState(rejoin ? rejoin.mic : true);
-  const [joinCamEnabled, setJoinCamEnabled] = useState(rejoin ? rejoin.cam : true);
+  const [deviceCheckDone, setDeviceCheckDone] = useState(initialJoin !== null);
+  const [micDeviceId, setMicDeviceId] = useState<string | null>(initialJoin?.micId ?? null);
+  const [camDeviceId, setCamDeviceId] = useState<string | null>(initialJoin?.camId ?? null);
+  const [spkDeviceId, setSpkDeviceId] = useState<string | null>(initialJoin?.spkId ?? null);
+  const [joinMicEnabled, setJoinMicEnabled] = useState(initialJoin ? initialJoin.mic : true);
+  const [joinCamEnabled, setJoinCamEnabled] = useState(initialJoin ? initialJoin.cam : true);
   /** Доступ к микрофону есть — выключенный при входе микрофон можно подключить заранее заглушённым (`MicPrewarm`). */
-  const [micPermitted, setMicPermitted] = useState(joinDefaults?.micGranted === true);
+  const [micPermitted, setMicPermitted] = useState(preChecked ? preChecked.micGranted : joinDefaults?.micGranted === true);
   /** Админ вошёл невидимкой (2026-10-17) — так же входим и после переподключений. */
   const invisibleRef = useRef(false);
   const [lessonTitle, setLessonTitle] = useState<string | null>(null);
@@ -832,7 +842,6 @@ export function RoomPage() {
   // навигации), карточку урока ему не отдают (§1.4 план-ТЗ). Меняем только
   // адрес в браузере: внутренний маршрут react-router остаётся прежним, F5 по
   // ссылке возвращает в урок через экран входа (`shouldRejoinViaLink`).
-  const location = useLocation();
   const enteredViaPath = (location.state as { joinPath?: string } | null)?.joinPath ?? null;
   const displayJoinPath = lessonJoinPath ?? enteredViaPath;
   useEffect(() => {

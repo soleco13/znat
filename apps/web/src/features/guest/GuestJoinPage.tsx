@@ -13,7 +13,8 @@ import { StatusScreen } from "@/shared/ui/status-screen";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { warmChunk } from "@/shared/chunk-warmup";
-import { isReloadOf, shouldRejoinViaLink } from "@/features/room/rejoin-state";
+import { isReloadOf, shouldRejoinViaLink, writeJoinDefaults, readJoinDefaults, writeRejoinState } from "@/features/room/rejoin-state";
+import { DeviceCheckScreen, type DeviceCheckResult } from "@/features/room/DeviceCheckScreen";
 import { enterGuestLesson, fetchGuestLessonInfo, fetchKnockStatus, knockGuestLesson, restoreGuestSession } from "./guest-api.js";
 import { useGuestSessionStore } from "./guest-session-store.js";
 
@@ -149,16 +150,53 @@ export function GuestJoinPage() {
   const [waiting, setWaiting] = useState<"pending" | "denied" | null>(null);
   const knockRef = useRef<{ id: string; name: string } | null>(null);
 
-  async function onSubmit(e: FormEvent) {
+  /** Шаг входа: имя → проверка устройств → (вход закрыт? ждём учителя) → урок. */
+  const [step, setStep] = useState<"name" | "devices">("name");
+  const checkedRef = useRef<DeviceCheckResult | null>(null);
+  const [joinDefaults] = useState(readJoinDefaults);
+
+  /** В комнату — сразу в урок: проверка устройств уже пройдена. */
+  function goToRoom(lessonId: string, result: DeviceCheckResult) {
+    writeRejoinState(lessonId, {
+      mic: result.micEnabled,
+      cam: result.camEnabled,
+      micId: result.micChoice,
+      camId: result.camChoice,
+      spkId: result.spkDeviceId,
+    });
+    navigate(`/lessons/${lessonId}/room`, {
+      replace: true,
+      state: { joinPath: linkPath, deviceCheck: { at: Date.now(), result } },
+    });
+  }
+
+  // Имя введено — проверка устройств; закрыт ли вход, выясняется после неё.
+  function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!info.data) return;
+    setError(null);
+    setStep("devices");
+  }
+
+  async function onDevicesChecked(result: DeviceCheckResult) {
     // Имя необязательно (2026-10-15): пустое — сервер подпишет «Ученик N».
     const trimmed = name.trim();
     if (!info.data) return;
+    checkedRef.current = result;
+    writeJoinDefaults({
+      mic: result.micToggle,
+      cam: result.camToggle,
+      micId: result.micChoice,
+      camId: result.camChoice,
+      spkId: result.spkDeviceId,
+      micGranted: result.micGranted,
+      camGranted: result.camGranted,
+    });
     setError(null);
     setSubmitting(true);
     try {
       const session = await enterGuestLesson(token, trimmed, info.data.lessonTitle);
-      navigate(`/lessons/${session.lessonId}/room`, { replace: true, state: { joinPath: linkPath } });
+      goToRoom(session.lessonId, result);
     } catch (err) {
       // Вход закрыт — не отказ, а комната ожидания: учитель увидит запрос.
       if (err instanceof ApiError && err.code === "lesson_entry_locked") {
@@ -166,6 +204,7 @@ export function GuestJoinPage() {
         return;
       }
       setError(err instanceof ApiError ? err.message : "Не удалось войти в урок");
+      setStep("name");
       setSubmitting(false);
     }
   }
@@ -177,6 +216,7 @@ export function GuestJoinPage() {
       setWaiting("pending");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Не удалось попросить учителя впустить");
+      setStep("name");
     } finally {
       setSubmitting(false);
     }
@@ -201,7 +241,9 @@ export function GuestJoinPage() {
         if (status === "admitted") {
           stopped = true;
           const session = await enterGuestLesson(token, knock.name, lessonTitle, knock.id);
-          navigate(`/lessons/${session.lessonId}/room`, { replace: true, state: { joinPath: linkPath } });
+          // Устройства проверены до ожидания — впущенный сразу попадает в урок.
+          if (checkedRef.current) goToRoom(session.lessonId, checkedRef.current);
+          else navigate(`/lessons/${session.lessonId}/room`, { replace: true, state: { joinPath: linkPath } });
         }
       } catch (err) {
         // Запроса больше нет (сервер перезапустился) — попросим заново.
@@ -217,6 +259,19 @@ export function GuestJoinPage() {
       clearInterval(timer);
     };
   }, [waiting, info.data, token, navigate, linkPath]);
+
+  // Проверка устройств — до входа: закрыт ли урок, узнаём уже после неё.
+  if (info.data && !checkingStaff && step === "devices" && waiting === null && !submitting) {
+    return (
+      <DeviceCheckScreen
+        lessonTitle={info.data.lessonTitle}
+        defaultCameraOn={joinDefaults?.cam ?? false}
+        defaultMicOn={joinDefaults?.mic ?? true}
+        saved={joinDefaults}
+        onContinue={(r) => void onDevicesChecked(r)}
+      />
+    );
+  }
 
   return (
     <StatusScreen>
@@ -278,6 +333,8 @@ export function GuestJoinPage() {
               Попросить ещё раз
             </Button>
           </Empty>
+        ) : info.data && step === "devices" ? (
+          <CenteredSpinner label="Входим…" />
         ) : info.data ? (
           <>
             <div className="mb-7">

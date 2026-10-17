@@ -1,5 +1,5 @@
 // 2026-10-17: комната ожидания — вход закрыт, ученики просят войти, учитель впускает/отклоняет.
-import { resetLesson, openBrowsers, P, teacherJoin, check, finish, sleep, waitFor, ORIGIN, JOIN, LID, teacherApi, passDeviceCheck, inRoom, mark } from "./lib.mjs";
+import { resetLesson, openBrowsers, P, teacherJoin, check, finish, sleep, waitFor, ORIGIN, JOIN, LID, teacherApi, inRoom, mark, byText } from "./lib.mjs";
 await openBrowsers(["teacher", "s1", "s2"]);
 const T = P.teacher, A = P.s1, B = P.s2;
 check("teacher joins", await teacherJoin(T));
@@ -13,6 +13,11 @@ const knock = async (p, name) => {
   await p.eval(`(() => { const i = document.querySelector('input[placeholder="Имя и фамилия"]'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(i, ''); i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
   await p.type(name);
   await p.click("document.querySelector('button[type=submit]')");
+  // 2026-10-17: проверка устройств — до входа, закрытость выясняется после неё.
+  const dc = await waitFor(() => p.eval(`!!${byText("button", "Присоединиться")}`), 20000);
+  if (!dc.ok) return false;
+  await sleep(1200);
+  await p.click(byText("button", "Присоединиться"));
   return (await waitFor(() => p.eval(`document.body.innerText.includes('Ждём, когда учитель впустит')`), 15000)).ok;
 };
 mark("двое просят войти");
@@ -28,7 +33,8 @@ check("B sees denied", (await waitFor(() => B.eval(`document.body.innerText.incl
 await T.click(row("Стучащий А", "Впустить"));
 const passed = (await waitFor(() => A.eval(`!document.body.innerText.includes('Ждём, когда учитель впустит')`), 10000)).ok;
 check("A leaves waiting screen", passed);
-check("A gets into the room", await passDeviceCheck(A));
+check("A gets straight into the room", (await waitFor(() => inRoom(A), 20000)).ok);
+check("A not shown device check again", !(await A.eval(`!!${byText("button", "Присоединиться")}`)));
 await sleep(2000);
 check("teacher sees A in lesson", await T.eval(`document.body.innerText.includes('Стучащий А')`));
 mark("Б просит снова и закрывает страницу");
