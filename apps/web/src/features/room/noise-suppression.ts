@@ -22,7 +22,9 @@ import workletUrl from "./rnnoise-worklet.ts?worker&url";
  *    встроенный фильтр браузера при этом выключен, чтобы звук не чистился дважды;
  *  - слабое — встроенное шумоподавление браузера (часть его же эхоподавления,
  *    почти бесплатно);
- *  - очень слабое — без шумоподавления.
+ *  - очень слабое — встроенное (выключать совсем нельзя: шум хуже, а фильтр
+ *    браузера почти бесплатен; Контур Толк в «экономичном режиме» тоже
+ *    переходит на встроенное, а не выключает).
  * Школа задаёт режим по умолчанию (`noiseSuppressionMode`), участник может
  * выбрать свой в настройках урока; «Сильное» на слабом устройстве недоступно.
  * Выбор участника живёт до закрытия страницы (без localStorage, CLAUDE.md).
@@ -45,7 +47,7 @@ const READY_TIMEOUT_MS = 8_000;
 const PROCESSOR_NAME = "matis-rnnoise";
 
 export function noiseTier(profile: DeviceProfile | null): NoiseTier {
-  if (!profile || profile.score === 0) return "weak";
+  if (!profile || profile.score === 0 || !profile.benchmarkTrusted) return "weak";
   if (profile.score < VERY_WEAK_SCORE) return "very_weak";
   if (!profile.weak && profile.score >= STRONG_SCORE && (profile.cores === 0 || profile.cores >= 4)) return "strong";
   return "weak";
@@ -104,7 +106,6 @@ export function strongNoiseAvailable(): boolean {
 export function resolveNoise(mode: NoiseSuppressionMode, tier: NoiseTier, strongOk: boolean): NoiseEffective {
   if (mode === "off") return "off";
   if (mode === "standard") return "standard";
-  if (mode === "auto" && tier === "very_weak") return "off";
   return tier === "strong" && strongOk ? "strong" : "standard";
 }
 

@@ -29,6 +29,14 @@ export interface DeviceProfile {
   /** Условные операции за мс одного потока (i7-8700 ≈ 66, Pentium N3700 ≈ 17). */
   score: number;
   cores: number;
+  /**
+   * Микробенчмарку можно верить. На WebKit (Safari, все браузеры iOS) — нет:
+   * 25 мс JS там дают оценку в 4–7 раз ниже реальной (телеметрия 13–17.10:
+   * все iPhone 7,6–16,4, Mac Safari 10–14 при i7 Windows 57–63), и iPhone/Mac
+   * получали камеру 360p/15 одним слоем и выключенное шумоподавление.
+   * Там «слабое» решает фактическая перегрузка (`cpu-governor`).
+   */
+  benchmarkTrusted: boolean;
 }
 
 /** Ниже — процессор уровня Celeron/Pentium N, Atom, старых i3 мобильных. */
@@ -46,7 +54,16 @@ export function deviceProfileNow(): DeviceProfile | null {
 export function detectDeviceProfile(): Promise<DeviceProfile> {
   if (cached) return Promise.resolve(cached);
   pending ??= detect()
-    .catch((): DeviceProfile => ({ codec: "vp8", h264Hw: false, weak: false, score: 0, cores: navigator.hardwareConcurrency ?? 0 }))
+    .catch(
+      (): DeviceProfile => ({
+        codec: "vp8",
+        h264Hw: false,
+        weak: false,
+        score: 0,
+        cores: navigator.hardwareConcurrency ?? 0,
+        benchmarkTrusted: false,
+      }),
+    )
     .then((profile) => {
       cached = profile;
       // Браузер, ОС и сеть — чтобы по журналу урока сразу видеть, на чём
@@ -93,7 +110,8 @@ async function detect(): Promise<DeviceProfile> {
   // Замер — когда страница простаивает, иначе он мерил бы загрузку страницы.
   await idle();
   const score = cpuScore();
-  const weak = score > 0 && (score < WEAK_SCORE || (cores > 0 && cores <= 2));
+  const benchmarkTrusted = !isWebKit();
+  const weak = (cores > 0 && cores <= 2) || (benchmarkTrusted && score > 0 && score < WEAK_SCORE);
   const [vp8, h264] = await Promise.all([encoderInfo("video/VP8"), encoderInfo(H264_CONTENT_TYPE)]);
   const h264Hw = !vp8.powerEfficient && h264.supported && h264.powerEfficient;
   // H.264 пока не включаем (урок 2026-10-13): у ученицы с Pentium-уровнем
@@ -102,7 +120,15 @@ async function detect(): Promise<DeviceProfile> {
   // запасного не переживает («can't regress codec»), и демонстрацию не видел
   // никто. Вернуть — только с проверкой фактического кодека после публикации.
   const codec: VideoCodec = "vp8";
-  return { codec, h264Hw, weak, score: Math.round(score * 10) / 10, cores };
+  return { codec, h264Hw, weak, score: Math.round(score * 10) / 10, cores, benchmarkTrusted };
+}
+
+/** Движок WebKit: Safari на Mac и любой браузер на iPhone/iPad (включая iPadOS с UA Mac). */
+export function isWebKit(): boolean {
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|iPod/.test(ua)) return true;
+  if (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) return true;
+  return /AppleWebKit\//.test(ua) && /Safari\//.test(ua) && !/Chrome\/|Chromium\/|Edg\/|OPR\/|YaBrowser\//.test(ua);
 }
 
 /** Тот же профиль H.264, что согласует WebRTC в Chrome/Safari (baseline, packetization-mode=1). */
