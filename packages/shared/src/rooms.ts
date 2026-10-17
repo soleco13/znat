@@ -159,6 +159,12 @@ export const serverRoomMessageSchema = z.discriminatedUnion("type", [
     reason: z.enum(["removed", "link_rotated"]).optional(),
   }),
   z.object({ type: z.literal("entry_locked"), locked: z.boolean() }),
+  /**
+   * Комната ожидания (2026-10-17): изменился список учеников, которые просят
+   * войти при закрытом входе. Только сигнал — сам список учитель берёт
+   * `GET /lessons/:id/knocks` (имена ожидающих ученикам не рассылаем).
+   */
+  z.object({ type: z.literal("knocks_changed") }),
   z.object({ type: z.literal("chat_locked"), locked: z.boolean() }),
   z.object({
     type: z.literal("permissions_updated"),
@@ -233,3 +239,19 @@ export const claimScreenShareResponseSchema = z.object({
   holderName: z.string().nullable(),
 });
 export type ClaimScreenShareResponse = z.infer<typeof claimScreenShareResponseSchema>;
+
+/**
+ * Комната ожидания (2026-10-17): вход закрыт — ученик «стучится», учитель
+ * видит плашку и впускает. Запрос живёт, пока страница ученика открыта
+ * (она раз в несколько секунд опрашивает статус).
+ */
+export const lessonKnockSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  /** Когда постучался (ISO) — для порядка. */
+  since: z.string(),
+});
+export type LessonKnock = z.infer<typeof lessonKnockSchema>;
+
+export const lessonKnocksResponseSchema = z.object({ knocks: z.array(lessonKnockSchema) });
+export type LessonKnocksResponse = z.infer<typeof lessonKnocksResponseSchema>;

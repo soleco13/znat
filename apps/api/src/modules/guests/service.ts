@@ -80,6 +80,19 @@ export function hashJoinToken(joinToken: string): string {
 }
 
 /** Публичная инфо-карточка урока по ссылке (`GET /j/:token`) — до входа гость видит только имя и настройки. */
+/**
+ * Урок по ссылке для комнаты ожидания (2026-10-17) — с той же проверкой
+ * «вход без аккаунта разрешён школой», что и у входа.
+ */
+export async function resolveLessonForGuestEntry(joinToken: string): Promise<{ id: string; schoolId: string }> {
+  const lesson = await lessonsService.resolveJoinToken(joinToken);
+  const settings = await schoolSettingsService.getSchoolSettings(lesson.schoolId);
+  if (!settings.guestAccessEnabled) {
+    throw new AppError(403, "guest_access_disabled", "Вход без аккаунта отключён администратором школы");
+  }
+  return { id: lesson.id, schoolId: lesson.schoolId };
+}
+
 export async function getPublicLessonInfo(joinToken: string): Promise<GuestLessonInfo> {
   const lesson = await lessonsService.resolveJoinToken(joinToken);
   return {

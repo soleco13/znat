@@ -237,6 +237,7 @@ vi.mock("./presence.js", async () => {
       else chatLocks.delete(lessonId);
     }),
     isEntryLocked: vi.fn(async (lessonId: string) => entryLocks.has(lessonId)),
+    isAdmitted: vi.fn(async () => false),
     setEntryLocked: vi.fn(async (lessonId: string, locked: boolean) => {
       if (locked) entryLocks.add(lessonId);
       else entryLocks.delete(lessonId);
@@ -453,6 +454,15 @@ describe("защита от утёкшей ссылки: лимит, закры�
 
     repoMock.findCanonicalParticipant.mockResolvedValueOnce({ id: "row", kind: "guest", displayName: "Ученик" });
     const result = await roomsService.join(guestActor("guest-returning"), LESSON_ID);
+    expect(result.entryLocked).toBe(true);
+  });
+
+  it("закрытый вход: впущенный из комнаты ожидания проходит (2026-10-17)", async () => {
+    await roomsService.join(staffActor(), LESSON_ID);
+    await roomsService.setEntryLocked(SCHOOL_ID, LESSON_ID, teacherToken(), true);
+    const presence = await import("./presence.js");
+    vi.mocked(presence.isAdmitted).mockResolvedValueOnce(true);
+    const result = await roomsService.join(guestActor("guest-admitted"), LESSON_ID);
     expect(result.entryLocked).toBe(true);
   });
 

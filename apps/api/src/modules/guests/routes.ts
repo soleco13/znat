@@ -1,5 +1,11 @@
 import type { FastifyInstance } from "fastify";
-import { guestEnterRequestSchema, type GuestEnterResponse } from "@school/shared";
+import {
+  guestEnterRequestSchema,
+  guestKnockRequestSchema,
+  type GuestEnterResponse,
+  type GuestKnockResponse,
+  type GuestKnockStatus,
+} from "@school/shared";
 import { env } from "../../plugins/env.js";
 import { GUEST_COOKIE_NAME, GUEST_NAME_COOKIE, GUEST_NAME_COOKIE_MAX_AGE_S, readRememberedName } from "./service.js";
 import * as guestsService from "./service.js";
@@ -17,6 +23,18 @@ import { logEvent, setLogContext } from "../../plugins/logger.js";
  * (было 20 — выбивало 429 с 7-го ученика). Перебор ссылки лимит не
  * сдерживает и не должен: токен — 32 случайных байта.
  */
+/** «Ученик N»: наименьший номер, которого нет у тех, кто сейчас в уроке (в постоянной комнате номера не растут). */
+async function autoStudentName(lessonId: string): Promise<string> {
+  const taken = new Set<number>();
+  for (const p of await roomsService.listParticipantsSnapshot(lessonId)) {
+    const m = /^Ученик (\d+)$/.exec(p.fullName);
+    if (m) taken.add(Number(m[1]));
+  }
+  let n = 1;
+  while (taken.has(n)) n++;
+  return `Ученик ${n}`;
+}
+
 export default async function guestsRoutes(app: FastifyInstance) {
   const rateLimited = {
     config: { rateLimit: { max: env.RATE_LIMIT_GUEST_ENTRY_PER_MINUTE, timeWindow: "1 minute" } },
@@ -56,28 +74,28 @@ export default async function guestsRoutes(app: FastifyInstance) {
         // она выбила бы первую.
         const previous = request.cookies?.[GUEST_COOKIE_NAME];
         const previousActor = previous ? await guestsService.resolveGuestSession(previous).catch(() => null) : null;
+        let admitted: { guestId: string; name: string } | null = null;
         session = await guestsService.enterAsGuest(
           request.params.token,
           body.name,
           async (lessonId) => {
+            // Вход закрыт, но учитель впустил по запросу — личность из запроса.
+            if (body.knockId) {
+              admitted = await roomsService.admittedKnock(lessonId, body.knockId);
+              if (admitted) return admitted.guestId;
+            }
             if (!previousActor || previousActor.lessonId !== lessonId) return null;
             return (await roomsService.isParticipantConnected(lessonId, previousActor.participantId))
               ? null
               : previousActor.participantId;
           },
-          // Имя не ввели (2026-10-15: имя необязательно) — вернувшемуся гостю
-          // его прежнее имя, новому — «Ученик N»: наименьший номер, которого
-          // нет у тех, кто сейчас в уроке (в постоянной комнате номера не растут).
+          // Имя не ввели (2026-10-15: имя необязательно) — впущенному из
+          // комнаты ожидания имя из запроса, вернувшемуся гостю его прежнее,
+          // новому — «Ученик N».
           async (lessonId, reusedGuestId) => {
+            if (admitted && reusedGuestId === admitted.guestId) return admitted.name;
             if (reusedGuestId && previousActor?.participantId === reusedGuestId) return previousActor.displayName;
-            const taken = new Set<number>();
-            for (const p of await roomsService.listParticipantsSnapshot(lessonId)) {
-              const m = /^Ученик (\d+)$/.exec(p.fullName);
-              if (m) taken.add(Number(m[1]));
-            }
-            let n = 1;
-            while (taken.has(n)) n++;
-            return `Ученик ${n}`;
+            return autoStudentName(lessonId);
           },
         );
         setLogContext({ lessonId: session.payload.lessonId, participantId: session.payload.guestId });
@@ -116,6 +134,45 @@ export default async function guestsRoutes(app: FastifyInstance) {
         expiresAt: session.expiresAt.toISOString(),
       };
       return reply.status(201).send(response);
+    },
+  );
+
+  /**
+   * Комната ожидания (2026-10-17): вход закрыт — ученик просит войти. Учитель
+   * видит плашку (`GET /lessons/:id/knocks`) и впускает; страница ученика
+   * опрашивает статус и, когда впустили, входит `POST /j/:token/enter` с `knockId`.
+   */
+  app.post<{ Params: { token: string } }>("/j/:token/knock", rateLimited, async (request, reply) => {
+    const body = guestKnockRequestSchema.parse(request.body);
+    const lesson = await guestsService.resolveLessonForGuestEntry(request.params.token);
+    const name = body.name || readRememberedName(request.cookies?.[GUEST_NAME_COOKIE]) || (await autoStudentName(lesson.id));
+    if (body.name) {
+      reply.setCookie(GUEST_NAME_COOKIE, encodeURIComponent(body.name), {
+        httpOnly: true,
+        secure: env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: GUEST_NAME_COOKIE_MAX_AGE_S,
+      });
+    }
+    const knockId = await roomsService.createKnock(lesson.id, name);
+    logEvent("lesson_knock", { lessonId: lesson.id }, "info", request.log);
+    const response: GuestKnockResponse = { knockId };
+    return reply.status(201).send(response);
+  });
+
+  // Страница ожидающего спрашивает раз в ~2 с — у класса за одним роутером
+  // это десятки запросов в минуту, поэтому отдельный, более щедрый лимит.
+  app.get<{ Params: { token: string; knockId: string } }>(
+    "/j/:token/knock/:knockId",
+    { config: { rateLimit: { max: 600, timeWindow: "1 minute" } } },
+    async (request, reply) => {
+      const lesson = await guestsService.resolveLessonForGuestEntry(request.params.token);
+      const status = await roomsService.getKnockStatus(lesson.id, request.params.knockId);
+      if (!status) throw new AppError(404, "not_found", "Запрос на вход не найден");
+      reply.header("cache-control", "no-store");
+      const response: GuestKnockStatus = { status };
+      return reply.send(response);
     },
   );
 

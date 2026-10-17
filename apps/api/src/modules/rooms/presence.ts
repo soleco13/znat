@@ -547,3 +547,88 @@ export async function hitChatRate(
   const participant = participantKey ? Number(results?.[2]?.[1] ?? 0) : 0;
   return { participant, lesson };
 }
+
+// ── Комната ожидания (2026-10-17) ──────────────────────────────────────────
+// Вход закрыт — ученик «стучится». Запрос живёт, пока его страница открыта:
+// она раз в ~2 с спрашивает статус (`touchKnock`); не спрашивала дольше
+// KNOCK_STALE_MS — страницу закрыли, в списке учителя её нет.
+
+export type KnockStatus = "pending" | "admitted" | "denied";
+
+export interface KnockEntry {
+  name: string;
+  /** Личность, под которой ученик войдёт, если впустят. */
+  guestId: string;
+  since: number;
+  seen: number;
+  status: KnockStatus;
+}
+
+const KNOCK_STALE_MS = 15_000;
+/** Впущенный заходит повторно без нового запроса до конца дня. */
+const KNOCKS_TTL_SECONDS = 12 * 60 * 60;
+
+function knocksKey(lessonId: string): string {
+  return `room:${lessonId}:knocks`;
+}
+
+function admittedKey(lessonId: string): string {
+  return `room:${lessonId}:admitted`;
+}
+
+export async function createKnock(lessonId: string, knockId: string, entry: KnockEntry): Promise<void> {
+  await redis
+    .multi()
+    .hset(knocksKey(lessonId), knockId, JSON.stringify(entry))
+    .expire(knocksKey(lessonId), KNOCKS_TTL_SECONDS)
+    .exec();
+}
+
+export async function getKnock(lessonId: string, knockId: string): Promise<KnockEntry | null> {
+  const raw = await redis.hget(knocksKey(lessonId), knockId);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as KnockEntry;
+  } catch {
+    return null;
+  }
+}
+
+/** Ученик ещё ждёт — обновить отметку; вернуть запрос (или null, если его нет). */
+export async function touchKnock(lessonId: string, knockId: string, now = Date.now()): Promise<KnockEntry | null> {
+  const entry = await getKnock(lessonId, knockId);
+  if (!entry) return null;
+  const next = { ...entry, seen: now };
+  await redis.hset(knocksKey(lessonId), knockId, JSON.stringify(next));
+  return next;
+}
+
+export async function setKnockStatus(lessonId: string, knockId: string, status: KnockStatus): Promise<KnockEntry | null> {
+  const entry = await getKnock(lessonId, knockId);
+  if (!entry) return null;
+  const next = { ...entry, status };
+  await redis.hset(knocksKey(lessonId), knockId, JSON.stringify(next));
+  if (status === "admitted") {
+    await redis.multi().sadd(admittedKey(lessonId), entry.guestId).expire(admittedKey(lessonId), KNOCKS_TTL_SECONDS).exec();
+  }
+  return next;
+}
+
+/** Ожидающие с открытой страницей, по времени запроса. */
+export async function listPendingKnocks(lessonId: string, now = Date.now()): Promise<(KnockEntry & { id: string })[]> {
+  const all = await redis.hgetall(knocksKey(lessonId));
+  const out: (KnockEntry & { id: string })[] = [];
+  for (const [id, raw] of Object.entries(all)) {
+    try {
+      const entry = JSON.parse(raw) as KnockEntry;
+      if (entry.status === "pending" && now - entry.seen <= KNOCK_STALE_MS) out.push({ ...entry, id });
+    } catch {
+      // битая запись — пропускаем
+    }
+  }
+  return out.sort((a, b) => a.since - b.since);
+}
+
+export async function isAdmitted(lessonId: string, guestId: string): Promise<boolean> {
+  return (await redis.sismember(admittedKey(lessonId), guestId)) === 1;
+}

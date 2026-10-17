@@ -62,6 +62,8 @@ export type GuestLessonInfo = z.infer<typeof guestLessonInfoSchema>;
 export const guestEnterRequestSchema = z.object({
   name: z.string().trim().max(80).default(""),
   personalDataConsent: personalDataConsentSchema,
+  /** Вход закрыт, но учитель впустил по запросу (`POST /j/:token/knock`). */
+  knockId: z.string().uuid().optional(),
 });
 export type GuestEnterRequest = z.infer<typeof guestEnterRequestSchema>;
 
@@ -99,3 +101,17 @@ export type GuestSession = z.infer<typeof guestSessionSchema>;
  * (`canvas/hocuspocus.ts`). Staff-токен — всегда JWT, не пересекается.
  */
 export const GUEST_CANVAS_TOKEN_MARKER = "guest";
+
+/** `POST /j/:token/knock` — попросить войти, когда вход закрыт (комната ожидания, 2026-10-17). */
+export const guestKnockRequestSchema = z.object({
+  name: z.string().trim().max(80).default(""),
+  personalDataConsent: personalDataConsentSchema,
+});
+export type GuestKnockRequest = z.infer<typeof guestKnockRequestSchema>;
+
+export const guestKnockResponseSchema = z.object({ knockId: z.string().uuid() });
+export type GuestKnockResponse = z.infer<typeof guestKnockResponseSchema>;
+
+/** `GET /j/:token/knock/:knockId` — заодно отметка «я ещё жду» (страница открыта). */
+export const guestKnockStatusSchema = z.object({ status: z.enum(["pending", "admitted", "denied"]) });
+export type GuestKnockStatus = z.infer<typeof guestKnockStatusSchema>;

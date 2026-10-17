@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { Link2Off, WifiOff } from "lucide-react";
+import { DoorClosed, Link2Off, WifiOff } from "lucide-react";
 import { lessonJoinCodeSchema } from "@school/shared";
 
 import { ApiError, apiFetch, hasStaffSession, setGuestMode } from "@/shared/api-client";
@@ -14,7 +14,7 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { warmChunk } from "@/shared/chunk-warmup";
 import { isReloadOf, shouldRejoinViaLink } from "@/features/room/rejoin-state";
-import { enterGuestLesson, fetchGuestLessonInfo, restoreGuestSession } from "./guest-api.js";
+import { enterGuestLesson, fetchGuestLessonInfo, fetchKnockStatus, knockGuestLesson, restoreGuestSession } from "./guest-api.js";
 import { useGuestSessionStore } from "./guest-session-store.js";
 
 // Только докачка, без `import()`: оборванный `import()` браузер запоминает,
@@ -145,6 +145,9 @@ export function GuestJoinPage() {
   }, [info.data]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Комната ожидания: вход закрыт — ждём, пока учитель впустит. */
+  const [waiting, setWaiting] = useState<"pending" | "denied" | null>(null);
+  const knockRef = useRef<{ id: string; name: string } | null>(null);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -157,10 +160,63 @@ export function GuestJoinPage() {
       const session = await enterGuestLesson(token, trimmed, info.data.lessonTitle);
       navigate(`/lessons/${session.lessonId}/room`, { replace: true, state: { joinPath: linkPath } });
     } catch (err) {
+      // Вход закрыт — не отказ, а комната ожидания: учитель увидит запрос.
+      if (err instanceof ApiError && err.code === "lesson_entry_locked") {
+        await askToEnter(trimmed);
+        return;
+      }
       setError(err instanceof ApiError ? err.message : "Не удалось войти в урок");
       setSubmitting(false);
     }
   }
+
+  async function askToEnter(trimmed: string) {
+    try {
+      const { knockId } = await knockGuestLesson(token, trimmed);
+      knockRef.current = { id: knockId, name: trimmed };
+      setWaiting("pending");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Не удалось попросить учителя впустить");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // Ждём решения: опрос раз в 2 с (он же — «страница ещё открыта» для сервера).
+  // Закрыл страницу — запрос у учителя пропадёт сам.
+  useEffect(() => {
+    if (waiting !== "pending" || !info.data) return;
+    const lessonTitle = info.data.lessonTitle;
+    let stopped = false;
+    const tick = async () => {
+      const knock = knockRef.current;
+      if (stopped || !knock) return;
+      try {
+        const { status } = await fetchKnockStatus(token, knock.id);
+        if (stopped) return;
+        if (status === "denied") {
+          setWaiting("denied");
+          return;
+        }
+        if (status === "admitted") {
+          stopped = true;
+          const session = await enterGuestLesson(token, knock.name, lessonTitle, knock.id);
+          navigate(`/lessons/${session.lessonId}/room`, { replace: true, state: { joinPath: linkPath } });
+        }
+      } catch (err) {
+        // Запроса больше нет (сервер перезапустился) — попросим заново.
+        if (err instanceof ApiError && err.status === 404 && knockRef.current) {
+          await askToEnter(knockRef.current.name);
+        }
+      }
+    };
+    void tick();
+    const timer = setInterval(() => void tick(), 2000);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+  }, [waiting, info.data, token, navigate, linkPath]);
 
   return (
     <StatusScreen>
@@ -190,6 +246,37 @@ export function GuestJoinPage() {
                 Ссылка на урок устарела или введена с ошибкой. Попросите учителя прислать её заново.
               </EmptyDescription>
             </EmptyHeader>
+          </Empty>
+        ) : info.data && waiting === "pending" ? (
+          <Empty className="p-0 md:p-0">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <DoorClosed aria-hidden />
+              </EmptyMedia>
+              <EmptyTitle as="h1">Ждём, когда учитель впустит</EmptyTitle>
+              <EmptyDescription>
+                Вход в урок «{info.data.lessonTitle}» закрыт. Учитель видит, что вы хотите войти. Не закрывайте эту
+                страницу — как только он впустит, вы окажетесь в уроке.
+              </EmptyDescription>
+            </EmptyHeader>
+            <CenteredSpinner label="Ожидаем…" />
+          </Empty>
+        ) : info.data && waiting === "denied" ? (
+          <Empty className="p-0 md:p-0">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <DoorClosed aria-hidden />
+              </EmptyMedia>
+              <EmptyTitle as="h1">Учитель не впустил вас в урок</EmptyTitle>
+              <EmptyDescription>Если это ошибка, попросите ещё раз.</EmptyDescription>
+            </EmptyHeader>
+            <Button
+              size="lg"
+              className="mt-4 w-full"
+              onClick={() => void askToEnter(knockRef.current?.name ?? name.trim())}
+            >
+              Попросить ещё раз
+            </Button>
           </Empty>
         ) : info.data ? (
           <>

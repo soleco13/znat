@@ -12,6 +12,7 @@ import {
   setLessonModeRequestSchema,
   setLessonStageRequestSchema,
   updateParticipantPermissionsRequestSchema,
+  type LessonKnocksResponse,
 } from "@school/shared";
 import * as roomsService from "./service.js";
 import { AppError } from "../../plugins/errors.js";
@@ -179,6 +180,28 @@ export default async function roomsRoutes(app: FastifyInstance) {
   app.patch<{ Params: { id: string } }>("/lessons/:id/entry", staff, async (request, reply) => {
     const body = setEntryLockedRequestSchema.parse(request.body);
     await roomsService.setEntryLocked(request.user.schoolId, request.params.id, request.user, body.locked);
+    return reply.status(204).send();
+  });
+
+  // Комната ожидания (2026-10-17): кто просит войти при закрытом входе, впустить/отклонить.
+  app.get<{ Params: { id: string } }>("/lessons/:id/knocks", staff, async (request, reply) => {
+    const knocks = await roomsService.listKnocks(request.user.schoolId, request.params.id, request.user);
+    const response: LessonKnocksResponse = { knocks };
+    return reply.send(response);
+  });
+
+  app.post<{ Params: { id: string; knockId: string } }>("/lessons/:id/knocks/:knockId/admit", staff, async (request, reply) => {
+    await roomsService.decideKnock(request.user.schoolId, request.params.id, request.user, request.params.knockId, true);
+    return reply.status(204).send();
+  });
+
+  app.post<{ Params: { id: string; knockId: string } }>("/lessons/:id/knocks/:knockId/deny", staff, async (request, reply) => {
+    await roomsService.decideKnock(request.user.schoolId, request.params.id, request.user, request.params.knockId, false);
+    return reply.status(204).send();
+  });
+
+  app.post<{ Params: { id: string } }>("/lessons/:id/knocks/admit-all", staff, async (request, reply) => {
+    await roomsService.decideKnock(request.user.schoolId, request.params.id, request.user, null, true);
     return reply.status(204).send();
   });
 

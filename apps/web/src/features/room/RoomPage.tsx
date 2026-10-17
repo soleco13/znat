@@ -117,6 +117,7 @@ import { useRoomIdentity } from "./use-room-identity.js";
 import { useWakeLock } from "./use-wake-lock.js";
 import { RoomHotkeys } from "./RoomHotkeys.js";
 import { useIsNarrowViewport, useIsPhoneLandscape, useMinViewportWidth } from "./use-narrow-viewport.js";
+import { KnockRequests } from "./KnockRequests.js";
 import { MicPrewarm, SelfMicButton } from "./MicControls.js";
 import { MicSync } from "./MicSync.js";
 import { Switch } from "@/shared/ui/switch";
@@ -338,7 +339,10 @@ function blockedScreenFor(err: unknown): { title: string; text: string } | null 
     case "removed_from_lesson":
       return REMOVED_SCREEN;
     case "lesson_entry_locked":
-      return { title: "Вход в урок закрыт", text: "Учитель закрыл вход. Попросите его открыть вход и обновите страницу." };
+      return {
+        title: "Вход в урок закрыт",
+        text: "Откройте ссылку на урок ещё раз — учитель увидит, что вы хотите войти, и сможет вас впустить.",
+      };
     case "lesson_full":
       return { title: "В уроке нет мест", text: err.message };
     default:
@@ -393,6 +397,8 @@ export function RoomPage() {
   /** Войти нельзя и повтор не поможет: удалили из урока, вход закрыт, урок полон. */
   const [blocked, setBlocked] = useState<{ title: string; text: string } | null>(null);
   const [entryLocked, setEntryLocked] = useState(false);
+  /** Растёт на каждый `knocks_changed` — плашка «просит войти» перечитывает список. */
+  const [knockSignal, setKnockSignal] = useState(0);
   /** Учитель закрыл чат: ученики читают, но не пишут. */
   const [chatLocked, setChatLocked] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<ParticipantSnapshot | null>(null);
@@ -550,6 +556,9 @@ export function RoomPage() {
         break;
       case "entry_locked":
         setEntryLocked(message.locked);
+        break;
+      case "knocks_changed":
+        setKnockSignal((n) => n + 1);
         break;
       case "chat_locked":
         setChatLocked(message.locked);
@@ -2513,6 +2522,9 @@ export function RoomPage() {
               setJoinCamEnabled(w.camera);
             }}
           />
+        ) : null}
+        {isTeacher && lessonId ? (
+          <KnockRequests lessonId={lessonId} entryLocked={entryLocked} signal={knockSignal} />
         ) : null}
         {clientMediaSettings?.pipEnabled !== false ? (
           <ScreenShareAutoPip

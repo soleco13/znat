@@ -1,8 +1,10 @@
+import { randomUUID } from "node:crypto";
 import type {
   AccessTokenPayload,
   ChatMessage,
   ClaimScreenShareResponse,
   JoinLessonResponse,
+  LessonKnock,
   LessonMode,
   LessonSettings,
   LessonStage,
@@ -352,6 +354,8 @@ function guestPermissionsFromSettings(rawSettings: unknown): ParticipantPermissi
  */
 export async function assertGuestNotLockedOut(lessonId: string, guestId: string): Promise<void> {
   if (!(await presence.isEntryLocked(lessonId))) return;
+  // Учитель впустил из комнаты ожидания — как будто уже был в уроке.
+  if (await presence.isAdmitted(lessonId, guestId)) return;
   const wasHere = await repo.findCanonicalParticipant(lessonId, { userId: null, guestId });
   if (!wasHere) {
     throw new AppError(403, "lesson_entry_locked", "Учитель закрыл вход в урок");
@@ -1495,4 +1499,66 @@ export function stopChatRetentionSweep(): void {
     clearInterval(chatRetentionTimer);
     chatRetentionTimer = null;
   }
+}
+
+// ── Комната ожидания (2026-10-17) ──────────────────────────────────────────
+// Вход закрыт — ученик просит войти (`POST /j/:token/knock`), учитель, админ
+// или соведущий видит плашку и впускает/отклоняет. Впущенный входит обычным
+// `POST /j/:token/enter` с `knockId` — под той личностью, что выдана здесь.
+
+/** Ученик просит войти. Возвращает id запроса. */
+export async function createKnock(lessonId: string, name: string): Promise<string> {
+  const knockId = randomUUID();
+  const now = Date.now();
+  await presence.createKnock(lessonId, knockId, { name, guestId: randomUUID(), since: now, seen: now, status: "pending" });
+  emitRoomEvent(lessonId, { type: "knocks_changed" });
+  return knockId;
+}
+
+/**
+ * Статус запроса для страницы ученика (заодно отметка «ещё жду»). Вход
+ * открыли, пока ждал, — впускаем сразу. Нет такого запроса — `null`.
+ */
+export async function getKnockStatus(lessonId: string, knockId: string): Promise<presence.KnockStatus | null> {
+  const entry = await presence.touchKnock(lessonId, knockId);
+  if (!entry) return null;
+  if (entry.status === "pending" && !(await presence.isEntryLocked(lessonId))) {
+    await presence.setKnockStatus(lessonId, knockId, "admitted");
+    emitRoomEvent(lessonId, { type: "knocks_changed" });
+    return "admitted";
+  }
+  return entry.status;
+}
+
+/** Впущенный по запросу: личность и имя для гостевой сессии; иначе `null`. */
+export async function admittedKnock(lessonId: string, knockId: string): Promise<{ guestId: string; name: string } | null> {
+  const entry = await presence.getKnock(lessonId, knockId);
+  return entry?.status === "admitted" ? { guestId: entry.guestId, name: entry.name } : null;
+}
+
+export async function listKnocks(schoolId: string, lessonId: string, requester: AccessTokenPayload): Promise<LessonKnock[]> {
+  await assertLessonTeacher(schoolId, lessonId, requester, "Запросы на вход видит только учитель урока");
+  return (await presence.listPendingKnocks(lessonId)).map((k) => ({
+    id: k.id,
+    name: k.name,
+    since: new Date(k.since).toISOString(),
+  }));
+}
+
+/** Впустить или отклонить один запрос; `knockId` не указан — впустить всех ожидающих. */
+export async function decideKnock(
+  schoolId: string,
+  lessonId: string,
+  requester: AccessTokenPayload,
+  knockId: string | null,
+  admit: boolean,
+): Promise<void> {
+  await assertLessonTeacher(schoolId, lessonId, requester, "Впускать в урок может только учитель урока");
+  const ids = knockId ? [knockId] : (await presence.listPendingKnocks(lessonId)).map((k) => k.id);
+  let changed = false;
+  for (const id of ids) {
+    if (await presence.setKnockStatus(lessonId, id, admit ? "admitted" : "denied")) changed = true;
+  }
+  if (knockId && !changed) throw new AppError(404, "not_found", "Запрос на вход не найден");
+  if (changed) emitRoomEvent(lessonId, { type: "knocks_changed" });
 }

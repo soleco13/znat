@@ -171,6 +171,7 @@ export function logger(): FastifyBaseLogger {
  */
 export type LogEventName =
   | "auth_success"
+  | "lesson_knock"
   | "auth_failure"
   | "lesson_join_started"
   | "lesson_join_success"

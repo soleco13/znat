@@ -1,4 +1,4 @@
-import type { GuestEnterResponse, GuestLessonInfo, GuestSession } from "@school/shared";
+import type { GuestEnterResponse, GuestKnockResponse, GuestKnockStatus, GuestLessonInfo, GuestSession } from "@school/shared";
 
 import { ApiError, apiFetch, setGuestMode } from "@/shared/api-client";
 import { useGuestSessionStore } from "./guest-session-store.js";
@@ -18,11 +18,13 @@ export async function enterGuestLesson(
   token: string,
   name: string,
   lessonTitle: string,
+  /** Вход закрыт, но учитель впустил по запросу (комната ожидания). */
+  knockId?: string,
 ): Promise<GuestEnterResponse> {
   const res = await apiFetch<GuestEnterResponse>(`/j/${encodeURIComponent(token)}/enter`, {
     method: "POST",
     // Согласие даётся нажатием «Продолжить» (текст под кнопкой на экране входа).
-    body: JSON.stringify({ name, personalDataConsent: true }),
+    body: JSON.stringify({ name, personalDataConsent: true, ...(knockId ? { knockId } : {}) }),
   });
   setGuestMode(true);
   useGuestSessionStore.getState().setSession({ ...res, lessonTitle });
@@ -50,4 +52,17 @@ export async function restoreGuestSession(): Promise<GuestSession | null | "unav
     if (err instanceof ApiError && err.status >= 400 && err.status < 500 && err.status !== 429) return null;
     return "unavailable";
   }
+}
+
+/** Вход закрыт — попросить учителя впустить (комната ожидания, 2026-10-17). */
+export function knockGuestLesson(token: string, name: string): Promise<GuestKnockResponse> {
+  return apiFetch<GuestKnockResponse>(`/j/${encodeURIComponent(token)}/knock`, {
+    method: "POST",
+    body: JSON.stringify({ name, personalDataConsent: true }),
+  });
+}
+
+/** Статус запроса; заодно сервер видит, что страница ещё открыта. */
+export function fetchKnockStatus(token: string, knockId: string): Promise<GuestKnockStatus> {
+  return apiFetch<GuestKnockStatus>(`/j/${encodeURIComponent(token)}/knock/${encodeURIComponent(knockId)}`, {}, false);
 }
