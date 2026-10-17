@@ -123,13 +123,16 @@ services:
   livekit:
     # Версии медиа закреплены: `:latest` обновил бы медиа-сервер на любом pull.
     # Обновлять осознанно, с проверкой урока (CLAUDE.md: конфиги LiveKit — читать построчно).
-    # Своя сборка: v1.13.9 (фикс dynacast #4907, allow_pause на пути с одним
-    # PeerConnection #4957) + отчёты TWCC по времени + 30 с на возврат после
-    # обрыва + проба канала заглушками (services/livekit/Dockerfile).
-    # Откат: image znat/livekit-server:v1.13.9-twcc-r30 (без пробы заглушками),
+    # Своя сборка: v1.13.10 (NACK при приёме RTX #5000, фикс dynacast #4907,
+    # allow_pause на пути с одним PeerConnection #4957) + отчёты TWCC по
+    # времени + 30 с на возврат после обрыва + проба заглушками из апстрима
+    # #5013 (services/livekit/Dockerfile). A/B 2026-10-17 против 1.13.9:
+    # «3G» — замираний ~45 % меньше, «Елена» — возврат видео 6–8 с (1.13.9 в
+    # одном прогоне из двух не вернулось за 72 с).
+    # Откат: image znat/livekit-server:v1.13.9-twcc-r30-probe,
     # v1.13.9-twcc / v1.13.8-twcc (собраны, лежат локально) или
     # livekit/livekit-server:v1.13.6 без build и `docker compose up -d livekit`.
-    image: znat/livekit-server:v1.13.9-twcc-r30-probe
+    image: znat/livekit-server:v1.13.10-twcc-r30-p5013
     build: services/livekit
     restart: unless-stopped
     network_mode: host
