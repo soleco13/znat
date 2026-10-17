@@ -19,7 +19,8 @@ function levelFor(event: ClientEvent["event"]): "info" | "warn" {
   return event.endsWith("_failed") ||
     event === "client_error" ||
     event === "livekit_reconnecting" ||
-    event === "livekit_connect_slow"
+    event === "livekit_connect_slow" ||
+    event === "livekit_restore_slow"
     ? "warn"
     : "info";
 }

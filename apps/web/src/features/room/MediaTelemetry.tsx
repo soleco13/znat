@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { useRoomContext } from "@livekit/components-react";
 import { ConnectionState, DisconnectReason, RoomEvent, Track, type Room } from "livekit-client";
 import { errorFields, track } from "../../shared/telemetry.js";
+import { currentPressure } from "./cpu-load-engine.js";
+import { peerStats, statsEntries } from "./peer-stats.js";
 
 /**
  * События медиасоединения урока — в серверный лог (shared/telemetry.ts).
@@ -56,7 +58,11 @@ export function MediaTelemetry({ lessonId }: { lessonId: string }) {
     const onMediaReconnecting = onReconnecting("media");
     const onSignalReconnecting = onReconnecting("signal");
     const onReconnected = () => {
-      track("livekit_reconnected", { ...base(), durationMs: reconnectingSince ? Date.now() - reconnectingSince : null });
+      const durationMs = reconnectingSince ? Date.now() - reconnectingSince : null;
+      track("livekit_reconnected", { ...base(), durationMs });
+      // Долгое восстановление — отдельным событием (как «Long conference
+      // reconnection» у Контур Толка): по нему видно, где resume не спас.
+      if (durationMs !== null && durationMs > SLOW_RESTORE_MS) track("livekit_restore_slow", { ...base(), durationMs });
       reconnectingSince = 0;
     };
     const onDisconnected = (reason?: DisconnectReason) => {
@@ -124,6 +130,8 @@ export function MediaTelemetry({ lessonId }: { lessonId: string }) {
 }
 
 const CONNECT_SLOW_MS = 15_000;
+/** Восстановление дольше — отдельное событие `livekit_restore_slow`. */
+const SLOW_RESTORE_MS = 30_000;
 const FIRST_SAMPLE_MS = 5_000;
 const QUALITY_INTERVAL_MS = 60_000;
 /** getStats на каждую принимаемую камеру класса 30 раз в минуту не нужен — хватит выборки. */
@@ -180,6 +188,8 @@ class MediaStatsSampler {
   private lastPathKey: string | null = null;
   private lastBytesSent: { at: number; bytes: number } | null = null;
   private lastFreezes = new Map<string, number>();
+  /** Накопительные счётчики соединения с прошлого тика (одним `getStats`). */
+  private lastTotals: Record<string, number> | null = null;
   private lastAudio = new Map<string, { concealed: number; total: number; jbDelay: number; jbEmitted: number }>();
   private running = false;
 
@@ -187,6 +197,32 @@ class MediaStatsSampler {
     private readonly room: Room,
     private readonly lessonId: string,
   ) {}
+
+  private async connectionTotals(captureHeight: number | null, sendHeight: number | null): Promise<Record<string, number | string | null>> {
+    const cur = await readTotals(this.room).catch(() => null);
+    const prev = this.lastTotals;
+    this.lastTotals = cur;
+    const out: Record<string, number | string | null> = {
+      computePressure: currentPressure(),
+      cameraDownscale: captureHeight && sendHeight ? Math.round((captureHeight / sendHeight) * 100) / 100 : null,
+    };
+    if (!cur) return out;
+    if (typeof cur.upLossPct === "number") out.upLossPct = cur.upLossPct;
+    if (typeof cur.bweDownKbps === "number") out.bweDownKbps = cur.bweDownKbps;
+    if (!prev) return out;
+    const d = (k: string) => Math.max(0, (cur[k] ?? 0) - (prev[k] ?? 0));
+    const recv = d("inRecv");
+    const lost = d("inLost");
+    out.downLossPct = recv + lost > 0 ? Math.round((lost / (recv + lost)) * 1000) / 10 : null;
+    out.recvFreezeMs = Math.round(d("freezeS") * 1000);
+    out.pliIn = d("pliIn");
+    out.pliOut = d("pliOut");
+    out.keyFramesEncoded = d("keyEnc");
+    out.keyFramesDecoded = d("keyDec");
+    out.cpuLimitedS = Math.round(d("qlCpuS"));
+    out.bwLimitedS = Math.round(d("qlBwS"));
+    return out;
+  }
 
   async sample(): Promise<void> {
     if (this.running || this.room.state !== ConnectionState.Connected) return;
@@ -354,7 +390,58 @@ class MediaStatsSampler {
       recvAudioDelayMs,
       hidden: document.visibilityState === "hidden",
     });
+    const health = await this.connectionTotals(camera?.mediaStreamTrack?.getSettings().height ?? null, sendHeight);
+    track("media_health", { ...base, ...health });
   }
+}
+
+/**
+ * Поля по образцу «Метрик здоровья» Контур Толка (2026-10-17): потери вверх и
+ * вниз, оценка канала вниз, длительность замираний, PLI, ключевые кадры,
+ * причины ограничения кодировщика за минуту, уменьшение своей камеры, Compute
+ * Pressure. Один полный `getStats()` соединения на тик.
+ */
+async function readTotals(room: Room): Promise<Record<string, number> | null> {
+  const reports = await peerStats(room);
+  if (!reports) return null;
+  const t: Record<string, number> = {};
+  const add = (k: string, v: unknown) => {
+    if (typeof v === "number" && Number.isFinite(v)) t[k] = (t[k] ?? 0) + v;
+  };
+  for (const i of statsEntries(reports, "inbound-rtp")) {
+    add("inRecv", i.packetsReceived);
+    add("inLost", typeof i.packetsLost === "number" ? Math.max(0, i.packetsLost) : 0);
+    if (i.kind === "video") {
+      add("freezeS", i.totalFreezesDuration);
+      add("pliOut", i.pliCount);
+      add("keyDec", i.keyFramesDecoded);
+    }
+  }
+  for (const o of statsEntries(reports, "outbound-rtp")) {
+    if (o.kind !== "video") continue;
+    add("pliIn", o.pliCount);
+    add("keyEnc", o.keyFramesEncoded);
+    const d = o.qualityLimitationDurations as Record<string, number> | undefined;
+    if (d) {
+      add("qlCpuS", d.cpu);
+      add("qlBwS", d.bandwidth);
+    }
+  }
+  let lossSum = 0;
+  let lossN = 0;
+  for (const r of statsEntries(reports, "remote-inbound-rtp")) {
+    if (typeof r.fractionLost === "number") {
+      lossSum += r.fractionLost;
+      lossN += 1;
+    }
+  }
+  if (lossN) t.upLossPct = Math.round((lossSum / lossN) * 1000) / 10;
+  for (const p of statsEntries(reports, "candidate-pair")) {
+    if ((p.nominated === true || p.selected === true) && typeof p.availableIncomingBitrate === "number") {
+      t.bweDownKbps = Math.round(p.availableIncomingBitrate / 1000);
+    }
+  }
+  return t;
 }
 
 /** Подключение к LiveKit не удалось (onError у `<LiveKitRoom>`, повтор в MediaRecovery). */

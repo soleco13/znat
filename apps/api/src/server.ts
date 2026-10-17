@@ -124,15 +124,22 @@ export function buildServer() {
   // (редко, только при переключении): в логе видно каждое переключение,
   // независимо от доски (она сообщает свой режим, только пока открыта).
   // `?link=repath` — клиент перевыбирает сетевой путь медиа (PoorLinkMedia.tsx).
-  app.get<{ Querystring: { link?: string; who?: string } }>(
+  // `&reason=<слово>` — какой признак включил экономный режим (2026-10-17).
+  app.get<{ Querystring: { link?: string; who?: string; reason?: string } }>(
     "/ping",
     { config: { rateLimit: false }, logLevel: "silent" },
     async (request, reply) => {
-      const { link, who } = request.query;
+      const { link, who, reason } = request.query;
       // Маршрут вне лимита запросов — запись в лог идёт из общего бюджета телеметрии (G-08).
       const validWho = !!who && /^[0-9a-f-]{36}$/.test(who);
       if ((link === "poor" || link === "ok") && validWho && admitClientEvent()) {
-        logEvent("client_event", { clientEvent: "link_quality_changed", poorLink: link === "poor", participantId: who });
+        const validReason = reason && /^[a-z_]{1,24}$/.test(reason) ? reason : undefined;
+        logEvent("client_event", {
+          clientEvent: "link_quality_changed",
+          poorLink: link === "poor",
+          participantId: who,
+          ...(validReason ? { reason: validReason } : {}),
+        });
       } else if (link === "repath" && validWho && admitClientEvent()) {
         logEvent("client_event", { clientEvent: "media_path_refresh", participantId: who });
       }

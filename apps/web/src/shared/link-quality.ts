@@ -29,14 +29,31 @@ const RECOVER_MAX_MS = 15 * 60_000;
 const RELAPSE_WINDOW_MS = 10 * 60_000;
 const STICKY_AFTER_RELAPSES = 2;
 const TICK_MS = 2000;
-/** Хорошая связь «доказана»: столько быстрых пингов подряд за окно и ни одного медленного. */
+/**
+ * Хорошая связь «доказана»: столько пингов подряд за окно не выше базового RTT
+ * + `STRONG_OVER_BASE_MS` (и не выше `STRONG_RTT_MS` над нулём, если базы ещё
+ * нет). Порог относительный (2026-10-17): на далёкой сети с RTT ≈ 400 мс
+ * абсолютные 200 мс недостижимы, и ученик навсегда оставался в экономном
+ * режиме. Контур Толк в своих метриках прямо пишет: «RTT ~300 может быть
+ * нормой, важны скачки».
+ */
 const STRONG_RTT_MS = 200;
+const STRONG_OVER_BASE_MS = 120;
+/** Скачок RTT: выше базового на столько — признак перегруженного канала. */
+const SPIKE_OVER_BASE_MS = 250;
+/** База — минимум RTT за это окно. */
+const BASE_WINDOW_MS = 120_000;
 const STRONG_SAMPLES = 8;
 const STRONG_WINDOW_MS = 30_000;
 /** Замер связи из урока (`useLinkProbe`): пустой `/ping` на сервер приложения. */
 const PROBE_INTERVAL_MS = 2000;
-const PROBE_TIMEOUT_MS = 1500;
-const PROBE_RTT_POOR_MS = 400;
+/**
+ * HTTP-пинг идёт по TCP/TLS: на потерях он ждёт повторов и «медленный» даже
+ * там, где медиа по UDP в порядке. Поэтому с 2026-10-17 он — только признак
+ * полного обрыва (нет ответа `PROBE_TIMEOUT_MS`), а качество медиа решает
+ * статистика медиапути (`PoorLinkMedia.useMediaPathQuality`).
+ */
+const PROBE_TIMEOUT_MS = 2500;
 /**
  * После входа в урок и открытия доски браузер качает их код и данные —
  * замеры в это время медленные на любой сети. Раньше это давало ложный
@@ -49,11 +66,13 @@ type Listener = () => void;
 class LinkQuality {
   private poor = false;
   private lastBadAt = 0;
+  private lastBadReason = "";
   private recoverMs = RECOVER_MIN_MS;
   private leftAt = 0;
   private relapses = 0;
   private sticky = false;
   private rtts: { at: number; rtt: number }[] = [];
+  private baseRtts: { at: number; rtt: number }[] = [];
   private excellentSince = 0;
   private graceUntil = 0;
   private listeners = new Set<Listener>();
@@ -63,23 +82,42 @@ class LinkQuality {
     return this.poor;
   }
 
+  /** Последний признак, из-за которого связь считалась плохой (для журнала). */
+  get badReason(): string {
+    return this.lastBadReason;
+  }
+
   /** Плохие признаки не учитывать `ms` (идёт загрузка — см. `LINK_GRACE_MS`). */
   startGrace(ms = LINK_GRACE_MS, now = Date.now()): void {
     this.graceUntil = Math.max(this.graceUntil, now + ms);
   }
 
   /** Плохой признак от любого источника: медленный/потерянный пинг, обрыв, Poor у LiveKit. */
-  reportBad(now = Date.now()): void {
+  reportBad(reason = "other", now = Date.now()): void {
     if (now < this.graceUntil) return;
     this.lastBadAt = now;
+    this.lastBadReason = reason;
     this.evaluate(now);
   }
 
-  /** RTT пинга доски — материал для «доказательства» хорошей связи. */
+  /** RTT пинга — материал для «доказательства» хорошей связи и базового RTT. */
   reportRtt(rtt: number, now = Date.now()): void {
     this.rtts.push({ at: now, rtt });
     if (this.rtts.length > 20) this.rtts.shift();
+    this.baseRtts.push({ at: now, rtt });
+    while (this.baseRtts.length && now - this.baseRtts[0]!.at > BASE_WINDOW_MS) this.baseRtts.shift();
     this.evaluate(now);
+  }
+
+  /** Базовый RTT сессии — минимум за последние 2 мин (`null`, пока замеров нет). */
+  baseRtt(): number | null {
+    return this.baseRtts.length ? Math.min(...this.baseRtts.map((s) => s.rtt)) : null;
+  }
+
+  /** RTT — скачок над базовым, а не просто «большой». */
+  isRttSpike(rtt: number): boolean {
+    const base = this.baseRtt();
+    return base !== null && rtt > base + SPIKE_OVER_BASE_MS;
   }
 
   /** LiveKit: отличная связь сейчас (`true`) или нет. */
@@ -106,7 +144,9 @@ class LinkQuality {
   private isStrongGood(now: number): boolean {
     if (now - this.lastBadAt < STRONG_WINDOW_MS) return false;
     const recent = this.rtts.filter((s) => now - s.at < STRONG_WINDOW_MS);
-    const pingsGood = recent.length >= STRONG_SAMPLES && recent.every((s) => s.rtt < STRONG_RTT_MS);
+    const base = this.baseRtt();
+    const limit = base === null ? STRONG_RTT_MS : Math.max(STRONG_RTT_MS, base + STRONG_OVER_BASE_MS);
+    const pingsGood = recent.length >= STRONG_SAMPLES && recent.every((s) => s.rtt < limit);
     const mediaGood = this.excellentSince > 0 && now - this.excellentSince >= STRONG_WINDOW_MS;
     return pingsGood || mediaGood;
   }
@@ -162,7 +202,6 @@ export function useLinkProbe(): void {
   useEffect(() => {
     linkQuality.startGrace();
     let inFlight = false;
-    const recent: number[] = [];
     const probe = async () => {
       // Фоновая вкладка: браузер душит таймеры и сеть — замер был бы ложным.
       if (document.hidden || inFlight) return;
@@ -172,14 +211,10 @@ export function useLinkProbe(): void {
       const startedAt = performance.now();
       try {
         await fetch("/ping", { cache: "no-store", signal: controller.signal });
-        const rtt = performance.now() - startedAt;
-        linkQuality.reportRtt(rtt);
-        recent.push(rtt);
-        if (recent.length > 4) recent.shift();
-        // Один всплеск — не повод; два медленных из последних четырёх — уже канал.
-        if (recent.filter((value) => value > PROBE_RTT_POOR_MS).length >= 2) linkQuality.reportBad();
+        linkQuality.reportRtt(performance.now() - startedAt);
       } catch {
-        linkQuality.reportBad();
+        // Нет ответа вовсе — обрыв: это признак плохой связи при любом медиа.
+        linkQuality.reportBad("ping_timeout");
       } finally {
         clearTimeout(timeout);
         inFlight = false;

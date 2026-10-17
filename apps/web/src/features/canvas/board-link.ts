@@ -23,8 +23,6 @@ import { linkQuality, useLinkPoor } from "@/shared/link-quality";
  */
 
 const PING_INTERVAL_MS = 2000;
-/** Нормальный RTT мобильной сети — 50–150 мс; стабильно выше — канал не справляется. */
-const RTT_POOR_MS = 400;
 const PONG_TIMEOUT_MS = 1500;
 export const PACED_SEND_MS = 100;
 
@@ -64,7 +62,7 @@ export function useBoardLinkPoor(provider: HocuspocusProvider | null): boolean {
       }
       if (outstanding && Date.now() - outstanding.sentAt > PONG_TIMEOUT_MS) {
         outstanding = null;
-        linkQuality.reportBad();
+        linkQuality.reportBad("board_timeout");
       }
       if (!outstanding) {
         outstanding = { i: ++seq, sentAt: Date.now() };
@@ -80,10 +78,12 @@ export function useBoardLinkPoor(provider: HocuspocusProvider | null): boolean {
       linkQuality.reportRtt(rtt);
       outstanding = null;
       if (recentRtt.length > 4) recentRtt.shift();
-      // Один всплеск — не повод; два медленных из последних четырёх — уже канал.
-      if (recentRtt.filter((rtt) => rtt > RTT_POOR_MS).length >= 2) linkQuality.reportBad();
+      // Один всплеск — не повод; два скачка над базовым RTT из последних
+      // четырёх — уже канал. Порог относительный: на далёкой сети с ровным
+      // RTT ≈ 400 мс абсолютные 400 мс давали вечный экономный режим.
+      if (recentRtt.filter((value) => linkQuality.isRttSpike(value)).length >= 2) linkQuality.reportBad("board_rtt");
     };
-    const onDisconnect = () => linkQuality.reportBad();
+    const onDisconnect = () => linkQuality.reportBad("board_disconnect");
 
     provider.on("stateless", onStateless);
     provider.on("disconnect", onDisconnect);

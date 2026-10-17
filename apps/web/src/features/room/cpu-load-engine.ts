@@ -92,6 +92,12 @@ export function cpuConstrainedRecently(withinMs: number): boolean {
 let currentLevel = 0;
 const levelListeners = new Set<() => void>();
 
+/** Последнее состояние Compute Pressure (`null` — браузер не даёт или адаптер не запущен). */
+let lastPressure: PressureLevel | null = null;
+export function currentPressure(): PressureLevel | null {
+  return lastPressure;
+}
+
 export function cpuLoadLevel(): number {
   return currentLevel;
 }
@@ -435,7 +441,10 @@ export function startCpuLoadAdapter(
   const governor = new CpuGovernor(initialLevel, strongDevice);
   const adjusted = new Set<LocalVideoTrack>();
   let pressure: PressureLevel | null = null;
-  const stopPressure = watchPressure((s) => (pressure = s));
+  const stopPressure = watchPressure((s) => {
+    pressure = s;
+    lastPressure = s;
+  });
   let prevMic: { track: LocalAudioTrack; at: number; seconds: number } | null = null;
   let running = false;
   let disposed = false;
