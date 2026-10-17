@@ -1,4 +1,4 @@
-// 2026-10-17: комната ожидания — вход закрыт, ученики просят войти, учитель впускает/отклоняет.
+// 2026-10-17: комната ожидания — вход закрыт, ученики просят войти, учитель впускает/отклоняет (карточка уведомлений).
 import { resetLesson, openBrowsers, P, teacherJoin, check, finish, sleep, waitFor, ORIGIN, JOIN, LID, teacherApi, inRoom, mark, byText } from "./lib.mjs";
 await openBrowsers(["teacher", "s1", "s2"]);
 const T = P.teacher, A = P.s1, B = P.s2;
@@ -23,25 +23,33 @@ const knock = async (p, name) => {
 mark("двое просят войти");
 check("A sees waiting screen", await knock(A, "Стучащий А"));
 check("B sees waiting screen", await knock(B, "Стучащий Б"));
-const plaque = await waitFor(() => T.eval(`document.body.innerText.includes('Просят войти в урок: 2')`), 15000);
-check("teacher sees plaque for 2 with names", plaque.ok && (await T.eval(`document.body.innerText.includes('Стучащий А') && document.body.innerText.includes('Стучащий Б')`)));
-check("«Впустить всех» shown", await T.eval(`[...document.querySelectorAll('button')].some(b => b.textContent.trim() === 'Впустить всех')`));
-mark("Б отклонён, А впущен");
-const row = (name, btn) => `(() => { const li = [...document.querySelectorAll('li')].find(l => l.textContent.includes(${JSON.stringify(name)})); return li && [...li.querySelectorAll('button')].find(b => b.textContent.trim() === ${JSON.stringify(btn)}); })()`;
-await T.click(row("Стучащий Б", "Отклонить"));
-check("B sees denied", (await waitFor(() => B.eval(`document.body.innerText.includes('Учитель не впустил вас в урок')`), 10000)).ok);
-await T.click(row("Стучащий А", "Впустить"));
+// 2026-10-17: запросы — одной карточкой уведомлений справа сверху (notify).
+const toast = (who) => `[...document.querySelectorAll('[data-sonner-toast]')].find((l) => l.innerText.includes(${JSON.stringify(who)}))`;
+const btn = (who, label) => `(() => { const li = ${toast(who)}; return li && [...li.querySelectorAll('button')].find((b) => b.textContent.trim() === ${JSON.stringify(label)}); })()`;
+const plaque = await waitFor(() => T.eval(`!!${toast("Просят войти: 2")}`), 15000);
+check("teacher sees one card for 2 with names", plaque.ok && (await T.eval(`(() => { const t = ${toast("Просят войти: 2")}.innerText; return t.includes('Стучащий А') && t.includes('Стучащий Б'); })()`)));
+check("«Впустить всех» and «По одному» shown", (await T.eval(`!!${btn("Просят войти: 2", "Впустить всех")}`)) && (await T.eval(`!!${btn("Просят войти: 2", "По одному")}`)));
+mark("по одному: А впущен, Б отклонён");
+await T.click(btn("Просят войти: 2", "По одному"));
+const firstA = await waitFor(() => T.eval(`!!${toast("Стучащий А")} && ${toast("Стучащий А")}.innerText.includes('Ещё ждут: 1')`), 10000);
+check("one-by-one shows oldest (А) with queue count", firstA.ok);
+await T.click(btn("Стучащий А", "Впустить"));
 const passed = (await waitFor(() => A.eval(`!document.body.innerText.includes('Ждём, когда учитель впустит')`), 10000)).ok;
 check("A leaves waiting screen", passed);
 check("A gets straight into the room", (await waitFor(() => inRoom(A), 20000)).ok);
 check("A not shown device check again", !(await A.eval(`!!${byText("button", "Присоединиться")}`)));
-await sleep(2000);
+const nextB = await waitFor(() => T.eval(`!!${btn("Стучащий Б", "Отклонить")}`), 10000);
+check("card moves to Б", nextB.ok);
+await T.click(btn("Стучащий Б", "Отклонить"));
+check("B sees denied", (await waitFor(() => B.eval(`document.body.innerText.includes('Учитель не впустил вас в урок')`), 10000)).ok);
+check("card gone after both decided", (await waitFor(() => T.eval(`!${toast("Просит")}`), 10000)).ok);
+await sleep(1000);
 check("teacher sees A in lesson", await T.eval(`document.body.innerText.includes('Стучащий А')`));
 mark("Б просит снова и закрывает страницу");
 await B.click(`[...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Попросить ещё раз')`);
-check("teacher sees B again", (await waitFor(() => T.eval(`document.body.innerText.includes('Стучащий Б')`), 10000)).ok);
+check("teacher sees B again", (await waitFor(() => T.eval(`!!${toast("Стучащий Б")}`), 10000)).ok);
 await B.goto("about:blank");
-const gone = await waitFor(() => T.eval(`!document.body.innerText.includes('Просит войти в урок')`), 30000);
+const gone = await waitFor(() => T.eval(`!${toast("Стучащий Б")}`), 30000);
 check("plaque disappears after B closed the page", gone.ok, { ms: gone.ms });
 await teacherApi(T, "PATCH", `/lessons/${LID}/entry`, { locked: false });
 await finish();
