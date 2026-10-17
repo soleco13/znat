@@ -142,7 +142,7 @@ importers:
         version: 4.6.0(y-protocols@1.0.7(yjs@13.6.32))(yjs@13.6.32)
       '@livekit/components-react':
         specifier: ^2.9.24
-        version: 2.9.24(livekit-client@2.22.3(@types/dom-mediacapture-record@1.0.22))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tslib@2.8.1)
+        version: 2.9.24(livekit-client@2.23.0(@types/dom-mediacapture-record@1.0.22))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tslib@2.8.1)
       '@radix-ui/react-accordion':
         specifier: ^1.2.20
         version: 1.2.20(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -258,8 +258,8 @@ importers:
         specifier: ^0.18.5
         version: 0.18.5
       livekit-client:
-        specifier: ^2.22.3
-        version: 2.22.3(@types/dom-mediacapture-record@1.0.22)
+        specifier: ^2.23.0
+        version: 2.23.0(@types/dom-mediacapture-record@1.0.22)
       lucide-react:
         specifier: ^1.41.0
         version: 1.41.0(react@19.2.8)
@@ -1507,8 +1507,8 @@ packages:
   '@livekit/protocol@1.48.0':
     resolution: {integrity: sha512-fYHYgltH6YavAsokl3qsHLkBdQeKCl4UORVTub5crS3t8JtKFZ0uinHDFQ+XXdNKS6Ub9gcOjV+UHcDiqnWXoQ==}
 
-  '@livekit/protocol@1.50.4':
-    resolution: {integrity: sha512-L1uggNQAqyY21smQY8AllyOYbcv9Me9TaxwuLytL1R8ck9nbYPmQLNwEDi3pOFGAMa5F8I2nUi2Jc59W5awxlA==}
+  '@livekit/protocol@1.52.1':
+    resolution: {integrity: sha512-X8DxKlNbzk6Lh+v630+mjdFHSotdAFwIyzxSRSUql2DbTxCnlpa7JsvFGc6Na3mXiex2OFh0iiQtWwOBP0rIYA==}
 
   '@lukeed/ms@2.0.2':
     resolution: {integrity: sha512-9I2Zn6+NJLfaGoz9jN3lpwDgAYvfGeNYdbAIjJOqzs4Tpc+VU3Jqq4IofSUBKajiDS8k9fZIg18/z13mpk1bsA==}
@@ -4267,8 +4267,8 @@ packages:
   linkifyjs@4.3.3:
     resolution: {integrity: sha512-P8aEP5U/D1/IlTY2OeYsErdwh9bGuLE30NcXtKEjgdHcahveQoQwM2yZNsioQHsWFz0P7KKudisbrzCgR0sDHg==}
 
-  livekit-client@2.22.3:
-    resolution: {integrity: sha512-jw9zBKXY5Gtr5MZ7vEON3QhMNccuDvYHck1PFSyG1aaateQPqgKZFBMgZkFZaXHIf9RV4MDW5xpTK2b/+qbwOg==}
+  livekit-client@2.23.0:
+    resolution: {integrity: sha512-j9Kg86nJjBjNFUD+ukp2jwMCGa0k+YD5gU//RzAM+ZY3pbG631QCte7fQjwqWMmtBzhDJL9nKYuOLMv/9IbAxg==}
     peerDependencies:
       '@types/dom-mediacapture-record': ^1
 
@@ -6249,21 +6249,21 @@ snapshots:
 
   '@lifeomic/attempt@3.1.0': {}
 
-  '@livekit/components-core@0.12.15(livekit-client@2.22.3(@types/dom-mediacapture-record@1.0.22))(tslib@2.8.1)':
+  '@livekit/components-core@0.12.15(livekit-client@2.23.0(@types/dom-mediacapture-record@1.0.22))(tslib@2.8.1)':
     dependencies:
       '@floating-ui/dom': 1.7.6
-      livekit-client: 2.22.3(@types/dom-mediacapture-record@1.0.22)
+      livekit-client: 2.23.0(@types/dom-mediacapture-record@1.0.22)
       loglevel: 1.9.1
       rxjs: 7.8.2
       tslib: 2.8.1
 
-  '@livekit/components-react@2.9.24(livekit-client@2.22.3(@types/dom-mediacapture-record@1.0.22))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tslib@2.8.1)':
+  '@livekit/components-react@2.9.24(livekit-client@2.23.0(@types/dom-mediacapture-record@1.0.22))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tslib@2.8.1)':
     dependencies:
-      '@livekit/components-core': 0.12.15(livekit-client@2.22.3(@types/dom-mediacapture-record@1.0.22))(tslib@2.8.1)
+      '@livekit/components-core': 0.12.15(livekit-client@2.23.0(@types/dom-mediacapture-record@1.0.22))(tslib@2.8.1)
       clsx: 2.1.1
       events: 3.3.0
       jose: 6.2.10
-      livekit-client: 2.22.3(@types/dom-mediacapture-record@1.0.22)
+      livekit-client: 2.23.0(@types/dom-mediacapture-record@1.0.22)
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
       tslib: 2.8.1
@@ -6275,7 +6275,7 @@ snapshots:
     dependencies:
       '@bufbuild/protobuf': 1.10.1
 
-  '@livekit/protocol@1.50.4':
+  '@livekit/protocol@1.52.1':
     dependencies:
       '@bufbuild/protobuf': 1.10.1
 
@@ -9128,10 +9128,10 @@ snapshots:
 
   linkifyjs@4.3.3: {}
 
-  livekit-client@2.22.3(@types/dom-mediacapture-record@1.0.22):
+  livekit-client@2.23.0(@types/dom-mediacapture-record@1.0.22):
     dependencies:
       '@livekit/mutex': 1.1.1
-      '@livekit/protocol': 1.50.4
+      '@livekit/protocol': 1.52.1
       '@types/dom-mediacapture-record': 1.0.22
       events: 3.3.0
       jose: 6.2.10

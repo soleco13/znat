@@ -4,6 +4,7 @@ import { RemoteTrackPublication, Track } from "livekit-client";
 
 import { linkQuality } from "@/shared/link-quality";
 import { track as trackEvent } from "@/shared/telemetry";
+import { peerStats, selectedPair, statsEntries } from "./peer-stats.js";
 
 /**
  * Звук собеседника «застрял» с задержкой после скачка сети (UX-аудит
@@ -34,6 +35,15 @@ import { track as trackEvent } from "@/shared/telemetry";
  * сбрасывает вовсе — `test-results/kontur-research-2026-10-14`.)
  */
 const TICK_MS = 1000;
+/** Дорожек больше — такт реже: на слабом ПК в большом классе статистика сама стоит процессора. */
+const MANY_TRACKS = 10;
+const TICK_MANY_MS = 2500;
+/**
+ * Сразу после подписки буфер ещё набирается и задержка по
+ * `jitterBufferDelay/EmittedCount` высокая (600–1600 мс) — это не «застрявший»
+ * буфер. Без паузы почти каждый вход давал секунду тишины (аудит 2026-10-17, 4.7).
+ */
+const WARMUP_MS = 12_000;
 /** Обычная задержка воспроизведения — 20–100 мс; выше этого — «застрявший» буфер. */
 const LAG_MS = 600;
 /** Сколько подряд держится, прежде чем сбрасывать (не реагируем на разовые всплески). */
@@ -72,76 +82,84 @@ export function AudioLagGuard() {
     let running = false;
     let disposed = false;
 
+    const firstSeen = new Map<string, number>();
+    let nextAt = 0;
+
     const tick = async () => {
       if (running || disposed) return;
+      const now = Date.now();
+      if (now < nextAt) return;
       running = true;
       try {
-        const now = Date.now();
         if (linkQuality.isPoor) lastNetTroubleAt = now;
+        const subs: { pub: RemoteTrackPublication; identity: string; trackId: string }[] = [];
         for (const participant of room.remoteParticipants.values()) {
           for (const pub of participant.trackPublications.values()) {
             if (!(pub instanceof RemoteTrackPublication) || pub.kind !== Track.Kind.Audio || !pub.isSubscribed) continue;
-            const receiver = pub.track?.receiver;
-            if (!receiver) continue;
-            const stats = await receiver.getStats().catch(() => null);
-            if (!stats) continue;
-            let cur: Sample | null = null;
-            let jitter = 0;
-            let rtt = 0;
-            stats.forEach((report: RTCStats) => {
-              const r = report as RTCStats & { kind?: string } & Record<string, number | undefined>;
-              if (r.type !== "inbound-rtp" || r.kind !== "audio") return;
-              cur = {
-                delay: r.jitterBufferDelay ?? 0,
-                emitted: r.jitterBufferEmittedCount ?? 0,
-                received: r.packetsReceived ?? 0,
-                lost: r.packetsLost ?? 0,
-              };
-              jitter = r.jitter ?? 0;
-            });
-            stats.forEach((report: RTCStats) => {
-              const r = report as RTCStats & Record<string, unknown>;
-              if (r.type === "candidate-pair" && r.nominated === true && typeof r.currentRoundTripTime === "number") {
-                rtt = Math.max(rtt, r.currentRoundTripTime);
-              }
-            });
-            if (rtt > RTT_SPIKE_S) lastNetTroubleAt = now;
-            if (!cur) continue;
-            const sid = pub.trackSid;
-            const before = prev.get(sid);
-            prev.set(sid, cur);
-            if (!before || (cur as Sample).emitted <= before.emitted) continue;
-            const c = cur as Sample;
-            const delayMs = (1000 * (c.delay - before.delay)) / (c.emitted - before.emitted);
-            const got = c.received - before.received;
-            const lost = Math.max(0, c.lost - before.lost);
-            const calm = jitter < CALM_JITTER_S && got > 0 && lost / (got + lost) < CALM_LOSS;
-            if (delayMs < LAG_MS || !calm) {
-              lagSince.delete(sid);
-              continue;
-            }
-            // Задержка вернулась вскоре после сброса — дело в сети, не в разовом скачке.
-            const resetAt = lastReset.get(sid);
-            if (resetAt && now - resetAt < RELAPSE_MS && !disabledUntil.has(sid)) {
-              disabledUntil.set(sid, now + DISABLE_MS);
-              trackEvent("audio_lag_reset", { delayMs: Math.round(delayMs), identity: participant.identity, disabled: true });
-            }
-            if ((disabledUntil.get(sid) ?? 0) > now || now - lastNetTroubleAt < QUIET_NET_MS) {
-              lagSince.delete(sid);
-              continue;
-            }
-            disabledUntil.delete(sid);
-            if (!lagSince.has(sid)) lagSince.set(sid, now);
-            if (now - lagSince.get(sid)! < LAG_FOR_MS || now - (lastReset.get(sid) ?? 0) < COOLDOWN_MS) continue;
-            lagSince.delete(sid);
-            lastReset.set(sid, now);
-            prev.delete(sid);
-            trackEvent("audio_lag_reset", { delayMs: Math.round(delayMs), identity: participant.identity });
-            pub.setSubscribed(false);
-            setTimeout(() => {
-              if (!disposed) pub.setSubscribed(true);
-            }, RESUBSCRIBE_GAP_MS);
+            const id = pub.track?.mediaStreamTrack?.id;
+            if (id) subs.push({ pub, identity: participant.identity, trackId: id });
           }
+        }
+        nextAt = now + (subs.length > MANY_TRACKS ? TICK_MANY_MS : TICK_MS);
+        for (const sid of [...firstSeen.keys()]) if (!subs.some((x) => x.pub.trackSid === sid)) firstSeen.delete(sid);
+        if (!subs.length) return;
+        // Один отчёт соединения на такт вместо `receiver.getStats()` на каждую дорожку.
+        const reports = await peerStats(room);
+        if (!reports || disposed) return;
+        const inbound = new Map<string, Record<string, unknown>>();
+        for (const r of statsEntries(reports, "inbound-rtp")) {
+          if (r.kind === "audio" && typeof r.trackIdentifier === "string") inbound.set(r.trackIdentifier, r);
+        }
+        const pair = selectedPair(reports);
+        const rtt = typeof pair?.currentRoundTripTime === "number" ? pair.currentRoundTripTime : 0;
+        if (rtt > RTT_SPIKE_S) lastNetTroubleAt = now;
+
+        for (const { pub, identity, trackId } of subs) {
+          const sid = pub.trackSid;
+          if (!firstSeen.has(sid)) firstSeen.set(sid, now);
+          const r = inbound.get(trackId);
+          if (!r) continue;
+          const n = (v: unknown) => (typeof v === "number" ? v : 0);
+          const cur: Sample = {
+            delay: n(r.jitterBufferDelay),
+            emitted: n(r.jitterBufferEmittedCount),
+            received: n(r.packetsReceived),
+            lost: n(r.packetsLost),
+          };
+          const jitter = n(r.jitter);
+          const before = prev.get(sid);
+          prev.set(sid, cur);
+          if (now - firstSeen.get(sid)! < WARMUP_MS) continue;
+          if (!before || cur.emitted <= before.emitted) continue;
+          const delayMs = (1000 * (cur.delay - before.delay)) / (cur.emitted - before.emitted);
+          const got = cur.received - before.received;
+          const lost = Math.max(0, cur.lost - before.lost);
+          const calm = jitter < CALM_JITTER_S && got > 0 && lost / (got + lost) < CALM_LOSS;
+          if (delayMs < LAG_MS || !calm) {
+            lagSince.delete(sid);
+            continue;
+          }
+          // Задержка вернулась вскоре после сброса — дело в сети, не в разовом скачке.
+          const resetAt = lastReset.get(sid);
+          if (resetAt && now - resetAt < RELAPSE_MS && !disabledUntil.has(sid)) {
+            disabledUntil.set(sid, now + DISABLE_MS);
+            trackEvent("audio_lag_reset", { delayMs: Math.round(delayMs), identity, disabled: true });
+          }
+          if ((disabledUntil.get(sid) ?? 0) > now || now - lastNetTroubleAt < QUIET_NET_MS) {
+            lagSince.delete(sid);
+            continue;
+          }
+          disabledUntil.delete(sid);
+          if (!lagSince.has(sid)) lagSince.set(sid, now);
+          if (now - lagSince.get(sid)! < LAG_FOR_MS || now - (lastReset.get(sid) ?? 0) < COOLDOWN_MS) continue;
+          lagSince.delete(sid);
+          lastReset.set(sid, now);
+          prev.delete(sid);
+          trackEvent("audio_lag_reset", { delayMs: Math.round(delayMs), identity });
+          pub.setSubscribed(false);
+          setTimeout(() => {
+            if (!disposed) pub.setSubscribed(true);
+          }, RESUBSCRIBE_GAP_MS);
         }
       } finally {
         running = false;
