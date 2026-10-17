@@ -635,3 +635,68 @@ export async function listPendingKnocks(lessonId: string, now = Date.now()): Pro
 export async function isAdmitted(lessonId: string, guestId: string): Promise<boolean> {
   return (await redis.sismember(admittedKey(lessonId), guestId)) === 1;
 }
+
+/**
+ * Слоты входов персонала (2026-10-17): до MAX_STAFF_SESSIONS вкладок с
+ * одного аккаунта. Слот → вкладка (`tabId`) и время выдачи токена. Занят,
+ * пока его подключение есть в LiveKit; только что выданный (подключение ещё
+ * не дошло до LiveKit) — тоже занят, SESSION_CLAIM_GRACE_MS.
+ */
+export interface SessionSlot {
+  tabId: string;
+  at: number;
+}
+
+export const SESSION_CLAIM_GRACE_MS = 30_000;
+const SESSIONS_TTL_SECONDS = 12 * 60 * 60;
+
+function sessionsKey(lessonId: string, userId: string): string {
+  return `room:${lessonId}:sessions:${userId}`;
+}
+
+/** Слот для вкладки: её прежний, иначе первый свободный; `null` — все заняты. */
+export function pickSessionSlot(
+  slots: ReadonlyMap<number, SessionSlot>,
+  tabId: string,
+  connected: ReadonlySet<number>,
+  max: number,
+  now: number,
+): number | null {
+  for (const [slot, entry] of slots) if (entry.tabId === tabId && slot <= max) return slot;
+  for (let slot = 1; slot <= max; slot++) {
+    if (connected.has(slot)) continue;
+    const entry = slots.get(slot);
+    if (!entry || now - entry.at > SESSION_CLAIM_GRACE_MS) return slot;
+  }
+  return null;
+}
+
+export async function listSessionSlots(lessonId: string, userId: string): Promise<Map<number, SessionSlot>> {
+  const all = await redis.hgetall(sessionsKey(lessonId, userId));
+  const out = new Map<number, SessionSlot>();
+  for (const [slot, raw] of Object.entries(all)) {
+    try {
+      out.set(Number(slot), JSON.parse(raw) as SessionSlot);
+    } catch {
+      // битая запись — слот считается свободным
+    }
+  }
+  return out;
+}
+
+export async function claimSessionSlot(lessonId: string, userId: string, slot: number, tabId: string): Promise<void> {
+  const key = sessionsKey(lessonId, userId);
+  await redis
+    .multi()
+    .hset(key, String(slot), JSON.stringify({ tabId, at: Date.now() } satisfies SessionSlot))
+    .expire(key, SESSIONS_TTL_SECONDS)
+    .exec();
+}
+
+export async function releaseSessionSlot(lessonId: string, userId: string, slot: number): Promise<void> {
+  await redis.hdel(sessionsKey(lessonId, userId), String(slot));
+}
+
+export async function clearSessionSlots(lessonId: string, userId: string): Promise<void> {
+  await redis.del(sessionsKey(lessonId, userId));
+}

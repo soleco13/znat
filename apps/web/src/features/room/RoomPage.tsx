@@ -138,6 +138,7 @@ import { Loader } from "@/shared/ui/loader";
 import { BrandMark } from "@/shared/ui/brand-mark";
 import { PoorLinkMediaAdapter } from "./PoorLinkMedia.js";
 import { CpuLoadAdapter } from "./cpu-load.js";
+import { currentTabId, renewTabId } from "./tab-id.js";
 import { NoiseSuppressionController, effectiveNoise, schoolNoiseMode } from "./noise-suppression.js";
 import { ScreenShareStopSweep } from "./screen-share-stop.js";
 import { MEDIA_CONNECT_OPTIONS, MEDIA_RECONNECT_POLICY, MediaRecovery } from "./MediaRecovery.js";
@@ -336,6 +337,10 @@ function blockedScreenFor(err: unknown): { title: string; text: string } | null 
   // Гостевая сессия истекла — повтором не войти, нужна ссылка заново.
   if (err instanceof ApiError && err.status === 401 && err.code === "invalid_guest_session") {
     return { title: "Нужно войти заново", text: "Откройте ссылку на урок ещё раз — так вы вернётесь в урок." };
+  }
+  // Несколько вкладок с аккаунта (2026-10-17): шестой вход и невидимка при открытых других.
+  if (err instanceof ApiError && (err.code === "too_many_sessions" || err.code === "invisible_needs_single_session")) {
+    return { title: "Урок уже открыт на других устройствах", text: err.message };
   }
   if (!(err instanceof ApiError) || err.status !== 403) return null;
   switch (err.code) {
@@ -681,7 +686,7 @@ export function RoomPage() {
     if (!lessonId || !joinedRef.current || leftRef.current) return;
     await apiFetch<JoinLessonResponse>(`/lessons/${lessonId}/join`, {
       method: "POST",
-      body: JSON.stringify({ invisible: invisibleRef.current }),
+      body: JSON.stringify({ invisible: invisibleRef.current, tabId: currentTabId() }),
     }).catch((err) => {
       const screen = blockedScreenFor(err);
       if (screen) setBlocked(screen);
@@ -708,9 +713,7 @@ export function RoomPage() {
   // переподключения служебного канала на мобильной сети частые, видео и звук
   // под ними не прерываются — перекрывать урок из-за них не нужно.
   const [longReconnect, setLongReconnect] = useState(false);
-  // Тот же человек вошёл в урок с другой вкладки/устройства — здесь LiveKit
-  // отключил медиа. Раньше плитки просто гасли, без объяснения.
-  const [mediaTakenOver, setMediaTakenOver] = useState(false);
+  // Повторный вход в медиа (`MediaRecovery`): наш слот занял дубликат вкладки.
   const [mediaResumeSignal, setMediaResumeSignal] = useState(0);
   useEffect(() => {
     if (status !== "reconnecting") {
@@ -727,7 +730,7 @@ export function RoomPage() {
     setJoinFailed(false);
     apiFetch<JoinLessonResponse>(`/lessons/${lessonId}/join`, {
       method: "POST",
-      body: JSON.stringify({ invisible: invisibleRef.current }),
+      body: JSON.stringify({ invisible: invisibleRef.current, tabId: currentTabId() }),
     })
       .then((data) => {
         joinedRef.current = true;
@@ -929,7 +932,11 @@ export function RoomPage() {
     // сети нет вовсе) кнопка «Выйти» до 30 с ничего не делала. `keepalive`
     // доносит запрос и после ухода со страницы; не дошёл — сервер сам
     // уберёт участника по молчанию.
-    void apiFetch(`/lessons/${lessonId}/leave`, { method: "POST", keepalive: true }).catch(() => undefined);
+    void apiFetch(`/lessons/${lessonId}/leave`, {
+      method: "POST",
+      keepalive: true,
+      body: JSON.stringify({ tabId: currentTabId() }),
+    }).catch(() => undefined);
     if (isGuest) {
       // У гостя нет /lessons и личного кабинета — показываем экран выхода.
       // Гостевую сессию в памяти НЕ очищаем: `RequireRoomAccess` видел
@@ -2317,30 +2324,6 @@ export function RoomPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {mediaTakenOver ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-6">
-          <div
-            role="alertdialog"
-            aria-live="assertive"
-            className="flex w-full max-w-[400px] flex-col items-center gap-3 rounded-xl border border-border bg-card p-6 text-center shadow-lg"
-          >
-            <h2 className="text-lg font-bold tracking-tight">Урок открыт в другом окне</h2>
-            <p className="text-sm text-text-2 [text-wrap:pretty]">
-              Вы вошли в этот урок с другой вкладки или устройства, поэтому здесь звук и видео выключены.
-            </p>
-            <Button
-              className="h-9 px-3.5 text-sm"
-              onClick={() => {
-                setMediaTakenOver(false);
-                setMediaResumeSignal((n) => n + 1);
-              }}
-            >
-              Продолжить здесь
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
       {/* Только WS-канал (`status`), НЕ LiveKit-медиа — оно продолжает
           работать под оверлеем, урок не прерывается. */}
       {status === "reconnecting" && longReconnect && everConnectedRef.current ? (
@@ -2536,7 +2519,11 @@ export function RoomPage() {
               if (screen) setBlocked(screen);
               return screen !== null;
             }}
-            onTakenOver={() => setMediaTakenOver(true)}
+            onTakenOver={() => {
+              // Наш слот занял дубликат этой вкладки — входим своим слотом.
+              renewTabId();
+              setMediaResumeSignal((n) => n + 1);
+            }}
             resumeSignal={mediaResumeSignal}
             initialWanted={rejoin ? { camera: rejoin.cam, microphone: rejoin.mic } : undefined}
             onWantedChange={(w) => {

@@ -262,8 +262,27 @@ export const lessonKnocksResponseSchema = z.object({ knocks: z.array(lessonKnock
 export type LessonKnocksResponse = z.infer<typeof lessonKnocksResponseSchema>;
 
 /** Тело `POST /lessons/:id/join` (необязательное). `invisible` — только администратору. */
+/**
+ * Несколько входов с одного аккаунта персонала (запрос 2026-10-17): до
+ * MAX_STAFF_SESSIONS вкладок/устройств одновременно. Первая — в LiveKit под
+ * id участника, остальные — `<id>~2` … `<id>~5` и с именем «Имя (2)». В
+ * списке участников и посещаемости человек один.
+ */
+export const MAX_STAFF_SESSIONS = 5;
+export const MEDIA_SESSION_SEPARATOR = "~";
+
 export const joinLessonRequestSchema = z
-  .object({ invisible: z.boolean().optional() })
+  .object({
+    invisible: z.boolean().optional(),
+    /** Случайный id вкладки — повторный вход с неё (F5, переподключение) занимает тот же слот. */
+    tabId: z.string().uuid().optional(),
+  })
   .partial()
   .default({});
 export type JoinLessonRequest = z.infer<typeof joinLessonRequestSchema>;
+
+export const leaveLessonRequestSchema = z
+  .object({ tabId: z.string().uuid().optional() })
+  .partial()
+  .default({});
+export type LeaveLessonRequest = z.infer<typeof leaveLessonRequestSchema>;

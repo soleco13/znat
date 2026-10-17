@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
+  useLocalParticipant,
   useParticipants,
   useSpeakingParticipants,
   useTracks,
@@ -20,7 +21,7 @@ import {
   Pin,
   SignalLow,
 } from "lucide-react";
-import type { LessonMode, ParticipantSnapshot } from "@school/shared";
+import { MEDIA_SESSION_SEPARATOR, type LessonMode, type ParticipantSnapshot } from "@school/shared";
 
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/shared/ui/avatar";
@@ -34,6 +35,7 @@ import { isStreamPaused, useStreamStateUpdates } from "./use-stream-state.js";
 import { useAdaptiveGrid } from "./use-adaptive-grid.js";
 import { useTileMenu } from "./tile-menu-context.js";
 import { useIsNarrowViewport } from "./use-narrow-viewport.js";
+import { selfTileId, withExtraSessions } from "./media-sessions.js";
 
 const GAP = 10;
 /**
@@ -70,9 +72,9 @@ type TileSize = "lg" | "md" | "sm" | "xs";
  *    Так камера учителя переносится, когда учебнику нужна вся ширина.
  */
 export function RoomVideoGrid({
-  participants,
+  participants: lessonParticipants,
   reconnectingIds,
-  selfId,
+  selfId: selfUserId,
   variant = "grid",
   layout = "grid",
   onLayoutChange,
@@ -99,6 +101,10 @@ export function RoomVideoGrid({
 }) {
   const narrow = useIsNarrowViewport();
   const { id: lessonId } = useParams<{ id: string }>();
+  // Вторая и следующие вкладки сотрудника — свои плитки (`media-sessions.ts`).
+  const roomParticipants = useParticipants();
+  const participants = withExtraSessions(lessonParticipants, roomParticipants);
+  const selfId = selfTileId(selfUserId, useLocalParticipant().localParticipant.identity);
   const tileMenu = useTileMenu();
   const cameraTracks = useTracks([Track.Source.Camera], { onlySubscribed: true });
   const trackByIdentity = new Map(cameraTracks.map((t) => [t.participant.identity, t]));
@@ -124,7 +130,6 @@ export function RoomVideoGrid({
   // Для подсказки «говорит» вне экрана: речь прерывается паузами, и метка без
   // удержания мигала бы на каждом вдохе.
   const heldSpeakers = useHeldIds(speakingIds, SPEAKER_HOLD_MS);
-  const roomParticipants = useParticipants();
   const micOffIds = new Set(
     roomParticipants.filter((p) => !p.isMicrophoneEnabled).map((p) => p.identity),
   );
@@ -364,7 +369,7 @@ export function RoomVideoGrid({
           </span>
         )}
 
-        {tileMenu && size !== "xs" ? (
+        {tileMenu && size !== "xs" && p.userId.indexOf(MEDIA_SESSION_SEPARATOR) < 0 ? (
           <span
             className={cn(
               "absolute opacity-100 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/tile:opacity-100 [@media(hover:hover)]:focus-within:opacity-100 [@media(hover:hover)]:has-[[data-state=open]]:opacity-100",
@@ -723,7 +728,10 @@ function TileVideo({
 
 /** Имя до первого пробела — для подписи крошечной плитки ленты. */
 function shortName(fullName: string): string {
-  return fullName.trim().split(/\s+/)[0] ?? fullName;
+  const first = fullName.trim().split(/\s+/)[0] ?? fullName;
+  // Вторая вкладка сотрудника — «Анна (2)», номер не теряем.
+  const session = /\s(\(\d+\))$/.exec(fullName.trim());
+  return session ? `${first} ${session[1]}` : first;
 }
 
 /** Столько метка «говорит» держится после паузы в речи. */

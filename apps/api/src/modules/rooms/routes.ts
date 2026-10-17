@@ -13,6 +13,7 @@ import {
   setLessonStageRequestSchema,
   updateParticipantPermissionsRequestSchema,
   joinLessonRequestSchema,
+  leaveLessonRequestSchema,
   type LessonKnocksResponse,
 } from "@school/shared";
 import * as roomsService from "./service.js";
@@ -37,7 +38,7 @@ export default async function roomsRoutes(app: FastifyInstance) {
     let result;
     try {
       const body = joinLessonRequestSchema.parse(request.body ?? {});
-      result = await roomsService.join(actor, request.params.id, { invisible: body.invisible });
+      result = await roomsService.join(actor, request.params.id, { invisible: body.invisible, tabId: body.tabId });
     } catch (err) {
       const reason = err instanceof AppError ? err.code : "internal_error";
       logEvent(
@@ -64,7 +65,8 @@ export default async function roomsRoutes(app: FastifyInstance) {
   });
 
   app.post<{ Params: { id: string } }>("/lessons/:id/leave", lessonAccess, async (request, reply) => {
-    await roomsService.leave(request.lessonActor, request.params.id);
+    const body = leaveLessonRequestSchema.parse(request.body ?? {});
+    await roomsService.leave(request.lessonActor, request.params.id, body.tabId);
     return reply.status(204).send();
   });
 

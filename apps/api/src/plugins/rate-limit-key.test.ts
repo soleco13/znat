@@ -53,6 +53,11 @@ describe("rateLimitKey", () => {
     expect(rateLimitMax(request({}), "recorder:lesson-1")).toBe(IDENTITY_RATE_LIMIT_PER_MINUTE);
   });
 
+  it("сотруднику — бюджет на каждую из MAX_STAFF_SESSIONS вкладок урока (2026-10-17)", () => {
+    expect(rateLimitMax(request({}), "staff:u1")).toBe(IDENTITY_RATE_LIMIT_PER_MINUTE * 5);
+    expect(rateLimitMax(request({}), "guest:g1")).toBe(IDENTITY_RATE_LIMIT_PER_MINUTE);
+  });
+
   it("поддельный recorder-токен — откат на IP", async () => {
     authServiceMock.verifyAccessToken.mockRejectedValue(new Error("bad"));
     recorderAuthMock.verifyRecorderToken.mockResolvedValue(null);

@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { TrackSource, TrackType, WebhookReceiver } from "livekit-server-sdk";
 import { env } from "../../plugins/env.js";
 import * as roomsService from "./service.js";
+import * as mediaService from "../media/service.js";
 import * as recordingsService from "../recordings/service.js";
 import { logEvent } from "../../plugins/logger.js";
 
@@ -89,7 +90,9 @@ export default async function livekitWebhookRoutes(app: FastifyInstance) {
       // (egress, identity «EG_…») и прочие служебные подключения — нет: их id
       // уходил в запросы к uuid-колонкам, вебхук отвечал 500, и LiveKit
       // повторял его — на каждой записи урока (нагрузочный тест 2026-10-05).
-      const isLessonParticipant = userId !== undefined && UUID_RE.test(userId);
+      // Вторая и следующие вкладки сотрудника — `<id>~2` … (mediaIdentity).
+      const isLessonParticipant =
+        userId !== undefined && UUID_RE.test(mediaService.parseMediaIdentity(userId).participantId);
       if (event.event === "participant_joined" && roomName && userId && isLessonParticipant) {
         await roomsService.handleParticipantJoinedWebhook(roomName, userId);
       } else if (event.event === "participant_left" && roomName && userId && isLessonParticipant) {

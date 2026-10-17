@@ -14,7 +14,7 @@ import type {
   ServerRoomMessage,
   UpdateParticipantPermissionsRequest,
 } from "@school/shared";
-import { lessonSettingsSchema } from "@school/shared";
+import { MAX_STAFF_SESSIONS, lessonSettingsSchema } from "@school/shared";
 import { env } from "../../plugins/env.js";
 import { AppError } from "../../plugins/errors.js";
 import * as canvasService from "../canvas/service.js";
@@ -388,7 +388,7 @@ function lessonFullError(): AppError {
 export async function join(
   actor: LessonActor,
   lessonId: string,
-  opts: { invisible?: boolean } = {},
+  opts: { invisible?: boolean; tabId?: string } = {},
 ): Promise<JoinLessonResponse> {
   const lesson = await assertMembership(actor, lessonId);
   // Невидимка (2026-10-17) — только администратор (не соведущий-гость, у
@@ -403,6 +403,16 @@ export async function join(
   const schoolId = actor.schoolId;
   const participantId = actor.participantId;
   const isStaff = actor.kind === "staff";
+
+  // Несколько вкладок с аккаунта персонала (2026-10-17): слот выбираем до
+  // любых изменений — шестой вход отказом, ничего не тронув. Без `tabId`
+  // (старая страница) — как раньше: первый слот, прежняя вкладка вытесняется.
+  let livekitRoom: string | null = null;
+  let slot = 1;
+  if (isStaff && opts.tabId) {
+    livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
+    slot = await claimStaffSlot(lessonId, participantId, opts.tabId, livekitRoom, hidden);
+  }
 
   activeLessons.add(lessonId);
   clearEmptyRoomTimer(lessonId);
@@ -512,7 +522,7 @@ export async function join(
     emitRoomEvent(lessonId, { type: "participant_updated", participant: snapshot });
   }
 
-  const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
+  livekitRoom ??= await lessonsService.ensureLivekitRoom(schoolId, lessonId);
   // Предел комнаты LiveKit = ученики + места персонала и записи. Сбой не
   // блокирует вход: медиа поднимется в комнате, созданной LiveKit, а лимит
   // учеников по-прежнему держит presence.
@@ -528,6 +538,7 @@ export async function join(
     kind: entry.kind,
     permissions: entry.permissions,
     hidden,
+    slot,
   });
 
   const lessonMode = await presence.getLessonMode(lessonId);
@@ -550,6 +561,49 @@ export async function join(
     entryLocked,
     chatLocked,
   };
+}
+
+/** Слоты этого участника, подключённые к LiveKit сейчас (LiveKit недоступен — пусто). */
+async function connectedSlots(livekitRoom: string, participantId: string): Promise<Set<number>> {
+  const out = new Set<number>();
+  try {
+    for (const identity of await mediaService.listConnectedIdentities(livekitRoom)) {
+      const parsed = mediaService.parseMediaIdentity(identity);
+      if (parsed.participantId === participantId) out.add(parsed.slot);
+    }
+  } catch (err) {
+    logger().warn({ err, livekitRoom, integration: "livekit" }, "rooms: livekit participants unavailable");
+  }
+  return out;
+}
+
+async function claimStaffSlot(
+  lessonId: string,
+  participantId: string,
+  tabId: string,
+  livekitRoom: string,
+  hidden: boolean,
+): Promise<number> {
+  const connected = await connectedSlots(livekitRoom, participantId);
+  const slots = await presence.listSessionSlots(lessonId, participantId);
+  const slot = presence.pickSessionSlot(slots, tabId, connected, MAX_STAFF_SESSIONS, Date.now());
+  if (slot === null) {
+    throw new AppError(
+      409,
+      "too_many_sessions",
+      `С этого аккаунта урок уже открыт на ${MAX_STAFF_SESSIONS} устройствах — закройте его на одном из них`,
+    );
+  }
+  // Невидимка — один на аккаунт: видимость общая для человека в списке.
+  if (hidden && [...connected].some((s) => s !== slot)) {
+    throw new AppError(
+      409,
+      "invisible_needs_single_session",
+      "Чтобы войти невидимкой, закройте урок в других вкладках и на других устройствах",
+    );
+  }
+  await presence.claimSessionSlot(lessonId, participantId, slot, tabId);
+  return slot;
 }
 
 /**
@@ -598,7 +652,27 @@ async function recordSession(
 }
 
 /** Явный выход (кнопка «Выйти»/POST leave) — без grace-периода на переподключение. */
-export async function leave(actor: LessonActor, lessonId: string): Promise<void> {
+export async function leave(actor: LessonActor, lessonId: string, tabId?: string): Promise<void> {
+  // Закрыл одну из нескольких вкладок персонала — уходит только она: человек
+  // остаётся в уроке и в посещаемости, пока открыта хоть одна.
+  let slot = 1;
+  if (actor.kind === "staff" && tabId) {
+    const slots = await presence.listSessionSlots(lessonId, actor.participantId);
+    slot = [...slots].find(([, e]) => e.tabId === tabId)?.[0] ?? 1;
+    const room = await lessonsService.findLivekitRoom(lessonId);
+    const others = room ? await connectedSlots(room, actor.participantId) : new Set<number>();
+    others.delete(slot);
+    if (others.size > 0) {
+      await presence.releaseSessionSlot(lessonId, actor.participantId, slot);
+      try {
+        await mediaService.removeParticipant(room!, mediaService.mediaIdentity(actor.participantId, slot));
+      } catch (err) {
+        logTaskFailure("rooms.leave_livekit", err, { lessonId, participantId: actor.participantId });
+      }
+      return;
+    }
+  }
+  await presence.clearSessionSlots(lessonId, actor.participantId);
   const leaving = await presence.getParticipant(lessonId, actor.participantId);
   await presence.removeParticipant(lessonId, actor.participantId);
   // Выход — и из медиа тоже: раньше участник оставался в комнате LiveKit, а
@@ -612,7 +686,7 @@ export async function leave(actor: LessonActor, lessonId: string): Promise<void>
   const livekitRoom = await lessonsService.findLivekitRoom(lessonId);
   if (livekitRoom) {
     try {
-      await mediaService.removeParticipant(livekitRoom, actor.participantId);
+      await mediaService.removeParticipant(livekitRoom, mediaService.mediaIdentity(actor.participantId, slot));
     } catch (err) {
       logTaskFailure("rooms.leave_livekit", err, { lessonId, participantId: actor.participantId });
     }
@@ -961,6 +1035,10 @@ export async function muteParticipantNow(
   }
   const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
   await mediaService.muteParticipant(livekitRoom, targetUserId);
+  // Сотрудник открыл урок в нескольких вкладках — глушим и остальные.
+  for (const extra of await connectedSlots(livekitRoom, targetUserId)) {
+    if (extra > 1) await mediaService.muteParticipant(livekitRoom, mediaService.mediaIdentity(targetUserId, extra));
+  }
   emitRoomEvent(lessonId, { type: "microphones_muted", userIds: [targetUserId] });
 }
 
@@ -1150,9 +1228,10 @@ export async function setEntryLocked(
  * сессии, и удалённый ученик мог бы подключиться к комнате им напрямую, в
  * обход приложения. Выкидываем такого сразу после входа.
  */
-export async function handleParticipantJoinedWebhook(livekitRoom: string, userId: string): Promise<void> {
+export async function handleParticipantJoinedWebhook(livekitRoom: string, identity: string): Promise<void> {
+  const userId = mediaService.parseMediaIdentity(identity).participantId;
   if (await guestsService.isGuestSessionRevoked(userId)) {
-    await mediaService.removeParticipant(livekitRoom, userId);
+    await mediaService.removeParticipant(livekitRoom, identity);
     return;
   }
   // Медиа-токен гостя живёт всю гостевую сессию, а права в нём — на момент
@@ -1171,7 +1250,7 @@ export async function handleParticipantJoinedWebhook(livekitRoom: string, userId
   // токеном) — в уроке его нет, и учитель его не видит: выкидываем (G-01).
   if (await presence.hasLeft(lesson.id, userId)) {
     logger().warn({ lessonId: lesson.id, participantId: userId }, "livekit: участник вне урока подключился к медиа — удалён");
-    await mediaService.removeParticipant(livekitRoom, userId);
+    await mediaService.removeParticipant(livekitRoom, identity);
     return;
   }
   // Presence уже снят зачисткой (связь пропала дольше grace) — права как у
@@ -1194,9 +1273,12 @@ export async function handleParticipantJoinedWebhook(livekitRoom: string, userId
  * могло бы конфликтовать с более аккуратной логикой в `markDisconnected`.
  * Идемпотентно (`repo.closeOpenSession` бьёт по `WHERE left_at IS NULL`).
  */
-export async function handleParticipantLeftWebhook(livekitRoom: string, userId: string): Promise<void> {
+export async function handleParticipantLeftWebhook(livekitRoom: string, identity: string): Promise<void> {
   const lesson = await lessonsService.getLessonByLivekitRoom(livekitRoom);
   if (!lesson) return;
+  const userId = mediaService.parseMediaIdentity(identity).participantId;
+  // Ушла одна из вкладок сотрудника, другие на месте — он всё ещё на уроке.
+  if ((await connectedSlots(livekitRoom, userId)).size > 0) return;
   await repo.closeOpenSession(lesson.id, userId);
   // Подстраховка на разрыв связи без явного leave()/track_unpublished (см. releaseScreenShare выше).
   await presence.releaseScreenShare(lesson.id, userId);
@@ -1247,18 +1329,18 @@ export async function handleRoomFinishedWebhook(livekitRoom: string): Promise<vo
  * закончилась) не должен затереть исходный режим значением `lecture`,
  * которое сам же и выставил.
  */
-export async function handleScreenShareStartedWebhook(livekitRoom: string, userId: string): Promise<void> {
+export async function handleScreenShareStartedWebhook(livekitRoom: string, identity: string): Promise<void> {
   const lesson = await lessonsService.getLessonByLivekitRoom(livekitRoom);
   if (!lesson) return;
 
-  const publisher = await presence.getParticipant(lesson.id, userId);
+  const publisher = await presence.getParticipant(lesson.id, mediaService.parseMediaIdentity(identity).participantId);
   const isPublisherStaff = publisher?.kind === "staff" || publisher?.cohost === true;
-  const others = await mediaService.findOtherActiveScreenShares(livekitRoom, userId);
+  const others = await mediaService.findOtherActiveScreenShares(livekitRoom, identity);
 
   if (others.length > 0) {
     if (!isPublisherStaff) {
       // Не учитель, а демонстрация уже идёт — новую гасим, старая продолжается.
-      await mediaService.muteScreenShare(livekitRoom, userId);
+      await mediaService.muteScreenShare(livekitRoom, identity);
       return;
     }
     // Учитель — приоритет, гасим все чужие демонстрации.
@@ -1285,7 +1367,7 @@ export async function handleScreenShareStartedWebhook(livekitRoom: string, userI
  * же, переподключившаяся) ещё идёт. Если сохранённого режима нет (`null`)
  * — режим уже был `lecture` до демонстрации, восстанавливать нечего.
  */
-export async function handleScreenShareStoppedWebhook(livekitRoom: string, userId?: string): Promise<void> {
+export async function handleScreenShareStoppedWebhook(livekitRoom: string, identity?: string): Promise<void> {
   const lesson = await lessonsService.getLessonByLivekitRoom(livekitRoom);
   if (!lesson) return;
 
@@ -1293,7 +1375,7 @@ export async function handleScreenShareStoppedWebhook(livekitRoom: string, userI
   // release (обрыв связи, закрытая вкладка) — реальное состояние LiveKit
   // надёжнее клиентского вызова. `releaseScreenShare` — compare-and-delete,
   // чужой уже перехваченный лок не тронет.
-  if (userId) await presence.releaseScreenShare(lesson.id, userId);
+  if (identity) await presence.releaseScreenShare(lesson.id, mediaService.parseMediaIdentity(identity).participantId);
 
   const stillSharing = await mediaService.findOtherActiveScreenShares(livekitRoom);
   if (stillSharing.length > 0) return;
@@ -1440,7 +1522,8 @@ async function mediaConnectedIds(lessonId: string): Promise<Set<string>> {
   try {
     const livekitRoom = await lessonsService.findLivekitRoom(lessonId);
     if (!livekitRoom) return new Set();
-    return await mediaService.listConnectedIdentities(livekitRoom);
+    const identities = await mediaService.listConnectedIdentities(livekitRoom);
+    return new Set([...identities].map((identity) => mediaService.parseMediaIdentity(identity).participantId));
   } catch (err) {
     logger().warn({ err, lessonId, integration: "livekit" }, "rooms: livekit participants unavailable");
     return new Set();

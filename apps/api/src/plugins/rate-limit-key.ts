@@ -1,4 +1,5 @@
 import type { FastifyRequest } from "fastify";
+import { MAX_STAFF_SESSIONS } from "@school/shared";
 import { verifyAccessToken } from "../modules/auth/service.js";
 import { GUEST_COOKIE_NAME, verifyGuestToken } from "../modules/guests/service.js";
 import { verifyRecorderToken } from "../modules/recorder-auth/service.js";
@@ -50,7 +51,11 @@ export async function rateLimitKey(request: FastifyRequest): Promise<string> {
 }
 
 export function rateLimitMax(_request: FastifyRequest, key: string): number {
-  return key.startsWith("ip:") ? ANONYMOUS_RATE_LIMIT_PER_MINUTE : IDENTITY_RATE_LIMIT_PER_MINUTE;
+  if (key.startsWith("ip:")) return ANONYMOUS_RATE_LIMIT_PER_MINUTE;
+  // Сотрудник может держать урок открытым в MAX_STAFF_SESSIONS вкладках
+  // (2026-10-17): у каждой свои опросы и телеметрия — бюджет на каждую.
+  if (key.startsWith("staff:")) return IDENTITY_RATE_LIMIT_PER_MINUTE * MAX_STAFF_SESSIONS;
+  return IDENTITY_RATE_LIMIT_PER_MINUTE;
 }
 
 /**

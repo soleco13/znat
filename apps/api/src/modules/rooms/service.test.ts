@@ -92,6 +92,11 @@ const {
     listConnectedIdentities: vi.fn().mockResolvedValue(new Set()),
     ensureRoom: vi.fn().mockResolvedValue(undefined),
     mediaTokenTtlSeconds: vi.fn().mockReturnValue(900),
+    mediaIdentity: (id: string, slot = 1) => (slot > 1 ? `${id}~${slot}` : id),
+    parseMediaIdentity: (identity: string) => {
+      const m = /^(.*)~(\d+)$/.exec(identity);
+      return m ? { participantId: m[1]!, slot: Number(m[2]) } : { participantId: identity, slot: 1 };
+    },
   },
   schoolSettingsServiceMock: {
     // Параметры школы (запрос 2026-09-14) — `join()` подмешивает мягкие
@@ -137,6 +142,7 @@ vi.mock("./presence.js", async () => {
   const chatRate = new Map<string, number>();
   const leftMarks = new Set<string>();
   const newGuests = new Map<string, number[]>();
+  const sessionSlots = new Map<string, Map<number, { tabId: string; at: number }>>();
   const roomMap = (lessonId: string) => {
     let m = rooms.get(lessonId);
     if (!m) {
@@ -238,6 +244,19 @@ vi.mock("./presence.js", async () => {
     }),
     isEntryLocked: vi.fn(async (lessonId: string) => entryLocks.has(lessonId)),
     isAdmitted: vi.fn(async () => false),
+    listSessionSlots: vi.fn(async (lessonId: string, userId: string) => new Map(sessionSlots.get(`${lessonId}:${userId}`) ?? [])),
+    claimSessionSlot: vi.fn(async (lessonId: string, userId: string, slot: number, tabId: string) => {
+      const k = `${lessonId}:${userId}`;
+      const m = sessionSlots.get(k) ?? new Map();
+      m.set(slot, { tabId, at: Date.now() });
+      sessionSlots.set(k, m);
+    }),
+    releaseSessionSlot: vi.fn(async (lessonId: string, userId: string, slot: number) => {
+      sessionSlots.get(`${lessonId}:${userId}`)?.delete(slot);
+    }),
+    clearSessionSlots: vi.fn(async (lessonId: string, userId: string) => {
+      sessionSlots.delete(`${lessonId}:${userId}`);
+    }),
     setEntryLocked: vi.fn(async (lessonId: string, locked: boolean) => {
       if (locked) entryLocks.add(lessonId);
       else entryLocks.delete(lessonId);
@@ -304,6 +323,7 @@ vi.mock("./presence.js", async () => {
       chatIdem.delete(`${lessonId}:${participantId}:${key}`);
     }),
     __clear: () => {
+      sessionSlots.clear();
       chatIdem.clear();
       leftMarks.clear();
       rooms.clear();
@@ -1825,5 +1845,77 @@ describe("текущее задание урока (вошедшие позже)
 
     await roomsService.setLessonStage(SCHOOL_ID, LESSON_ID, teacherToken(), "people");
     expect((await roomsService.getLessonStateSnapshot(LESSON_ID)).currentActivityId).toBeNull();
+  });
+});
+
+describe("несколько вкладок с аккаунта персонала (2026-10-17)", () => {
+  const TAB = ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"];
+  const slotOf = () => vi.mocked(mediaServiceMock.createParticipantConnection).mock.calls.at(-1)?.[0].slot;
+  beforeEach(() => {
+    mediaServiceMock.listConnectedIdentities.mockResolvedValue(new Set());
+    lessonsServiceMock.findLivekitRoom.mockResolvedValue("lesson-room");
+    lessonsServiceMock.getLessonByLivekitRoom.mockResolvedValue({ id: LESSON_ID, schoolId: SCHOOL_ID, settings: {} });
+  });
+  afterEach(() => {
+    mediaServiceMock.listConnectedIdentities.mockResolvedValue(new Set());
+    lessonsServiceMock.findLivekitRoom.mockResolvedValue(null);
+  });
+
+  it("pickSessionSlot: своя вкладка — свой слот, занятые и только что выданные пропускаются, сверх предела — null", async () => {
+    const { pickSessionSlot, SESSION_CLAIM_GRACE_MS } = await vi.importActual<typeof import("./presence.js")>("./presence.js");
+    const now = 1_000_000;
+    const slots = new Map([
+      [1, { tabId: "a", at: now - 60_000 }],
+      [2, { tabId: "b", at: now - 1_000 }],
+    ]);
+    expect(pickSessionSlot(slots, "b", new Set([1]), 5, now)).toBe(2);
+    expect(pickSessionSlot(slots, "c", new Set([1]), 5, now)).toBe(3);
+    expect(pickSessionSlot(slots, "c", new Set(), 5, now)).toBe(1);
+    expect(pickSessionSlot(slots, "c", new Set([1]), 5, now + SESSION_CLAIM_GRACE_MS + 1)).toBe(2);
+    expect(pickSessionSlot(new Map(), "c", new Set([1, 2, 3, 4, 5]), 5, now)).toBeNull();
+  });
+
+  it("вторая вкладка — второй слот, человек в списке один", async () => {
+    await roomsService.join(staffActor(), LESSON_ID, { tabId: TAB[0] });
+    expect(slotOf()).toBe(1);
+    mediaServiceMock.listConnectedIdentities.mockResolvedValue(new Set([TEACHER_ID]));
+    const second = await roomsService.join(staffActor(), LESSON_ID, { tabId: TAB[1] });
+    expect(slotOf()).toBe(2);
+    expect(second.participants.filter((p) => p.userId === TEACHER_ID)).toHaveLength(1);
+  });
+
+  it("шестой вход с аккаунта — отказ", async () => {
+    mediaServiceMock.listConnectedIdentities.mockResolvedValue(
+      new Set([TEACHER_ID, `${TEACHER_ID}~2`, `${TEACHER_ID}~3`, `${TEACHER_ID}~4`, `${TEACHER_ID}~5`]),
+    );
+    await expect(roomsService.join(staffActor(), LESSON_ID, { tabId: TAB[0] })).rejects.toMatchObject({
+      statusCode: 409,
+      code: "too_many_sessions",
+    });
+  });
+
+  it("закрыл одну вкладку — остальные на уроке, посещаемость не закрыта", async () => {
+    await roomsService.join(staffActor(), LESSON_ID, { tabId: TAB[0] });
+    mediaServiceMock.listConnectedIdentities.mockResolvedValue(new Set([TEACHER_ID]));
+    await roomsService.join(staffActor(), LESSON_ID, { tabId: TAB[1] });
+    mediaServiceMock.listConnectedIdentities.mockResolvedValue(new Set([TEACHER_ID, `${TEACHER_ID}~2`]));
+    await roomsService.leave(staffActor(), LESSON_ID, TAB[1]);
+    expect(mediaServiceMock.removeParticipant).toHaveBeenCalledWith(expect.any(String), `${TEACHER_ID}~2`);
+    expect(repoMock.closeOpenSession).not.toHaveBeenCalled();
+    const list = await roomsService.listParticipantsSnapshot(LESSON_ID);
+    expect(list.some((p) => p.userId === TEACHER_ID)).toBe(true);
+  });
+
+  it("вебхук ухода одной вкладки при живой другой не закрывает посещаемость", async () => {
+    mediaServiceMock.listConnectedIdentities.mockResolvedValue(new Set([TEACHER_ID]));
+    await roomsService.handleParticipantLeftWebhook("lesson-room", `${TEACHER_ID}~2`);
+    expect(repoMock.closeOpenSession).not.toHaveBeenCalled();
+  });
+
+  it("невидимкой — только когда других вкладок нет", async () => {
+    mediaServiceMock.listConnectedIdentities.mockResolvedValue(new Set([TEACHER_ID]));
+    await expect(
+      roomsService.join(staffActor({ role: "admin" }), LESSON_ID, { tabId: TAB[1], invisible: true }),
+    ).rejects.toMatchObject({ statusCode: 409, code: "invisible_needs_single_session" });
   });
 });

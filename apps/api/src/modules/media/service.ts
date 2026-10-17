@@ -1,5 +1,5 @@
 import { AccessToken, ParticipantInfo_State, RoomServiceClient, TrackSource } from "livekit-server-sdk";
-import type { MediaConnection, ParticipantKind, ParticipantPermissions } from "@school/shared";
+import { MEDIA_SESSION_SEPARATOR, type MediaConnection, type ParticipantKind, type ParticipantPermissions } from "@school/shared";
 import { env } from "../../plugins/env.js";
 import { logEvent } from "../../plugins/logger.js";
 
@@ -93,12 +93,16 @@ export async function createParticipantConnection(params: {
   permissions: ParticipantPermissions;
   /** Админ-невидимка: скрытый участник LiveKit, только смотреть и слушать. */
   hidden?: boolean;
+  /** Слот входа персонала (1…MAX_STAFF_SESSIONS) — см. `mediaIdentity`. */
+  slot?: number;
 }): Promise<MediaConnection> {
   const started = performance.now();
   const ttlSeconds = mediaTokenTtlSeconds(params.kind);
+  const slot = params.slot ?? 1;
+  const identity = mediaIdentity(params.userId, slot);
   const at = new AccessToken(env.LIVEKIT_API_KEY, env.LIVEKIT_API_SECRET, {
-    identity: params.userId,
-    name: params.fullName,
+    identity,
+    name: slot > 1 ? `${params.fullName} (${slot})` : params.fullName,
     ttl: ttlSeconds,
     // Э6.1 / Э12.4: вид участника (`staff | guest`) как LiveKit-атрибут —
     // клиенту (`TeacherVideoTile`) нужно отличить камеру персонала от камеры
@@ -118,7 +122,7 @@ export async function createParticipantConnection(params: {
   // livekit) и вебхуки сводятся к этому входу в урок. Сам токен — нет.
   logEvent("livekit_token_created", {
     livekitRoom: params.livekitRoom,
-    identity: params.userId,
+    identity,
     kind: params.kind,
     ttlSeconds,
     canPublishSources: grant.canPublishSources.map((s) => TrackSource[s]),
@@ -171,6 +175,23 @@ export async function removeParticipant(livekitRoom: string, userId: string): Pr
   } catch (err) {
     if (!isNotFoundError(err)) throw err;
   }
+}
+
+/**
+ * Identity в LiveKit: первый вход — id участника, следующие входы того же
+ * сотрудника — `<id>~2` … (запрос 2026-10-17, несколько вкладок с аккаунта).
+ */
+export function mediaIdentity(participantId: string, slot = 1): string {
+  return slot > 1 ? `${participantId}${MEDIA_SESSION_SEPARATOR}${slot}` : participantId;
+}
+
+/** Обратное к `mediaIdentity`; служебные подключения (запись) — как есть, слот 1. */
+export function parseMediaIdentity(identity: string): { participantId: string; slot: number } {
+  const at = identity.lastIndexOf(MEDIA_SESSION_SEPARATOR);
+  if (at <= 0) return { participantId: identity, slot: 1 };
+  const slot = Number(identity.slice(at + 1));
+  if (!Number.isInteger(slot) || slot < 2) return { participantId: identity, slot: 1 };
+  return { participantId: identity.slice(0, at), slot };
 }
 
 /**

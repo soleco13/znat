@@ -33,13 +33,10 @@ check("tab2 reaches device check or room", (await waitFor(async () => (await inR
 await passDeviceCheck(T2);
 await sleep(5000);
 const t1ui = await ui(T);
-check("first tab shows 'Урок открыт в другом окне'", t1ui.takenOver, t1ui);
-await shot(T, "taken-over");
-const resumeBtn = await T.eval(`!!${byText("button", "Продолжить здесь")}`);
-check("first tab offers 'Продолжить здесь'", resumeBtn);
-if (resumeBtn) { await T.click(byText("button", "Продолжить здесь")); await sleep(6000); }
-const t2ui = await ui(T2);
-check("after resume, tab2 shows taken-over", t2ui.takenOver, t2ui);
+// 2026-10-17: до 5 вкладок с аккаунта сотрудника — вторая не вытесняет первую.
+check("first tab stays in room (multi-session)", t1ui.inRoom && !t1ui.takenOver, t1ui);
+check("tab2 in room too", await inRoom(T2));
+await shot(T, "two-tabs");
 await T2.send("Page.close").catch(() => {});
 await sleep(2000);
 
@@ -85,7 +82,7 @@ if (await G.eval(`!!document.querySelector('input[placeholder="Имя и фам�
 }
 await sleep(4000);
 const lockedTxt = await text(G);
-check("new guest sees 'вход закрыт'", /закрыл вход|Вход закрыт|вход в урок закрыт/i.test(lockedTxt), lockedTxt.slice(0, 200));
+check("new guest sees 'вход закрыт'", /закрыл вход|Вход закрыт|вход в урок.*закрыт|Ждём, когда учитель впустит/i.test(lockedTxt), lockedTxt.slice(0, 200));
 await shot(G, "entry-locked");
 await S.reload();
 check("existing s1 returns while entry locked", (await waitFor(() => inRoom(S), 30000)).ok, await ui(S));

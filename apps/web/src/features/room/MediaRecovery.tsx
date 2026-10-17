@@ -13,6 +13,7 @@ import type { JoinLessonResponse } from "@school/shared";
 import { apiFetch } from "@/shared/api-client";
 import { reportMediaDeviceError } from "./media-device-errors.js";
 import { reportLiveKitConnectionFailed } from "./MediaTelemetry.js";
+import { currentTabId } from "./tab-id.js";
 
 /**
  * Медиа на плохой связи. Штатно LiveKit ждёт подключения 15 с с одним
@@ -222,7 +223,10 @@ export function MediaRecovery({
       if (finished || busy || room.state !== ConnectionState.Disconnected || Date.now() < nextTryAt) return;
       busy = true;
       try {
-        const data = await apiFetch<JoinLessonResponse>(`/lessons/${lessonId}/join`, { method: "POST" });
+        const data = await apiFetch<JoinLessonResponse>(`/lessons/${lessonId}/join`, {
+          method: "POST",
+          body: JSON.stringify({ tabId: currentTabId() }),
+        });
         if (finished || room.state !== ConnectionState.Disconnected) return;
         callbacks.current.onRejoined(data);
         await room.connect(data.media.url, data.media.token, MEDIA_CONNECT_OPTIONS);
