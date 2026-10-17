@@ -165,7 +165,7 @@ export function App() {
         <Route path="/" element={<RequireAuth><HomeRedirect /></RequireAuth>} />
       </Routes>
       </Suspense>
-      <Toaster position="top-right" richColors closeButton />
+      <Toaster />
     </BrowserRouter>
   );
 }

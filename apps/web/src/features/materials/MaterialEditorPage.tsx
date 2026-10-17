@@ -44,7 +44,7 @@ import {
 import { CenteredSpinner } from "@/shared/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { SimpleTooltip } from "@/shared/ui/tooltip";
-import { toast } from "@/shared/ui/sonner";
+import { notify } from "@/shared/ui/notify";
 import { TextbookView } from "./textbook/TextbookView.js";
 import { isPlaceholderMeta } from "./material-templates.js";
 import { MaterialDocEditor } from "./editor/MaterialDocEditor.js";
@@ -404,7 +404,7 @@ function SaveDialog({
         grades,
         topic: topic.trim() || undefined,
       });
-      toast.success("Сохранено");
+      notify.success("Сохранено");
       setOpen(false);
     } catch {
       setError("Не удалось сохранить — попробуйте ещё раз");
@@ -636,7 +636,7 @@ function StatusActions({
 
   function guardMeta(): boolean {
     if (metaReady) return true;
-    toast.error("Сначала нажмите «Сохранить» — укажите название и класс");
+    notify.error("Сначала нажмите «Сохранить» — укажите название и класс");
     return false;
   }
 
@@ -646,7 +646,7 @@ function StatusActions({
       await onFlushPending();
       await action();
     } catch {
-      toast.error("Не получилось — попробуйте ещё раз");
+      notify.error("Не получилось — попробуйте ещё раз");
     } finally {
       setPending(false);
     }
@@ -688,15 +688,15 @@ function StatusActions({
             run(async () => {
               const issues = await onValidate();
               if (issues.length > 0) {
-                toast.error(
-                  `Материал не готов к публикации — проблем: ${issues.length}. Смотрите «Проверка».`,
-                );
+                notify.error("Материал не готов к публикации", {
+                  text: `Проблем: ${issues.length} — смотрите «Проверка».`,
+                });
                 return;
               }
               await publishMaterial(materialId);
               onStatusChange("published");
               onPublished();
-              toast.success("Материал опубликован");
+              notify.success("Материал опубликован");
             })
           }
         >

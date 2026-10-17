@@ -8,7 +8,7 @@ import { EmptyState } from "@/shared/ui/empty-state";
 import { ErrorState } from "@/shared/ui/error-state";
 import { PageHeader } from "@/shared/ui/page-header";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { toast } from "@/shared/ui/sonner";
+import { notify } from "@/shared/ui/notify";
 import { buildPlaceholderDraft } from "./material-templates.js";
 import { createMaterial, listMaterials } from "./materials-api.js";
 
@@ -135,7 +135,7 @@ function NewMaterialButton() {
       const result = await createMaterial(buildPlaceholderDraft());
       navigate(`/materials/edit/${result.materialId}`);
     } catch {
-      toast.error("Не удалось создать материал — попробуйте ещё раз");
+      notify.error("Не удалось создать материал — попробуйте ещё раз");
       setBusy(false);
     }
   }

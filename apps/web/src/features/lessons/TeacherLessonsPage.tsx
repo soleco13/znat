@@ -24,7 +24,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/
 import { ErrorState } from "@/shared/ui/error-state";
 import { Input } from "@/shared/ui/input";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { toast } from "@/shared/ui/sonner";
+import { notify } from "@/shared/ui/notify";
 import { RecordingCard } from "@/features/recordings/RecordingCard.js";
 import {
   listRecordingsForLessons,
@@ -39,9 +39,9 @@ const PRESENCE_POLL_MS = 30_000;
 async function copyJoinLink(joinPath: string) {
   try {
     await navigator.clipboard.writeText(`${window.location.origin}${joinPath}`);
-    toast.success("Ссылка для учеников скопирована");
+    notify.success("Ссылка для учеников скопирована");
   } catch {
-    toast.error("Не удалось скопировать ссылку");
+    notify.error("Не удалось скопировать ссылку");
   }
 }
 

@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/shared/ui/select";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { toast } from "@/shared/ui/sonner";
+import { notify } from "@/shared/ui/notify";
 import { listMaterials } from "@/features/materials/materials-api.js";
 import {
   assignLessonMaterial,
@@ -173,7 +173,7 @@ export function LessonMaterialsDialog({
       onChanged?.(lesson.id, res.items);
       setSelected("");
     } catch {
-      toast.error("Не удалось назначить материал");
+      notify.error("Не удалось назначить материал");
     } finally {
       setBusy(false);
     }
@@ -188,7 +188,7 @@ export function LessonMaterialsDialog({
       setItems(next);
       onChanged?.(lesson.id, next);
     } catch {
-      toast.error("Не удалось снять материал");
+      notify.error("Не удалось снять материал");
     } finally {
       setBusy(false);
     }

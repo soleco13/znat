@@ -5,7 +5,7 @@ import { DropdownMenuItem } from "@/shared/ui/dropdown-menu";
 import { Toggle } from "@/shared/ui/toggle";
 import { SimpleTooltip } from "@/shared/ui/tooltip";
 import { Loader } from "@/shared/ui/loader";
-import { toast } from "@/shared/ui/sonner";
+import { notify } from "@/shared/ui/notify";
 
 export type RoomControlVariant = "circle" | "bare" | "pill" | "tile" | "rail" | "menu";
 
@@ -83,7 +83,7 @@ export function RoomControlButton({
   // указателя), и ученик видел просто серую кнопку, которая не жмётся.
   const explain = disabled && title ? title : null;
   const handleToggle = explain
-    ? () => toast(explain, { position: "top-center", duration: 5000, id: "room-control-hint" })
+    ? () => notify(explain, { id: "room-control-hint" })
     : onToggle;
   const blocked = disabled && !explain;
 

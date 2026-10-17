@@ -1,9 +1,10 @@
 import { useEffect } from "react";
 import { useRoomContext } from "@livekit/components-react";
 import { RoomEvent } from "livekit-client";
+import { MicOff, VideoOff } from "lucide-react";
 
 import { errorFields, track } from "@/shared/telemetry";
-import { toast } from "@/shared/ui/sonner";
+import { notify } from "@/shared/ui/notify";
 
 type DeviceKind = "microphone" | "camera";
 
@@ -12,20 +13,23 @@ const NAME: Record<DeviceKind, { what: string; to: string; it: string; ending: s
   camera: { what: "камеру", to: "камере", it: "Камера", ending: "а" },
 };
 
-/** Что человеку сделать, чтобы устройство заработало, — по имени ошибки `getUserMedia`. */
-function deviceErrorMessage(kind: DeviceKind, err: unknown): string {
+/** Что случилось и что человеку сделать, чтобы устройство заработало, — по имени ошибки `getUserMedia`. */
+function deviceErrorMessage(kind: DeviceKind, err: unknown): { title: string; text: string } {
   const { what, to, it, ending } = NAME[kind];
   const name = err instanceof Error ? err.name : "";
   if (name === "NotAllowedError" || name === "SecurityError") {
-    return `Браузер не дал доступ к ${to} — разрешите доступ в настройках сайта (значок слева от адреса)`;
+    return {
+      title: `Браузер не дал доступ к ${to}`,
+      text: "Разрешите: значок слева от адреса сайта",
+    };
   }
   if (name === "NotReadableError" || name === "AbortError") {
-    return `${it} занят${ending} другой программой — закройте её и попробуйте ещё раз`;
+    return { title: `${it} занят${ending} другой программой`, text: "Закройте её и попробуйте ещё раз" };
   }
   if (name === "NotFoundError" || name === "OverconstrainedError") {
-    return `${it} не найден${ending} — подключите и попробуйте ещё раз`;
+    return { title: `${it} не найден${ending}`, text: "Подключите и попробуйте ещё раз" };
   }
-  return `Не удалось включить ${what} — попробуйте ещё раз`;
+  return { title: `Не удалось включить ${what}`, text: "Попробуйте ещё раз" };
 }
 
 /**
@@ -39,7 +43,8 @@ export function reportMediaDeviceError(kind: DeviceKind, err: unknown): void {
 }
 
 function showMediaDeviceError(kind: DeviceKind, err: unknown): void {
-  toast.error(deviceErrorMessage(kind, err), { position: "top-center", duration: 8000, id: `media-device-${kind}` });
+  const { title, text } = deviceErrorMessage(kind, err);
+  notify(title, { id: `media-device-${kind}`, icon: kind === "camera" ? VideoOff : MicOff, text, duration: 8_000 });
 }
 
 /**

@@ -356,3 +356,13 @@ html[data-teacher-zoom] [data-radix-popper-content-wrapper] {
 html[data-teacher-zoom] [data-radix-popper-content-wrapper] > * {
   zoom: 1.2;
 }
+
+/*
+  Уведомления (`shared/ui/notify.tsx`): появляются и уходят на месте — лёгким
+  сдвигом и прозрачностью, а не выездом на свою высоту сверху (sonner по
+  умолчанию), иначе карточка проезжает поверх шапки урока.
+*/
+[data-sonner-toaster][data-y-position="top"] [data-sonner-toast][data-y-position="top"]:not([data-mounted="true"]),
+[data-sonner-toaster][data-y-position="top"] [data-sonner-toast][data-y-position="top"][data-removed="true"] {
+  --y: translateY(-8px);
+}

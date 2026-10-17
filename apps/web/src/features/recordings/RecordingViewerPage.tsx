@@ -28,7 +28,7 @@ import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { ErrorState } from "@/shared/ui/error-state";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { toast } from "@/shared/ui/sonner";
+import { notify } from "@/shared/ui/notify";
 import {
   formatBytes,
   formatDate,
@@ -62,9 +62,9 @@ export function RecordingViewerPage() {
     try {
       const link = await createExternalDownloadLink(data.id);
       await navigator.clipboard.writeText(link.url);
-      toast.success("Внешняя ссылка скопирована — действует 24 часа");
+      notify.success("Внешняя ссылка скопирована — действует 24 часа");
     } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : "Не удалось создать ссылку");
+      notify.error(e instanceof ApiError ? e.message : "Не удалось создать ссылку");
     } finally {
       setLinkBusy(false);
     }
@@ -75,10 +75,10 @@ export function RecordingViewerPage() {
     setDeleteBusy(true);
     try {
       await adminDeleteRecording(data.id);
-      toast.success("Запись удалена из хранилища");
+      notify.success("Запись удалена из хранилища");
       navigate("/admin/recordings");
     } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : "Не удалось удалить запись");
+      notify.error(e instanceof ApiError ? e.message : "Не удалось удалить запись");
       setDeleteBusy(false);
       setConfirmDelete(false);
     }

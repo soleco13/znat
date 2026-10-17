@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@/shared/ui/select";
 import { CenteredSpinner } from "@/shared/ui/spinner";
-import { toast } from "@/shared/ui/sonner";
+import { notify } from "@/shared/ui/notify";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 import { createInvite, listInvites, revokeInvite } from "./invites-api.js";
 
@@ -60,9 +60,9 @@ function inviteStatus(invite: InviteSummary): { label: string; variant: "default
 async function copyInviteLink(url: string) {
   try {
     await navigator.clipboard.writeText(url);
-    toast.success("Ссылка приглашения скопирована");
+    notify.success("Ссылка приглашения скопирована");
   } catch {
-    toast.error("Не удалось скопировать ссылку");
+    notify.error("Не удалось скопировать ссылку");
   }
 }
 
@@ -94,7 +94,7 @@ export function InvitesPage() {
       setCreated(invite);
       invites.reload();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Не удалось создать приглашение");
+      notify.error(err instanceof ApiError ? err.message : "Не удалось создать приглашение");
     } finally {
       setSubmitting(false);
     }
@@ -104,10 +104,10 @@ export function InvitesPage() {
     if (!revokeTarget) return;
     try {
       await revokeInvite(revokeTarget.id);
-      toast.success("Приглашение отозвано");
+      notify.success("Приглашение отозвано");
       invites.reload();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Не удалось отозвать приглашение");
+      notify.error(err instanceof ApiError ? err.message : "Не удалось отозвать приглашение");
     } finally {
       setRevokeTarget(null);
     }

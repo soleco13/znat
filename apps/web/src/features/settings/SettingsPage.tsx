@@ -22,7 +22,7 @@ import {
 } from "@/shared/ui/select";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { Switch } from "@/shared/ui/switch";
-import { toast } from "@/shared/ui/sonner";
+import { notify } from "@/shared/ui/notify";
 import { getSchoolSettings, updateSchoolSettings } from "./settings-api.js";
 
 /**
@@ -105,7 +105,7 @@ function BitrateInput({
       if (n !== value) onCommit(n);
       else setLocal(String(value));
     } else {
-      toast.error(`Битрейт — число от ${BITRATE_MIN} до ${BITRATE_MAX} Кбит/с`);
+      notify.error(`Битрейт — число от ${BITRATE_MIN} до ${BITRATE_MAX} Кбит/с`);
       setLocal(String(value));
     }
   }
@@ -146,7 +146,7 @@ export function SettingsPage() {
       setData(next);
     } catch (e) {
       setData(prev);
-      toast.error(e instanceof ApiError ? e.message : "Не удалось сохранить параметр");
+      notify.error(e instanceof ApiError ? e.message : "Не удалось сохранить параметр");
     } finally {
       setSavingKey(null);
     }

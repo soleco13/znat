@@ -79,7 +79,6 @@ export function RoomVideoGrid({
   layout = "grid",
   onLayoutChange,
   onShowAll,
-  bubbles,
   ordered = false,
 }: {
   participants: ParticipantSnapshot[];
@@ -94,8 +93,6 @@ export function RoomVideoGrid({
   onLayoutChange?: (layout: "grid" | "speaker") => void;
   /** Плитка «+N» в мобильной ленте — открыть список участников. */
   onShowAll?: () => void;
-  /** Свежие сообщения чата по автору — пузырь на его плитке (только учителю, см. RoomPage). */
-  bubbles?: ReadonlyMap<string, string>;
   /** Плитки в переданном порядке (окно PiP: постоянные места), без сортировки «персонал первым». */
   ordered?: boolean;
 }) {
@@ -247,7 +244,6 @@ export function RoomVideoGrid({
     const weak = weakIds.has(p.userId);
     const roleSuffix = p.kind === "staff" && p.role ? ROLE_SUFFIX[p.role] : undefined;
     const small = size === "sm" || size === "xs";
-    const bubble = bubbles?.get(p.userId);
 
     return (
       <div
@@ -381,25 +377,6 @@ export function RoomVideoGrid({
           </span>
         ) : null}
 
-        {bubble ? (
-          size === "xs" ? (
-            <span
-              className="pointer-events-none absolute left-1 top-1 size-2.5 rounded-full border-2 border-white bg-primary"
-              aria-label={`Новое сообщение: ${bubble}`}
-            />
-          ) : (
-            <span
-              role="status"
-              className={cn(
-                "pointer-events-none absolute max-w-[calc(100%-20px)] rounded-xl bg-card px-2.5 py-1.5 text-foreground shadow-[0_6px_16px_rgba(16,24,40,.22)] [overflow-wrap:anywhere]",
-                "line-clamp-2 animate-in fade-in-0 slide-in-from-bottom-1 duration-200 motion-reduce:animate-none",
-                size === "lg" ? "bottom-11 left-2.5 text-[13px]" : "bottom-9 left-2 text-xs",
-              )}
-            >
-              {bubble}
-            </span>
-          )
-        ) : null}
       </div>
     );
   };

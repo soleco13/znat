@@ -67,7 +67,7 @@ import {
   SelectValue,
 } from "@/shared/ui/select";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { toast } from "@/shared/ui/sonner";
+import { notify } from "@/shared/ui/notify";
 import { listMaterials } from "@/features/materials/materials-api.js";
 import {
   assignLessonMaterial,
@@ -90,9 +90,9 @@ function joinUrl(joinPath: string): string {
 async function copyJoinLink(joinPath: string) {
   try {
     await navigator.clipboard.writeText(joinUrl(joinPath));
-    toast.success("Ссылка для учеников скопирована");
+    notify.success("Ссылка для учеников скопирована");
   } catch {
-    toast.error("Не удалось скопировать ссылку");
+    notify.error("Не удалось скопировать ссылку");
   }
 }
 
@@ -202,7 +202,7 @@ function LessonFormDialog({
           });
       onSaved(saved);
       onOpenChange(false);
-      toast.success(editing ? "Урок обновлён" : "Урок создан");
+      notify.success(editing ? "Урок обновлён" : "Урок создан");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Не удалось сохранить урок");
     } finally {
@@ -444,7 +444,7 @@ function LessonMaterialsDialog({
       setItems(res.items);
       setSelected("");
     } catch {
-      toast.error("Не удалось назначить материал");
+      notify.error("Не удалось назначить материал");
     } finally {
       setBusy(false);
     }
@@ -457,7 +457,7 @@ function LessonMaterialsDialog({
       await unassignLessonMaterial(lesson.id, materialId);
       setItems((prev) => (prev ?? []).filter((m) => m.materialId !== materialId));
     } catch {
-      toast.error("Не удалось снять материал");
+      notify.error("Не удалось снять материал");
     } finally {
       setBusy(false);
     }
@@ -678,10 +678,10 @@ export function LessonsListPage() {
     try {
       const link = await rotateJoinLink(rotateFor.id);
       upsertLocal({ ...rotateFor, joinToken: link.joinToken, joinPath: link.joinPath });
-      toast.success("Ссылка перевыпущена — старая больше не работает");
+      notify.success("Ссылка перевыпущена — старая больше не работает");
       setRotateFor(null);
     } catch {
-      toast.error("Не удалось перевыпустить ссылку");
+      notify.error("Не удалось перевыпустить ссылку");
     } finally {
       setBusy(false);
     }
@@ -693,10 +693,10 @@ export function LessonsListPage() {
     try {
       await deleteLesson(deleteFor.id);
       setData((prev) => ({ items: (prev?.items ?? []).filter((l) => l.id !== deleteFor.id) }));
-      toast.success("Урок удалён");
+      notify.success("Урок удалён");
       setDeleteFor(null);
     } catch {
-      toast.error("Не удалось удалить урок");
+      notify.error("Не удалось удалить урок");
     } finally {
       setBusy(false);
     }

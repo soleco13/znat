@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "@/shared/ui/select";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { toast } from "@/shared/ui/sonner";
+import { notify } from "@/shared/ui/notify";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 import {
   formatBytes,
@@ -167,9 +167,9 @@ export function AdminRecordingsPage() {
     try {
       const link = await createExternalDownloadLink(recording.id);
       await navigator.clipboard.writeText(link.url);
-      toast.success("Внешняя ссылка скопирована — действует 24 часа");
+      notify.success("Внешняя ссылка скопирована — действует 24 часа");
     } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : "Не удалось создать ссылку");
+      notify.error(e instanceof ApiError ? e.message : "Не удалось создать ссылку");
     } finally {
       setLinkBusyId(null);
     }
@@ -200,9 +200,9 @@ export function AdminRecordingsPage() {
       return next;
     });
     if (failed.length > 0) {
-      toast.error(`Не удалось удалить: ${failed.join(", ")}`);
+      notify.error(`Не удалось удалить: ${failed.join(", ")}`);
     } else {
-      toast.success(deleteTargets.length > 1 ? `Удалено записей: ${ids.size}` : "Запись удалена из хранилища");
+      notify.success(deleteTargets.length > 1 ? `Удалено записей: ${ids.size}` : "Запись удалена из хранилища");
     }
     setBusy(false);
     setDeleteTargets(null);

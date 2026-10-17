@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { useLocalParticipant, useTracks } from "@livekit/components-react";
 import { Track, VideoPreset, type LocalTrack } from "livekit-client";
 import type { ClaimScreenShareResponse } from "@school/shared";
-import { MonitorUp, MonitorX } from "lucide-react";
+import { MonitorUp, MonitorX, VolumeX } from "lucide-react";
 
 import { apiFetch } from "@/shared/api-client";
 import { RoomControlButton, type RoomControlVariant } from "./RoomControlButton.js";
-import { toast } from "@/shared/ui/sonner";
+import { notify } from "@/shared/ui/notify";
 import { clearStaleScreenShare, stopOwnScreenShare, stopScreenShareAudio } from "./screen-share-stop.js";
 import { deviceProfileNow } from "./device-profile.js";
 
@@ -115,14 +115,14 @@ function isPickerCancel(err: unknown): boolean {
   return err instanceof Error && err.name === "NotAllowedError" && !/system/i.test(err.message);
 }
 
-function captureErrorMessage(err: unknown): string {
+function captureErrorMessage(err: unknown): { title: string; text: string } {
   if (err instanceof Error && err.name === "NotAllowedError") {
-    return "Компьютер не разрешает браузеру показывать экран — разрешите запись экрана для браузера в настройках системы";
+    return { title: "Система не даёт показать экран", text: "Разрешите браузеру запись экрана в настройках" };
   }
   if (err instanceof Error && err.name === "DeviceUnsupportedError") {
-    return "Этот браузер не умеет показывать экран — откройте урок в Chrome, Edge или Firefox на компьютере";
+    return { title: "Браузер не умеет показывать экран", text: "Откройте урок в Chrome, Edge или Firefox" };
   }
-  return "Не удалось начать демонстрацию — попробуйте ещё раз";
+  return { title: "Не удалось начать демонстрацию", text: "Попробуйте ещё раз" };
 }
 
 /**
@@ -214,7 +214,7 @@ export function SelfScreenShareButton({
     if (!isScreenShareEnabledRef.current) return;
     onScreenShareStopped?.();
     void stopOwnScreenShare(localParticipant);
-    toast.info("Демонстрацию перехватил учитель/администратор", { id: "screen-share-preempted" });
+    notify("Демонстрацию перехватил учитель или администратор", { id: "screen-share-preempted", icon: MonitorX });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preemptedSignal]);
 
@@ -294,11 +294,11 @@ export function SelfScreenShareButton({
       (): ClaimScreenShareResponse => ({ granted: true, holderName: null }), // сеть легла — не блокируем демонстрацию из-за этого, старый вебхук-гейт подстрахует
     );
     if (!claimResult.granted) {
-      toast.error(
-        claimResult.holderName
-          ? `Демонстрирует ${claimResult.holderName} — дождитесь окончания`
-          : "Кто-то уже демонстрирует экран",
-      );
+      notify(claimResult.holderName ? `Демонстрирует ${claimResult.holderName}` : "Кто-то уже демонстрирует экран", {
+        id: "screen-share-error",
+        icon: MonitorX,
+        text: "Дождитесь окончания",
+      });
       return;
     }
     // Прежняя демонстрация, остановленная во время переподключения, могла
@@ -336,15 +336,19 @@ export function SelfScreenShareButton({
         audioTrack.stop();
         audioTrack = undefined;
         // Иначе человек думает, что звук идёт, а его не слышат.
-        toast.info("Звук всего экрана в этом браузере не передаётся — чтобы был звук, покажите вкладку", {
+        notify("Звук экрана не передаётся", {
           id: "screen-share-no-system-audio",
-          duration: 7000,
+          icon: VolumeX,
+          text: "Чтобы был звук, покажите вкладку",
         });
       }
     } catch (e) {
       releaseScreenShare(lessonId);
       // Закрыл окно выбора — передумал, это не ошибка.
-      if (!isPickerCancel(e)) toast.error(captureErrorMessage(e));
+      if (!isPickerCancel(e)) {
+        const { title, text } = captureErrorMessage(e);
+        notify.error(title, { id: "screen-share-error", icon: MonitorX, text });
+      }
       return;
     }
     if (!track) {
@@ -370,19 +374,19 @@ export function SelfScreenShareButton({
           })
           .catch(() => {
             sound.stop();
-            toast.info("Экран показывается без звука — звук не удалось передать");
+            notify("Экран показывается без звука", { id: "screen-share-no-audio", icon: VolumeX, text: "Звук не удалось передать" });
           });
       }
       return;
     }
     audioTrack?.stop();
     releaseScreenShare(lessonId);
-    toast.error("Не удалось начать демонстрацию — попробуйте ещё раз");
+    notify.error("Не удалось начать демонстрацию", { id: "screen-share-error", text: "Попробуйте ещё раз" });
   }
 
   async function stop() {
     onScreenShareStopped?.();
-    // Как в `ScreenShareStatusBar`: остановка могла упасть на плохой связи,
+    // Как в `ScreenShareNotice`: остановка могла упасть на плохой связи,
     // блокировку на сервере освобождаем всё равно.
     try {
       await stopOwnScreenShare(localParticipant);
@@ -426,8 +430,12 @@ export function SelfScreenShareButton({
   );
 }
 
-/** Строка статуса над демонстрацией: кто показывает экран, у себя — кнопка «Остановить». */
-export function ScreenShareStatusBar({
+/**
+ * Кто показывает экран — уведомлением справа сверху, а не строкой над
+ * демонстрацией: у себя висит «Вы показываете экран» с «Остановить», у
+ * остальных — короткое «Имя показывает экран» при начале.
+ */
+export function ScreenShareNotice({
   lessonId,
   participants,
   onStopped,
@@ -438,11 +446,10 @@ export function ScreenShareStatusBar({
 }) {
   const { localParticipant, isScreenShareEnabled } = useLocalParticipant();
   const track = useTracks([Track.Source.ScreenShare], { onlySubscribed: true })[0];
-  if (!track) return null;
-  const isSelf = track.participant.identity === localParticipant.identity;
+  const isSelf = track?.participant.identity === localParticipant.identity;
   const name =
-    participants.find((p) => p.userId === track.participant.identity)?.fullName ??
-    (track.participant.name || "Участник");
+    participants.find((p) => p.userId === track?.participant.identity)?.fullName ??
+    (track?.participant.name || "Участник");
 
   async function stop() {
     onStopped?.();
@@ -456,21 +463,25 @@ export function ScreenShareStatusBar({
     }
   }
 
-  return (
-    <div className="flex shrink-0 items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-2 text-[13.5px] text-foreground shadow-xs">
-      <MonitorUp className="size-[17px] shrink-0 text-primary" aria-hidden />
-      <span className="min-w-0 flex-1 truncate">
-        {isSelf ? "Вы показываете экран" : `${name} показывает экран`}
-      </span>
-      {isSelf && isScreenShareEnabled ? (
-        <button
-          type="button"
-          onClick={() => void stop()}
-          className="h-[30px] shrink-0 rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
-        >
-          Остановить
-        </button>
-      ) : null}
-    </div>
-  );
+  const sharerId = track?.participant.identity;
+  const ownShare = isSelf && isScreenShareEnabled;
+  const stopRef = useRef(stop);
+  stopRef.current = stop;
+  useEffect(() => {
+    if (!sharerId) return;
+    if (ownShare) {
+      notify("Вы показываете экран", {
+        id: "screen-share-self",
+        icon: MonitorUp,
+        duration: Infinity,
+        actions: [{ label: "Остановить", primary: true, onClick: () => void stopRef.current() }],
+      });
+      return () => notify.dismiss("screen-share-self");
+    }
+    if (!isSelf) notify(`${name} показывает экран`, { id: "screen-share-other", icon: MonitorUp });
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- имя берём на момент начала
+  }, [sharerId, ownShare]);
+
+  return null;
 }
