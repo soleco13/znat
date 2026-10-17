@@ -91,6 +91,8 @@ export async function createParticipantConnection(params: {
   fullName: string;
   kind: ParticipantKind;
   permissions: ParticipantPermissions;
+  /** Админ-невидимка: скрытый участник LiveKit, только смотреть и слушать. */
+  hidden?: boolean;
 }): Promise<MediaConnection> {
   const started = performance.now();
   const ttlSeconds = mediaTokenTtlSeconds(params.kind);
@@ -105,7 +107,11 @@ export async function createParticipantConnection(params: {
     // отличие от прав) не требуется.
     attributes: { kind: params.kind },
   });
-  const grant = buildPublishGrant(params.permissions, params.kind);
+  // Невидимка (2026-10-17): LiveKit не сообщает о скрытом участнике другим
+  // (так подключается и запись); публиковать ему нечего и нельзя.
+  const grant = params.hidden
+    ? { canSubscribe: true, canPublish: false, canPublishSources: [] as TrackSource[], canPublishData: false, hidden: true }
+    : buildPublishGrant(params.permissions, params.kind);
   at.addGrant({ roomJoin: true, room: params.livekitRoom, ...grant });
   const token = await at.toJwt();
   // identity = participantId: по нему строки LiveKit-сервера (docker logs

@@ -22,6 +22,8 @@ export interface PresenceEntry {
   permissions: ParticipantPermissions;
   /** Гость с правами учителя (выдаёт администратор). Нет у записей до 2026-10-13. */
   cohost?: boolean;
+  /** Админ-невидимка (2026-10-17): в списках и событиях урока для других его нет. */
+  hidden?: boolean;
   joinedAt: string;
   lastSeenAt: number;
 }
@@ -163,7 +165,8 @@ export async function listRoomIds(): Promise<string[]> {
 export async function countConnected(lessonId: string): Promise<number> {
   const all = await listParticipants(lessonId);
   let n = 0;
-  for (const entry of all.values()) if (entry.connected) n++;
+  // Невидимку не считаем: «сколько в уроке» видят учителя.
+  for (const entry of all.values()) if (entry.connected && !entry.hidden) n++;
   return n;
 }
 

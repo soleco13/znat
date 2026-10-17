@@ -40,6 +40,11 @@ export const participantSnapshotSchema = z.object({
   permissions: participantPermissionsSchema,
   /** Гость с правами учителя (выдаёт только администратор). Нет у старых серверов. */
   cohost: z.boolean().optional(),
+  /**
+   * Админ вошёл невидимкой (2026-10-17): другим участникам о нём не
+   * сообщается вовсе — поле видит только он сам в своём `self`.
+   */
+  hidden: z.boolean().optional(),
   joinedAt: z.string(),
 });
 export type ParticipantSnapshot = z.infer<typeof participantSnapshotSchema>;
@@ -255,3 +260,10 @@ export type LessonKnock = z.infer<typeof lessonKnockSchema>;
 
 export const lessonKnocksResponseSchema = z.object({ knocks: z.array(lessonKnockSchema) });
 export type LessonKnocksResponse = z.infer<typeof lessonKnocksResponseSchema>;
+
+/** Тело `POST /lessons/:id/join` (необязательное). `invisible` — только администратору. */
+export const joinLessonRequestSchema = z
+  .object({ invisible: z.boolean().optional() })
+  .partial()
+  .default({});
+export type JoinLessonRequest = z.infer<typeof joinLessonRequestSchema>;

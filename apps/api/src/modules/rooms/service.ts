@@ -53,6 +53,9 @@ canvasService.setDrawPermissionResolver(async (lessonId, participantId) => {
   return entry ? entry.permissions.canDraw : null;
 });
 
+/** Невидимка только смотрит, слушает и пишет в чат (решение владельца 2026-10-17). */
+const HIDDEN_PERMISSIONS: ParticipantPermissions = { canDraw: false, canSpeak: false, canShareScreen: false, canPublishVideo: false };
+
 function toSnapshot(participantId: string, entry: PresenceEntry): ParticipantSnapshot {
   return {
     userId: participantId,
@@ -65,8 +68,18 @@ function toSnapshot(participantId: string, entry: PresenceEntry): ParticipantSna
     pinned: entry.pinned,
     permissions: entry.permissions,
     cohost: entry.cohost === true,
+    ...(entry.hidden ? { hidden: true } : {}),
     joinedAt: entry.joinedAt,
   };
+}
+
+/**
+ * Событие о participant'е — всем, кроме случая невидимки (2026-10-17): о
+ * вошедшем невидимкой админе остальным не сообщается ничего.
+ */
+function emitPresenceEvent(lessonId: string, entry: PresenceEntry | null | undefined, message: ServerRoomMessage): void {
+  if (entry?.hidden) return;
+  emitRoomEvent(lessonId, message);
 }
 
 /**
@@ -139,9 +152,10 @@ export async function getParticipantNames(
   return repo.findParticipantNames(ids);
 }
 
+/** Список участников для рассылки — без невидимок. */
 export async function listParticipantsSnapshot(lessonId: string): Promise<ParticipantSnapshot[]> {
   const participants = await presence.listParticipants(lessonId);
-  return [...participants.entries()].map(([id, entry]) => toSnapshot(id, entry));
+  return [...participants.entries()].filter(([, entry]) => !entry.hidden).map(([id, entry]) => toSnapshot(id, entry));
 }
 
 /**
@@ -371,8 +385,18 @@ function lessonFullError(): AppError {
   return new AppError(403, "lesson_full", `В уроке уже ${env.LESSON_MAX_GUESTS} учеников — это максимум`);
 }
 
-export async function join(actor: LessonActor, lessonId: string): Promise<JoinLessonResponse> {
+export async function join(
+  actor: LessonActor,
+  lessonId: string,
+  opts: { invisible?: boolean } = {},
+): Promise<JoinLessonResponse> {
   const lesson = await assertMembership(actor, lessonId);
+  // Невидимка (2026-10-17) — только администратор (не соведущий-гость, у
+  // которого делегированный `role: "teacher"`, и не учитель).
+  const hidden = opts.invisible === true;
+  if (hidden && !(actor.kind === "staff" && actor.role === "admin")) {
+    throw new AppError(403, "forbidden", "Входить невидимкой может только администратор");
+  }
   // Э12 (§0 план-ТЗ): урок постоянный, без статуса — войти можно всегда,
   // проверка `ended`/`cancelled` убрана.
 
@@ -388,9 +412,16 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
   // «комната только что открылась» — в ней ещё никого не было.
   const roomWasEmpty = (await presence.countConnected(lessonId)) === 0;
 
-  const existing = (
-    await presence.patchParticipant(lessonId, participantId, { connected: true, lastSeenAt: Date.now() })
-  )?.after;
+  const patched = await presence.patchParticipant(lessonId, participantId, {
+    connected: true,
+    lastSeenAt: Date.now(),
+    // Персоналу права и видимость — заново на каждый вход: вошёл видимым
+    // после невидимки — снова все права сотрудника.
+    ...(isStaff ? { hidden, permissions: hidden ? HIDDEN_PERMISSIONS : presence.defaultPermissions("staff") } : {}),
+  });
+  const existing = patched?.after;
+  /** Был невидимкой и стал видимым (или наоборот) — для других это вход (выход). */
+  const visibilityChanged = patched ? (patched.before.hidden === true) !== hidden : false;
   if (!existing && !isStaff) await assertGuestNotLockedOut(lessonId, participantId);
   const granted = existing || isStaff ? null : await presence.getGrantedPermissions(lessonId, participantId);
   const cohost = !existing && !isStaff && (await presence.isCohost(lessonId, participantId));
@@ -410,11 +441,13 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
         // (всё запрещено), а чекбоксы «ученики включают камеру/экран» в
         // диалоге урока ни на что не влияли. Живой грант учителя
         // (`togglePermission`) поверх этого работает как и работал.
-        permissions:
-          actor.kind === "staff"
+        permissions: hidden
+          ? HIDDEN_PERMISSIONS
+          : actor.kind === "staff"
             ? presence.defaultPermissions("staff")
             : (granted ?? guestPermissionsFromSettings(lesson.settings)),
         ...(cohost ? { cohost: true } : {}),
+        ...(hidden ? { hidden: true } : {}),
         joinedAt: new Date().toISOString(),
         lastSeenAt: Date.now(),
       };
@@ -450,7 +483,8 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
   // presence гостя берёт canDraw из настроек урока или сохранённого гранта —
   // клиент рисует, а сервер доски молча отбрасывает штрихи.
   canvasService.setDrawPermission(lessonId, participantId, entry.permissions.canDraw);
-  if (isNew) {
+  // Невидимка в посещаемость не попадает.
+  if (isNew && !hidden) {
     await recordSession(actor, lessonId, identity, history);
   }
 
@@ -469,10 +503,13 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
   }
 
   const snapshot = toSnapshot(participantId, entry);
-  if (!isNew) {
-    emitRoomEvent(lessonId, { type: "participant_updated", participant: snapshot });
-  } else {
+  if (hidden) {
+    // Стал невидимым, будучи видимым, — для остальных он вышел.
+    if (visibilityChanged) emitRoomEvent(lessonId, { type: "participant_left", userId: participantId });
+  } else if (isNew || visibilityChanged) {
     emitRoomEvent(lessonId, { type: "participant_joined", participant: snapshot });
+  } else {
+    emitRoomEvent(lessonId, { type: "participant_updated", participant: snapshot });
   }
 
   const livekitRoom = await lessonsService.ensureLivekitRoom(schoolId, lessonId);
@@ -490,6 +527,7 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
     fullName: entry.fullName,
     kind: entry.kind,
     permissions: entry.permissions,
+    hidden,
   });
 
   const lessonMode = await presence.getLessonMode(lessonId);
@@ -500,10 +538,12 @@ export async function join(actor: LessonActor, lessonId: string): Promise<JoinLe
   // качества медиа + флаги демонстрации/PiP, и staff, и гостю.
   const clientMediaSettings = await schoolSettingsService.getClientMediaSettings(schoolId);
 
+  const participants = await listParticipantsSnapshot(lessonId);
   return {
     lessonMode,
     stage,
-    participants: await listParticipantsSnapshot(lessonId),
+    // Невидимка видит в списке и себя (остальным его нет).
+    participants: hidden ? [...participants, snapshot] : participants,
     self: snapshot,
     media,
     clientMediaSettings,
@@ -559,6 +599,7 @@ async function recordSession(
 
 /** Явный выход (кнопка «Выйти»/POST leave) — без grace-периода на переподключение. */
 export async function leave(actor: LessonActor, lessonId: string): Promise<void> {
+  const leaving = await presence.getParticipant(lessonId, actor.participantId);
   await presence.removeParticipant(lessonId, actor.participantId);
   // Выход — и из медиа тоже: раньше участник оставался в комнате LiveKit, а
   // его токен позволял вернуться в неё в обход урока, невидимым для сетки
@@ -567,7 +608,7 @@ export async function leave(actor: LessonActor, lessonId: string): Promise<void>
   await presence.markLeft(lessonId, actor.participantId, mediaService.mediaTokenTtlSeconds(actor.kind) + LEFT_MARK_MARGIN_SECONDS);
   await repo.closeOpenSession(lessonId, actor.participantId);
   await presence.releaseScreenShare(lessonId, actor.participantId);
-  emitRoomEvent(lessonId, { type: "participant_left", userId: actor.participantId });
+  emitPresenceEvent(lessonId, leaving, { type: "participant_left", userId: actor.participantId });
   const livekitRoom = await lessonsService.findLivekitRoom(lessonId);
   if (livekitRoom) {
     try {
@@ -639,7 +680,7 @@ export async function attachSocket(lessonId: string, userId: string): Promise<Pa
   const result = await presence.patchParticipant(lessonId, userId, { connected: true, lastSeenAt: Date.now() });
   if (!result) return null;
   if (!result.before.connected) {
-    emitRoomEvent(lessonId, { type: "participant_updated", participant: toSnapshot(userId, result.after) });
+    emitPresenceEvent(lessonId, result.after, { type: "participant_updated", participant: toSnapshot(userId, result.after) });
   }
   return toSnapshot(userId, result.after);
 }
@@ -653,7 +694,7 @@ export async function markDisconnected(lessonId: string, userId: string): Promis
     { connected: true },
   );
   if (!result) return;
-  emitRoomEvent(lessonId, { type: "participant_updated", participant: toSnapshot(userId, result.after) });
+  emitPresenceEvent(lessonId, result.after, { type: "participant_updated", participant: toSnapshot(userId, result.after) });
 }
 
 /**
@@ -668,7 +709,7 @@ export async function touchHeartbeat(lessonId: string, userId: string): Promise<
   // сокет при этом выжил — без восстановления участник остаётся скрытым из
   // сетки камер до перезагрузки страницы.
   if (!result.before.connected) {
-    emitRoomEvent(lessonId, { type: "participant_updated", participant: toSnapshot(userId, result.after) });
+    emitPresenceEvent(lessonId, result.after, { type: "participant_updated", participant: toSnapshot(userId, result.after) });
   }
   return true;
 }
@@ -1434,11 +1475,11 @@ async function sweepRoom(lessonId: string): Promise<void> {
         stillStale,
       );
       if (!result) continue;
-      emitRoomEvent(lessonId, { type: "participant_updated", participant: toSnapshot(userId, result.after) });
+      emitPresenceEvent(lessonId, result.after, { type: "participant_updated", participant: toSnapshot(userId, result.after) });
     } else {
       if (!(await presence.removeParticipantIf(lessonId, userId, stillStale))) continue;
       await repo.closeOpenSession(lessonId, userId);
-      emitRoomEvent(lessonId, { type: "participant_left", userId });
+      emitPresenceEvent(lessonId, entry, { type: "participant_left", userId });
     }
     changed = true;
   }

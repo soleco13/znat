@@ -237,7 +237,9 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
     });
 
     try {
-      send({ type: "presence", participants: await roomsService.listParticipantsSnapshot(lessonId) });
+      const participants = await roomsService.listParticipantsSnapshot(lessonId);
+      // Невидимка (2026-10-17) в общем списке отсутствует — себя он видит.
+      send({ type: "presence", participants: self.hidden ? [...participants, self] : participants });
       const state = await roomsService.getLessonStateSnapshot(lessonId);
       send({ type: "stage_changed", stage: state.stage });
       send({ type: "lesson_mode", mode: state.mode });

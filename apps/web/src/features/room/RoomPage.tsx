@@ -428,6 +428,8 @@ export function RoomPage() {
   const [joinCamEnabled, setJoinCamEnabled] = useState(rejoin ? rejoin.cam : true);
   /** Доступ к микрофону есть — выключенный при входе микрофон можно подключить заранее заглушённым (`MicPrewarm`). */
   const [micPermitted, setMicPermitted] = useState(joinDefaults?.micGranted === true);
+  /** Админ вошёл невидимкой (2026-10-17) — так же входим и после переподключений. */
+  const invisibleRef = useRef(false);
   const [lessonTitle, setLessonTitle] = useState<string | null>(null);
   const [lessonJoinPath, setLessonJoinPath] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -526,7 +528,13 @@ export function RoomPage() {
     switch (message.type) {
       case "presence":
         recordingActivePrevRef.current = null;
-        setParticipants(message.participants);
+        // Невидимки нет в общем списке — свою запись не теряем.
+        setParticipants((prev) => {
+          const me = prev.find((p) => p.userId === selfIdRef.current && p.hidden);
+          return me && !message.participants.some((p) => p.userId === me.userId)
+            ? [...message.participants, me]
+            : message.participants;
+        });
         break;
       case "participant_joined":
         if (soundsRef.current && message.participant.userId !== selfIdRef.current) playParticipantSound("joined");
@@ -668,7 +676,10 @@ export function RoomPage() {
   const leftRef = useRef(false);
   const rejoinAfterEviction = useCallback(async () => {
     if (!lessonId || !joinedRef.current || leftRef.current) return;
-    await apiFetch<JoinLessonResponse>(`/lessons/${lessonId}/join`, { method: "POST" }).catch((err) => {
+    await apiFetch<JoinLessonResponse>(`/lessons/${lessonId}/join`, {
+      method: "POST",
+      body: JSON.stringify({ invisible: invisibleRef.current }),
+    }).catch((err) => {
       const screen = blockedScreenFor(err);
       if (screen) setBlocked(screen);
       throw err;
@@ -711,7 +722,10 @@ export function RoomPage() {
   const attemptJoin = useCallback(() => {
     if (!lessonId) return;
     setJoinFailed(false);
-    apiFetch<JoinLessonResponse>(`/lessons/${lessonId}/join`, { method: "POST" })
+    apiFetch<JoinLessonResponse>(`/lessons/${lessonId}/join`, {
+      method: "POST",
+      body: JSON.stringify({ invisible: invisibleRef.current }),
+    })
       .then((data) => {
         joinedRef.current = true;
         setParticipants(data.participants);
@@ -880,6 +894,8 @@ export function RoomPage() {
   }, [deckStatuses, decks, refreshDecks]);
 
   const self = participants.find((p) => p.userId === selfId);
+  /** Админ в уроке невидимкой: без микрофона, камеры и демонстрации. */
+  const selfHidden = self?.hidden === true;
 
   // Учитель дал или забрал слово — ученику короткая плашка: иначе он не
   // понимает, почему микрофон вдруг стал недоступен или снова доступен.
@@ -1759,6 +1775,7 @@ export function RoomPage() {
   ) : null;
 
   const cameraButton = (variant: RoomControlVariant) =>
+    selfHidden ? null :
     isTeacher ? (
       <SelfCameraButton
         variant={variant}
@@ -1789,7 +1806,7 @@ export function RoomPage() {
       />
     );
 
-  const micButton = (variant: RoomControlVariant) => (
+  const micButton = (variant: RoomControlVariant) => selfHidden ? null : (
     <SelfMicButton
       variant={variant}
       onOpenSettings={variant === "pill" ? openSettings : undefined}
@@ -1800,7 +1817,7 @@ export function RoomPage() {
 
   // Демонстрация — и на компьютере, и на телефоне/планшете, где браузер её умеет.
   const shareButton = (variant: RoomControlVariant) =>
-    shareVisible && lessonId ? (
+    shareVisible && lessonId && !selfHidden ? (
       <SelfScreenShareButton
         variant={variant}
         lessonId={lessonId}
@@ -2380,7 +2397,9 @@ export function RoomPage() {
         defaultCameraOn={joinDefaults?.cam ?? isTeacher}
         defaultMicOn={joinDefaults?.mic ?? true}
         saved={joinDefaults}
+        allowInvisible={isAdmin}
         onContinue={(r: DeviceCheckResult) => {
+          invisibleRef.current = r.invisible === true;
           writeJoinDefaults({
             mic: r.micToggle,
             cam: r.camToggle,
@@ -2421,7 +2440,7 @@ export function RoomPage() {
         options={roomOptions}
         connectOptions={MEDIA_CONNECT_OPTIONS}
         audio={
-          self?.permissions.canSpeak && joinMicEnabled
+          !selfHidden && self?.permissions.canSpeak && joinMicEnabled
             ? {
                 deviceId: micDeviceId ?? undefined,
                 // Параметры школы (§10.10 ТЗ) — мягкий дефолт «высокое
@@ -2439,7 +2458,7 @@ export function RoomPage() {
         // Ученику — если учитель разрешил камеру (настройка урока): включённая
         // на экране проверки камера раньше молча оставалась выключенной.
         video={
-          joinCamEnabled && (isTeacher || self?.permissions.canPublishVideo)
+          !selfHidden && joinCamEnabled && (isTeacher || self?.permissions.canPublishVideo)
             ? {
                 // Слабое устройство (определено ещё до проверки устройств) —
                 // сразу лёгкий захват: на уроке камеру не переоткрываем.
@@ -2477,7 +2496,7 @@ export function RoomPage() {
         <CpuLoadAdapter />
         <ScreenShareStopSweep />
         <PrefetchStageWhenMediaUp />
-        {lessonId ? (
+        {lessonId && !selfHidden ? (
           <MediaRecovery
             lessonId={lessonId}
             restoreCamera={(participant) =>
@@ -2522,6 +2541,24 @@ export function RoomPage() {
               setJoinCamEnabled(w.camera);
             }}
           />
+        ) : null}
+        {selfHidden ? (
+          <div
+            role="status"
+            className="fixed left-3 top-3 z-50 flex max-w-[calc(100vw-24px)] items-center gap-3 rounded-xl border border-border bg-card px-3 py-2 text-sm shadow-lg"
+          >
+            <span className="text-foreground">Вы в уроке невидимо — вас никто не видит и не слышит</span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                invisibleRef.current = false;
+                attemptJoin();
+              }}
+            >
+              Стать видимым
+            </Button>
+          </div>
         ) : null}
         {isTeacher && lessonId ? (
           <KnockRequests lessonId={lessonId} entryLocked={entryLocked} signal={knockSignal} />

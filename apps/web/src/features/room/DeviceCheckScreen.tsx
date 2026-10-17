@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Camera,
   CameraOff,
+  EyeOff,
   Mic,
   MicOff,
   Play,
@@ -49,6 +50,8 @@ export type DeviceCheckResult = {
   /** Доступ к микрофону / камере есть (выдан сейчас или раньше). */
   micGranted: boolean;
   camGranted: boolean;
+  /** Админ входит невидимкой (2026-10-17). */
+  invisible?: boolean;
 };
 
 type BrowserPermission = "granted" | "denied" | "prompt" | "unknown";
@@ -138,11 +141,14 @@ export function DeviceCheckScreen({
   defaultCameraOn = false,
   defaultMicOn = true,
   saved = null,
+  allowInvisible = false,
 }: {
   onContinue: (result: DeviceCheckResult) => void;
   lessonTitle?: string | null;
   /** Что человек выбрал на этом устройстве в прошлый раз (`readJoinDefaults`). */
   saved?: { micId?: string | null; camId?: string | null; spkId?: string | null; micGranted?: boolean; camGranted?: boolean } | null;
+  /** Администратор: кнопка «Войти невидимкой» (только смотреть, слушать и писать в чат). */
+  allowInvisible?: boolean;
   /** Учителю/админу камера включается сразу (они всегда публикуют видео); ученику — по кнопке. Прошлый выбор человека важнее. */
   defaultCameraOn?: boolean;
   /** Как в прошлый раз на этом устройстве (`readJoinDefaults`); впервые — включён. */
@@ -512,7 +518,7 @@ export function DeviceCheckScreen({
     });
   }
 
-  function handleContinue() {
+  function handleContinue(invisible = false) {
     const micOn = micPermission === "granted" && micEnabled;
     const camOn = camPermission === "granted" && camEnabled;
     onContinue({
@@ -527,6 +533,7 @@ export function DeviceCheckScreen({
       camChoice: camId || null,
       micGranted: micPermission === "granted",
       camGranted: camPermission === "granted",
+      invisible,
     });
   }
 
@@ -854,10 +861,25 @@ export function DeviceCheckScreen({
           <p className="hidden min-w-0 truncate font-heavy text-foreground short:block">
             {lessonTitle || "Проверка устройств"}
           </p>
+          {allowInvisible ? (
+            <Button
+              size="lg"
+              variant="outline"
+              className="shrink-0 sm:ml-auto short:h-10"
+              title="Никто в уроке вас не увидит и не узнает о подключении. Можно смотреть, слушать и писать в чат."
+              onClick={() => handleContinue(true)}
+            >
+              <EyeOff aria-hidden />
+              Войти невидимкой
+            </Button>
+          ) : null}
           <Button
             size="lg"
-            className="w-full sm:ml-auto sm:w-auto sm:min-w-44 short:ml-auto short:h-10 short:w-auto short:shrink-0"
-            onClick={handleContinue}
+            className={cn(
+              "w-full sm:w-auto sm:min-w-44 short:h-10 short:w-auto short:shrink-0",
+              allowInvisible ? "" : "sm:ml-auto short:ml-auto",
+            )}
+            onClick={() => handleContinue()}
           >
             Присоединиться
             <ArrowRight aria-hidden />

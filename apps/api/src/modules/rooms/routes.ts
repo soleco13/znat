@@ -12,6 +12,7 @@ import {
   setLessonModeRequestSchema,
   setLessonStageRequestSchema,
   updateParticipantPermissionsRequestSchema,
+  joinLessonRequestSchema,
   type LessonKnocksResponse,
 } from "@school/shared";
 import * as roomsService from "./service.js";
@@ -35,7 +36,8 @@ export default async function roomsRoutes(app: FastifyInstance) {
     logEvent("lesson_join_started", { kind: actor.kind }, "info", request.log);
     let result;
     try {
-      result = await roomsService.join(actor, request.params.id);
+      const body = joinLessonRequestSchema.parse(request.body ?? {});
+      result = await roomsService.join(actor, request.params.id, { invisible: body.invisible });
     } catch (err) {
       const reason = err instanceof AppError ? err.code : "internal_error";
       logEvent(
