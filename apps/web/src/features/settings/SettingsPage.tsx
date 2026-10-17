@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type {
   Framerate,
   MediaQualityPreset,
+  NoiseSuppressionMode,
   SchoolSettings,
   UpdateSchoolSettingsRequest,
 } from "@school/shared";
@@ -32,6 +33,13 @@ import { getSchoolSettings, updateSchoolSettings } from "./settings-api.js";
  * Переключатели/селекты применяются сразу по изменению; битрейт (текстовое
  * поле) — по потере фокуса/Enter, чтобы не слать PATCH на каждую цифру.
  */
+
+const NOISE_OPTIONS: Array<{ value: NoiseSuppressionMode; label: string }> = [
+  { value: "auto", label: "Авто — по устройству" },
+  { value: "strong", label: "Сильное (где потянет)" },
+  { value: "standard", label: "Обычное — браузер" },
+  { value: "off", label: "Выключено" },
+];
 
 const MEDIA_QUALITY_OPTIONS: Array<{ value: MediaQualityPreset; label: string }> = [
   { value: "360p", label: "360p" },
@@ -256,15 +264,29 @@ export function SettingsPage() {
             </Row>
             <Row
               title="Шумоподавление микрофона"
-              description="Убирает фоновый шум на стороне участника (браузер), не нагружает сервер"
+              description="Авто: на мощных устройствах — сильное (RNNoise), на слабых — встроенное в браузер, на очень слабых — выключено. Участник может выбрать своё в уроке"
             >
-              <Switch
-                checked={data.noiseSuppressionEnabled}
-                disabled={savingKey === "noiseSuppressionEnabled"}
-                onCheckedChange={(v) =>
-                  void patch("noiseSuppressionEnabled", { noiseSuppressionEnabled: v })
+              <Select
+                value={data.noiseSuppressionMode ?? (data.noiseSuppressionEnabled ? "auto" : "off")}
+                disabled={savingKey === "noiseSuppressionMode"}
+                onValueChange={(v) =>
+                  void patch("noiseSuppressionMode", {
+                    noiseSuppressionMode: v as NoiseSuppressionMode,
+                    noiseSuppressionEnabled: v !== "off",
+                  })
                 }
-              />
+              >
+                <SelectTrigger className="w-52">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {NOISE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Row>
           </Section>
 

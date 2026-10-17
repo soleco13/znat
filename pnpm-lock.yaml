@@ -209,6 +209,9 @@ importers:
       '@school/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@shiguredo/rnnoise-wasm':
+        specifier: 2025.1.5
+        version: 2025.1.5
       '@tiptap/core':
         specifier: ^3.31.3
         version: 3.31.3(@tiptap/pm@3.31.3)
@@ -2857,6 +2860,10 @@ packages:
       '@opentelemetry/instrumentation': ^0.57.1
       '@opentelemetry/sdk-trace-base': ^1.30.1
       '@opentelemetry/semantic-conventions': ^1.28.0
+
+  '@shiguredo/rnnoise-wasm@2025.1.5':
+    resolution: {integrity: sha512-9YJxzzHftlW936E5z9aEKK2CrPfUgc3HgZ2keyQ5e2Pb5bx+6tykYQ2Gyudvxd7Sxmlnar7SemDMFfx0OuVuGA==}
+    engines: {node: '>=20', pnpm: '>=10'}
 
   '@tiptap/core@3.31.3':
     resolution: {integrity: sha512-Cz50pvciQrxdSxgTkHOVz0uD0Yl/8Xt0QatGD6ILm47jW8EzyHR9RkUGs/D5IqzXKuVPntfw1ttaT926vXfiRg==}
@@ -7639,6 +7646,8 @@ snapshots:
       '@opentelemetry/sdk-trace-base': 1.30.1(@opentelemetry/api@1.9.1)
       '@opentelemetry/semantic-conventions': 1.43.0
       '@sentry/core': 8.55.2
+
+  '@shiguredo/rnnoise-wasm@2025.1.5': {}
 
   '@tiptap/core@3.31.3(@tiptap/pm@3.31.3)':
     dependencies:

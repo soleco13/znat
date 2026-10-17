@@ -33,6 +33,17 @@ export type Framerate = z.infer<typeof framerateSchema>;
 /** Разумный диапазон битрейта видео (Кбит/с) — ниже 100 картинка не читается, выше 8000 нет смысла для урока/документа. */
 const videoBitrateKbpsSchema = z.number().int().min(100).max(8000);
 
+/**
+ * Шумоподавление микрофона (запрос 2026-10-17):
+ * - `auto` — по устройству: сильное → RNNoise (WASM в AudioWorklet), слабое →
+ *   встроенное в браузер, очень слабое → выключено;
+ * - `strong` — RNNoise, если устройство его потянет (иначе встроенное);
+ * - `standard` — встроенное в браузер; `off` — без шумоподавления.
+ * Школа задаёт дефолт, участник может выбрать своё в настройках урока.
+ */
+export const noiseSuppressionModeSchema = z.enum(["auto", "strong", "standard", "off"]);
+export type NoiseSuppressionMode = z.infer<typeof noiseSuppressionModeSchema>;
+
 export const schoolSettingsSchema = z.object({
   /** Вход ученика по прямой ссылке без аккаунта (Э12.6, `/j/:token`). */
   guestAccessEnabled: z.boolean().default(true),
@@ -59,6 +70,11 @@ export const schoolSettingsSchema = z.object({
    * По умолчанию включено, школа может выключить.
    */
   noiseSuppressionEnabled: z.boolean().default(true),
+  /**
+   * Режим шумоподавления (2026-10-17). Не задан — из старого флага:
+   * `noiseSuppressionEnabled: false` → `off`, иначе `auto`.
+   */
+  noiseSuppressionMode: noiseSuppressionModeSchema.optional(),
 
   /** Мягкий дефолт разрешения/fps/битрейта демонстрации экрана — применяется в `ScreenShareControls.tsx`. */
   screenShareResolution: mediaQualityPresetSchema.default("1080p"),
@@ -104,6 +120,7 @@ export const clientMediaSettingsSchema = schoolSettingsSchema.pick({
   cameraBitrateKbps: true,
   micHighQuality: true,
   noiseSuppressionEnabled: true,
+  noiseSuppressionMode: true,
   screenShareResolution: true,
   screenShareFps: true,
   screenShareBitrateKbps: true,

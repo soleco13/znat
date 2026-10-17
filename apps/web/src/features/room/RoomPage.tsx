@@ -138,6 +138,7 @@ import { Loader } from "@/shared/ui/loader";
 import { BrandMark } from "@/shared/ui/brand-mark";
 import { PoorLinkMediaAdapter } from "./PoorLinkMedia.js";
 import { CpuLoadAdapter } from "./cpu-load.js";
+import { NoiseSuppressionController, effectiveNoise, schoolNoiseMode } from "./noise-suppression.js";
 import { ScreenShareStopSweep } from "./screen-share-stop.js";
 import { MEDIA_CONNECT_OPTIONS, MEDIA_RECONNECT_POLICY, MediaRecovery } from "./MediaRecovery.js";
 import {
@@ -208,7 +209,9 @@ function buildRoomOptions(
     // `setMicrophoneEnabled` без options и падает на этот дефолт комнаты, а
     // не на пропы первого коннекта.
     audioCaptureDefaults: {
-      noiseSuppression: settings.noiseSuppressionEnabled,
+      // Встроенный фильтр — только в режиме «обычное»; при RNNoise он выключен
+      // (`noise-suppression.ts`), чтобы звук не чистился дважды.
+      noiseSuppression: effectiveNoise(schoolNoiseMode(settings)) === "standard",
       channelCount: settings.micHighQuality ? 2 : undefined,
     },
     publishDefaults: {
@@ -2285,7 +2288,11 @@ export function RoomPage() {
       </footer>
       )}
 
-      {media ? <DeviceSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} /> : null}
+      {media ? <DeviceSettingsModal
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          schoolNoiseMode={schoolNoiseMode(clientMediaSettings)}
+        /> : null}
 
       <AlertDialog open={Boolean(removeTarget)} onOpenChange={(v) => !v && setRemoveTarget(null)}>
         <AlertDialogContent>
@@ -2447,9 +2454,9 @@ export function RoomPage() {
                 // качество звука» (стерео); участник не переопределяет
                 // явно, но выбор устройства (deviceId) остаётся его.
                 channelCount: clientMediaSettings?.micHighQuality ? 2 : undefined,
-                // Шумоподавление — клиентский DSP-фильтр браузера, по
-                // умолчанию включено школой (см. school-settings.ts).
-                noiseSuppression: clientMediaSettings?.noiseSuppressionEnabled ?? true,
+                // Шумоподавление по силе устройства (`noise-suppression.ts`):
+                // встроенный фильтр браузера — только в режиме «обычное».
+                noiseSuppression: effectiveNoise(schoolNoiseMode(clientMediaSettings)) === "standard",
               }
             : false
         }
@@ -2494,6 +2501,7 @@ export function RoomPage() {
         <VideoSubscriptionManager participants={participants} mode={lessonMode} />
         <PoorLinkMediaAdapter />
         <CpuLoadAdapter />
+        <NoiseSuppressionController schoolMode={schoolNoiseMode(clientMediaSettings)} />
         <ScreenShareStopSweep />
         <PrefetchStageWhenMediaUp />
         {lessonId && !selfHidden ? (

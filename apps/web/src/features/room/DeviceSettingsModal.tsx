@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocalParticipant, useRoomContext, VideoTrack } from "@livekit/components-react";
 import { Track } from "livekit-client";
+import type { NoiseSuppressionMode } from "@school/shared";
 import { Mic, Video, Volume2, Waves, type LucideIcon } from "lucide-react";
 
 import { Button } from "@/shared/ui/button";
@@ -19,7 +20,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/ui/select";
-import { Switch } from "@/shared/ui/switch";
+
+import {
+  autoNoise,
+  currentNoiseMode,
+  setUserNoiseMode,
+  strongNoiseAvailable,
+  useNoiseVersion,
+  type NoiseEffective,
+} from "./noise-suppression.js";
+
+const NOISE_LABEL: Record<NoiseEffective, string> = {
+  strong: "сильное",
+  standard: "обычное",
+  off: "выключено",
+};
 
 /**
  * Настройки устройств посреди урока. Переключает уже идущую публикацию через
@@ -29,9 +44,12 @@ import { Switch } from "@/shared/ui/switch";
 export function DeviceSettingsModal({
   open,
   onOpenChange,
+  schoolNoiseMode,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Режим шумоподавления школы — с ним «Авто», пока участник не выбрал своё. */
+  schoolNoiseMode: NoiseSuppressionMode;
 }) {
   const room = useRoomContext();
   const { localParticipant, isCameraEnabled, isMicrophoneEnabled } = useLocalParticipant();
@@ -42,18 +60,18 @@ export function DeviceSettingsModal({
   const [micId, setMicId] = useState("");
   const [camId, setCamId] = useState("");
   const [spkId, setSpkId] = useState("");
-  // Личный тумблер участника поверх школьного дефолта (§ школьные
-  // настройки, `noiseSuppressionEnabled`) — читаем ТЕКУЩИЙ эффективный
-  // дефолт комнаты (не школьный дефолт напрямую), чтобы модалка не
-  // сбрасывала выбор участника при повторном открытии в этом же уроке.
-  const [noiseSuppression, setNoiseSuppression] = useState(true);
+  // Выбор участника поверх режима школы (`noise-suppression.ts`) — до
+  // закрытия страницы; при повторном открытии показываем текущий.
+  useNoiseVersion();
+  const [noiseMode, setNoiseMode] = useState<NoiseSuppressionMode>("auto");
+  const strongOk = strongNoiseAvailable();
 
   useEffect(() => {
     if (!open) return;
     setMicId("");
     setCamId("");
     setSpkId("");
-    setNoiseSuppression(room.options.audioCaptureDefaults?.noiseSuppression !== false);
+    setNoiseMode(currentNoiseMode(schoolNoiseMode));
     navigator.mediaDevices
       .enumerateDevices()
       .then((list) => {
@@ -63,25 +81,15 @@ export function DeviceSettingsModal({
         setSpkDevices(usable.filter((d) => d.kind === "audiooutput"));
       })
       .catch(() => undefined);
-  }, [open, room]);
+  }, [open, room, schoolNoiseMode]);
 
   function apply() {
     if (micId) void room.switchActiveDevice("audioinput", micId).catch(() => undefined);
     if (camId) void room.switchActiveDevice("videoinput", camId).catch(() => undefined);
     if (spkId) void room.switchActiveDevice("audiooutput", spkId).catch(() => undefined);
 
-    // Тот же приём, что и `switchActiveDevice` внутри SDK (мутирует
-    // `room.options.audioCaptureDefaults` напрямую) — следующий ручной тогл
-    // микрофона (`MicControls.tsx`, без явных options) подхватит выбор
-    // участника, а не откатится на школьный дефолт.
-    room.options.audioCaptureDefaults = {
-      ...room.options.audioCaptureDefaults,
-      noiseSuppression,
-    };
-    const micPub = localParticipant.getTrackPublication(Track.Source.Microphone);
-    if (micPub?.audioTrack) {
-      void micPub.audioTrack.applyConstraints({ noiseSuppression }).catch(() => undefined);
-    }
+    // Применяет `NoiseSuppressionController` — к микрофону и к дефолту комнаты.
+    setUserNoiseMode(noiseMode);
 
     onOpenChange(false);
   }
@@ -120,7 +128,7 @@ export function DeviceSettingsModal({
             <DeviceField label="Камера" icon={Video} value={camId} onChange={setCamId} devices={camDevices} fallback="Камера" />
             <DeviceField label="Звук выводить в" icon={Volume2} value={spkId} onChange={setSpkId} devices={spkDevices} fallback="Динамики" />
 
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+            <div className="flex items-center gap-3 pt-1">
               <div className="flex min-w-0 items-center gap-2">
                 <Waves className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                 <div className="min-w-0">
@@ -128,8 +136,22 @@ export function DeviceSettingsModal({
                   <p className="text-xs text-text-3">Убирает фоновый шум с вашего микрофона</p>
                 </div>
               </div>
-              <Switch checked={noiseSuppression} onCheckedChange={setNoiseSuppression} />
             </div>
+            <Select value={noiseMode} onValueChange={(v) => setNoiseMode(v as NoiseSuppressionMode)}>
+              <SelectTrigger className="-mt-2 h-10 text-sm" aria-label="Шумоподавление">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">
+                  Авто — по возможностям устройства (сейчас: {NOISE_LABEL[autoNoise()]})
+                </SelectItem>
+                <SelectItem value="strong" disabled={!strongOk}>
+                  {strongOk ? "Сильное — убирает и громкий фон" : "Сильное — недоступно на этом устройстве"}
+                </SelectItem>
+                <SelectItem value="standard">Обычное — встроенное в браузер</SelectItem>
+                <SelectItem value="off">Выключено</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
