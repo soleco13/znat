@@ -19,7 +19,7 @@ import RnnoiseWorker from "./rnnoise-worker.ts?worker";
 
 /**
  * Шумоподавление микрофона по силе устройства (запрос 2026-10-17):
- *  - сильное устройство — RNNoise (WASM в отдельном Worker `rnnoise-worker.ts`,
+ *  - сильное устройство (скорость ядра ≥ STRONG_SCORE, ядер сколько угодно) — RNNoise (WASM в отдельном Worker `rnnoise-worker.ts`,
  *    AudioWorklet `rnnoise-worklet.ts` лишь обменивается кадрами и при опоздании
  *    Worker пропускает необработанный звук; не успевает в половине кадров за
  *    минуту — переходим на встроенное),
@@ -41,8 +41,14 @@ import RnnoiseWorker from "./rnnoise-worker.ts?worker";
 export type NoiseTier = "strong" | "weak" | "very_weak";
 export type NoiseEffective = "strong" | "standard" | "off";
 
-/** Не ниже — RNNoise (≈ 1–2 % одного ядра на i5) точно не помешает звуку и видео. */
-const STRONG_SCORE = 40;
+/**
+ * Не ниже — пробуем RNNoise (≈ 1–2 % одного ядра на i5, считается в своём
+ * Worker). Число ядер не важно: двухъядерный MacBook (урок 2026-10-19, score
+ * 35,8) тянет его спокойно, а если устройство всё же захлебнётся — молча
+ * откатываемся на встроенное (ступень CPU `CPU_FALLBACK_LEVEL` или Worker
+ * не успевает за кадрами).
+ */
+const STRONG_SCORE = 30;
 /** Ниже — уровень Pentium N3700 (≈ 17): там каждый процент процессора на счету. */
 const VERY_WEAK_SCORE = 18;
 /** Ступень `cpu-load-engine`, на которой RNNoise отключаем (SHARE_LEVEL — урезана уже демонстрация). */
@@ -53,7 +59,7 @@ const PROCESSOR_NAME = "matis-rnnoise";
 export function noiseTier(profile: DeviceProfile | null): NoiseTier {
   if (!profile || profile.score === 0 || !profile.benchmarkTrusted) return "weak";
   if (profile.score < VERY_WEAK_SCORE) return "very_weak";
-  if (!profile.weak && profile.score >= STRONG_SCORE && (profile.cores === 0 || profile.cores >= 4)) return "strong";
+  if (profile.score >= STRONG_SCORE) return "strong";
   return "weak";
 }
 
