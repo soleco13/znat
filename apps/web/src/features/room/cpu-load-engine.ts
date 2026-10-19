@@ -338,15 +338,37 @@ async function applyScreen(videoTrack: LocalVideoTrack, reduced: boolean, adjust
 
 // ---------- признаки перегрузки ----------
 
+/**
+ * Сколько кадров камера на самом деле отдаёт (`media-source.framesPerSecond`).
+ * `getSettings().frameRate` — лишь запрошенная частота: дешёвая веб-камера в
+ * полутьме отдаёт 8–12 кадр/с вместо 20, и кодировщик, честно сжимающий всё,
+ * что получил, выглядел «голодным» — автомат снижал качество при спокойном
+ * процессоре. Урок 2026-10-19 (Елена): CRITICAL весь урок только по частоте
+ * камеры — Compute Pressure nominal, захват звука 100 %, у кодировщика
+ * ограничения по процессору 0 с.
+ */
+function sourceFps(report: RTCStatsReport | undefined): number | null {
+  let fps: number | null = null;
+  report?.forEach((s: { type: string; kind?: string; framesPerSecond?: number }) => {
+    if (s.type === "media-source" && s.kind === "video" && typeof s.framesPerSecond === "number") fps = s.framesPerSecond;
+  });
+  return fps;
+}
+
 async function videoCpuLimited(videoTrack: LocalVideoTrack | undefined, encoderFpsCap?: number): Promise<boolean> {
   if (!videoTrack || videoTrack.isMuted || !videoTrack.sender) return false;
   try {
-    const stats = await videoTrack.getSenderStats();
-    if (stats.some((s) => s.qualityLimitationReason === "cpu")) return true;
+    const report = await videoTrack.getRTCStatsReport();
+    if (!report) return false;
+    const outbound: { qualityLimitationReason?: string; framesPerSecond?: number }[] = [];
+    report.forEach((s: { type: string; kind?: string; qualityLimitationReason?: string; framesPerSecond?: number }) => {
+      if (s.type === "outbound-rtp" && s.kind === "video") outbound.push(s);
+    });
+    if (outbound.some((s) => s.qualityLimitationReason === "cpu")) return true;
     // Узкий канал браузер тоже отрабатывает частотой кадров — это сеть, не процессор.
-    if (videoTrack.source !== Track.Source.Camera || stats.some((s) => s.qualityLimitationReason === "bandwidth")) return false;
-    const captureFps = videoTrack.mediaStreamTrack.getSettings().frameRate ?? 0;
-    const fps = Math.max(0, ...stats.map((s) => s.framesPerSecond ?? 0));
+    if (videoTrack.source !== Track.Source.Camera || outbound.some((s) => s.qualityLimitationReason === "bandwidth")) return false;
+    const captureFps = sourceFps(report) ?? videoTrack.mediaStreamTrack.getSettings().frameRate ?? 0;
+    const fps = Math.max(0, ...outbound.map((s) => s.framesPerSecond ?? 0));
     return cameraFpsStarved(captureFps, encoderFpsCap, fps);
   } catch {
     return false;
@@ -402,8 +424,10 @@ function localMic(room: Room): LocalAudioTrack | undefined {
 }
 
 /** Активные слои и кодировщик своей камеры — для лога. */
-async function cameraSendInfo(camera: LocalVideoTrack | undefined): Promise<{ layers: number | null; encoder: string | null }> {
-  if (!camera?.sender || camera.isMuted) return { layers: null, encoder: null };
+async function cameraSendInfo(
+  camera: LocalVideoTrack | undefined,
+): Promise<{ layers: number | null; encoder: string | null; sourceFps: number | null; sentFps: number | null }> {
+  if (!camera?.sender || camera.isMuted) return { layers: null, encoder: null, sourceFps: null, sentFps: null };
   try {
     const stats = await camera.getSenderStats();
     const active = stats.filter((s) => (s.framesPerSecond ?? 0) > 0);
@@ -412,16 +436,27 @@ async function cameraSendInfo(camera: LocalVideoTrack | undefined): Promise<{ la
     report?.forEach((s: { type: string; encoderImplementation?: string }) => {
       if (s.type === "outbound-rtp" && s.encoderImplementation) encoder ??= s.encoderImplementation;
     });
-    return { layers: active.length, encoder };
+    const sent = Math.max(0, ...active.map((s) => s.framesPerSecond ?? 0));
+    const src = sourceFps(report);
+    return { layers: active.length, encoder, sourceFps: src === null ? null : Math.round(src), sentFps: sent ? Math.round(sent) : null };
   } catch {
-    return { layers: null, encoder: null };
+    return { layers: null, encoder: null, sourceFps: null, sentFps: null };
   }
 }
 
 export interface CpuLoadChange {
   decision: Decision;
   sample: LoadSample;
-  camera: { height: number | null; fps: number | null; targetHeight: number | null; layers: number | null; encoder: string | null };
+  camera: {
+    height: number | null;
+    fps: number | null;
+    targetHeight: number | null;
+    layers: number | null;
+    encoder: string | null;
+    /** Кадров в секунду фактически с камеры и отправлено (верхний активный слой). */
+    sourceFps: number | null;
+    sentFps: number | null;
+  };
   remoteVideos: number;
 }
 

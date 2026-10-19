@@ -3,6 +3,7 @@ import { useRoomContext } from "@livekit/components-react";
 import { ConnectionState, DisconnectReason, RoomEvent, Track, type Room } from "livekit-client";
 import { errorFields, track } from "../../shared/telemetry.js";
 import { currentPressure } from "./cpu-load-engine.js";
+import { receivePressure } from "./receive-pressure.js";
 import { peerStats, statsEntries } from "./peer-stats.js";
 
 /**
@@ -190,7 +191,8 @@ class MediaStatsSampler {
   private lastFreezes = new Map<string, number>();
   /** Накопительные счётчики соединения с прошлого тика (одним `getStats`). */
   private lastTotals: Record<string, number> | null = null;
-  private lastAudio = new Map<string, { concealed: number; total: number; jbDelay: number; jbEmitted: number }>();
+  private lastAudio = new Map<string, { concealed: number; total: number; jbDelay: number; jbTarget: number; jbEmitted: number }>();
+  private lastVideo = new Map<string, { decoded: number; decodeS: number; dropped: number }>();
   private running = false;
 
   constructor(
@@ -286,7 +288,12 @@ class MediaStatsSampler {
     let sendFps: number | null = null;
     let sendLimit: string | null = null;
     let sendKbps: number | null = null;
+    // Сколько кадров камера отдаёт на самом деле (запрошенная частота — в getSettings).
+    let captureFps: number | null = null;
     if (cameraReport) {
+      for (const m of statsOfType(cameraReport, "media-source")) {
+        if (m.kind === "video") captureFps = num(m.framesPerSecond);
+      }
       let bytes = 0;
       for (const o of statsOfType(cameraReport, "outbound-rtp")) {
         bytes += num(o.bytesSent) ?? 0;
@@ -328,21 +335,40 @@ class MediaStatsSampler {
     let recvFreezes = 0;
     let recvMinFps: number | null = null;
     const freezes = new Map<string, number>();
+    // Декодирование чужого видео: среднее время на кадр (растёт на перегруженном
+    // процессоре) и кадры, отброшенные до показа. Вместе с джиттером звука ниже
+    // отличает «не успевает устройство» от «пакеты приходят пачками» (урок 2026-10-19).
+    let decodeS = 0;
+    let decoded = 0;
+    let recvFramesDropped: number | null = null;
+    const video = new Map<string, { decoded: number; decodeS: number; dropped: number }>();
     for (const { sid, report } of remoteVideo) {
       for (const i of statsOfType(report, "inbound-rtp")) {
         const count = num(i.freezeCount) ?? 0;
         freezes.set(sid, count);
         recvFreezes += Math.max(0, count - (this.lastFreezes.get(sid) ?? count));
+        const v = { decoded: num(i.framesDecoded) ?? 0, decodeS: num(i.totalDecodeTime) ?? 0, dropped: num(i.framesDropped) ?? 0 };
+        video.set(sid, v);
+        const pv = this.lastVideo.get(sid);
+        if (pv && v.decoded > pv.decoded && v.decodeS >= pv.decodeS) {
+          decoded += v.decoded - pv.decoded;
+          decodeS += v.decodeS - pv.decodeS;
+        }
+        if (pv && v.dropped >= pv.dropped) recvFramesDropped = (recvFramesDropped ?? 0) + v.dropped - pv.dropped;
         const fps = num(i.framesPerSecond);
         if (fps !== null && (recvMinFps === null || fps < recvMinFps)) recvMinFps = fps;
       }
     }
     this.lastFreezes = freezes;
+    this.lastVideo = video;
     let concealed = 0;
     let total = 0;
     // Задержка воспроизведения чужого звука (буфер джиттера), мс — худшая из дорожек.
     let recvAudioDelayMs: number | null = null;
-    const audio = new Map<string, { concealed: number; total: number; jbDelay: number; jbEmitted: number }>();
+    // Сколько буфер сам себе назначил (NetEq: по разбросу прихода пакетов) и джиттер прихода.
+    let recvAudioTargetMs: number | null = null;
+    let recvAudioJitterMs: number | null = null;
+    const audio = new Map<string, { concealed: number; total: number; jbDelay: number; jbTarget: number; jbEmitted: number }>();
     for (const { sid, report } of remoteAudio) {
       for (const i of statsOfType(report, "inbound-rtp")) {
         // Тишину собеседника (DTX: в паузах Opus почти не шлёт пакеты) браузер
@@ -352,8 +378,11 @@ class MediaStatsSampler {
           concealed: Math.max(0, (num(i.concealedSamples) ?? 0) - (num(i.silentConcealedSamples) ?? 0)),
           total: num(i.totalSamplesReceived) ?? 0,
           jbDelay: num(i.jitterBufferDelay) ?? 0,
+          jbTarget: num(i.jitterBufferTargetDelay) ?? 0,
           jbEmitted: num(i.jitterBufferEmittedCount) ?? 0,
         };
+        const jitter = num(i.jitter);
+        if (jitter !== null) recvAudioJitterMs = Math.max(recvAudioJitterMs ?? 0, Math.round(jitter * 1000));
         audio.set(sid, cur);
         const prev = this.lastAudio.get(sid);
         // Переподписка (AudioLagGuard) создаёт новый приёмник — счётчики
@@ -365,6 +394,10 @@ class MediaStatsSampler {
         if (prev && cur.jbEmitted > prev.jbEmitted && cur.jbDelay >= prev.jbDelay) {
           const ms = Math.round((1000 * (cur.jbDelay - prev.jbDelay)) / (cur.jbEmitted - prev.jbEmitted));
           recvAudioDelayMs = Math.max(recvAudioDelayMs ?? 0, ms);
+          if (cur.jbTarget >= prev.jbTarget) {
+            const target = Math.round((1000 * (cur.jbTarget - prev.jbTarget)) / (cur.jbEmitted - prev.jbEmitted));
+            recvAudioTargetMs = Math.max(recvAudioTargetMs ?? 0, target);
+          }
         }
       }
     }
@@ -380,6 +413,7 @@ class MediaStatsSampler {
       sendFps,
       sendLimit,
       sendKbps,
+      captureFps: captureFps === null ? null : Math.round(captureFps),
       shareHeight,
       shareFps,
       shareLimit,
@@ -388,6 +422,11 @@ class MediaStatsSampler {
       recvFreezes,
       recvAudioConcealedPct: total > 0 ? Math.round((concealed / total) * 1000) / 10 : null,
       recvAudioDelayMs,
+      recvAudioTargetMs,
+      recvAudioJitterMs,
+      recvDecodeMs: decoded > 0 ? Math.round((decodeS / decoded) * 10000) / 10 : null,
+      recvFramesDropped,
+      receivePressure: receivePressure(),
       hidden: document.visibilityState === "hidden",
     });
     const health = await this.connectionTotals(camera?.mediaStreamTrack?.getSettings().height ?? null, sendHeight);

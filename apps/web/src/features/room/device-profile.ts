@@ -41,6 +41,15 @@ export interface DeviceProfile {
 
 /** Ниже — процессор уровня Celeron/Pentium N, Atom, старых i3 мобильных. */
 const WEAK_SCORE = 28;
+/**
+ * Ноутбук на 4 потока с 4 ГБ памяти — слабый, что бы ни показал замер.
+ * 75 мс микробенчмарка зависят от турбо-частоты и фоновой работы: у Елены
+ * (4 потока, 4 ГБ) 14.10 вышло 26,7 (слабое), 19.10 — 32,7 (не слабое), и
+ * камера стартовала двумя слоями 360p, пока автомат не снял их сам.
+ * `navigator.deviceMemory` есть только в Chromium (на WebKit — `undefined`).
+ */
+const WEAK_MAX_CORES = 4;
+const WEAK_MAX_MEMORY_GB = 4;
 
 let cached: DeviceProfile | null = null;
 let pending: Promise<DeviceProfile> | null = null;
@@ -111,7 +120,11 @@ async function detect(): Promise<DeviceProfile> {
   await idle();
   const score = cpuScore();
   const benchmarkTrusted = !isWebKit();
-  const weak = (cores > 0 && cores <= 2) || (benchmarkTrusted && score > 0 && score < WEAK_SCORE);
+  const memoryGb = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+  const weak =
+    (cores > 0 && cores <= 2) ||
+    (benchmarkTrusted && score > 0 && score < WEAK_SCORE) ||
+    (cores > 0 && cores <= WEAK_MAX_CORES && typeof memoryGb === "number" && memoryGb <= WEAK_MAX_MEMORY_GB);
   const [vp8, h264] = await Promise.all([encoderInfo("video/VP8"), encoderInfo(H264_CONTENT_TYPE)]);
   const h264Hw = !vp8.powerEfficient && h264.supported && h264.powerEfficient;
   // H.264 пока не включаем (урок 2026-10-13): у ученицы с Pentium-уровнем

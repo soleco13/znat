@@ -39,6 +39,8 @@ export function CpuLoadAdapter() {
           cameraHeight: camera.height,
           cameraFps: camera.fps,
           cameraLayers: camera.layers,
+          cameraSourceFps: camera.sourceFps,
+          cameraSentFps: camera.sentFps,
           encoder: camera.encoder,
           remoteVideos,
           cores: navigator.hardwareConcurrency ?? null,

@@ -15,6 +15,7 @@ import { requestLessonPrecache } from "@/shared/service-worker";
 import { useIsNarrowViewport, useIsPhoneLandscape } from "./use-narrow-viewport.js";
 import { isWebKitRouting, mediaRouteConfirmed, refreshMediaPath, useRouteWatch } from "./use-route-watch.js";
 import { cpuConstrainedRecently, useCpuHeavy } from "./cpu-load.js";
+import { useReceivePressure } from "./receive-pressure.js";
 import { useCameraBitrateBySize } from "./camera-bitrate.js";
 import { peerStats, selectedPair, statsEntries } from "./peer-stats.js";
 
@@ -244,7 +245,7 @@ function useMediaPathRefresh(): void {
  * а по каждой стороне — ровно слой 640×360.
  */
 const PHONE_CAMERA_MAX = { width: 360, height: 360 };
-/** Частота чужих камер, когда своё устройство перегружено (`cpu-load` ступень 2+). */
+/** Частота чужих камер, когда своё устройство перегружено (`cpu-load` ступень 2+) или приём не успевает. */
 const CPU_HEAVY_CAMERA_FPS = 10;
 const FULL_CAMERA_FPS = 30;
 
@@ -343,6 +344,10 @@ export function PoorLinkMediaAdapter() {
   // тоже нижним слоем — каждая принятая камера разбирается процессором
   // учителя. Демонстрацию — нет: её текст должен оставаться читаемым.
   const cpuHeavy = useCpuHeavy();
+  // Звук собеседников копится в буфере (`receive-pressure.ts`) — входящий
+  // канал или устройство не успевают: камеры так же легче, звук важнее.
+  const receivePressure = useReceivePressure();
+  const lighten = cpuHeavy || receivePressure;
 
   // Чужие камеры и демонстрация: нижний слой при плохой связи (у демонстрации
   // он есть с 2026-09-26 — 360p/5 кадр/с), иначе — как решит adaptiveStream.
@@ -357,11 +362,11 @@ export function PoorLinkMediaAdapter() {
       // со старой версии страницы) нижнего слоя нет, просить его нечего.
       if (!video || !pub.isSubscribed || !pub.simulcasted) return;
       const camera = pub.source === Track.Source.Camera;
-      const quality = camera && cpuHeavy ? VideoQuality.LOW : receiveLevel;
-      // Своё устройство не справляется — чужие камеры ещё и реже: сервер
-      // отдаёт нижние временные слои VP8 (у Chrome их три в каждом слое
-      // simulcast), декодировать вдвое меньше кадров.
-      if (camera) pub.setVideoFPS(cpuHeavy ? CPU_HEAVY_CAMERA_FPS : FULL_CAMERA_FPS);
+      const quality = camera && lighten ? VideoQuality.LOW : receiveLevel;
+      // Своё устройство или приём не справляются — чужие камеры ещё и реже:
+      // сервер отдаёт нижние временные слои VP8 (у Chrome их три в каждом слое
+      // simulcast), декодировать и принимать вдвое меньше кадров.
+      if (camera) pub.setVideoFPS(lighten ? CPU_HEAVY_CAMERA_FPS : FULL_CAMERA_FPS);
       if (phone && camera && quality === VideoQuality.HIGH) pub.setVideoDimensions(PHONE_CAMERA_MAX);
       else pub.setVideoQuality(quality);
     };
@@ -373,7 +378,7 @@ export function PoorLinkMediaAdapter() {
     return () => {
       room.off(RoomEvent.TrackSubscribed, onSubscribed);
     };
-  }, [room, receiveLevel, phone, cpuHeavy]);
+  }, [room, receiveLevel, phone, lighten]);
 
   return null;
 }
