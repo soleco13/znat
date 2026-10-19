@@ -1,0 +1,62 @@
+{
+  "T0": 1792401827216,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "teacher joins",
+      "ok": true,
+      "rel": "   3.7"
+    },
+    {
+      "name": "s1 enters",
+      "ok": true,
+      "rel": "   6.8"
+    },
+    {
+      "name": "dual-core auto → RNNoise track sent",
+      "ok": true,
+      "detail": {
+        "processed": true,
+        "ns": null,
+        "cores": 2
+      },
+      "rel": "   7.3"
+    },
+    {
+      "name": "teacher hears s1 with RNNoise",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 14044,
+        "inAudioEnergy": 0.7691045159981162,
+        "outAudioBytes": 12007,
+        "outVideoBytes": 468897,
+        "inVideoFrames": 60,
+        "remoteVideoPlaying": 1
+      },
+      "rel": "  10.3"
+    },
+    {
+      "name": "RNNoise still on after 3 min",
+      "ok": true,
+      "detail": {
+        "processed": true,
+        "ns": null,
+        "cores": 2
+      },
+      "rel": " 199.3"
+    },
+    {
+      "name": "teacher still hears s1",
+      "ok": true,
+      "detail": {
+        "inAudioBytes": 13013,
+        "inAudioEnergy": 0.003806794339990205,
+        "outAudioBytes": 11698,
+        "outVideoBytes": 174206,
+        "inVideoFrames": 60,
+        "remoteVideoPlaying": 1
+      },
+      "rel": " 202.3"
+    }
+  ]
+}
