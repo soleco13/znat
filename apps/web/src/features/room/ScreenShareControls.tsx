@@ -67,6 +67,11 @@ const WEAK_SCREEN_MAX_BITRATE = 600_000;
 /**
  * Звук демонстрации: моно, без отправки тишины (DTX). Слабому устройству —
  * ниже битрейт. Приоритет ниже голоса учителя.
+ *
+ * С избыточностью (RED: в каждом пакете ещё и предыдущий кадр), как голос.
+ * Урок 2026-10-19: у зрителя на канале с потерями 15–30 % звук демонстрации
+ * заикался — без RED каждый потерянный пакет слышен, а Opus FEC через сервер
+ * не включается (о потерях у зрителя кодер учителя не узнаёт). Поток ~×2.
  */
 function screenAudioPreset(weak: boolean) {
   return { maxBitrate: weak ? 32_000 : 48_000, priority: "medium" as const };
@@ -370,7 +375,7 @@ export function SelfScreenShareButton({
             audioPreset: screenAudioPreset(weak),
             forceStereo: false,
             dtx: true,
-            red: false,
+            red: true,
           })
           .catch(() => {
             sound.stop();

@@ -4,7 +4,7 @@
 # внутри netns браузеров. Приложение — тестовый стенд znat-stage (своя БД/Redis),
 # доступен из ux-net по 172.31.0.1:3100, LiveKit стенда — lk-test 172.31.0.50
 # (с 2026-10-17, /root/loadtest/stage). Прод, его .env, БД и LiveKit не затрагиваются.
-#   stand.sh up | down
+#   stand.sh up | down   (CAPTURE_FLAG=--auto-select-tab-capture-source-by-title=<заголовок> FAKE_UI_FLAG= — демонстрация вкладки со звуком)
 #   stand.sh run <script.mjs> <out-name> [ENV=VAL ...]
 set -u
 H=$(cd "$(dirname "$0")" && pwd)
@@ -18,7 +18,7 @@ up)
   for n in $WHO; do docker rm -f ux-$n ux-$n-fwd >/dev/null 2>&1; done
   rm -rf "$CTL"; mkdir -p "$CTL"; chmod 777 "$CTL"
   FLAGS="--headless=new --no-sandbox --remote-debugging-port=9222 \
-   --use-fake-device-for-media-stream --use-fake-ui-for-media-stream --auto-select-desktop-capture-source=Entire \
+   --use-fake-device-for-media-stream ${FAKE_UI_FLAG---use-fake-ui-for-media-stream} ${CAPTURE_FLAG:---auto-select-desktop-capture-source=Entire} \
    --unsafely-treat-insecure-origin-as-secure=$ORIGIN --autoplay-policy=no-user-gesture-required \
    --window-size=1280,800 --lang=ru-RU"
   PIDS=""

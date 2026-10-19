@@ -1,0 +1,33 @@
+{
+  "T0": 1792409403738,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "teacher joins",
+      "ok": true,
+      "rel": "   3.9"
+    },
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "   6.8"
+    },
+    {
+      "name": "demo plays",
+      "ok": true,
+      "rel": "   9.4"
+    },
+    {
+      "name": "share on",
+      "ok": true,
+      "rel": "  12.2"
+    },
+    {
+      "name": "s1 receives share audio",
+      "ok": true,
+      "detail": 1,
+      "rel": "  20.2"
+    }
+  ],
+  "codec": "audio/opus"
+}
