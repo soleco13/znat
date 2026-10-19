@@ -19,7 +19,8 @@ import RnnoiseWorker from "./rnnoise-worker.ts?worker";
 
 /**
  * Шумоподавление микрофона по силе устройства (запрос 2026-10-17):
- *  - сильное устройство (скорость ядра ≥ STRONG_SCORE, ядер сколько угодно) — RNNoise (WASM в отдельном Worker `rnnoise-worker.ts`,
+ *  - сильное устройство (скорость ядра ≥ STRONG_SCORE и не «слабое» ни по чему,
+ *    кроме двух ядер) — RNNoise (WASM в отдельном Worker `rnnoise-worker.ts`,
  *    AudioWorklet `rnnoise-worklet.ts` лишь обменивается кадрами и при опоздании
  *    Worker пропускает необработанный звук; не успевает в половине кадров за
  *    минуту — переходим на встроенное),
@@ -59,7 +60,10 @@ const PROCESSOR_NAME = "matis-rnnoise";
 export function noiseTier(profile: DeviceProfile | null): NoiseTier {
   if (!profile || profile.score === 0 || !profile.benchmarkTrusted) return "weak";
   if (profile.score < VERY_WEAK_SCORE) return "very_weak";
-  if (profile.score >= STRONG_SCORE) return "strong";
+  // «Слабое» только из-за двух ядер (MacBook Юли) RNNoise не мешает; слабое
+  // по замеру или по памяти (4 потока и ≤ 4 ГБ, ПК Елены) — встроенное.
+  const weakBeyondCores = profile.weak && !(profile.cores > 0 && profile.cores <= 2);
+  if (profile.score >= STRONG_SCORE && !weakBeyondCores) return "strong";
   return "weak";
 }
 
