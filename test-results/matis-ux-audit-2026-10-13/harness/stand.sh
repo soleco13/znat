@@ -23,7 +23,7 @@ up)
    --window-size=1280,800 --lang=ru-RU"
   PIDS=""
   for n in $WHO; do
-    voice=voice-student.wav; [ "$n" = teacher ] && voice=voice-teacher.wav
+    voice=voice-student.wav; [ "$n" = teacher ] && voice=${VOICE_TEACHER:-voice-teacher.wav}
     # Ядра 1,2,7,8 — LiveKit прода, 3,9 — app прода: браузеры стенда туда не пускаем.
     docker run -d --name ux-$n --network ux-net --shm-size=1g --cap-add NET_ADMIN --cpuset-cpus="${UX_CPUSET:-0,4,5,6,10,11}" ${CPUS_FLAG:-} \
       -v "$H/$voice":/media/voice.wav:ro --entrypoint /usr/bin/google-chrome znat/raw-recorder:dev \

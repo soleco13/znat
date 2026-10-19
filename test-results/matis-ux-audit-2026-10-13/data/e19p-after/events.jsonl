@@ -1,0 +1,223 @@
+{"kind":"env","text":"Chrome/150.0.7871.46","t":1792404347057,"rel":"   0.9"}
+{"who":"teacher","kind":"http4xx","status":401,"url":"http://172.31.0.1:3100/api/v1/auth/refresh","method":"POST","t":1792404347473,"rel":"   1.3"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 401 (Unauthorized)","url":"http://172.31.0.1:3100/api/v1/auth/refresh","t":1792404347473,"rel":"   1.3"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":401,"ms":87,"bytes":394,"quiet":true,"t":1792404347555,"rel":"   1.4"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/login","status":200,"ms":42,"bytes":985,"quiet":true,"t":1792404347724,"rel":"   1.6"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons","status":200,"ms":9,"bytes":29750,"quiet":true,"t":1792404347774,"rel":"   1.6"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":58,"bytes":312,"quiet":true,"t":1792404347919,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/presence-counts?ids=:id,:id,:id,:id,:id,:id,:id,:id,:id,:id,:id,:id,:id,:i","status":200,"ms":58,"bytes":2446,"quiet":true,"t":1792404347919,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":59,"bytes":312,"quiet":true,"t":1792404347920,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":58,"bytes":312,"quiet":true,"t":1792404347920,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":59,"bytes":312,"quiet":true,"t":1792404347921,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":59,"bytes":312,"quiet":true,"t":1792404347921,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":59,"bytes":312,"quiet":true,"t":1792404347921,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":59,"bytes":312,"quiet":true,"t":1792404347921,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":58,"bytes":312,"quiet":true,"t":1792404347922,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":58,"bytes":312,"quiet":true,"t":1792404347922,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":58,"bytes":312,"quiet":true,"t":1792404347923,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":58,"bytes":312,"quiet":true,"t":1792404347923,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":58,"bytes":312,"quiet":true,"t":1792404347923,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":58,"bytes":312,"quiet":true,"t":1792404347923,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":59,"bytes":312,"quiet":true,"t":1792404347924,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":60,"bytes":312,"quiet":true,"t":1792404347926,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":60,"bytes":312,"quiet":true,"t":1792404347926,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":80,"bytes":312,"quiet":true,"t":1792404347946,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":80,"bytes":312,"quiet":true,"t":1792404347946,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":81,"bytes":312,"quiet":true,"t":1792404347947,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":97,"bytes":312,"quiet":true,"t":1792404347963,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":96,"bytes":312,"quiet":true,"t":1792404347963,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":97,"bytes":312,"quiet":true,"t":1792404347964,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":97,"bytes":312,"quiet":true,"t":1792404347964,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":97,"bytes":312,"quiet":true,"t":1792404347964,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":97,"bytes":312,"quiet":true,"t":1792404347964,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":105,"bytes":312,"quiet":true,"t":1792404347973,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":105,"bytes":312,"quiet":true,"t":1792404347973,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":106,"bytes":312,"quiet":true,"t":1792404347974,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":105,"bytes":312,"quiet":true,"t":1792404347974,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":106,"bytes":312,"quiet":true,"t":1792404347974,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":106,"bytes":312,"quiet":true,"t":1792404347975,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":106,"bytes":312,"quiet":true,"t":1792404347975,"rel":"   1.8"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":106,"bytes":312,"quiet":true,"t":1792404347976,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":106,"bytes":312,"quiet":true,"t":1792404347976,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":106,"bytes":312,"quiet":true,"t":1792404347976,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":106,"bytes":312,"quiet":true,"t":1792404347977,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":107,"bytes":312,"quiet":true,"t":1792404347978,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":106,"bytes":312,"quiet":true,"t":1792404347978,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":107,"bytes":312,"quiet":true,"t":1792404347978,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":107,"bytes":312,"quiet":true,"t":1792404347979,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":108,"bytes":312,"quiet":true,"t":1792404347980,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":108,"bytes":312,"quiet":true,"t":1792404347980,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":108,"bytes":312,"quiet":true,"t":1792404347981,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":108,"bytes":312,"quiet":true,"t":1792404347981,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":108,"bytes":312,"quiet":true,"t":1792404347981,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":107,"bytes":312,"quiet":true,"t":1792404347981,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":108,"bytes":312,"quiet":true,"t":1792404347982,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":108,"bytes":312,"quiet":true,"t":1792404347982,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":118,"bytes":312,"quiet":true,"t":1792404347992,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":119,"bytes":312,"quiet":true,"t":1792404347993,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":118,"bytes":312,"quiet":true,"t":1792404347993,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/materials","status":200,"ms":121,"bytes":312,"quiet":true,"t":1792404347996,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":135,"bytes":920,"quiet":true,"t":1792404348010,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":135,"bytes":920,"quiet":true,"t":1792404348010,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":135,"bytes":920,"quiet":true,"t":1792404348011,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":154,"bytes":113480,"quiet":true,"t":1792404348030,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":157,"bytes":4278,"quiet":true,"t":1792404348033,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":162,"bytes":4278,"quiet":true,"t":1792404348038,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":164,"bytes":4278,"quiet":true,"t":1792404348041,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":169,"bytes":4278,"quiet":true,"t":1792404348046,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":172,"bytes":3717,"quiet":true,"t":1792404348049,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":173,"bytes":3718,"quiet":true,"t":1792404348050,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":174,"bytes":3718,"quiet":true,"t":1792404348051,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":185,"bytes":3717,"quiet":true,"t":1792404348063,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":190,"bytes":2601,"quiet":true,"t":1792404348068,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":198,"bytes":2601,"quiet":true,"t":1792404348076,"rel":"   1.9"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":218,"bytes":2601,"quiet":true,"t":1792404348097,"rel":"   2.0"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":215,"bytes":2601,"quiet":true,"t":1792404348097,"rel":"   2.0"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":216,"bytes":2601,"quiet":true,"t":1792404348098,"rel":"   2.0"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":216,"bytes":2601,"quiet":true,"t":1792404348098,"rel":"   2.0"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":225,"bytes":2601,"quiet":true,"t":1792404348108,"rel":"   2.0"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":225,"bytes":2601,"quiet":true,"t":1792404348109,"rel":"   2.0"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":226,"bytes":1481,"quiet":true,"t":1792404348109,"rel":"   2.0"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/recordings","status":200,"ms":226,"bytes":1481,"quiet":true,"t":1792404348109,"rel":"   2.0"}
+{"who":"teacher","kind":"http4xx","status":401,"url":"http://172.31.0.1:3100/api/v1/guest/session","method":"GET","t":1792404348208,"rel":"   2.1"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 401 (Unauthorized)","url":"http://172.31.0.1:3100/api/v1/guest/session","t":1792404348208,"rel":"   2.1"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/guest/session","status":401,"ms":1,"bytes":398,"quiet":true,"t":1792404348208,"rel":"   2.1"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":200,"ms":0,"bytes":985,"quiet":true,"t":1792404348227,"rel":"   2.1"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id","status":200,"ms":2,"bytes":865,"quiet":true,"t":1792404348531,"rel":"   2.4"}
+{"who":"teacher","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/join","status":200,"ms":0,"bytes":2375,"quiet":true,"t":1792404350338,"rel":"   4.2"}
+{"who":"teacher","kind":"ws.created","url":"ws://172.31.0.1:3100/ws?lessonId=7df1a7ae-fa77-4ab4-acb7-db7943e9188d&token=…&cs=f22535b0-e715-4d76-bed4-1b765ef22191&attempt=0","t":1792404350364,"rel":"   4.2"}
+{"kind":"CHECK_OK","text":"teacher joins","t":1792404350364,"rel":"   4.2"}
+{"who":"teacher","kind":"ws.created","url":"ws://172.31.0.50:7880/rtc/v1?access_token=…&join_request=CAESiA4fiwgAAAAAAAAD7VvLbuS4FYUbSBAYKCDTq1leIGu6SJF6kI1a-JkZYLpjjLs729ASq8x06QGK5SrPT8wH5QfyWYFU5S65RHr","t":1792404350387,"rel":"   4.3"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/decks","status":200,"ms":46,"bytes":312,"quiet":true,"t":1792404350387,"rel":"   4.3"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/activities","status":200,"ms":24,"bytes":10748,"quiet":true,"t":1792404350387,"rel":"   4.3"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/knocks","status":200,"ms":24,"bytes":313,"quiet":true,"t":1792404350387,"rel":"   4.3"}
+{"who":"teacher","kind":"ws.open","url":"ws://172.31.0.1:3100/ws?lessonId=7df1a7ae-fa77-4ab4-acb7-db7943e9188d&token=…&cs=f22535b0-e715-4d76-bed4-1b765ef22191&attempt=0","status":101,"t":1792404350387,"rel":"   4.3"}
+{"who":"teacher","kind":"room.msg","type":"presence","quiet":true,"t":1792404350395,"rel":"   4.3"}
+{"who":"teacher","kind":"ws.open","url":"ws://172.31.0.50:7880/rtc/v1?access_token=…&join_request=CAESiA4fiwgAAAAAAAAD7VvLbuS4FYUbSBAYKCDTq1leIGu6SJF6kI1a-JkZYLpjjLs729ASq8x06QGK5SrPT8wH5QfyWYFU5S65RHr","status":101,"t":1792404350396,"rel":"   4.3"}
+{"who":"teacher","kind":"room.msg","type":"stage_changed","quiet":true,"t":1792404350396,"rel":"   4.3"}
+{"who":"teacher","kind":"room.msg","type":"lesson_mode","quiet":true,"t":1792404350396,"rel":"   4.3"}
+{"who":"teacher","kind":"room.msg","type":"entry_locked","quiet":true,"t":1792404350396,"rel":"   4.3"}
+{"who":"teacher","kind":"room.msg","type":"chat_locked","quiet":true,"t":1792404350396,"rel":"   4.3"}
+{"who":"teacher","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/chat","status":200,"ms":57,"bytes":13734,"quiet":true,"t":1792404350445,"rel":"   4.3"}
+{"who":"s1","kind":"rest","method":"GET","url":"/api/v1/j/758e82a0bbca21932a07183e3f35a90f630d8f7a1ce8c3a21f575af8fadb8ca2","status":200,"ms":96,"bytes":537,"quiet":true,"t":1792404351031,"rel":"   4.9"}
+{"who":"s1","kind":"http4xx","status":401,"url":"http://172.31.0.1:3100/api/v1/auth/refresh","method":"POST","t":1792404351034,"rel":"   4.9"}
+{"who":"s1","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 401 (Unauthorized)","url":"http://172.31.0.1:3100/api/v1/auth/refresh","t":1792404351034,"rel":"   4.9"}
+{"who":"s1","kind":"rest","method":"POST","url":"/api/v1/auth/refresh","status":401,"ms":446,"bytes":394,"quiet":true,"t":1792404351385,"rel":"   5.3"}
+{"who":"teacher","kind":"tele","type":"device_profile","ts":"2026-10-19T10:05:48.666Z","extra":{"codec":"vp8","h264Hw":false,"weak":false,"score":64.9,"cores":6,"benchmarkTrusted":true,"ua":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/150.0.0.0 Safari/537.36","browser":"Chromium 150, Google Chrome 150","platform":"Linux","mobile":false,"memoryGb":32,"netType":null,"netEffective":"4g","netDownlinkMbps":1.5,"netRttMs":100,"saveData":false},"quiet":true,"t":1792404353668,"rel":"   7.5"}
+{"who":"teacher","kind":"tele","type":"livekit_connection_started","ts":"2026-10-19T10:05:50.339Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":null,"identity":null,"online":true,"attempt":0},"quiet":true,"t":1792404353668,"rel":"   7.5"}
+{"who":"teacher","kind":"tele","type":"client_error","ts":"2026-10-19T10:05:50.362Z","extra":{"area":"wake_lock","message":"NotAllowedError"},"quiet":true,"t":1792404353668,"rel":"   7.5"}
+{"who":"teacher","kind":"tele","type":"livekit_connected","ts":"2026-10-19T10:05:50.455Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"6e81c5b6-964a-4e1e-8577-3e05e1d18f49","online":true,"durationMs":116},"quiet":true,"t":1792404353668,"rel":"   7.5"}
+{"who":"teacher","kind":"tele","type":"noise_suppression","ts":"2026-10-19T10:05:50.632Z","extra":{"livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","mode":"auto","effective":"strong","tier":"strong","score":64.9,"blocked":null,"result":"ok"},"quiet":true,"t":1792404353668,"rel":"   7.5"}
+{"who":"s1","kind":"rest","method":"POST","url":"/api/v1/j/758e82a0bbca21932a07183e3f35a90f630d8f7a1ce8c3a21f575af8fadb8ca2/enter","status":201,"ms":55,"bytes":1125,"quiet":true,"t":1792404353971,"rel":"   7.8"}
+{"who":"teacher","kind":"room.msg","type":"participant_joined","quiet":true,"t":1792404354452,"rel":"   8.3"}
+{"kind":"CHECK_OK","text":"s1 joins","t":1792404354550,"rel":"   8.4"}
+{"kind":"MARK","text":"оба в уроке","t":1792404354550,"rel":"   8.4"}
+{"who":"s1","kind":"rest","method":"POST","url":"/api/v1/lessons/:id/join","status":200,"ms":190,"bytes":2638,"quiet":true,"t":1792404354631,"rel":"   8.5"}
+{"kind":"MARK","text":"канал s1: норма","t":1792404354651,"rel":"   8.5"}
+{"who":"s1","kind":"ws.created","url":"ws://172.31.0.1:3100/ws?lessonId=7df1a7ae-fa77-4ab4-acb7-db7943e9188d&cs=e6596a80-408c-49b4-9d7a-5e1d6d1d34c1&attempt=0","t":1792404354759,"rel":"   8.6"}
+{"who":"s1","kind":"ws.created","url":"ws://172.31.0.50:7880/rtc/v1?access_token=…&join_request=CAESiw4fiwgAAAAAAAAD7VvbbuS4EYUHSBAYaCA7T_tYQJ7pZonUjYN-8LrHySx2BsbOZZF9Ci2x28y0LpDY7vb-xH5QfiCfFUjdnpZ","t":1792404354843,"rel":"   8.7"}
+{"who":"s1","kind":"ws.open","url":"ws://172.31.0.1:3100/ws?lessonId=7df1a7ae-fa77-4ab4-acb7-db7943e9188d&cs=e6596a80-408c-49b4-9d7a-5e1d6d1d34c1&attempt=0","status":101,"t":1792404354847,"rel":"   8.7"}
+{"who":"s1","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/activities","status":200,"ms":89,"bytes":10746,"quiet":true,"t":1792404354848,"rel":"   8.7"}
+{"who":"s1","kind":"room.msg","type":"presence","quiet":true,"t":1792404354855,"rel":"   8.7"}
+{"who":"s1","kind":"room.msg","type":"stage_changed","quiet":true,"t":1792404354855,"rel":"   8.7"}
+{"who":"s1","kind":"room.msg","type":"lesson_mode","quiet":true,"t":1792404354856,"rel":"   8.7"}
+{"who":"s1","kind":"room.msg","type":"entry_locked","quiet":true,"t":1792404354856,"rel":"   8.7"}
+{"who":"s1","kind":"room.msg","type":"chat_locked","quiet":true,"t":1792404354856,"rel":"   8.7"}
+{"who":"s1","kind":"ws.open","url":"ws://172.31.0.50:7880/rtc/v1?access_token=…&join_request=CAESiw4fiwgAAAAAAAAD7VvbbuS4EYUHSBAYaCA7T_tYQJ7pZonUjYN-8LrHySx2BsbOZZF9Ci2x28y0LpDY7vb-xH5QfiCfFUjdnpZ","status":101,"t":1792404355131,"rel":"   9.0"}
+{"who":"s1","kind":"rest","method":"GET","url":"/api/v1/lessons/:id/chat","status":200,"ms":281,"bytes":13732,"quiet":true,"t":1792404355132,"rel":"   9.0"}
+{"who":"s1","kind":"tele","type":"livekit_connection_started","ts":"2026-10-19T10:05:54.740Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":null,"identity":null,"online":true,"attempt":0},"quiet":true,"t":1792404359741,"rel":"  13.6"}
+{"who":"s1","kind":"tele","type":"client_error","ts":"2026-10-19T10:05:54.833Z","extra":{"area":"wake_lock","message":"NotAllowedError"},"quiet":true,"t":1792404359741,"rel":"  13.6"}
+{"who":"s1","kind":"tele","type":"device_profile","ts":"2026-10-19T10:05:55.139Z","extra":{"codec":"vp8","h264Hw":false,"weak":false,"score":61.9,"cores":6,"benchmarkTrusted":true,"ua":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/150.0.0.0 Safari/537.36","browser":"Chromium 150, Google Chrome 150","platform":"Linux","mobile":false,"memoryGb":32,"netType":null,"netEffective":"4g","netDownlinkMbps":2,"netRttMs":100,"saveData":false},"quiet":true,"t":1792404359741,"rel":"  13.6"}
+{"who":"s1","kind":"tele","type":"livekit_connected","ts":"2026-10-19T10:05:55.443Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"fded6733-0eaa-4045-8013-4b321bbbeaed","online":true,"durationMs":703},"quiet":true,"t":1792404359741,"rel":"  13.6"}
+{"who":"teacher","kind":"tele","type":"media_path","ts":"2026-10-19T10:05:55.456Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"6e81c5b6-964a-4e1e-8577-3e05e1d18f49","localType":"host","protocol":"udp","relayProtocol":null,"remoteType":"host","previous":null},"quiet":true,"t":1792404360457,"rel":"  14.3"}
+{"who":"teacher","kind":"tele","type":"media_quality","ts":"2026-10-19T10:05:55.456Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"6e81c5b6-964a-4e1e-8577-3e05e1d18f49","pathType":"host","protocol":"udp","rttMs":0,"availableOutKbps":5255,"sendHeight":720,"sendFps":20,"sendLimit":"none","sendKbps":null,"captureFps":20,"shareHeight":null,"shareFps":null,"shareLimit":null,"recvVideo":0,"recvMinFps":null,"recvFreezes":0,"recvAudioConcealedPct":null,"recvAudioDelayMs":null,"recvAudioTargetMs":null,"recvAudioJitterMs":null,"recvDecodeMs":null,"recvFramesDropped":null,"receivePressure":false,"hidden":false},"quiet":true,"t":1792404360457,"rel":"  14.3"}
+{"who":"teacher","kind":"tele","type":"media_health","ts":"2026-10-19T10:05:55.457Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"6e81c5b6-964a-4e1e-8577-3e05e1d18f49","computePressure":"nominal","cameraDownscale":1,"upLossPct":0},"quiet":true,"t":1792404360457,"rel":"  14.3"}
+{"who":"teacher","kind":"http4xx","status":400,"url":"http://172.31.0.1:3100/api/v1/telemetry","method":"POST","t":1792404360460,"rel":"  14.3"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 400 (Bad Request)","url":"http://172.31.0.1:3100/api/v1/telemetry","t":1792404360461,"rel":"  14.3"}
+{"who":"s1","kind":"tele","type":"media_path","ts":"2026-10-19T10:06:00.445Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"fded6733-0eaa-4045-8013-4b321bbbeaed","localType":"host","protocol":"udp","relayProtocol":null,"remoteType":"host","previous":null},"quiet":true,"t":1792404365446,"rel":"  19.3"}
+{"who":"s1","kind":"tele","type":"media_quality","ts":"2026-10-19T10:06:00.445Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"fded6733-0eaa-4045-8013-4b321bbbeaed","pathType":"host","protocol":"udp","rttMs":675,"availableOutKbps":1013,"sendHeight":360,"sendFps":20,"sendLimit":"none","sendKbps":null,"captureFps":20,"shareHeight":null,"shareFps":null,"shareLimit":null,"recvVideo":1,"recvMinFps":17,"recvFreezes":0,"recvAudioConcealedPct":null,"recvAudioDelayMs":null,"recvAudioTargetMs":null,"recvAudioJitterMs":66,"recvDecodeMs":null,"recvFramesDropped":null,"receivePressure":false,"hidden":false},"quiet":true,"t":1792404365446,"rel":"  19.3"}
+{"who":"s1","kind":"tele","type":"media_health","ts":"2026-10-19T10:06:00.445Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"fded6733-0eaa-4045-8013-4b321bbbeaed","computePressure":"nominal","cameraDownscale":1,"upLossPct":0},"quiet":true,"t":1792404365446,"rel":"  19.3"}
+{"who":"s1","kind":"http4xx","status":400,"url":"http://172.31.0.1:3100/api/v1/telemetry","method":"POST","t":1792404366364,"rel":"  20.2"}
+{"who":"s1","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 400 (Bad Request)","url":"http://172.31.0.1:3100/api/v1/telemetry","t":1792404366365,"rel":"  20.2"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404370342,"rel":"  24.2"}
+{"who":"s1","kind":"tele","type":"noise_suppression","ts":"2026-10-19T10:06:05.558Z","extra":{"livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","mode":"auto","effective":"strong","tier":"strong","score":61.9,"blocked":null,"result":"rnnoise_timeout"},"quiet":true,"t":1792404370559,"rel":"  24.4"}
+{"who":"s1","kind":"tele","type":"noise_suppression","ts":"2026-10-19T10:06:05.561Z","extra":{"livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","mode":"auto","effective":"standard","tier":"strong","score":61.9,"blocked":"rnnoise_timeout","result":"ok"},"quiet":true,"t":1792404370559,"rel":"  24.4"}
+{"who":"s1","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404374892,"rel":"  28.8"}
+{"kind":"MARK","text":"канал s1: провал 250 кбит/с","t":1792404375092,"rel":"  29.0"}
+{"who":"s1","kind":"tele","type":"audio_lag_reset","ts":"2026-10-19T10:06:12.732Z","extra":{"delayMs":1988,"identity":"6e81c5b6-964a-4e1e-8577-3e05e1d18f49","pauseMs":8000},"quiet":true,"t":1792404377733,"rel":"  31.6"}
+{"who":"teacher","kind":"room.msg","type":"participant_left","quiet":true,"t":1792404382022,"rel":"  35.9"}
+{"who":"s1","kind":"room.msg","type":"participant_left","quiet":true,"t":1792404384895,"rel":"  38.8"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404390342,"rel":"  44.2"}
+{"who":"s1","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404394734,"rel":"  48.6"}
+{"kind":"MARK","text":"канал s1: норма","t":1792404401221,"rel":"  55.1"}
+{"who":"s1","kind":"tele","type":"audio_lag_reset","ts":"2026-10-19T10:06:37.732Z","extra":{"delayMs":1209,"identity":"6e81c5b6-964a-4e1e-8577-3e05e1d18f49","relapse":true,"disabled":true,"nextInS":600},"quiet":true,"t":1792404402733,"rel":"  56.6"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404410343,"rel":"  64.2"}
+{"who":"s1","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404414731,"rel":"  68.6"}
+{"who":"teacher","kind":"tele","type":"media_quality","ts":"2026-10-19T10:06:50.456Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"6e81c5b6-964a-4e1e-8577-3e05e1d18f49","pathType":"host","protocol":"udp","rttMs":0,"availableOutKbps":5255,"sendHeight":180,"sendFps":20,"sendLimit":"none","sendKbps":359,"captureFps":20,"shareHeight":null,"shareFps":null,"shareLimit":null,"recvVideo":1,"recvMinFps":20,"recvFreezes":0,"recvAudioConcealedPct":null,"recvAudioDelayMs":null,"recvAudioTargetMs":null,"recvAudioJitterMs":4,"recvDecodeMs":null,"recvFramesDropped":null,"receivePressure":false,"hidden":false},"quiet":true,"t":1792404415458,"rel":"  69.3"}
+{"who":"teacher","kind":"tele","type":"media_health","ts":"2026-10-19T10:06:50.457Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"6e81c5b6-964a-4e1e-8577-3e05e1d18f49","computePressure":"nominal","cameraDownscale":4,"upLossPct":0,"downLossPct":0.2,"recvFreezeMs":223,"pliIn":7,"pliOut":0,"keyFramesEncoded":15,"keyFramesDecoded":2,"cpuLimitedS":0,"bwLimitedS":0},"quiet":true,"t":1792404415458,"rel":"  69.3"}
+{"who":"teacher","kind":"http4xx","status":400,"url":"http://172.31.0.1:3100/api/v1/telemetry","method":"POST","t":1792404415460,"rel":"  69.3"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 400 (Bad Request)","url":"http://172.31.0.1:3100/api/v1/telemetry","t":1792404415460,"rel":"  69.3"}
+{"who":"s1","kind":"tele","type":"media_quality","ts":"2026-10-19T10:06:55.445Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"fded6733-0eaa-4045-8013-4b321bbbeaed","pathType":"host","protocol":"udp","rttMs":37,"availableOutKbps":1013,"sendHeight":360,"sendFps":20,"sendLimit":"none","sendKbps":338,"captureFps":20,"shareHeight":null,"shareFps":null,"shareLimit":null,"recvVideo":1,"recvMinFps":10,"recvFreezes":5,"recvAudioConcealedPct":3.6,"recvAudioDelayMs":855,"recvAudioTargetMs":898,"recvAudioJitterMs":2,"recvDecodeMs":0.3,"recvFramesDropped":25,"receivePressure":true,"hidden":false},"quiet":true,"t":1792404420446,"rel":"  74.3"}
+{"who":"s1","kind":"tele","type":"media_health","ts":"2026-10-19T10:06:55.445Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"fded6733-0eaa-4045-8013-4b321bbbeaed","computePressure":"nominal","cameraDownscale":1,"upLossPct":0,"downLossPct":8.6,"recvFreezeMs":9113,"pliIn":0,"pliOut":3,"keyFramesEncoded":0,"keyFramesDecoded":4,"cpuLimitedS":0,"bwLimitedS":0},"quiet":true,"t":1792404420446,"rel":"  74.3"}
+{"who":"s1","kind":"http4xx","status":400,"url":"http://172.31.0.1:3100/api/v1/telemetry","method":"POST","t":1792404420530,"rel":"  74.4"}
+{"who":"s1","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 400 (Bad Request)","url":"http://172.31.0.1:3100/api/v1/telemetry","t":1792404420530,"rel":"  74.4"}
+{"kind":"MARK","text":"канал s1: провал 250 кбит/с","t":1792404421393,"rel":"  75.3"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404430343,"rel":"  84.2"}
+{"who":"s1","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404434738,"rel":"  88.6"}
+{"kind":"MARK","text":"канал s1: норма","t":1792404447523,"rel":" 101.4"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404450342,"rel":" 104.2"}
+{"who":"s1","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404454734,"rel":" 108.6"}
+{"kind":"MARK","text":"канал s1: провал 250 кбит/с","t":1792404467647,"rel":" 121.5"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404470342,"rel":" 124.2"}
+{"who":"s1","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404474733,"rel":" 128.6"}
+{"who":"teacher","kind":"tele","type":"media_quality","ts":"2026-10-19T10:07:50.457Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"6e81c5b6-964a-4e1e-8577-3e05e1d18f49","pathType":"host","protocol":"udp","rttMs":0,"availableOutKbps":5255,"sendHeight":180,"sendFps":20,"sendLimit":"none","sendKbps":151,"captureFps":20,"shareHeight":null,"shareFps":null,"shareLimit":null,"recvVideo":1,"recvMinFps":20,"recvFreezes":0,"recvAudioConcealedPct":0.1,"recvAudioDelayMs":132,"recvAudioTargetMs":120,"recvAudioJitterMs":5,"recvDecodeMs":0.4,"recvFramesDropped":1,"receivePressure":false,"hidden":false},"quiet":true,"t":1792404475458,"rel":" 129.3"}
+{"who":"teacher","kind":"tele","type":"media_health","ts":"2026-10-19T10:07:50.457Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"6e81c5b6-964a-4e1e-8577-3e05e1d18f49","computePressure":"nominal","cameraDownscale":4,"upLossPct":0,"downLossPct":0.2,"recvFreezeMs":0,"pliIn":0,"pliOut":0,"keyFramesEncoded":0,"keyFramesDecoded":0,"cpuLimitedS":0,"bwLimitedS":0},"quiet":true,"t":1792404475458,"rel":" 129.3"}
+{"who":"teacher","kind":"http4xx","status":400,"url":"http://172.31.0.1:3100/api/v1/telemetry","method":"POST","t":1792404475460,"rel":" 129.3"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 400 (Bad Request)","url":"http://172.31.0.1:3100/api/v1/telemetry","t":1792404475460,"rel":" 129.3"}
+{"who":"s1","kind":"tele","type":"media_quality","ts":"2026-10-19T10:07:55.445Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"fded6733-0eaa-4045-8013-4b321bbbeaed","pathType":"host","protocol":"udp","rttMs":43,"availableOutKbps":1013,"sendHeight":360,"sendFps":20,"sendLimit":"none","sendKbps":370,"captureFps":20,"shareHeight":null,"shareFps":null,"shareLimit":null,"recvVideo":1,"recvMinFps":10,"recvFreezes":0,"recvAudioConcealedPct":0,"recvAudioDelayMs":68,"recvAudioTargetMs":62,"recvAudioJitterMs":10,"recvDecodeMs":0.2,"recvFramesDropped":1,"receivePressure":true,"hidden":false},"quiet":true,"t":1792404480446,"rel":" 134.3"}
+{"who":"s1","kind":"tele","type":"media_health","ts":"2026-10-19T10:07:55.445Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"fded6733-0eaa-4045-8013-4b321bbbeaed","computePressure":"nominal","cameraDownscale":1,"upLossPct":0,"downLossPct":0.3,"recvFreezeMs":0,"pliIn":0,"pliOut":0,"keyFramesEncoded":0,"keyFramesDecoded":0,"cpuLimitedS":0,"bwLimitedS":0},"quiet":true,"t":1792404480446,"rel":" 134.3"}
+{"who":"s1","kind":"http4xx","status":400,"url":"http://172.31.0.1:3100/api/v1/telemetry","method":"POST","t":1792404480522,"rel":" 134.4"}
+{"who":"s1","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 400 (Bad Request)","url":"http://172.31.0.1:3100/api/v1/telemetry","t":1792404480522,"rel":" 134.4"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404490342,"rel":" 144.2"}
+{"kind":"MARK","text":"канал s1: норма","t":1792404493825,"rel":" 147.7"}
+{"who":"s1","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404494731,"rel":" 148.6"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404510343,"rel":" 164.2"}
+{"kind":"MARK","text":"канал s1: провал 250 кбит/с","t":1792404513950,"rel":" 167.8"}
+{"who":"s1","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404514734,"rel":" 168.6"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404530344,"rel":" 184.2"}
+{"who":"s1","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404535168,"rel":" 189.0"}
+{"who":"teacher","kind":"tele","type":"media_quality","ts":"2026-10-19T10:08:50.456Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"6e81c5b6-964a-4e1e-8577-3e05e1d18f49","pathType":"host","protocol":"udp","rttMs":0,"availableOutKbps":5255,"sendHeight":360,"sendFps":11,"sendLimit":"none","sendKbps":153,"captureFps":19,"shareHeight":null,"shareFps":null,"shareLimit":null,"recvVideo":1,"recvMinFps":20,"recvFreezes":0,"recvAudioConcealedPct":0,"recvAudioDelayMs":60,"recvAudioTargetMs":60,"recvAudioJitterMs":3,"recvDecodeMs":0.5,"recvFramesDropped":0,"receivePressure":false,"hidden":false},"quiet":true,"t":1792404535457,"rel":" 189.3"}
+{"who":"teacher","kind":"tele","type":"media_health","ts":"2026-10-19T10:08:50.457Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"6e81c5b6-964a-4e1e-8577-3e05e1d18f49","computePressure":"nominal","cameraDownscale":2,"upLossPct":0,"downLossPct":0.2,"recvFreezeMs":0,"pliIn":1,"pliOut":0,"keyFramesEncoded":4,"keyFramesDecoded":1,"cpuLimitedS":0,"bwLimitedS":0},"quiet":true,"t":1792404535457,"rel":" 189.3"}
+{"who":"teacher","kind":"http4xx","status":400,"url":"http://172.31.0.1:3100/api/v1/telemetry","method":"POST","t":1792404535460,"rel":" 189.3"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 400 (Bad Request)","url":"http://172.31.0.1:3100/api/v1/telemetry","t":1792404535460,"rel":" 189.3"}
+{"kind":"MARK","text":"канал s1: норма","t":1792404540080,"rel":" 194.0"}
+{"who":"s1","kind":"tele","type":"media_quality","ts":"2026-10-19T10:08:55.444Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"fded6733-0eaa-4045-8013-4b321bbbeaed","pathType":"host","protocol":"udp","rttMs":461,"availableOutKbps":1013,"sendHeight":360,"sendFps":20,"sendLimit":"none","sendKbps":369,"captureFps":20,"shareHeight":null,"shareFps":null,"shareLimit":null,"recvVideo":1,"recvMinFps":10,"recvFreezes":3,"recvAudioConcealedPct":0.5,"recvAudioDelayMs":75,"recvAudioTargetMs":65,"recvAudioJitterMs":26,"recvDecodeMs":0.2,"recvFramesDropped":12,"receivePressure":false,"hidden":false},"quiet":true,"t":1792404540446,"rel":" 194.3"}
+{"who":"s1","kind":"tele","type":"media_health","ts":"2026-10-19T10:08:55.445Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"fded6733-0eaa-4045-8013-4b321bbbeaed","computePressure":"nominal","cameraDownscale":1,"upLossPct":1.4,"downLossPct":0.9,"recvFreezeMs":233,"pliIn":0,"pliOut":0,"keyFramesEncoded":2,"keyFramesDecoded":3,"cpuLimitedS":0,"bwLimitedS":0},"quiet":true,"t":1792404540446,"rel":" 194.3"}
+{"who":"s1","kind":"http4xx","status":400,"url":"http://172.31.0.1:3100/api/v1/telemetry","method":"POST","t":1792404540506,"rel":" 194.4"}
+{"who":"s1","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 400 (Bad Request)","url":"http://172.31.0.1:3100/api/v1/telemetry","t":1792404540506,"rel":" 194.4"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404550344,"rel":" 204.2"}
+{"who":"s1","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404554730,"rel":" 208.6"}
+{"kind":"MARK","text":"канал s1: провал 250 кбит/с","t":1792404560206,"rel":" 214.1"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404570344,"rel":" 224.2"}
+{"who":"s1","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404574738,"rel":" 228.6"}
+{"kind":"MARK","text":"канал s1: норма","t":1792404586389,"rel":" 240.3"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404590345,"rel":" 244.2"}
+{"who":"s1","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404594731,"rel":" 248.6"}
+{"who":"teacher","kind":"tele","type":"media_quality","ts":"2026-10-19T10:09:50.456Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"6e81c5b6-964a-4e1e-8577-3e05e1d18f49","pathType":"host","protocol":"udp","rttMs":0,"availableOutKbps":5255,"sendHeight":180,"sendFps":20,"sendLimit":"none","sendKbps":196,"captureFps":20,"shareHeight":null,"shareFps":null,"shareLimit":null,"recvVideo":1,"recvMinFps":20,"recvFreezes":0,"recvAudioConcealedPct":0.1,"recvAudioDelayMs":65,"recvAudioTargetMs":60,"recvAudioJitterMs":2,"recvDecodeMs":0.5,"recvFramesDropped":2,"receivePressure":false,"hidden":false},"quiet":true,"t":1792404595457,"rel":" 249.3"}
+{"who":"teacher","kind":"tele","type":"media_health","ts":"2026-10-19T10:09:50.457Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"6e81c5b6-964a-4e1e-8577-3e05e1d18f49","computePressure":"nominal","cameraDownscale":4,"upLossPct":0,"downLossPct":0.1,"recvFreezeMs":0,"pliIn":1,"pliOut":0,"keyFramesEncoded":3,"keyFramesDecoded":0,"cpuLimitedS":0,"bwLimitedS":0},"quiet":true,"t":1792404595457,"rel":" 249.3"}
+{"who":"teacher","kind":"http4xx","status":400,"url":"http://172.31.0.1:3100/api/v1/telemetry","method":"POST","t":1792404595460,"rel":" 249.3"}
+{"who":"teacher","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 400 (Bad Request)","url":"http://172.31.0.1:3100/api/v1/telemetry","t":1792404595460,"rel":" 249.3"}
+{"who":"s1","kind":"tele","type":"media_quality","ts":"2026-10-19T10:09:55.445Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"fded6733-0eaa-4045-8013-4b321bbbeaed","pathType":"host","protocol":"udp","rttMs":43,"availableOutKbps":1013,"sendHeight":360,"sendFps":20,"sendLimit":"none","sendKbps":372,"captureFps":20,"shareHeight":null,"shareFps":null,"shareLimit":null,"recvVideo":1,"recvMinFps":18,"recvFreezes":3,"recvAudioConcealedPct":0.3,"recvAudioDelayMs":241,"recvAudioTargetMs":208,"recvAudioJitterMs":2,"recvDecodeMs":0.2,"recvFramesDropped":20,"receivePressure":false,"hidden":false},"quiet":true,"t":1792404600446,"rel":" 254.3"}
+{"who":"s1","kind":"tele","type":"media_health","ts":"2026-10-19T10:09:55.445Z","extra":{"lessonId":"7df1a7ae-fa77-4ab4-acb7-db7943e9188d","livekitRoom":"lesson-7df1a7ae-fa77-4ab4-acb7-db7943e9188d","identity":"fded6733-0eaa-4045-8013-4b321bbbeaed","computePressure":"nominal","cameraDownscale":1,"upLossPct":0,"downLossPct":1.9,"recvFreezeMs":2880,"pliIn":0,"pliOut":0,"keyFramesEncoded":0,"keyFramesDecoded":5,"cpuLimitedS":0,"bwLimitedS":0},"quiet":true,"t":1792404600446,"rel":" 254.3"}
+{"who":"s1","kind":"http4xx","status":400,"url":"http://172.31.0.1:3100/api/v1/telemetry","method":"POST","t":1792404600510,"rel":" 254.4"}
+{"who":"s1","kind":"browser.log","text":"network: Failed to load resource: the server responded with a status of 400 (Bad Request)","url":"http://172.31.0.1:3100/api/v1/telemetry","t":1792404600510,"rel":" 254.4"}
+{"kind":"MARK","text":"канал s1: провал 250 кбит/с","t":1792404606493,"rel":" 260.4"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404610345,"rel":" 264.2"}
+{"who":"s1","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404614737,"rel":" 268.6"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404630346,"rel":" 284.2"}
+{"kind":"MARK","text":"канал s1: норма","t":1792404632567,"rel":" 286.4"}
+{"who":"s1","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404634733,"rel":" 288.6"}
+{"who":"teacher","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404650346,"rel":" 304.2"}
+{"kind":"MARK","text":"канал s1: провал 250 кбит/с","t":1792404652695,"rel":" 306.6"}
+{"who":"s1","kind":"room.msg","type":"heartbeat","quiet":true,"t":1792404654778,"rel":" 308.7"}
+{"kind":"NET","text":"s1 -> clear","t":1792404654797,"rel":" 308.7"}
