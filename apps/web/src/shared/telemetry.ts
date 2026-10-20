@@ -1,4 +1,4 @@
-import type { ClientEvent, ClientEventFieldValue, ClientEventName } from "@school/shared";
+import { CLIENT_EVENT_MAX_FIELDS, type ClientEvent, type ClientEventFieldValue, type ClientEventName } from "@school/shared";
 import { useAuthStore } from "./auth-store.js";
 
 /**
@@ -58,10 +58,14 @@ export function track(event: ClientEventName, fields: Record<string, ClientEvent
   }
   if (++windowCount > MAX_EVENTS_PER_MINUTE) return;
   const clean: Record<string, ClientEventFieldValue> = {};
-  for (const [key, value] of Object.entries(fields)) {
-    if (value === undefined) continue;
+  const entries = Object.entries(fields).filter((e): e is [string, ClientEventFieldValue] => e[1] !== undefined);
+  // Лишнее поле в одном событии — и сервер отклоняет весь пакет (урок 2026-10-20:
+  // media_quality с 26 полями, сутки без качества связи). Режем здесь и помечаем.
+  const fit = entries.length > CLIENT_EVENT_MAX_FIELDS ? CLIENT_EVENT_MAX_FIELDS - 1 : entries.length;
+  for (const [key, value] of entries.slice(0, fit)) {
     clean[key] = typeof value === "string" ? value.slice(0, 300) : value;
   }
+  if (fit < entries.length) clean.fieldsDropped = entries.length - fit;
   queue.push({ event, ts: new Date(now).toISOString(), fields: clean });
   if (queue.length >= MAX_BATCH) flush();
   else if (!flushTimer) flushTimer = setTimeout(() => flush(), FLUSH_DELAY_MS);

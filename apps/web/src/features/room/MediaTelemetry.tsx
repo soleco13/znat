@@ -420,6 +420,12 @@ class MediaStatsSampler {
       recvVideo: remoteVideo.length,
       recvMinFps,
       recvFreezes,
+      hidden: document.visibilityState === "hidden",
+    });
+    // Приём — отдельным событием: в одном событии не больше 20 полей
+    // (CLIENT_EVENT_MAX_FIELDS), иначе сервер отклоняет весь пакет.
+    track("media_recv", {
+      ...base,
       recvAudioConcealedPct: total > 0 ? Math.round((concealed / total) * 1000) / 10 : null,
       recvAudioDelayMs,
       recvAudioTargetMs,
@@ -427,7 +433,6 @@ class MediaStatsSampler {
       recvDecodeMs: decoded > 0 ? Math.round((decodeS / decoded) * 10000) / 10 : null,
       recvFramesDropped,
       receivePressure: receivePressure(),
-      hidden: document.visibilityState === "hidden",
     });
     const health = await this.connectionTotals(camera?.mediaStreamTrack?.getSettings().height ?? null, sendHeight);
     track("media_health", { ...base, ...health });

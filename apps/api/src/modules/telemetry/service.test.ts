@@ -9,6 +9,14 @@ describe("sanitizeClientFields", () => {
       sanitizeClientFields({ reason: "timeout", accessToken: "x", userEmail: "a@b.c", attempt: 2, lessonId: "l" }),
     ).toEqual({ reason: "timeout", attempt: 2, lessonId: "l" });
   });
+
+  it("переименовывает поля, совпадающие с полями строки журнала", () => {
+    expect(sanitizeClientFields({ level: 2, msg: "x", state: "CRITICAL" })).toEqual({
+      client_level: 2,
+      client_msg: "x",
+      state: "CRITICAL",
+    });
+  });
 });
 
 describe("clientEventBatchSchema", () => {

@@ -5,12 +5,21 @@ import { logEvent } from "../../plugins/logger.js";
 /** Ключи, похожие на секреты или персональные данные, из браузера в лог не пишем. */
 const UNSAFE_FIELD_KEY = /token|password|secret|cookie|authorization|email|phone/i;
 
+/** Поля строки журнала (pino, logEvent и поля самого клиентского события). */
+const RESERVED_LOG_KEYS = new Set([
+  "level", "time", "msg", "pid", "hostname", "service", "env", "version", "requestId",
+  "event", "source", "clientEvent", "clientTs", "userId", "schoolId", "clientSessionId",
+]);
+
 export function sanitizeClientFields(
   fields: Record<string, ClientEventFieldValue> | undefined,
 ): Record<string, ClientEventFieldValue> {
   const safe: Record<string, ClientEventFieldValue> = {};
   for (const [key, value] of Object.entries(fields ?? {})) {
-    if (!UNSAFE_FIELD_KEY.test(key)) safe[key] = value;
+    if (UNSAFE_FIELD_KEY.test(key)) continue;
+    // Поле браузера не должно затирать поля самой записи: `level: 2` из
+    // media_cpu_adapt превращал уровень строки журнала в «2».
+    safe[RESERVED_LOG_KEYS.has(key) ? `client_${key}` : key] = value;
   }
   return safe;
 }

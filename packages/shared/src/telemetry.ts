@@ -28,6 +28,7 @@ export const CLIENT_EVENT_NAMES = [
    * ограничения кодировщика, уменьшение камеры, Compute Pressure.
    */
   "media_health",
+  "media_recv",
   /** Восстановление медиа LiveKit длилось дольше 30 с. */
   "livekit_restore_slow",
   /** Своё устройство не успевает: смена ступени камеры/демонстрации ради звука (cpu-governor.ts). */
@@ -56,13 +57,16 @@ export type ClientEventName = (typeof CLIENT_EVENT_NAMES)[number];
 export const clientEventFieldValueSchema = z.union([z.string().max(300), z.number(), z.boolean(), z.null()]);
 export type ClientEventFieldValue = z.infer<typeof clientEventFieldValueSchema>;
 
+/** Потолок полей одного события. Больше — сервер отклоняет весь пакет (до 50 событий). */
+export const CLIENT_EVENT_MAX_FIELDS = 20;
+
 export const clientEventSchema = z.object({
   event: z.enum(CLIENT_EVENT_NAMES),
   /** Время события в браузере (ISO) — сервер пишет ещё и своё время приёма. */
   ts: z.string().datetime(),
   fields: z
     .record(z.string().max(40), clientEventFieldValueSchema)
-    .refine((o) => Object.keys(o).length <= 20, "too many fields")
+    .refine((o) => Object.keys(o).length <= CLIENT_EVENT_MAX_FIELDS, "too many fields")
     .optional(),
 });
 export type ClientEvent = z.infer<typeof clientEventSchema>;
