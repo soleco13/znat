@@ -1,0 +1,79 @@
+{
+  "T0": 1792473740706,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "teacher joins",
+      "ok": true,
+      "rel": "   3.7"
+    },
+    {
+      "name": "one live mic after click at +0 ms",
+      "ok": false,
+      "detail": {
+        "audioSenders": 2,
+        "enabled": 2,
+        "button": "on"
+      },
+      "rel": "  10.8"
+    },
+    {
+      "name": "one live mic after click at +100 ms",
+      "ok": true,
+      "detail": {
+        "audioSenders": 1,
+        "enabled": 1,
+        "button": "on"
+      },
+      "rel": "  17.8"
+    },
+    {
+      "name": "one live mic after click at +250 ms",
+      "ok": true,
+      "detail": {
+        "audioSenders": 1,
+        "enabled": 1,
+        "button": "on"
+      },
+      "rel": "  25.0"
+    },
+    {
+      "name": "one live mic after click at +400 ms",
+      "ok": true,
+      "detail": {
+        "audioSenders": 1,
+        "enabled": 1,
+        "button": "on"
+      },
+      "rel": "  32.2"
+    },
+    {
+      "name": "one live mic after click at +700 ms",
+      "ok": true,
+      "detail": {
+        "audioSenders": 1,
+        "enabled": 1,
+        "button": "on"
+      },
+      "rel": "  39.8"
+    },
+    {
+      "name": "one live mic after click at +1200 ms",
+      "ok": true,
+      "detail": {
+        "audioSenders": 1,
+        "enabled": 1,
+        "button": "on"
+      },
+      "rel": "  47.9"
+    },
+    {
+      "name": "no double mic in any attempt",
+      "ok": false,
+      "detail": {
+        "bad": 1
+      },
+      "rel": "  47.9"
+    }
+  ]
+}

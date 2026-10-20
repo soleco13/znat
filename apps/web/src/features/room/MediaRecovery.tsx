@@ -12,6 +12,7 @@ import type { JoinLessonResponse } from "@school/shared";
 
 import { apiFetch } from "@/shared/api-client";
 import { reportMediaDeviceError } from "./media-device-errors.js";
+import { setOwnMicrophone } from "./MicControls.js";
 import { reportLiveKitConnectionFailed } from "./MediaTelemetry.js";
 import { currentTabId } from "./tab-id.js";
 
@@ -149,9 +150,7 @@ export function MediaRecovery({
       if (participant.permissions && !participant.permissions.canPublish) return;
       const wanted = wantedRef.current;
       if (wanted.microphone && !participant.isMicrophoneEnabled) {
-        await participant
-          .setMicrophoneEnabled(true)
-          .catch((err: unknown) => reportMediaDeviceError("microphone", err));
+        await setOwnMicrophone(participant, true).catch((err: unknown) => reportMediaDeviceError("microphone", err));
       }
       if (wanted.camera && !participant.isCameraEnabled) {
         await callbacks.current

@@ -1,10 +1,31 @@
 import { useEffect, useState } from "react";
 import { useIsSpeaking, useLocalParticipant, useParticipants, useRoomContext } from "@livekit/components-react";
-import { ConnectionState, RoomEvent, Track, createLocalAudioTrack } from "livekit-client";
+import { ConnectionState, RoomEvent, Track, createLocalAudioTrack, type LocalParticipant } from "livekit-client";
 import { Mic, MicOff } from "lucide-react";
 
 import { reportMediaDeviceError } from "./media-device-errors.js";
 import { RoomControlButton, type RoomControlVariant } from "./RoomControlButton.js";
+
+/**
+ * Заглушённая «прогретая» дорожка (`MicPrewarm`) публикуется в фоне. Включение
+ * микрофона в эти же доли секунды не видело её публикацию и публиковало вторую
+ * дорожку (урок 2026-10-20, iPhone ученицы): кнопка показывала «выключен», а
+ * звук шёл по второй; после нажатия «включить» — обе, двойной голос. Поэтому
+ * включение ждёт окончания прогрева, а прогрев не начинается во время включения.
+ */
+let prewarmInFlight: Promise<void> | null = null;
+let enablingMic = false;
+
+/** Включить/выключить свой микрофон — единственный путь для кнопки и восстановления. */
+export async function setOwnMicrophone(participant: LocalParticipant, on: boolean): Promise<void> {
+  enablingMic = true;
+  try {
+    if (prewarmInFlight) await prewarmInFlight.catch(() => undefined);
+    await participant.setMicrophoneEnabled(on);
+  } finally {
+    enablingMic = false;
+  }
+}
 
 /**
  * Кнопка «мьют себя» (Э2.5) — для любого участника с правом `canSpeak`.
@@ -44,7 +65,7 @@ export function SelfMicButton({
       onToggle={() => {
         const next = !desired;
         setDesired(next);
-        localParticipant.setMicrophoneEnabled(next).catch((err: unknown) => {
+        setOwnMicrophone(localParticipant, next).catch((err: unknown) => {
           setDesired(localParticipant.isMicrophoneEnabled);
           if (next) reportMediaDeviceError("microphone", err);
         });
@@ -83,25 +104,38 @@ export function MicPrewarm({ enabled, deviceId }: { enabled: boolean; deviceId: 
     if (!enabled) return;
     let cancelled = false;
     let busy = false;
+    const hasMic = () => room.localParticipant.getTrackPublication(Track.Source.Microphone) !== undefined;
+    const run = async () => {
+      const track = await createLocalAudioTrack({
+        ...room.options.audioCaptureDefaults,
+        ...(deviceId ? { deviceId } : {}),
+      });
+      await track.mute();
+      if (cancelled || enablingMic || hasMic()) {
+        track.stop();
+        return;
+      }
+      await room.localParticipant.publishTrack(track, { source: Track.Source.Microphone });
+      // Страховка: если микрофон всё же опубликовали параллельно — снимаем свою
+      // заглушённую дорожку, остаётся одна.
+      const mics = [...room.localParticipant.trackPublications.values()].filter(
+        (p) => p.source === Track.Source.Microphone,
+      );
+      if (mics.length > 1) await room.localParticipant.unpublishTrack(track, true);
+    };
     const prewarm = async () => {
-      if (cancelled || busy || room.state !== ConnectionState.Connected) return;
-      if (room.localParticipant.getTrackPublication(Track.Source.Microphone)) return;
+      if (cancelled || busy || enablingMic || room.state !== ConnectionState.Connected) return;
+      if (hasMic()) return;
       busy = true;
+      const job = run();
+      prewarmInFlight = job;
       try {
-        const track = await createLocalAudioTrack({
-          ...room.options.audioCaptureDefaults,
-          ...(deviceId ? { deviceId } : {}),
-        });
-        await track.mute();
-        if (cancelled || room.localParticipant.getTrackPublication(Track.Source.Microphone)) {
-          track.stop();
-          return;
-        }
-        await room.localParticipant.publishTrack(track, { source: Track.Source.Microphone });
+        await job;
       } catch {
         // Не вышло — первое включение кнопкой пойдёт обычным путём.
       } finally {
         busy = false;
+        if (prewarmInFlight === job) prewarmInFlight = null;
       }
     };
     void prewarm();

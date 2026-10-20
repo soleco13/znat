@@ -1,0 +1,119 @@
+{
+  "T0": 1792473903102,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "teacher joins",
+      "ok": true,
+      "rel": "   3.7"
+    },
+    {
+      "name": "one live mic after click at +0 ms",
+      "ok": true,
+      "detail": {
+        "audioSenders": 1,
+        "enabled": 1,
+        "button": "on"
+      },
+      "rel": "  11.0"
+    },
+    {
+      "name": "one live mic after click at +0 ms",
+      "ok": true,
+      "detail": {
+        "audioSenders": 1,
+        "enabled": 1,
+        "button": "on"
+      },
+      "rel": "  17.8"
+    },
+    {
+      "name": "one live mic after click at +0 ms",
+      "ok": true,
+      "detail": {
+        "audioSenders": 1,
+        "enabled": 1,
+        "button": "on"
+      },
+      "rel": "  24.7"
+    },
+    {
+      "name": "one live mic after click at +30 ms",
+      "ok": true,
+      "detail": {
+        "audioSenders": 1,
+        "enabled": 1,
+        "button": "on"
+      },
+      "rel": "  31.6"
+    },
+    {
+      "name": "one live mic after click at +60 ms",
+      "ok": true,
+      "detail": {
+        "audioSenders": 1,
+        "enabled": 1,
+        "button": "on"
+      },
+      "rel": "  38.6"
+    },
+    {
+      "name": "one live mic after click at +100 ms",
+      "ok": true,
+      "detail": {
+        "audioSenders": 1,
+        "enabled": 1,
+        "button": "on"
+      },
+      "rel": "  45.6"
+    },
+    {
+      "name": "one live mic after click at +250 ms",
+      "ok": true,
+      "detail": {
+        "audioSenders": 1,
+        "enabled": 1,
+        "button": "on"
+      },
+      "rel": "  52.8"
+    },
+    {
+      "name": "one live mic after click at +400 ms",
+      "ok": true,
+      "detail": {
+        "audioSenders": 1,
+        "enabled": 1,
+        "button": "on"
+      },
+      "rel": "  60.0"
+    },
+    {
+      "name": "one live mic after click at +700 ms",
+      "ok": true,
+      "detail": {
+        "audioSenders": 1,
+        "enabled": 1,
+        "button": "on"
+      },
+      "rel": "  67.6"
+    },
+    {
+      "name": "one live mic after click at +1200 ms",
+      "ok": true,
+      "detail": {
+        "audioSenders": 1,
+        "enabled": 1,
+        "button": "on"
+      },
+      "rel": "  75.7"
+    },
+    {
+      "name": "no double mic in any attempt",
+      "ok": true,
+      "detail": {
+        "bad": 0
+      },
+      "rel": "  75.7"
+    }
+  ]
+}
