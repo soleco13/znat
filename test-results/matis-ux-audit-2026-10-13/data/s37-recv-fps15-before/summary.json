@@ -1,0 +1,16 @@
+{
+  "T0": 1792577187849,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "teacher joins",
+      "ok": true,
+      "rel": "   8.9"
+    },
+    {
+      "name": "s1 enters",
+      "ok": true,
+      "rel": "  13.5"
+    }
+  ]
+}

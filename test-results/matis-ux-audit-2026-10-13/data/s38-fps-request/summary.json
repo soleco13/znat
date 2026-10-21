@@ -1,0 +1,59 @@
+{
+  "T0": 1792577474393,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "teacher joins",
+      "ok": true,
+      "rel": "   8.3"
+    },
+    {
+      "name": "s1 enters",
+      "ok": true,
+      "rel": "  13.1"
+    },
+    {
+      "name": "found room",
+      "ok": true,
+      "rel": "  16.1"
+    },
+    {
+      "name": "10 fps request on 15 fps camera ≈ full rate (bug)",
+      "ok": false,
+      "detail": {
+        "7": [
+          7,
+          8
+        ],
+        "10": [
+          7,
+          8
+        ],
+        "30": [
+          7,
+          15
+        ]
+      },
+      "rel": " 124.3"
+    },
+    {
+      "name": "7 fps request gives ~7.5",
+      "ok": true,
+      "detail": {
+        "7": [
+          7,
+          8
+        ],
+        "10": [
+          7,
+          8
+        ],
+        "30": [
+          7,
+          15
+        ]
+      },
+      "rel": " 124.3"
+    }
+  ]
+}
