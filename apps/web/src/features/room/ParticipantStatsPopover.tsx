@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/shared/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import type { MarkRole } from "@/shared/ui/role-mark";
-import { useParticipantStats, useParticipantStatus, type ParticipantStats } from "./participant-stats.js";
+import { capByServer, useParticipantStats, useParticipantStatus, type ParticipantStats } from "./participant-stats.js";
 
 /** Потери выше — плохо слышно и видно; задержка выше — заметна в разговоре. */
 const BAD_LOSS_PCT = 5;
@@ -90,8 +90,12 @@ function StatsCard({
   reconnecting: boolean;
 }) {
   const state = useParticipantStats(identity, isSelf, true);
-  const status = useParticipantStatus(identity, true, reconnecting);
+  const { status, quality } = useParticipantStatus(identity, true, reconnecting);
   const s: ParticipantStats | null = state.kind === "ready" ? state.stats : null;
+  const score = s ? capByServer(s.score, quality) : null;
+  // Большие потери на приёме при своей хорошей связи — это потери собеседника,
+  // пришедшие вместе с его потоком (см. qualityScore).
+  const inherited = !!s && score !== null && score >= 70 && (s.downLossPct ?? 0) > BAD_LOSS_PCT;
   const dash = state.kind === "unavailable" ? "нет данных" : "…";
 
   return (
@@ -105,7 +109,7 @@ function StatsCard({
       </div>
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 px-4 py-3 tabular-nums">
         <Row label="Качество связи">
-          {s ? <span className={cn("font-semibold", scoreTone(s.score))}>{s.score} / 100</span> : dash}
+          {score !== null ? <span className={cn("font-semibold", scoreTone(score))}>{score} / 100</span> : dash}
         </Row>
         <Row label="Статус">{STATUS_TEXT[status]}</Row>
         <Row label="Отправляет видео">{s ? (s.sendHeight ? `${s.sendHeight}p` : "нет") : dash}</Row>
@@ -123,7 +127,7 @@ function StatsCard({
               up={fmtPct(s.upLossPct)}
               down={fmtPct(s.downLossPct)}
               upBad={(s.upLossPct ?? 0) > BAD_LOSS_PCT}
-              downBad={(s.downLossPct ?? 0) > BAD_LOSS_PCT}
+              downBad={!inherited && (s.downLossPct ?? 0) > BAD_LOSS_PCT}
             />
           ) : (
             dash
@@ -139,6 +143,11 @@ function StatsCard({
           )}
         </Row>
       </dl>
+      {inherited ? (
+        <p className="border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
+          Потери на приёме, скорее всего, у собеседника: его плохая связь приходит вместе с его видео и звуком.
+        </p>
+      ) : null}
       {state.kind === "unavailable" ? (
         <p className="border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
           Участник не присылает данные: у него старая версия страницы или пропала связь.

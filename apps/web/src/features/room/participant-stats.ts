@@ -50,13 +50,25 @@ function codecName(reports: RTCStatsReport[], codecId: unknown): string | null {
 }
 
 /**
- * Оценка связи 0–100: потери сильнее всего портят звук и видео, задержка
- * выше 150 мс мешает разговору, джиттер выше 20 мс растит буфер звука.
- * 0 % потерь и 40 мс — 100; 32 % и 635 мс (пример из Толка) — 0.
+ * Оценка СВОЕЙ связи 0–100: потери на своей отдаче и задержка выше 150 мс.
+ * 0 % и 40 мс — 100; 32 % и 635 мс (пример из Толка) — 0.
+ *
+ * Потери и джиттер на приёме в оценку не входят: сервер пересылает поток как
+ * есть, и пакеты, потерянные на отдаче у собеседника, у получателя тоже числятся
+ * потерянными (урок 2026-10-24: у админа с хорошей сетью «0 / 100» из-за
+ * iPhone ученика с 14 % потерь). Приём проверяет `capByServer` — оценка
+ * соединения участника сервером LiveKit, он видит каждое соединение отдельно.
  */
-export function qualityScore(lossPct: number, rttMs: number, jitterMs: number): number {
-  const score = 100 - 2.5 * lossPct - 0.08 * Math.max(0, rttMs - 150) - 0.5 * Math.max(0, jitterMs - 20);
+export function qualityScore(upLossPct: number, rttMs: number): number {
+  const score = 100 - 2.5 * upLossPct - 0.08 * Math.max(0, rttMs - 150);
   return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+/** Потолок оценки по качеству соединения, которое видит сервер LiveKit. */
+export function capByServer(score: number, quality: ConnectionQuality | null): number {
+  const cap =
+    quality === ConnectionQuality.Lost ? 0 : quality === ConnectionQuality.Poor ? 40 : quality === ConnectionQuality.Good ? 85 : 100;
+  return Math.min(score, cap);
 }
 
 async function computeOwn(room: Room): Promise<ParticipantStats | null> {
@@ -103,7 +115,7 @@ async function computeOwn(room: Room): Promise<ParticipantStats | null> {
   const downLost = prev ? t.downLost - prev.downLost : 0;
   const downLossPct = prev ? pct(downLost, t.recvPackets - prev.recvPackets + Math.max(0, downLost)) : null;
   return {
-    score: qualityScore(Math.max(upLossPct ?? 0, downLossPct ?? 0), rttMs ?? 0, jitterMs ?? 0),
+    score: qualityScore(upLossPct ?? 0, rttMs ?? 0),
     sendKbps: prev ? kbps(t.sentBytes - prev.sentBytes) : null,
     recvKbps: prev ? kbps(t.recvBytes - prev.recvBytes) : null,
     upLossPct,
@@ -208,7 +220,11 @@ export function useParticipantStats(userId: string, isSelf: boolean, open: boole
 }
 
 /** Состояние участника для строки «Статус». */
-export function useParticipantStatus(identity: string, open: boolean, reconnecting: boolean): "active" | "reconnecting" | "lost" | "absent" {
+export function useParticipantStatus(
+  identity: string,
+  open: boolean,
+  reconnecting: boolean,
+): { status: "active" | "reconnecting" | "lost" | "absent"; quality: ConnectionQuality | null } {
   const room = useRoomContext();
   const find = (): Participant | undefined =>
     identity === room.localParticipant.identity ? room.localParticipant : room.getParticipantByIdentity(identity);
@@ -227,7 +243,6 @@ export function useParticipantStatus(identity: string, open: boolean, reconnecti
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room, identity, open]);
-  if (reconnecting) return "reconnecting";
-  if (quality === null) return "absent";
-  return quality === ConnectionQuality.Lost ? "lost" : "active";
+  const status = reconnecting ? "reconnecting" : quality === null ? "absent" : quality === ConnectionQuality.Lost ? "lost" : "active";
+  return { status, quality };
 }
