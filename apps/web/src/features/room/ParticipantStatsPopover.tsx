@@ -143,11 +143,6 @@ function StatsCard({
           )}
         </Row>
       </dl>
-      {inherited ? (
-        <p className="border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
-          Потери на приёме, скорее всего, у собеседника: его плохая связь приходит вместе с его видео и звуком.
-        </p>
-      ) : null}
       {state.kind === "unavailable" ? (
         <p className="border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
           Участник не присылает данные: у него старая версия страницы или пропала связь.
