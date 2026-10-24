@@ -131,7 +131,7 @@ import { ApplyParticipantVolumes } from "./participant-volume.js";
 import { AudioLagGuard } from "./AudioLagGuard.js";
 import { TileMenuContext } from "./tile-menu-context.js";
 import { canShareScreenHere, ScreenShareNotice, SelfScreenShareButton } from "./ScreenShareControls.js";
-import { RoomVideoGrid } from "./RoomVideoGrid.js";
+import { RoomVideoGrid, SoloStage } from "./RoomVideoGrid.js";
 import { ScreenShareTile } from "./ScreenShareTile.js";
 import { useRoomSocket } from "./useRoomSocket.js";
 import { usePresenceGrace } from "./use-presence-grace.js";
@@ -1679,32 +1679,32 @@ export function RoomPage() {
 
   // ── Стейдж ────────────────────────────────────────────────────────────
   const soloCard = aloneOnStage ? (
-    <div className="flex shrink-0 flex-col items-start justify-center gap-3 rounded-lg border border-border bg-card p-4 shadow-xs md:min-w-0 md:flex-1 md:gap-3.5 md:p-8">
-      <span className="hidden size-10 items-center justify-center rounded-md border border-border text-foreground md:flex">
+    <div className="solo-card flex flex-col items-start justify-center gap-3 rounded-lg border border-border bg-card p-4 shadow-xs md:gap-3.5 md:p-8">
+      <span className="solo-extra hidden size-10 items-center justify-center rounded-md border border-border text-foreground md:flex">
         <Users className="size-5" aria-hidden />
       </span>
-      <span className="text-base font-heavy tracking-[-.02em] md:text-xl">
+      <span className="solo-title text-base font-heavy tracking-[-.02em] md:text-xl">
         {isTeacher ? "Вы пока один в уроке" : "Вы пока одни в уроке"}
       </span>
-      <span className="hidden text-sm text-text-2 [text-wrap:pretty] md:block">
+      <span className="solo-extra hidden text-sm text-text-2 [text-wrap:pretty] md:block">
         {isTeacher
           ? "Отправьте ученикам ссылку — они войдут без установки приложений. Урок уже идёт."
           : "Урок продолжится, как только подключатся остальные. Пока можно проверить микрофон и камеру."}
       </span>
       <div className="flex flex-wrap gap-2">
         {isTeacher && lessonJoinPath ? (
-          <Button onClick={copyJoinLink}>
+          <Button onClick={copyJoinLink} aria-label="Скопировать ссылку">
             <LinkIcon aria-hidden />
-            Скопировать ссылку
+            <span className="solo-label">Скопировать ссылку</span>
           </Button>
         ) : null}
-        <Button variant="secondary" className="hidden md:inline-flex" onClick={openSettings}>
+        <Button variant="secondary" className="solo-secondary hidden md:inline-flex" onClick={openSettings}>
           <SlidersHorizontal aria-hidden />
           Проверить устройства
         </Button>
       </div>
       {isTeacher && lessonJoinPath ? (
-        <span className="hidden max-w-full truncate text-[12.5px] text-text-3 md:block">
+        <span className="solo-extra hidden max-w-full truncate text-[12.5px] text-text-3 md:block">
           {window.location.host}
           {lessonJoinPath}
         </span>
@@ -3032,12 +3032,8 @@ function StageContent({
 
   if (!railed) {
     if (solo) {
-      return (
-        <div className="flex min-h-0 flex-1 flex-col gap-2 md:flex-row md:items-stretch md:gap-3.5">
-          <div className="min-h-0 min-w-0 flex-1 md:flex-[1.5]">{main}</div>
-          {solo}
-        </div>
-      );
+      // Как у Толка: карточка со ссылкой — вторая плитка того же размера и формы.
+      return <SoloStage main={main} card={solo} />;
     }
     return <div className="min-h-0 flex-1">{main}</div>;
   }

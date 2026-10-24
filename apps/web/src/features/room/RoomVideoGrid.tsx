@@ -41,6 +41,8 @@ import { useIsNarrowViewport } from "./use-narrow-viewport.js";
 import { selfTileId, withExtraSessions } from "./media-sessions.js";
 
 const GAP = 10;
+/** Базовые пропорции плитки, как у Толка: 4:3 (см. `tileInCell`). */
+export const TILE_ASPECT = 4 / 3;
 /**
  * Страница сетки — сколько плиток не уже этой ширины помещается в контейнер
  * (16:9), но не больше `MAX_PAGE`; на слабых машинах (≤ 4 ядер) — `WEAK_MAX_PAGE`,
@@ -210,7 +212,7 @@ export function RoomVideoGrid({
   const handsAfter = offPageHands.filter((p) => pageOf(p) > safePage);
 
   const gridRef = useRef<HTMLDivElement>(null);
-  const grid = useAdaptiveGrid(gridRef, gridCells, { gap: GAP, aspect: 16 / 9, minTileW: MIN_TILE_W, maxCapacity: PAGE_CAP });
+  const grid = useAdaptiveGrid(gridRef, gridCells, { gap: GAP, aspect: TILE_ASPECT, minTileW: MIN_TILE_W, maxCapacity: PAGE_CAP });
   const rects = tileRects(grid, gridCells, GAP);
   // Перестройку сетки анимируем, только если устройство справляется: на
   // слабом или перегруженном ПК каждый кадр перерисовки плиток с видео
@@ -515,7 +517,7 @@ export function RoomVideoGrid({
     const railHiddenSpeaker = railExpanded ? undefined : tiles.slice(RAIL_VISIBLE).find((p) => heldSpeakers.has(p.userId));
     return (
       <div className="flex w-[190px] shrink-0 flex-col gap-2 overflow-y-auto">
-        {shown.map((p) => renderTile(p, "sm", "aspect-video w-full shrink-0"))}
+        {shown.map((p) => renderTile(p, "sm", "aspect-[4/3] w-full shrink-0"))}
         {tiles.length > RAIL_VISIBLE ? (
           <button
             type="button"
@@ -543,10 +545,12 @@ export function RoomVideoGrid({
   }
 
   if (narrow) {
-    if (tiles.length === 1 || !focus) return renderTile(tiles[0]!, "lg", "size-full");
+    if (tiles.length === 1 || !focus) return <FitTile portraitOk>{renderTile(tiles[0]!, "lg")}</FitTile>;
     return (
       <div className="flex h-full min-h-0 flex-col gap-2">
-        {renderTile(focus, "lg", "min-h-0 w-full flex-1")}
+        <FitTile portraitOk className="min-h-0 flex-1">
+          {renderTile(focus, "lg")}
+        </FitTile>
         {strip(tiles.filter((p) => p.userId !== focus.userId))}
       </div>
     );
@@ -555,17 +559,17 @@ export function RoomVideoGrid({
   if (layout === "speaker" && tiles.length > 1 && focus) {
     return (
       <div className="flex h-full min-h-0 w-full gap-3">
-        {renderTile(focus, "lg", "h-full min-w-0 flex-1")}
+        <FitTile className="min-w-0 flex-1">{renderTile(focus, "lg")}</FitTile>
         <div className="flex w-[190px] shrink-0 flex-col gap-2 overflow-y-auto">
           {tiles
             .filter((p) => p.userId !== focus.userId)
-            .map((p) => renderTile(p, "sm", "aspect-video w-full shrink-0"))}
+            .map((p) => renderTile(p, "sm", "aspect-[4/3] w-full shrink-0"))}
         </div>
       </div>
     );
   }
 
-  if (tiles.length === 1) return renderTile(tiles[0]!, "lg", "size-full");
+  if (tiles.length === 1) return <FitTile>{renderTile(tiles[0]!, "lg")}</FitTile>;
 
   const pagerBtn =
     "flex size-[30px] shrink-0 items-center justify-center rounded-full border border-border bg-card text-text-2 transition-colors hover:bg-surface-2 disabled:pointer-events-none disabled:text-text-3 [&_svg]:size-4";
@@ -681,6 +685,45 @@ export function RoomVideoGrid({
           </button>
           </GridCell>
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Одна плитка на всё место (один участник, главная плитка «докладчика» и
+ * телефона) по правилу Толка (`tileInCell`): место от квадрата до 16:9 —
+ * плитка занимает его целиком, иначе плитка 4:3 по центру. Раньше такие плитки
+ * растягивались на всё место — в высоком окне колонна, в низком полоса (жалоба
+ * 2026-10-24). `portraitOk` — на вертикальном экране телефона: от 3:4, а не от
+ * квадрата. Стили — `.fit-tile` в index.css.
+ */
+function FitTile({ children, portraitOk, className }: { children: React.ReactNode; portraitOk?: boolean; className?: string }) {
+  return (
+    <div className={cn("fit-tile size-full min-h-0 min-w-0", className)} data-portrait-ok={portraitOk ? "" : undefined}>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * «Вы пока один в уроке», как у Толка: камера и карточка со ссылкой — две
+ * плитки одной сетки, одинакового размера и формы (`computeGrid` на 2 плитки):
+ * рядом в широком окне, друг под другом в высоком.
+ */
+export function SoloStage({ main, card }: { main: React.ReactNode; card: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const grid = useAdaptiveGrid(ref, 2, { gap: GAP, aspect: TILE_ASPECT });
+  const [a, b] = tileRects(grid, 2, GAP);
+  const place = (r: TileRect | undefined) =>
+    r ? { transform: `translate(${r.x}px, ${r.y}px)`, width: r.w, height: r.h } : { visibility: "hidden" as const };
+  return (
+    <div ref={ref} className="relative min-h-0 flex-1">
+      <div className="absolute left-0 top-0" style={place(a)}>
+        {main}
+      </div>
+      <div className="solo-side absolute left-0 top-0" style={place(b)}>
+        {card}
       </div>
     </div>
   );

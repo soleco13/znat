@@ -14,7 +14,7 @@ export interface GridLayout {
    * ресайза только тормозит.
    */
   animate: boolean;
-  /** Размер плитки в px; после дотягивания до краёв пропорция может отличаться от `aspect`. */
+  /** Размер плитки в px: вся клетка (от 1:1 до 16:9) или `aspect`, вписанная в клетку (`tileInCell`). */
   tileW: number;
   tileH: number;
   /**
@@ -26,7 +26,7 @@ export interface GridLayout {
 
 interface GridOptions {
   gap?: number;
-  /** Ширина/высота плитки до дотягивания. */
+  /** Базовые пропорции плитки (ширина/высота), когда клетка слишком узкая или широкая. */
   aspect?: number;
   /** Минимальная ширина плитки для расчёта ёмкости страницы. */
   minTileW?: number;
@@ -39,21 +39,11 @@ export const GRID_MOTION_MS = 300;
 
 /** Меньше 4 плиток на странице не бывает: иначе пагинация при любом классе. */
 const MIN_CAPACITY = 4;
-/**
- * Дотягиваем плитки до края, если сетка уже заняла больше этой доли стороны
- * (как в Толке, §4.4 разбора), но пропорцию держим в этих пределах — дальше
- * видео в `cover` режется слишком сильно.
- */
-const STRETCH_FROM = 0.75;
-const MIN_STRETCHED_ASPECT = 4 / 3;
-const MAX_STRETCHED_ASPECT = 2;
 
 /**
- * Раскладка плиток участников. Перебираем число колонок и берём то, при
- * котором плитка `aspect` крупнее всего (тот же выбор, что у Толка: при
- * равных размерах контейнера колонки совпадают, см.
- * `test-results/matis-camera-grid-2026-10-07/comparison-and-design.md`).
- * Затем плитки дотягиваются до краёв, если остаток мал.
+ * Раскладка плиток участников, как у Контур Толка (замеры 2026-10-24): перебираем
+ * число колонок и берём то, при котором плитка крупнее всего; форма плитки —
+ * `tileInCell` (клетка целиком или 4:3).
  *
  * Ёмкость страницы считается от контейнера: сколько полных плиток шириной
  * `minTileW` помещается по ширине и высоте. Пересчёт — на ResizeObserver
@@ -145,25 +135,45 @@ export function computeGrid(
 
   let cols = 1;
   let tileW = 0;
+  let tileH = 0;
+  let empty = Infinity;
   for (let c = 1; c <= count; c += 1) {
     const r = Math.ceil(count / c);
-    const t = Math.min((w - gap * (c - 1)) / c, ((h - gap * (r - 1)) / r) * aspect);
-    if (t > tileW) {
+    const [tw, th] = tileInCell((w - gap * (c - 1)) / c, (h - gap * (r - 1)) / r, aspect);
+    const area = tw * th;
+    const best = tileW * tileH;
+    // Разница в площади до 1 % не в счёт — тогда где меньше пустых мест (трое
+    // в высоком окне — столбиком, а не 2 + 1, как у Толка).
+    if (area > best * 1.01 || (area >= best * 0.99 && c * r - count < empty)) {
       cols = c;
-      tileW = t;
+      tileW = tw;
+      tileH = th;
+      empty = c * r - count;
     }
   }
   const rows = Math.ceil(count / cols);
-  let tileH = tileW / aspect;
-
-  const totalW = cols * tileW + gap * (cols - 1);
-  const totalH = rows * tileH + gap * (rows - 1);
-  if (totalW / w > STRETCH_FROM && totalW < w) tileW = (w - gap * (cols - 1)) / cols;
-  if (totalH / h > STRETCH_FROM && totalH < h) tileH = (h - gap * (rows - 1)) / rows;
-  tileW = Math.min(tileW, tileH * MAX_STRETCHED_ASPECT);
-  tileH = Math.min(tileH, tileW / MIN_STRETCHED_ASPECT);
 
   return { cols, rows, width: w, height: h, tileW: Math.floor(tileW), tileH: Math.floor(tileH), capacity };
+}
+
+/** Клетка такой формы заполняется плиткой целиком; иначе плитка — `aspect` по центру. */
+export const FILL_MIN_ASPECT = 1;
+export const FILL_MAX_ASPECT = 16 / 9;
+
+/**
+ * Плитка в клетке `cellW × cellH` по правилу Контур Толка (замеры 2026-10-24,
+ * test-results/kontur-research-2026-10-14/data/kontur-tiles): если клетка от
+ * квадрата до 16:9 — плитка занимает её всю (видео обрезается по краям), иначе
+ * плитка базовых пропорций `aspect` (4:3), вписанная в клетку. Так плитка не
+ * становится ни колонной, ни полосой, но и не оставляет пустых полей, когда
+ * окно почти подходит.
+ */
+export function tileInCell(cellW: number, cellH: number, aspect: number): [number, number] {
+  if (cellW <= 0 || cellH <= 0) return [0, 0];
+  const a = cellW / cellH;
+  if (a >= FILL_MIN_ASPECT - 1e-3 && a <= FILL_MAX_ASPECT + 1e-3) return [cellW, cellH];
+  const w = Math.min(cellW, cellH * aspect);
+  return [w, w / aspect];
 }
 
 export interface TileRect {

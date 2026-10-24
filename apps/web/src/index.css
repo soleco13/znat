@@ -525,3 +525,87 @@ html[data-teacher-zoom] [data-radix-popper-content-wrapper] > * {
 @keyframes ri-draw-5 { from { stroke-dasharray: 5; stroke-dashoffset: 5; } to { stroke-dasharray: 5; stroke-dashoffset: 0; } }
 @keyframes ri-draw-9 { from { stroke-dasharray: 9; stroke-dashoffset: 9; } to { stroke-dasharray: 9; stroke-dashoffset: 0; } }
 @keyframes ri-draw-30 { from { stroke-dasharray: 30; stroke-dashoffset: 30; } to { stroke-dasharray: 30; stroke-dashoffset: 0; } }
+
+/* ---------- Плитка на всё место (RoomVideoGrid, FitTile) ----------
+   Правило Контур Толка (tileInCell в use-adaptive-grid.ts): место от квадрата
+   до 16:9 — плитка занимает его целиком, иначе 4:3 по центру. С
+   data-portrait-ok (телефон) заполнение начинается от 3:4, уже — плитка 3:4. */
+.fit-tile {
+  container-type: size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fit-tile > * {
+  flex: none;
+  aspect-ratio: 4 / 3;
+  width: min(100cqw, calc(100cqh * 4 / 3));
+  height: auto;
+}
+@container (min-aspect-ratio: 1) and (max-aspect-ratio: 16 / 9) {
+  .fit-tile > * {
+    aspect-ratio: auto;
+    width: 100%;
+    height: 100%;
+  }
+}
+@container (min-aspect-ratio: 3 / 4) and (max-aspect-ratio: 16 / 9) {
+  .fit-tile[data-portrait-ok] > * {
+    aspect-ratio: auto;
+    width: 100%;
+    height: 100%;
+  }
+}
+@container (max-aspect-ratio: 3 / 4) {
+  .fit-tile[data-portrait-ok] > * {
+    aspect-ratio: 3 / 4;
+    width: min(100cqw, calc(100cqh * 3 / 4));
+  }
+}
+
+/* ---------- «Вы пока один в уроке» (RoomVideoGrid, SoloStage) ----------
+   Карточка — вторая плитка сетки, того же размера, что камера. Чем меньше
+   плитка, тем меньше в карточке: сначала уходят значок, пояснение и ссылка
+   текстом, потом заголовок — кнопка остаётся. */
+.solo-side {
+  container-type: size;
+}
+.solo-side > .solo-card {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  align-items: center;
+  text-align: center;
+}
+.solo-card > div {
+  justify-content: center;
+}
+@container (max-height: 420px) {
+  .solo-card {
+    padding: 16px;
+  }
+}
+@container (max-height: 340px) {
+  .solo-card .solo-extra {
+    display: none;
+  }
+}
+@container (max-height: 110px) {
+  .solo-card .solo-title {
+    display: none;
+  }
+}
+/* Узкая плитка: одна кнопка «Скопировать ссылку», в самой маленькой — значком. */
+@container (max-width: 380px) {
+  .solo-card .solo-secondary {
+    display: none;
+  }
+}
+@container (max-width: 220px) {
+  .solo-card {
+    padding: 8px;
+  }
+  .solo-card .solo-label {
+    display: none;
+  }
+}
