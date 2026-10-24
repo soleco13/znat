@@ -1,0 +1,122 @@
+{
+  "T0": 1792832028977,
+  "chrome": "Chrome/150.0.7871.46",
+  "checks": [
+    {
+      "name": "teacher joins",
+      "ok": true,
+      "rel": "   3.9"
+    },
+    {
+      "name": "s1 joins",
+      "ok": true,
+      "rel": "   7.0"
+    },
+    {
+      "name": "s2 joins",
+      "ok": true,
+      "rel": "  11.4"
+    },
+    {
+      "name": "first tile moves through ≥5 frames (smooth)",
+      "ok": true,
+      "detail": {
+        "changes": 8
+      },
+      "rel": "  13.9"
+    },
+    {
+      "name": "motion settles within ~400 ms",
+      "ok": true,
+      "detail": {
+        "ms": 316
+      },
+      "rel": "  13.9"
+    },
+    {
+      "name": "new tile fades in (opacity < 1 on some frame)",
+      "ok": true,
+      "rel": "  13.9"
+    },
+    {
+      "name": "hover «Микрофон»: icon animates (wiggle)",
+      "ok": false,
+      "detail": {
+        "motion": "wiggle",
+        "anim": "none",
+        "transform": "none",
+        "box": [
+          376,
+          838
+        ],
+        "bg": "rgba(246, 247, 249, 0.97)"
+      },
+      "rel": "  14.1"
+    },
+    {
+      "name": "hover «Микрофон»: button stays",
+      "ok": true,
+      "rel": "  14.1"
+    },
+    {
+      "name": "hover «Камера»: icon animates (nudge)",
+      "ok": false,
+      "detail": {
+        "motion": "nudge",
+        "anim": "none",
+        "transform": "none",
+        "box": [
+          568,
+          838
+        ],
+        "bg": "rgba(246, 247, 249, 0.92)"
+      },
+      "rel": "  14.8"
+    },
+    {
+      "name": "hover «Камера»: button stays",
+      "ok": true,
+      "rel": "  14.8"
+    },
+    {
+      "name": "hover «Демонстрация»: icon animates (lift)",
+      "ok": false,
+      "detail": {
+        "motion": "lift",
+        "anim": "none",
+        "transform": "none",
+        "box": [
+          751,
+          838
+        ],
+        "bg": "rgba(246, 247, 249, 0.92)"
+      },
+      "rel": "  15.4"
+    },
+    {
+      "name": "hover «Демонстрация»: button stays",
+      "ok": true,
+      "rel": "  15.4"
+    },
+    {
+      "name": "hover «Доска»: icon animates (scribble)",
+      "ok": false,
+      "detail": {
+        "motion": "scribble",
+        "anim": "none",
+        "transform": "none",
+        "box": [
+          872,
+          838
+        ],
+        "bg": "rgba(246, 247, 249, 0.92)"
+      },
+      "rel": "  16.1"
+    },
+    {
+      "name": "hover «Доска»: button stays",
+      "ok": true,
+      "rel": "  16.1"
+    }
+  ]
+}
