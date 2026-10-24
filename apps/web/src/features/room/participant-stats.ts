@@ -70,8 +70,13 @@ async function computeOwn(room: Room): Promise<ParticipantStats | null> {
   for (const o of statsEntries(reports, "outbound-rtp")) {
     t.sentBytes += num(o.bytesSent);
     t.sentPackets += num(o.packetsSent);
-    if (o.kind === "video" && o.active !== false && num(o.frameHeight) > 0) {
-      sendHeight = Math.max(sendHeight ?? 0, num(o.frameHeight));
+    // Только слой, который сейчас реально идёт (кадры/с > 0): у остановленного
+    // слоя Chrome держит в статистике последний размер кадра. Качество — по
+    // короткой стороне, как принято (и как у Толка): вертикальная камера
+    // телефона 180×320 — это «180p», а не «320p» (окно 2026-10-24, iPhone).
+    if (o.kind === "video" && o.active !== false && num(o.framesPerSecond) > 0 && num(o.frameHeight) > 0) {
+      const short = num(o.frameWidth) > 0 ? Math.min(num(o.frameWidth), num(o.frameHeight)) : num(o.frameHeight);
+      sendHeight = Math.max(sendHeight ?? 0, short);
       videoCodec ??= codecName(reports, o.codecId);
     }
     if (o.kind === "audio") audioCodec ??= codecName(reports, o.codecId);
