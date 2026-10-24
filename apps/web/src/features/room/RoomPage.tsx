@@ -153,6 +153,7 @@ import {
   writeJoinDefaults,
   writeRejoinState,
 } from "./rejoin-state.js";
+import { ParticipantStatsResponder } from "./participant-stats.js";
 import { MediaTelemetry, reportLiveKitConnectionFailed } from "./MediaTelemetry.js";
 import { MediaDeviceErrorNotice } from "./media-device-errors.js";
 
@@ -2496,6 +2497,7 @@ export function RoomPage() {
         onError={handleLiveKitError}
       >
         {lessonId ? <MediaTelemetry lessonId={lessonId} /> : null}
+        <ParticipantStatsResponder />
         <MediaDeviceErrorNotice />
         <RoomHotkeys />
         <ApplyAudioOutput deviceId={spkDeviceId} />

@@ -36,6 +36,7 @@ import { tileRects, useAdaptiveGrid, type TileRect } from "./use-adaptive-grid.j
 import { useCpuHeavy } from "./cpu-load.js";
 import { deviceProfileNow } from "./device-profile.js";
 import { useTileMenu } from "./tile-menu-context.js";
+import { ParticipantStatsPopover } from "./ParticipantStatsPopover.js";
 import { useIsNarrowViewport } from "./use-narrow-viewport.js";
 import { selfTileId, withExtraSessions } from "./media-sessions.js";
 
@@ -368,9 +369,16 @@ export function RoomVideoGrid({
         ) : null}
 
         {size !== "xs" ? (
-          <span
+          <ParticipantStatsPopover
+            identity={p.userId}
+            isSelf={isSelf}
+            name={p.fullName}
+            badge={isSelf ? "вы" : p.kind === "guest" ? "гость" : roleSuffix}
+            colorKey={participantColorKey(p, lessonId)}
+            role={markRoleOf(p.kind, p.role)}
+            reconnecting={reconnecting}
             className={cn(
-              "pointer-events-none absolute inline-flex items-center rounded-full bg-[rgba(16,24,40,.72)] font-medium text-white",
+              "absolute inline-flex items-center rounded-full bg-[rgba(16,24,40,.72)] font-medium text-white",
               size === "lg" && "bottom-2.5 left-2.5 h-6 max-w-[calc(100%-20px)] gap-1.5 px-[9px] text-xs",
               size === "md" && "bottom-2 left-2 h-[22px] max-w-[calc(100%-16px)] gap-[5px] px-2 text-[11.5px]",
               size === "sm" && "bottom-2 left-2 h-5 max-w-[calc(100%-16px)] gap-1 px-[7px] text-[11px]",
@@ -384,7 +392,7 @@ export function RoomVideoGrid({
               {p.fullName}
               {isSelf ? " (вы)" : (size === "lg" || size === "md") && roleSuffix ? ` · ${roleSuffix}` : ""}
             </span>
-          </span>
+          </ParticipantStatsPopover>
         ) : (
           // Лента телефона: короткое имя внизу плитки, иначе ученики с
           // одинаковым знаком неразличимы.

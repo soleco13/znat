@@ -1,18 +1,22 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import type { ServerRoomMessage } from "@school/shared";
+import { clientRoomMessageSchema, type ServerRoomMessage } from "@school/shared";
 import { verifyAccessToken } from "../auth/service.js";
 import { GUEST_COOKIE_NAME, resolveGuestSession } from "../guests/service.js";
 import { verifyRecorderToken } from "../recorder-auth/service.js";
 import * as recordingsService from "../recordings/service.js";
-import { roomEvents } from "./events.js";
+import { roomEvents, statsRelay } from "./events.js";
 import { SUPERSEDED_CLOSE_CODE, registerSocket, unregisterSocket } from "./socket-registry.js";
 import * as roomsService from "./service.js";
 import { AppError } from "../../plugins/errors.js";
 import { logEvent, safeClientId } from "../../plugins/logger.js";
 
 const PING_INTERVAL_MS = 20_000;
+/** Сообщения браузера (окно связи): размер и частота на одно соединение. */
+const CLIENT_MESSAGE_MAX_BYTES = 2048;
+const CLIENT_MESSAGES_PER_SECOND = 5;
+const CLIENT_MESSAGES_BURST = 10;
 
 const querySchema = z.object({
   // Э12.4: персонал передаёт access-токен в query; гость-ученик его не
@@ -191,6 +195,31 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
     // уже прошёл, слушатель roomEvents и таймер пинга оставались навсегда,
     // а участник числился «на связи» до зачистки.
     roomEvents.on(lessonId, onEvent);
+    // Окно связи (2026-10-24): адресная пересылка запросов и ответов между
+    // участниками этого урока. Ничего не хранится и не пишется в журнал.
+    const relayKey = `${lessonId}:${userId}`;
+    statsRelay.on(relayKey, send);
+    let budget = CLIENT_MESSAGES_BURST;
+    let budgetAt = Date.now();
+    socket.on("message", (data: Buffer) => {
+      if (data.length > CLIENT_MESSAGE_MAX_BYTES) return;
+      const now = Date.now();
+      budget = Math.min(CLIENT_MESSAGES_BURST, budget + ((now - budgetAt) / 1000) * CLIENT_MESSAGES_PER_SECOND);
+      budgetAt = now;
+      if (budget < 1) return;
+      budget -= 1;
+      let raw: unknown;
+      try {
+        raw = JSON.parse(data.toString("utf8"));
+      } catch {
+        return;
+      }
+      const parsed = clientRoomMessageSchema.safeParse(raw);
+      if (!parsed.success || parsed.data.to === userId) return;
+      const target = `${lessonId}:${parsed.data.to}`;
+      if (parsed.data.type === "stats_request") statsRelay.emit(target, { type: "stats_request", from: userId });
+      else statsRelay.emit(target, { type: "stats_report", from: userId, stats: parsed.data.stats });
+    });
     // G-04: не больше MAX_SOCKETS_PER_PARTICIPANT каналов на участника —
     // лишние старые закрываются (см. socket-registry.ts).
     for (const evicted of registerSocket(lessonId, userId, socket)) {
@@ -207,6 +236,7 @@ export default async function roomsWsRoutes(app: FastifyInstance) {
       cleanedUp = true;
       clearInterval(pingTimer);
       roomEvents.off(lessonId, onEvent);
+      statsRelay.off(relayKey, send);
       // Живо другое подключение того же участника — он на связи.
       if (!unregisterSocket(lessonId, userId, socket)) return;
       roomsService

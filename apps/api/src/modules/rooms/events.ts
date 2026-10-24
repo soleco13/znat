@@ -29,3 +29,11 @@ export function emitRoomEvent(lessonId: string, message: ServerRoomMessage): voi
     }
   }
 }
+
+/**
+ * Адресная пересылка окна связи участника (2026-10-24): ключ
+ * `${lessonId}:${participantId}` — сообщение получает только адресат, мимо
+ * общей рассылки урока и журнала записи.
+ */
+export const statsRelay = new EventEmitter();
+statsRelay.setMaxListeners(0);

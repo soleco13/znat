@@ -145,6 +145,31 @@ export type SetDrawForAllRequest = z.infer<typeof setDrawForAllRequestSchema>;
 
 // WS /ws?lessonId=&token= — канал только для пуша от сервера клиенту.
 // Действия (поднять руку, чат, права) идут через обычные HTTP-эндпоинты.
+/**
+ * Связь участника для окна по клику на имя (2026-10-24): считает браузер
+ * самого участника, наш `/ws` только пересылает адресату — без хранения.
+ */
+export const connectionStatsSchema = z.object({
+  score: z.number().int().min(0).max(100),
+  sendKbps: z.number().min(0).max(1_000_000).nullable(),
+  recvKbps: z.number().min(0).max(1_000_000).nullable(),
+  upLossPct: z.number().min(0).max(100).nullable(),
+  downLossPct: z.number().min(0).max(100).nullable(),
+  rttMs: z.number().min(0).max(100_000).nullable(),
+  jitterMs: z.number().min(0).max(100_000).nullable(),
+  sendHeight: z.number().int().min(0).max(10_000).nullable(),
+  audioCodec: z.string().max(16).nullable(),
+  videoCodec: z.string().max(16).nullable(),
+});
+export type ConnectionStats = z.infer<typeof connectionStatsSchema>;
+
+/** Сообщения браузера в `/ws` урока. Всё остальное по-прежнему идёт через HTTP. */
+export const clientRoomMessageSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("stats_request"), to: z.string().uuid() }),
+  z.object({ type: z.literal("stats_report"), to: z.string().uuid(), stats: connectionStatsSchema }),
+]);
+export type ClientRoomMessage = z.infer<typeof clientRoomMessageSchema>;
+
 export const serverRoomMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("presence"), participants: z.array(participantSnapshotSchema) }),
   z.object({ type: z.literal("participant_joined"), participant: participantSnapshotSchema }),
@@ -227,6 +252,9 @@ export const serverRoomMessageSchema = z.discriminatedUnion("type", [
    * пульса не отличал тишину от мёртвого соединения (E2E 2026-10-04).
    */
   z.object({ type: z.literal("heartbeat") }),
+  /** Кто-то открыл окно связи с нашим именем — ответить `stats_report` (только адресату). */
+  z.object({ type: z.literal("stats_request"), from: z.string().uuid() }),
+  z.object({ type: z.literal("stats_report"), from: z.string().uuid(), stats: connectionStatsSchema }),
 ]);
 export type ServerRoomMessage = z.infer<typeof serverRoomMessageSchema>;
 

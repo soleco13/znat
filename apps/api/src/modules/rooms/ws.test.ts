@@ -150,3 +150,81 @@ describe("G-04: WS-каналов урока на участника", () => {
     expect(countSockets(LESSON, "stranger")).toBe(0);
   });
 });
+
+describe("окно связи участника: адресная пересылка через /ws (2026-10-24)", () => {
+  let app: FastifyInstance;
+  const A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+  const C = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+  const stats = {
+    score: 97,
+    sendKbps: 420,
+    recvKbps: 300,
+    upLossPct: 0,
+    downLossPct: 0.4,
+    rttMs: 38,
+    jitterMs: 6,
+    sendHeight: 360,
+    audioCodec: "opus",
+    videoCodec: "vp8",
+  };
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    resetSocketRegistry();
+    roomsServiceMock.attachSocket.mockImplementation(async (_lesson: string, userId: string) => ({ userId }));
+    app = Fastify();
+    await app.register(cookie);
+    await app.register(websocket);
+    await app.register(roomsWsRoutes);
+    await app.ready();
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  function inbox(ws: WebSocket): { type: string; from?: string }[] {
+    const got: { type: string; from?: string }[] = [];
+    ws.on("message", (data: Buffer) => {
+      const msg = JSON.parse(data.toString()) as { type: string; from?: string };
+      if (msg.type.startsWith("stats_")) got.push(msg);
+    });
+    return got;
+  }
+
+  it("запрос получает только адресат, ответ — только спросивший", async () => {
+    const [a, b, c] = [await open(app, A), await open(app, B), await open(app, C)];
+    const [toA, toB, toC] = [inbox(a), inbox(b), inbox(c)];
+    a.send(JSON.stringify({ type: "stats_request", to: B }));
+    await flush();
+    expect(toB).toEqual([{ type: "stats_request", from: A }]);
+    b.send(JSON.stringify({ type: "stats_report", to: A, stats }));
+    await flush();
+    expect(toA).toEqual([{ type: "stats_report", from: B, stats }]);
+    expect(toC).toEqual([]);
+    a.close();
+    b.close();
+    c.close();
+  });
+
+  it("неверные сообщения, себе и сверх частоты — отбрасываются", async () => {
+    const [a, b] = [await open(app, A), await open(app, B)];
+    const toB = inbox(b);
+    a.send("not json");
+    a.send(JSON.stringify({ type: "stats_request", to: "not-a-uuid" }));
+    a.send(JSON.stringify({ type: "stats_report", to: B, stats: { ...stats, score: 999 } }));
+    a.send(JSON.stringify({ type: "stats_request", to: A }));
+    a.send(JSON.stringify({ type: "chat_message", to: B }));
+    a.send("x".repeat(5000));
+    await flush();
+    expect(toB).toEqual([]);
+    for (let i = 0; i < 30; i += 1) a.send(JSON.stringify({ type: "stats_request", to: B }));
+    await flush();
+    // 6 отброшенных выше тоже потратили бюджет (кроме слишком длинного): из 30 дойдут не все.
+    expect(toB.length).toBeGreaterThan(0);
+    expect(toB.length).toBeLessThanOrEqual(10);
+    a.close();
+    b.close();
+  });
+});

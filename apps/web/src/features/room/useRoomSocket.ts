@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ServerRoomMessage } from "@school/shared";
 import { getFreshAccessToken } from "../../shared/api-client.js";
 import { clientSessionId, track } from "../../shared/telemetry.js";
+import { handleStatsMessage, setStatsSocketSender } from "./participant-stats.js";
 
 export type SocketStatus = "connecting" | "connected" | "reconnecting" | "closed";
 
@@ -134,6 +135,11 @@ export function useRoomSocket(
       connectingSince = Date.now();
 
       current.onopen = () => {
+        if (mode !== "recorder") {
+          setStatsSocketSender((message) => {
+            if (current === socket && current.readyState === WebSocket.OPEN) current.send(JSON.stringify(message));
+          });
+        }
         everOpened = true;
         connectTimeouts = 0;
         openedAt = Date.now();
@@ -149,7 +155,10 @@ export function useRoomSocket(
         // в секунду бесконечно.
         attempt = 0;
         try {
-          onMessageRef.current(JSON.parse(event.data) as ServerRoomMessage);
+          const message = JSON.parse(event.data) as ServerRoomMessage;
+          // Окно связи участника — адресные сообщения, в состояние урока не идут.
+          if (handleStatsMessage(message)) return;
+          onMessageRef.current(message);
         } catch {
           // игнорируем нераспознанные сообщения
         }
@@ -258,6 +267,7 @@ export function useRoomSocket(
 
     return () => {
       stopped = true;
+      if (mode !== "recorder") setStatsSocketSender(null);
       window.removeEventListener("offline", onOffline);
       window.removeEventListener("online", onOnline);
       clearInterval(staleTimer);
