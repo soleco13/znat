@@ -32,7 +32,9 @@ import { participantsCount } from "./format.js";
 import { useSelfCameraUiStore } from "./self-camera-ui-store.js";
 import { TILE_LOADER_MAX_MS, useTileMediaStore } from "./tile-media-store.js";
 import { isStreamPaused, useStreamStateUpdates } from "./use-stream-state.js";
-import { useAdaptiveGrid } from "./use-adaptive-grid.js";
+import { tileRects, useAdaptiveGrid, type TileRect } from "./use-adaptive-grid.js";
+import { useCpuHeavy } from "./cpu-load.js";
+import { deviceProfileNow } from "./device-profile.js";
 import { useTileMenu } from "./tile-menu-context.js";
 import { useIsNarrowViewport } from "./use-narrow-viewport.js";
 import { selfTileId, withExtraSessions } from "./media-sessions.js";
@@ -208,6 +210,13 @@ export function RoomVideoGrid({
 
   const gridRef = useRef<HTMLDivElement>(null);
   const grid = useAdaptiveGrid(gridRef, gridCells, { gap: GAP, aspect: 16 / 9, minTileW: MIN_TILE_W, maxCapacity: PAGE_CAP });
+  const rects = tileRects(grid, gridCells, GAP);
+  // Перестройку сетки анимируем, только если устройство справляется: на
+  // слабом или перегруженном ПК каждый кадр перерисовки плиток с видео
+  // отнимает процессор у звука (правило проекта — адаптация без участия
+  // пользователя). «Уменьшить движение» в системе выключает анимацию в CSS.
+  const cpuHeavy = useCpuHeavy();
+  const animateGrid = grid.animate && !cpuHeavy && !(deviceProfileNow()?.weak ?? false);
   // Ёмкость и страницы зависят друг от друга: меньше ёмкость → появляется
   // строка страниц и съедает высоту → ёмкость пересчитывается → строка
   // пропадает → ёмкость снова больше… Около 25 участников это зацикливалось
@@ -628,23 +637,19 @@ export function RoomVideoGrid({
           </button>
         </div>
       ) : null}
-      <div
-        ref={gridRef}
-        className="grid min-h-0 flex-1 place-content-center"
-        style={{
-          gap: GAP,
-          gridTemplateColumns: grid.tileW > 0 ? `repeat(${grid.cols}, ${grid.tileW}px)` : `repeat(${grid.cols}, minmax(0, 1fr))`,
-          gridAutoRows: grid.tileH > 0 ? `${grid.tileH}px` : undefined,
-        }}
-      >
-        {pageTiles.map((p) => renderTile(p, paged ? "md" : "lg", grid.tileH > 0 ? "size-full" : "aspect-video w-full"))}
+      <div ref={gridRef} className="relative min-h-0 flex-1">
+        {pageTiles.map((p, i) => (
+          <GridCell key={p.userId} rect={rects[i]} animate={animateGrid}>
+            {renderTile(p, paged ? "md" : "lg", "size-full")}
+          </GridCell>
+        ))}
         {moreCount > 0 ? (
+          <GridCell key="more" rect={rects[pageTiles.length]} animate={animateGrid}>
           <button
             type="button"
             onClick={() => setPage(safePage + 1)}
             className={cn(
-              "relative flex w-full flex-col items-center justify-center gap-1 rounded-xl bg-[#101828] px-2 text-white",
-              grid.tileH > 0 ? "h-full" : "aspect-video",
+              "relative flex size-full flex-col items-center justify-center gap-1 rounded-xl bg-[#101828] px-2 text-white",
               speakersAfter.length > 0 && "ring-2 ring-inset ring-primary",
             )}
           >
@@ -666,8 +671,35 @@ export function RoomVideoGrid({
               <span className="text-xs text-white/70">ещё участников</span>
             )}
           </button>
+          </GridCell>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Ячейка сетки: стоит в рассчитанной точке (`tileRects`) и при перестройке
+ * плавно переезжает и меняет размер — `transform`, `width`, `height` за
+ * `--motion-layout`, как плитки Толка (`grid-participant._animate`). Новая
+ * ячейка проявляется (`grid-cell-enter`) чуть позже начала движения
+ * остальных. Пока сетка не измерена, ячейка невидима — без мигания в углу.
+ */
+function GridCell({ rect, animate, children }: { rect: TileRect | undefined; animate: boolean; children: React.ReactNode }) {
+  // Проявляется только ячейка, родившаяся во время анимированной перестройки
+  // (кто-то вошёл). Первая отрисовка урока и листание страниц — без него.
+  const [enter] = useState(animate);
+  return (
+    <div
+      className={cn(
+        "grid-cell absolute left-0 top-0",
+        animate && "grid-cell-animate",
+        enter && "grid-cell-enter",
+        !rect && "invisible",
+      )}
+      style={rect ? { transform: `translate(${rect.x}px, ${rect.y}px)`, width: rect.w, height: rect.h } : undefined}
+    >
+      {children}
     </div>
   );
 }

@@ -83,6 +83,10 @@
   /* ---------- Motion ---------- */
   --transition: 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Перестройка сетки камер — как у Контур Толка: 300 мс, ease-out-quint
+     (резкий старт, длинное мягкое «доезжание»). GRID_MOTION_MS в use-adaptive-grid.ts. */
+  --motion-layout-duration: 300ms;
+  --ease-layout: cubic-bezier(0.23, 1, 0.32, 1);
 
   /* ============================================================
      Семантические shadcn-токены (HSL "H S% L%") — src/shared/ui/*
@@ -375,4 +379,92 @@ html[data-teacher-zoom] [data-radix-popper-content-wrapper] > * {
 [data-sonner-toaster][data-y-position="top"] [data-sonner-toast][data-y-position="top"]:not([data-mounted="true"]),
 [data-sonner-toaster][data-y-position="top"] [data-sonner-toast][data-y-position="top"][data-removed="true"] {
   --y: translateY(-8px);
+}
+
+/* ---------- Сетка камер урока (RoomVideoGrid, GridCell) ---------- */
+/* Перестройка меняет и width/height (как у Толка: масштаб через scale растягивал
+   бы подписи и скругления плиток). contain: layout держит пересчёт внутри ячейки. */
+.grid-cell {
+  contain: layout;
+}
+/* ----------
+   Движение только когда оно уместно: prefers-reduced-motion: no-preference.
+   Слабое/перегруженное устройство класс grid-cell-animate не получает. */
+@media (prefers-reduced-motion: no-preference) {
+  .grid-cell-animate {
+    transition:
+      transform var(--motion-layout-duration) var(--ease-layout),
+      width var(--motion-layout-duration) var(--ease-layout),
+      height var(--motion-layout-duration) var(--ease-layout);
+  }
+  /* Новая плитка проявляется, когда остальные уже на трети пути (у Толка — enterDelayPercent 0.3). */
+  .grid-cell-enter {
+    animation: grid-cell-enter var(--motion-layout-duration) var(--ease-layout) 90ms both;
+  }
+}
+@keyframes grid-cell-enter {
+  from {
+    opacity: 0;
+    scale: 0.94;
+  }
+}
+
+/* ---------- Кнопки панели урока: отклик иконки на наведение ----------
+   Как у Толка, при наведении «оживает» иконка, а не кнопка: кнопка не
+   двигается под курсором (без мерцания hover). Только мышь/тачпад и только
+   если движение не отключено в системе. Вид движения — по смыслу иконки
+   (data-icon-motion в RoomControlButton). */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .room-ctl:not(:disabled):hover [data-icon-motion] {
+    animation-duration: 420ms;
+    animation-timing-function: var(--ease);
+  }
+  .room-ctl:not(:disabled):hover [data-icon-motion="pop"] { animation-name: ctl-icon-pop; }
+  .room-ctl:not(:disabled):hover [data-icon-motion="wiggle"] { animation-name: ctl-icon-wiggle; }
+  .room-ctl:not(:disabled):hover [data-icon-motion="nudge"] { animation-name: ctl-icon-nudge; }
+  .room-ctl:not(:disabled):hover [data-icon-motion="lift"] { animation-name: ctl-icon-lift; }
+  .room-ctl:not(:disabled):hover [data-icon-motion="wave"] {
+    animation-name: ctl-icon-wave;
+    animation-duration: 560ms;
+    transform-origin: 50% 85%;
+  }
+  .room-ctl:not(:disabled):hover [data-icon-motion="scribble"] {
+    animation-name: ctl-icon-scribble;
+    transform-origin: 15% 85%;
+  }
+}
+/* Нажатие — короткое «вдавливание» иконки, тоже без сдвига самой кнопки. */
+@media (prefers-reduced-motion: no-preference) {
+  .room-ctl [data-icon-motion] {
+    transition: scale 120ms var(--ease);
+  }
+  .room-ctl:not(:disabled):active [data-icon-motion] {
+    scale: 0.88;
+  }
+}
+@keyframes ctl-icon-pop {
+  40% { transform: translateY(-2px) scale(1.12); }
+}
+@keyframes ctl-icon-wiggle {
+  25% { transform: rotate(-10deg); }
+  60% { transform: rotate(8deg); }
+  85% { transform: rotate(-3deg); }
+}
+@keyframes ctl-icon-nudge {
+  35% { transform: translateX(2px) scale(1.06); }
+  70% { transform: translateX(-1px); }
+}
+@keyframes ctl-icon-lift {
+  40% { transform: translateY(-3px); }
+  75% { transform: translateY(0.5px); }
+}
+@keyframes ctl-icon-wave {
+  20% { transform: rotate(-14deg); }
+  45% { transform: rotate(10deg); }
+  70% { transform: rotate(-8deg); }
+  90% { transform: rotate(3deg); }
+}
+@keyframes ctl-icon-scribble {
+  30% { transform: rotate(-8deg) translate(-1px, 1px); }
+  65% { transform: rotate(4deg) translate(1px, -1px); }
 }
