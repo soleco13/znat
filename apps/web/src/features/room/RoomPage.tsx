@@ -8,7 +8,7 @@ import {
   useRoomContext,
   useTracks,
 } from "@livekit/components-react";
-import { AudioPresets, ConnectionQuality, ConnectionState, RoomEvent, Track, VideoPresets, type RoomOptions } from "livekit-client";
+import { AudioPresets, ConnectionQuality, ConnectionState, RoomEvent, Track, VideoPreset, VideoPresets, type RoomOptions } from "livekit-client";
 import {
   ChevronUp,
   ArrowLeft,
@@ -224,6 +224,10 @@ function buildRoomOptions(
       videoEncoding:
         isTeacher && !weak ? toVideoEncoding(settings.cameraFps, settings.cameraBitrateKbps) : VideoPresets.h360.encoding,
       audioPreset: { ...voice, priority: "high" },
+      // Нижний слой — то, что получают узкие каналы (Елена: провалы до
+      // 60–140 кбит/с). Стандарт LiveKit — 180p, 160 кбит/с, 20 кадр/с; свой —
+      // 100 кбит/с и 15 кадр/с (у Толка VP9 — 110). Средний (для 720p учителя) — как был.
+      videoSimulcastLayers: [CAMERA_LOW_LAYER, VideoPresets.h360],
       ...(profile?.codec === "h264" ? { videoCodec: "h264" as const, backupCodec: false } : {}),
     },
     adaptiveStream: true,
@@ -237,6 +241,9 @@ function buildRoomOptions(
  * (sonner, `position: "top-center"`), исчезают сами. Раньше это были полосы
  * над сеткой камер: занимали место в сетке и висели, пока их не закроют.
  */
+/** Нижний слой камеры (simulcast) для узких каналов, см. `buildRoomOptions`. */
+const CAMERA_LOW_LAYER = new VideoPreset(320, 180, 100_000, 15, "medium");
+
 /** Голос учителя без «высокого качества микрофона» (см. `buildRoomOptions`). */
 const TEACHER_VOICE_PRESET = { maxBitrate: 32_000 };
 
