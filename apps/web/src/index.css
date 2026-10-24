@@ -409,62 +409,119 @@ html[data-teacher-zoom] [data-radix-popper-content-wrapper] > * {
   }
 }
 
-/* ---------- Кнопки панели урока: отклик иконки на наведение ----------
-   Как у Толка, при наведении «оживает» иконка, а не кнопка: кнопка не
-   двигается под курсором (без мерцания hover). Только мышь/тачпад и только
-   если движение не отключено в системе. Вид движения — по смыслу иконки
-   (data-icon-motion в RoomControlButton). */
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .room-ctl:not(:disabled):hover [data-icon-motion] {
-    animation-duration: 420ms;
-    animation-timing-function: var(--ease);
-  }
-  .room-ctl:not(:disabled):hover [data-icon-motion="pop"] { animation-name: ctl-icon-pop; }
-  .room-ctl:not(:disabled):hover [data-icon-motion="wiggle"] { animation-name: ctl-icon-wiggle; }
-  .room-ctl:not(:disabled):hover [data-icon-motion="nudge"] { animation-name: ctl-icon-nudge; }
-  .room-ctl:not(:disabled):hover [data-icon-motion="lift"] { animation-name: ctl-icon-lift; }
-  .room-ctl:not(:disabled):hover [data-icon-motion="wave"] {
-    animation-name: ctl-icon-wave;
-    animation-duration: 560ms;
-    transform-origin: 50% 85%;
-  }
-  .room-ctl:not(:disabled):hover [data-icon-motion="scribble"] {
-    animation-name: ctl-icon-scribble;
-    transform-origin: 15% 85%;
-  }
+/* ---------- Иконки нижней панели урока: анимация частей SVG при наведении ----------
+   Как у Толка (tl-anime-icon): при наведении двигаются части иконки — капсула и
+   дуга микрофона, объектив камеры, стрелка демонстрации, перо доски, точки «Ещё»
+   и т. д. Только нижняя панель урока (footer внутри .room-icons); правило привязано к
+   иконке (класс lucide-*), поэтому любая кнопка панели получает своё движение. Только
+   мышь/тачпад и только если движение не отключено в системе; кнопка не двигается. */
+.room-icons footer svg.lucide > *,
+.room-icons footer svg.lucide {
+  transform-box: fill-box;
+  transform-origin: center;
 }
-/* Нажатие — короткое «вдавливание» иконки, тоже без сдвига самой кнопки. */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-mic > :nth-child(3) { animation: ri-up2 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-mic > :nth-child(2) { animation: ri-arc 520ms var(--ease) 60ms; transform-origin: 50% 0%;}
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-mic-off > :nth-child(5) { animation: ri-draw-30 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-mic-off > :nth-child(2) { animation: ri-shake 520ms var(--ease) 40ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-mic-off > :nth-child(6) { animation: ri-shake 520ms var(--ease) 40ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-video > :nth-child(1) { animation: ri-lens 520ms var(--ease); transform-origin: 0% 50%;}
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-video > :nth-child(2) { animation: ri-body 520ms var(--ease) 40ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-video-off > :nth-child(3) { animation: ri-draw-30 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-video-off > :nth-child(1) { animation: ri-lens 520ms var(--ease) 60ms; transform-origin: 0% 50%;}
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-monitor-up > :nth-child(1) { animation: ri-up3 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-monitor-up > :nth-child(2) { animation: ri-up3 520ms var(--ease) 50ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-monitor-x > :nth-child(1) { animation: ri-rot90 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-monitor-x > :nth-child(2) { animation: ri-rot90 520ms var(--ease) 40ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-pen-line > :nth-child(2) { animation: ri-scribble 520ms var(--ease); transform-origin: 0% 100%;}
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-pen-line > :nth-child(1) { animation: ri-draw-9 520ms var(--ease) 140ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-users > :nth-child(4) { animation: ri-up2 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-users > :nth-child(2) { animation: ri-up2 520ms var(--ease) 90ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-users > :nth-child(3) { animation: ri-up1 520ms var(--ease) 90ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-message-square > :nth-child(1) { animation: ri-squash 520ms var(--ease); transform-origin: 0% 100%;}
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-message-square-off > :nth-child(2) { animation: ri-draw-30 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-message-square-off > :nth-child(1) { animation: ri-squash 520ms var(--ease) 60ms; transform-origin: 0% 100%;}
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-message-square-off > :nth-child(3) { animation: ri-squash 520ms var(--ease) 60ms; transform-origin: 0% 100%;}
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-clipboard-list > :nth-child(1) { animation: ri-up1 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-clipboard-list > :nth-child(5) { animation: ri-pop 520ms var(--ease) 40ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-clipboard-list > :nth-child(3) { animation: ri-draw-5 520ms var(--ease) 80ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-clipboard-list > :nth-child(6) { animation: ri-pop 520ms var(--ease) 140ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-clipboard-list > :nth-child(4) { animation: ri-draw-5 520ms var(--ease) 180ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-ellipsis > :nth-child(3) { animation: ri-up3 420ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-ellipsis > :nth-child(1) { animation: ri-up3 420ms var(--ease) 80ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-ellipsis > :nth-child(2) { animation: ri-up3 420ms var(--ease) 160ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-log-out > :nth-child(1) { animation: ri-right3 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-log-out > :nth-child(2) { animation: ri-right3 520ms var(--ease) 30ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-link > :nth-child(1) { animation: ri-link-a 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-link > :nth-child(2) { animation: ri-link-b 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-settings > :nth-child(1) { animation: ri-rot90 600ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-settings > :nth-child(2) { animation: ri-pulse-in 520ms var(--ease) 60ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-hand { animation: ri-wave 620ms var(--ease); transform-origin: 50% 100%;}
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-hand > :nth-child(1) { animation: ri-up1 520ms var(--ease) 60ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-hand > :nth-child(2) { animation: ri-up1 520ms var(--ease) 120ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-hand > :nth-child(3) { animation: ri-up1 520ms var(--ease) 180ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-chevron-up > :nth-child(1) { animation: ri-up2 420ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-chevron-right > :nth-child(1) { animation: ri-right2 420ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-layout-grid > :nth-child(1) { animation: ri-pop 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-layout-grid > :nth-child(2) { animation: ri-pop 520ms var(--ease) 60ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-layout-grid > :nth-child(3) { animation: ri-pop 520ms var(--ease) 120ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-layout-grid > :nth-child(4) { animation: ri-pop 520ms var(--ease) 180ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-disc > :nth-child(2) { animation: ri-pulse-out 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-disc > :nth-child(1) { animation: ri-body 520ms var(--ease) 40ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-lock > :nth-child(2) { animation: ri-up2 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-lock-open > :nth-child(2) { animation: ri-down2 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-maximize > :nth-child(1) { animation: ri-out-tl 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-minimize > :nth-child(1) { animation: ri-in-tl 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-maximize > :nth-child(2) { animation: ri-out-tr 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-minimize > :nth-child(2) { animation: ri-in-tr 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-maximize > :nth-child(3) { animation: ri-out-bl 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-minimize > :nth-child(3) { animation: ri-in-bl 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-maximize > :nth-child(4) { animation: ri-out-br 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-minimize > :nth-child(4) { animation: ri-in-br 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-sliders-horizontal > :nth-child(3) { animation: ri-slide-r 520ms var(--ease) }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-sliders-horizontal > :nth-child(8) { animation: ri-slide-r2 520ms var(--ease) 60ms }
+  .room-icons footer :is(button, a):not(:disabled):hover svg.lucide-sliders-horizontal > :nth-child(4) { animation: ri-slide-l 520ms var(--ease) 120ms }
+}
+/* Нажатие — короткое «вдавливание» иконки (и на сенсорных экранах). */
 @media (prefers-reduced-motion: no-preference) {
-  .room-ctl [data-icon-motion] {
+  .room-icons footer button svg.lucide {
     transition: scale 120ms var(--ease);
   }
-  .room-ctl:not(:disabled):active [data-icon-motion] {
+  .room-icons footer button:not(:disabled):active svg.lucide {
     scale: 0.88;
   }
 }
-@keyframes ctl-icon-pop {
-  40% { transform: translateY(-2px) scale(1.12); }
-}
-@keyframes ctl-icon-wiggle {
-  25% { transform: rotate(-10deg); }
-  60% { transform: rotate(8deg); }
-  85% { transform: rotate(-3deg); }
-}
-@keyframes ctl-icon-nudge {
-  35% { transform: translateX(2px) scale(1.06); }
-  70% { transform: translateX(-1px); }
-}
-@keyframes ctl-icon-lift {
-  40% { transform: translateY(-3px); }
-  75% { transform: translateY(0.5px); }
-}
-@keyframes ctl-icon-wave {
-  20% { transform: rotate(-14deg); }
-  45% { transform: rotate(10deg); }
-  70% { transform: rotate(-8deg); }
-  90% { transform: rotate(3deg); }
-}
-@keyframes ctl-icon-scribble {
-  30% { transform: rotate(-8deg) translate(-1px, 1px); }
-  65% { transform: rotate(4deg) translate(1px, -1px); }
-}
+@keyframes ri-up1 { 45% { transform: translateY(-1.5px); } 75% { transform: translateY(0.4px); } }
+@keyframes ri-up2 { 40% { transform: translateY(-2px); } 75% { transform: translateY(0.5px); } }
+@keyframes ri-up3 { 40% { transform: translateY(-3px); } 75% { transform: translateY(0.6px); } }
+@keyframes ri-down2 { 45% { transform: translateY(1.5px); } 80% { transform: translateY(-0.4px); } }
+@keyframes ri-right2 { 45% { transform: translateX(2px); } 80% { transform: translateX(-0.5px); } }
+@keyframes ri-right3 { 45% { transform: translateX(3px); } 80% { transform: translateX(-0.6px); } }
+@keyframes ri-arc { 30% { transform: scale(1.12); } 60% { transform: scale(0.97); } }
+@keyframes ri-shake { 25% { transform: translateX(-1px); } 50% { transform: translateX(1px); } 75% { transform: translateX(-0.5px); } }
+@keyframes ri-lens { 40% { transform: translateX(1.5px) scaleY(1.22); } 75% { transform: translateX(-0.3px) scaleY(0.96); } }
+@keyframes ri-body { 40% { transform: scale(0.93); } 75% { transform: scale(1.02); } }
+@keyframes ri-rot90 { from { transform: rotate(0deg); } to { transform: rotate(90deg); } }
+@keyframes ri-scribble { 25% { transform: rotate(-9deg) translate(-1px, 1px); } 55% { transform: rotate(5deg) translate(1px, -0.5px); } 80% { transform: rotate(-2deg); } }
+@keyframes ri-squash { 30% { transform: scale(1.08, 0.9); } 60% { transform: scale(0.96, 1.05); } 85% { transform: scale(1.01, 0.99); } }
+@keyframes ri-pop { 35% { transform: scale(0.55); } 70% { transform: scale(1.18); } }
+@keyframes ri-pulse-in { 45% { transform: scale(0.7); } }
+@keyframes ri-pulse-out { 40% { transform: scale(1.9); } 75% { transform: scale(0.9); } }
+@keyframes ri-link-a { 45% { transform: translate(1.6px, -1.6px); } 80% { transform: translate(-0.3px, 0.3px); } }
+@keyframes ri-link-b { 45% { transform: translate(-1.6px, 1.6px); } 80% { transform: translate(0.3px, -0.3px); } }
+@keyframes ri-wave { 20% { transform: rotate(-12deg); } 45% { transform: rotate(9deg); } 70% { transform: rotate(-5deg); } 90% { transform: rotate(2deg); } }
+@keyframes ri-out-tl { 45% { transform: translate(-1.5px, -1.5px); } }
+@keyframes ri-out-tr { 45% { transform: translate(1.5px, -1.5px); } }
+@keyframes ri-out-bl { 45% { transform: translate(-1.5px, 1.5px); } }
+@keyframes ri-out-br { 45% { transform: translate(1.5px, 1.5px); } }
+@keyframes ri-in-tl { 45% { transform: translate(1.2px, 1.2px); } }
+@keyframes ri-in-tr { 45% { transform: translate(-1.2px, 1.2px); } }
+@keyframes ri-in-bl { 45% { transform: translate(1.2px, -1.2px); } }
+@keyframes ri-in-br { 45% { transform: translate(-1.2px, -1.2px); } }
+@keyframes ri-slide-r { 45% { transform: translateX(3px); } 80% { transform: translateX(-0.5px); } }
+@keyframes ri-slide-r2 { 45% { transform: translateX(4px); } 80% { transform: translateX(-0.5px); } }
+@keyframes ri-slide-l { 45% { transform: translateX(-3px); } 80% { transform: translateX(0.5px); } }
+@keyframes ri-draw-5 { from { stroke-dasharray: 5; stroke-dashoffset: 5; } to { stroke-dasharray: 5; stroke-dashoffset: 0; } }
+@keyframes ri-draw-9 { from { stroke-dasharray: 9; stroke-dashoffset: 9; } to { stroke-dasharray: 9; stroke-dashoffset: 0; } }
+@keyframes ri-draw-30 { from { stroke-dasharray: 30; stroke-dashoffset: 30; } to { stroke-dasharray: 30; stroke-dashoffset: 0; } }

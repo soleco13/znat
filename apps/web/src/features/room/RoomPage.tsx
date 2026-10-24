@@ -2021,7 +2021,7 @@ export function RoomPage() {
   ) : null;
 
   const content = (
-    <div className="flex h-dvh flex-col overflow-hidden bg-[var(--c-room)] text-foreground">
+    <div className="room-icons flex h-dvh flex-col overflow-hidden bg-[var(--c-room)] text-foreground">
       {/* Шапка — десктоп */}
       {phoneLandscape ? null : (
       <header className="hidden h-16 shrink-0 items-center gap-3 px-3.5 pt-2 md:flex">

@@ -1,17 +1,4 @@
-import {
-  ChevronUp,
-  Hand,
-  MessageSquare,
-  Mic,
-  MicOff,
-  MonitorUp,
-  MonitorX,
-  PenLine,
-  Users,
-  Video,
-  VideoOff,
-  type LucideIcon,
-} from "lucide-react";
+import { ChevronUp, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { DropdownMenuItem } from "@/shared/ui/dropdown-menu";
@@ -39,25 +26,6 @@ export const FLOATING_SHADOW = "shadow-[0_4px_14px_rgba(16,24,40,.08),0_1px_3px_
  * недоступно»). `tone` оставлен для совместимости: `media` и `quiet` теперь
  * выглядят одинаково. `tone="action"`: включено — синий тинт.
  */
-/**
- * Как «оживает» иконка при наведении (стили — index.css, `.room-ctl`): у Толка
- * каждая иконка панели анимирована по-своему; у нас — короткое движение по
- * смыслу. Иконки без своего движения коротко «пружинят».
- */
-type IconMotion = "pop" | "wiggle" | "nudge" | "lift" | "wave" | "scribble";
-const ICON_MOTION = new Map<LucideIcon, IconMotion>([
-  [Mic, "wiggle"],
-  [MicOff, "wiggle"],
-  [Video, "nudge"],
-  [VideoOff, "nudge"],
-  [MonitorUp, "lift"],
-  [MonitorX, "pop"],
-  [Hand, "wave"],
-  [PenLine, "scribble"],
-  [MessageSquare, "pop"],
-  [Users, "pop"],
-]);
-
 export function RoomControlButton({
   active,
   activeIcon: ActiveIcon,
@@ -107,13 +75,7 @@ export function RoomControlButton({
     ? "border-primary-muted bg-primary-light text-primary"
     : "border-border bg-card text-foreground";
   const hover = highlighted ? "hover:bg-black/[.04]" : "hover:bg-surface-2";
-  const iconNode = loading ? (
-    <Loader />
-  ) : (
-    <span data-icon-motion={ICON_MOTION.get(Icon) ?? "pop"} className="inline-flex shrink-0">
-      <Icon aria-hidden />
-    </span>
-  );
+  const iconNode = loading ? <Loader /> : <Icon aria-hidden />;
   const tooltip = hotkey ? `${label} · ${hotkey}` : label;
   // Недоступна, но с причиной («Микрофон выключил учитель — поднимите руку»):
   // не блокируем, а по нажатию объясняем. У настоящей disabled-кнопки
@@ -139,7 +101,7 @@ export function RoomControlButton({
           explain && "opacity-50",
         )}
       >
-        {loading ? <Loader /> : <Icon aria-hidden />}
+        {iconNode}
         <span className="min-w-0 flex-1 truncate">{label}</span>
         {badge ? (
           <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground">
@@ -163,7 +125,7 @@ export function RoomControlButton({
         title={label}
         className={cn(
           explain && "opacity-50",
-          "room-ctl relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-[3px] rounded-2xl border text-[11.5px] font-semibold leading-none transition-colors disabled:opacity-50 [&_svg]:size-[21px] [&_svg]:shrink-0",
+          "relative flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-[3px] rounded-2xl border text-[11.5px] font-semibold leading-none transition-colors disabled:opacity-50 [&_svg]:size-[21px] [&_svg]:shrink-0",
           surface,
           hover,
           FLOATING_SHADOW,
@@ -194,7 +156,7 @@ export function RoomControlButton({
         title={label}
         className={cn(
           explain && "opacity-50",
-          "room-ctl relative flex size-12 shrink-0 items-center justify-center rounded-2xl border transition-colors disabled:opacity-50 [&_svg]:size-[21px] [&_svg]:shrink-0",
+          "relative flex size-12 shrink-0 items-center justify-center rounded-2xl border transition-colors disabled:opacity-50 [&_svg]:size-[21px] [&_svg]:shrink-0",
           surface,
           hover,
           FLOATING_SHADOW,
@@ -232,7 +194,7 @@ export function RoomControlButton({
             aria-label={label}
             className={cn(
               explain && "opacity-50",
-              "room-ctl inline-flex h-12 items-center gap-2 px-3.5 text-[15px] font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50 lg:px-[18px] [&_svg]:size-5 [&_svg]:shrink-0",
+              "inline-flex h-12 items-center gap-2 px-3.5 text-[15px] font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50 lg:px-[18px] [&_svg]:size-5 [&_svg]:shrink-0",
               hover,
             )}
           >
@@ -286,7 +248,7 @@ export function RoomControlButton({
           disabled={blocked}
           aria-disabled={explain ? true : undefined}
           aria-label={label}
-          className={cn("room-ctl relative size-11", FLOATING_SHADOW, explain && "opacity-50", speaking && "ring-2 ring-success ring-offset-1")}
+          className={cn("relative size-11", FLOATING_SHADOW, explain && "opacity-50", speaking && "ring-2 ring-success ring-offset-1")}
         >
           {iconNode}
         </Toggle>

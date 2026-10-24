@@ -1,0 +1,565 @@
+{
+ "teacher-1440": [
+  {
+   "label": "Пригласить",
+   "icons": [
+    "lucide-link"
+   ]
+  },
+  {
+   "label": "Настройки",
+   "icons": [
+    "lucide-settings"
+   ]
+  },
+  {
+   "label": "Действия — Юля Тестова",
+   "icons": [
+    "lucide-ellipsis"
+   ]
+  },
+  {
+   "label": "Участники",
+   "icons": [
+    "lucide-users"
+   ]
+  },
+  {
+   "label": "Чат",
+   "icons": [
+    "lucide-message-square"
+   ]
+  },
+  {
+   "label": "Материалы урока",
+   "icons": [
+    "lucide-clipboard-list"
+   ]
+  },
+  {
+   "label": "Ещё",
+   "icons": [
+    "lucide-ellipsis"
+   ]
+  },
+  {
+   "label": "Микрофон",
+   "icons": [
+    "lucide-mic"
+   ]
+  },
+  {
+   "label": "Выбрать микрофон",
+   "icons": [
+    "lucide-chevron-up"
+   ]
+  },
+  {
+   "label": "Камера",
+   "icons": [
+    "lucide-video"
+   ]
+  },
+  {
+   "label": "Выбрать камеру",
+   "icons": [
+    "lucide-chevron-up"
+   ]
+  },
+  {
+   "label": "Демонстрация",
+   "icons": [
+    "lucide-monitor-up"
+   ]
+  },
+  {
+   "label": "Доска",
+   "icons": [
+    "lucide-pen-line"
+   ]
+  },
+  {
+   "label": "Выйти",
+   "icons": [
+    "lucide-log-out"
+   ]
+  }
+ ],
+ "teacher-1440-Ещё": [
+  {
+   "label": "Пригласить",
+   "icons": [
+    "lucide-link"
+   ]
+  },
+  {
+   "label": "Настройки",
+   "icons": [
+    "lucide-settings"
+   ]
+  },
+  {
+   "label": "Действия — Юля Тестова",
+   "icons": [
+    "lucide-ellipsis"
+   ]
+  },
+  {
+   "label": "Участники",
+   "icons": [
+    "lucide-users"
+   ]
+  },
+  {
+   "label": "Чат",
+   "icons": [
+    "lucide-message-square"
+   ]
+  },
+  {
+   "label": "Материалы урока",
+   "icons": [
+    "lucide-clipboard-list"
+   ]
+  },
+  {
+   "label": "Ещё",
+   "icons": [
+    "lucide-ellipsis"
+   ]
+  },
+  {
+   "label": "Микрофон",
+   "icons": [
+    "lucide-mic"
+   ]
+  },
+  {
+   "label": "Выбрать микрофон",
+   "icons": [
+    "lucide-chevron-up"
+   ]
+  },
+  {
+   "label": "Камера",
+   "icons": [
+    "lucide-video"
+   ]
+  },
+  {
+   "label": "Выбрать камеру",
+   "icons": [
+    "lucide-chevron-up"
+   ]
+  },
+  {
+   "label": "Демонстрация",
+   "icons": [
+    "lucide-monitor-up"
+   ]
+  },
+  {
+   "label": "Доска",
+   "icons": [
+    "lucide-pen-line"
+   ]
+  },
+  {
+   "label": "Выйти",
+   "icons": [
+    "lucide-log-out"
+   ]
+  },
+  {
+   "label": "Запись урока",
+   "icons": [
+    "lucide-disc"
+   ]
+  },
+  {
+   "label": "Вид: сетка",
+   "icons": [
+    "lucide-layout-grid"
+   ]
+  },
+  {
+   "label": "На весь экран",
+   "icons": [
+    "lucide-maximize"
+   ]
+  },
+  {
+   "label": "Заглушить всех",
+   "icons": [
+    "lucide-mic-off"
+   ]
+  },
+  {
+   "label": "Режим урока",
+   "icons": [
+    "lucide-sliders-horizontal",
+    "lucide-chevron-right"
+   ]
+  },
+  {
+   "label": "Разрешить рисовать всем",
+   "icons": [
+    "lucide-pen-line"
+   ]
+  },
+  {
+   "label": "Закрыть вход",
+   "icons": [
+    "lucide-lock"
+   ]
+  },
+  {
+   "label": "Закрыть чат",
+   "icons": [
+    "lucide-message-square-off"
+   ]
+  }
+ ],
+ "teacher-390": [
+  {
+   "label": "Меню урока",
+   "icons": [
+    "lucide-ellipsis"
+   ]
+  },
+  {
+   "label": "Действия — Юля Тестова",
+   "icons": [
+    "lucide-ellipsis"
+   ]
+  },
+  {
+   "label": "Другие кнопки урока",
+   "icons": [
+    "lucide-chevron-up"
+   ]
+  },
+  {
+   "label": "Микрофон",
+   "icons": [
+    "lucide-mic"
+   ]
+  },
+  {
+   "label": "Камера",
+   "icons": [
+    "lucide-video"
+   ]
+  },
+  {
+   "label": "Выйти из урока",
+   "icons": [
+    "lucide-log-out"
+   ]
+  }
+ ],
+ "teacher-390-Другие кнопки урока": [
+  {
+   "label": "Меню урока",
+   "icons": [
+    "lucide-ellipsis"
+   ]
+  },
+  {
+   "label": "Действия — Юля Тестова",
+   "icons": [
+    "lucide-ellipsis"
+   ]
+  },
+  {
+   "label": "Другие кнопки урока",
+   "icons": [
+    "lucide-chevron-up"
+   ]
+  },
+  {
+   "label": "Микрофон",
+   "icons": [
+    "lucide-mic"
+   ]
+  },
+  {
+   "label": "Камера",
+   "icons": [
+    "lucide-video"
+   ]
+  },
+  {
+   "label": "Выйти из урока",
+   "icons": [
+    "lucide-log-out"
+   ]
+  },
+  {
+   "label": "Демонстрация",
+   "icons": [
+    "lucide-monitor-up"
+   ]
+  },
+  {
+   "label": "Участники",
+   "icons": [
+    "lucide-users"
+   ]
+  },
+  {
+   "label": "Чат",
+   "icons": [
+    "lucide-message-square"
+   ]
+  }
+ ],
+ "student-1440": [
+  {
+   "label": "Настройки",
+   "icons": [
+    "lucide-settings"
+   ]
+  },
+  {
+   "label": "Действия — Тимур Учителев",
+   "icons": [
+    "lucide-ellipsis"
+   ]
+  },
+  {
+   "label": "Участники",
+   "icons": [
+    "lucide-users"
+   ]
+  },
+  {
+   "label": "Чат",
+   "icons": [
+    "lucide-message-square"
+   ]
+  },
+  {
+   "label": "Материалы урока",
+   "icons": [
+    "lucide-clipboard-list"
+   ]
+  },
+  {
+   "label": "Ещё",
+   "icons": [
+    "lucide-ellipsis"
+   ]
+  },
+  {
+   "label": "Поднять руку",
+   "icons": [
+    "lucide-hand"
+   ]
+  },
+  {
+   "label": "Микрофон",
+   "icons": [
+    "lucide-mic"
+   ]
+  },
+  {
+   "label": "Выбрать микрофон",
+   "icons": [
+    "lucide-chevron-up"
+   ]
+  },
+  {
+   "label": "Камера",
+   "icons": [
+    "lucide-video"
+   ]
+  },
+  {
+   "label": "Выбрать камеру",
+   "icons": [
+    "lucide-chevron-up"
+   ]
+  },
+  {
+   "label": "Выйти",
+   "icons": [
+    "lucide-log-out"
+   ]
+  }
+ ],
+ "student-1440-Ещё": [
+  {
+   "label": "Настройки",
+   "icons": [
+    "lucide-settings"
+   ]
+  },
+  {
+   "label": "Действия — Тимур Учителев",
+   "icons": [
+    "lucide-ellipsis"
+   ]
+  },
+  {
+   "label": "Участники",
+   "icons": [
+    "lucide-users"
+   ]
+  },
+  {
+   "label": "Чат",
+   "icons": [
+    "lucide-message-square"
+   ]
+  },
+  {
+   "label": "Материалы урока",
+   "icons": [
+    "lucide-clipboard-list"
+   ]
+  },
+  {
+   "label": "Ещё",
+   "icons": [
+    "lucide-ellipsis"
+   ]
+  },
+  {
+   "label": "Поднять руку",
+   "icons": [
+    "lucide-hand"
+   ]
+  },
+  {
+   "label": "Микрофон",
+   "icons": [
+    "lucide-mic"
+   ]
+  },
+  {
+   "label": "Выбрать микрофон",
+   "icons": [
+    "lucide-chevron-up"
+   ]
+  },
+  {
+   "label": "Камера",
+   "icons": [
+    "lucide-video"
+   ]
+  },
+  {
+   "label": "Выбрать камеру",
+   "icons": [
+    "lucide-chevron-up"
+   ]
+  },
+  {
+   "label": "Выйти",
+   "icons": [
+    "lucide-log-out"
+   ]
+  },
+  {
+   "label": "Вид: сетка",
+   "icons": [
+    "lucide-layout-grid"
+   ]
+  },
+  {
+   "label": "На весь экран",
+   "icons": [
+    "lucide-maximize"
+   ]
+  }
+ ],
+ "student-390": [
+  {
+   "label": "Меню урока",
+   "icons": [
+    "lucide-ellipsis"
+   ]
+  },
+  {
+   "label": "Действия — Тимур Учителев",
+   "icons": [
+    "lucide-ellipsis"
+   ]
+  },
+  {
+   "label": "Другие кнопки урока",
+   "icons": [
+    "lucide-chevron-up"
+   ]
+  },
+  {
+   "label": "Микрофон",
+   "icons": [
+    "lucide-mic"
+   ]
+  },
+  {
+   "label": "Камера",
+   "icons": [
+    "lucide-video"
+   ]
+  },
+  {
+   "label": "Выйти из урока",
+   "icons": [
+    "lucide-log-out"
+   ]
+  }
+ ],
+ "student-390-Другие кнопки урока": [
+  {
+   "label": "Меню урока",
+   "icons": [
+    "lucide-ellipsis"
+   ]
+  },
+  {
+   "label": "Действия — Тимур Учителев",
+   "icons": [
+    "lucide-ellipsis"
+   ]
+  },
+  {
+   "label": "Другие кнопки урока",
+   "icons": [
+    "lucide-chevron-up"
+   ]
+  },
+  {
+   "label": "Микрофон",
+   "icons": [
+    "lucide-mic"
+   ]
+  },
+  {
+   "label": "Камера",
+   "icons": [
+    "lucide-video"
+   ]
+  },
+  {
+   "label": "Выйти из урока",
+   "icons": [
+    "lucide-log-out"
+   ]
+  },
+  {
+   "label": "Поднять руку",
+   "icons": [
+    "lucide-hand"
+   ]
+  },
+  {
+   "label": "Чат",
+   "icons": [
+    "lucide-message-square"
+   ]
+  }
+ ]
+}
