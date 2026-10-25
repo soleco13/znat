@@ -201,12 +201,21 @@ export function Pricing() {
               ))}
             </ul>
 
-            <a
-              href="#cta"
-              className={cn(buttonVariants({ size: "cta" }), "mt-9")}
-            >
-              {plan.cta}
-            </a>
+            {plan.monthly === null ? (
+              <a href="mailto:support@matis-edu.ru?subject=Тариф «Сеть»" className={cn(buttonVariants({ size: "cta" }), "mt-9")}>
+                {plan.cta}
+              </a>
+            ) : (
+              <div className="mt-9 flex flex-wrap items-center gap-x-5 gap-y-3">
+                {/* Путь покупки: тариф → цена → «Оплатить» → кабинет «Тариф» (после входа). */}
+                <a href={`/billing?plan=${plan.id}&period=${yearly ? "year" : "month"}`} className={buttonVariants({ size: "cta" })}>
+                  Оплатить {priceFmt.format(yearly ? plan.monthly * 10 : plan.monthly)} ₽
+                </a>
+                <a href="/register" className="text-small font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+                  или 14 дней бесплатно
+                </a>
+              </div>
+            )}
           </div>
         </Reveal>
 

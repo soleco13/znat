@@ -40,6 +40,7 @@ import schoolSettingsRoutes from "./modules/school-settings/routes.js";
 import registrationRoutes from "./modules/registration/routes.js";
 import invitesRoutes from "./modules/invites/routes.js";
 import telemetryRoutes from "./modules/telemetry/routes.js";
+import billingRoutes from "./modules/billing/routes.js";
 import { admitClientEvent } from "./modules/telemetry/service.js";
 import {
   startRawRecordingBackground,
@@ -177,6 +178,7 @@ export function buildServer() {
       api.register(registrationRoutes);
       api.register(invitesRoutes);
       api.register(telemetryRoutes);
+      api.register(billingRoutes);
     },
     { prefix: "/api/v1" },
   );

@@ -171,6 +171,14 @@ const envSchema = z.object({
     .transform((v) => v === "true"),
   /** Адрес отправителя — на проде должен жить в домене с настроенными SPF/DKIM/DMARC (инфра, не код). */
   SMTP_FROM: z.string().min(1).default("no-reply@localhost"),
+  // --- Оплата тарифов через Platega (2026-10-25). Без ключей кнопка «Оплатить»
+  //     показывает заглушку «оплата пока недоступна». Callback принимается на
+  //     `${PUBLIC_ORIGIN}/api/v1/billing/platega/callback` (адрес в ЛК Platega). ---
+  PLATEGA_API_URL: z.string().url().default("https://app.platega.io"),
+  PLATEGA_MERCHANT_ID: z.string().min(1).optional(),
+  PLATEGA_SECRET: z.string().min(1).optional(),
+  /** Почта поддержки — показывается на странице тарифов. */
+  SUPPORT_EMAIL: z.string().email().default("support@matis-edu.ru"),
 });
 
 export const env = envSchema.parse(process.env);

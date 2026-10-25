@@ -11,8 +11,7 @@ import {
   PanelLeftOpen,
   Settings,
   SquarePen,
-  Ticket,
-} from "lucide-react";
+  Ticket, CreditCard } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Role } from "@school/shared";
 
@@ -47,6 +46,7 @@ const NAV: NavItem[] = [
   },
   { to: "/materials/edit", label: "Редактор", icon: SquarePen, roles: ["admin", "methodist"] },
   { to: "/admin/settings", label: "Параметры", icon: Settings, roles: ["admin"] },
+  { to: "/billing", label: "Тариф", icon: CreditCard, roles: ["admin", "methodist", "teacher"] },
   { to: "/admin/invites", label: "Приглашения", icon: Ticket, roles: ["admin"] },
 ];
 

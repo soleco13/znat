@@ -44,6 +44,7 @@ export const deckStatusEnum = pgEnum("deck_status", [
 export const materialStatusEnum = pgEnum("material_status", ["draft", "review", "published"]);
 /** Э9.7: `video` сознательно не входит — план ограничивает подзадачу «картинки/аудио», видео в медиатеке — отдельная работа (транскодирование/превью не в этом срезе). */
 export const mediaAssetKindEnum = pgEnum("media_asset_kind", ["image", "audio", "video"]);
+export const paymentStatusEnum = pgEnum("payment_status", ["pending", "confirmed", "canceled", "chargebacked"]);
 /**
  * Э10 (§10.4 ТЗ). Проекция `livekit.EgressStatus` + собственное `deleted`
  * (удаление файла по ретеншну). Строкой, не числом LiveKit — журнал
@@ -87,6 +88,10 @@ export const schools = pgTable("schools", {
   ogrn: text("ogrn"),
   timezone: text("timezone").notNull().default("UTC"),
   settings: jsonb("settings").notNull().default({}),
+  /** Оплаченный тариф (`BILLING_PLANS` в packages/shared); null — не платили. */
+  billingPlan: text("billing_plan"),
+  /** До какого момента оплачено; продлевается каждым подтверждённым платежом. */
+  paidUntil: timestamp("paid_until", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -818,4 +823,29 @@ export const rawRecordingJournal = pgTable(
     data: bytea("data"),
   },
   (t) => [primaryKey({ columns: [t.recordingId, t.seq] })],
+);
+
+/**
+ * Платежи за тариф (Platega, 2026-10-25). Строка создаётся до перехода на
+ * платёжную форму; статус меняет только callback Platega. Сумма — по каталогу
+ * тарифов на сервере, не из запроса клиента.
+ */
+export const payments = pgTable(
+  "payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    schoolId: uuid("school_id")
+      .notNull()
+      .references(() => schools.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    plan: text("plan").notNull(),
+    period: text("period").notNull(),
+    amountRub: integer("amount_rub").notNull(),
+    status: paymentStatusEnum("status").notNull().default("pending"),
+    provider: text("provider").notNull().default("platega"),
+    providerTxId: text("provider_tx_id").unique(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+  },
+  (t) => [index("payments_school_idx").on(t.schoolId, t.createdAt)],
 );

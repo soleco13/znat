@@ -206,7 +206,9 @@ export type LogEventName =
   | "raw_recording_claimed"
   | "raw_recording_recorded"
   | "raw_render_claimed"
-  | "raw_recording_ready";
+  | "raw_recording_ready"
+  | "payment_created"
+  | "payment_callback";
 
 type Level = "debug" | "info" | "warn" | "error" | "fatal";
 
