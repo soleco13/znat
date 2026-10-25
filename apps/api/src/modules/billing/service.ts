@@ -6,7 +6,10 @@ import {
   type CheckoutRequest,
   type PlategaCallback,
   type SubscribeRequest,
+  type TestPaymentComplete,
+  type TestPaymentInfo,
 } from "@school/shared";
+import { randomUUID } from "node:crypto";
 import { env } from "../../plugins/env.js";
 import { AppError } from "../../plugins/errors.js";
 import { logEvent } from "../../plugins/logger.js";
@@ -42,7 +45,8 @@ export async function getState(user: AccessTokenPayload): Promise<BillingState> 
       : null,
     plan: plan === "tutor" || plan === "school" ? plan : null,
     paidUntil: school?.paidUntil ? school.paidUntil.toISOString() : null,
-    paymentsEnabled: platega.plategaConfigured(),
+    paymentsEnabled: platega.plategaConfigured() || testMode(),
+    testMode: testMode(),
     supportEmail: env.SUPPORT_EMAIL,
     lastPayment: last
       ? {
@@ -57,7 +61,23 @@ export async function getState(user: AccessTokenPayload): Promise<BillingState> 
   };
 }
 
+/** Тестовая оплата — только пока Platega не подключена. */
+const testMode = () => env.BILLING_TEST_MODE && !platega.plategaConfigured();
+const publicOrigin = () => env.PUBLIC_ORIGIN.replace(/\/+$/, "");
+
 export async function checkout(user: AccessTokenPayload, email: string, req: CheckoutRequest): Promise<{ url: string }> {
+  if (testMode()) {
+    const payment = await repo.insertPayment({
+      schoolId: user.schoolId,
+      userId: user.sub,
+      plan: req.plan,
+      period: req.period,
+      amountRub: priceRub(req.plan, req.period),
+      provider: "test",
+    });
+    await repo.setProviderTxId(payment.id, `test-${payment.id}`);
+    return { url: `${publicOrigin()}/billing/test-pay?payment=${payment.id}` };
+  }
   if (!platega.plategaConfigured()) {
     throw new AppError(503, "payments_unavailable", "Оплата пока недоступна");
   }
@@ -93,7 +113,7 @@ const PENDING_SUB_TTL_MS = 35 * 60 * 1000;
  * незавершённая привязка старше 30 минут считается неудавшейся.
  */
 export async function subscribe(user: AccessTokenPayload, req: SubscribeRequest): Promise<{ url: string }> {
-  if (!platega.plategaConfigured()) {
+  if (!platega.plategaConfigured() && !testMode()) {
     throw new AppError(503, "payments_unavailable", "Оплата пока недоступна");
   }
   const current = await repo.currentSubscription(user.schoolId);
@@ -109,6 +129,10 @@ export async function subscribe(user: AccessTokenPayload, req: SubscribeRequest)
   const amountRub = priceRub(req.plan, req.period);
   const plan = BILLING_PLANS.find((x) => x.id === req.plan)!;
   const sub = await repo.insertSubscription({ schoolId: user.schoolId, userId: user.sub, plan: req.plan, period: req.period, amountRub });
+  if (testMode()) {
+    await repo.setSubscriptionProviderId(sub.id, `test-${sub.id}`);
+    return { url: `${publicOrigin()}/billing/test-pay?subscription=${sub.id}` };
+  }
   const created = await platega.createSubscription({
     amountRub,
     period: req.period,
@@ -123,7 +147,7 @@ export async function subscribe(user: AccessTokenPayload, req: SubscribeRequest)
 export async function cancelAutopay(user: AccessTokenPayload): Promise<void> {
   const current = await repo.currentSubscription(user.schoolId);
   if (!current) return;
-  if (current.providerSubId) await platega.cancelSubscription(current.providerSubId);
+  if (current.providerSubId && !current.providerSubId.startsWith("test-")) await platega.cancelSubscription(current.providerSubId);
   await repo.updateSubscription(current.id, { status: "cancelled", nextChargeAt: null });
 }
 
@@ -240,4 +264,49 @@ export async function manualExtend(input: {
   });
   if (!ok) throw new AppError(404, "not_found", "Школа не найдена");
   logEvent("payment_created", { schoolId: input.schoolId, manual: true, plan: input.plan, interval, by: input.byUserId });
+}
+
+/* ---------- Тестовая оплата (BILLING_TEST_MODE) ---------- */
+
+async function ownTestItem(user: AccessTokenPayload, kind: "payment" | "subscription", id: string) {
+  if (!testMode()) throw new AppError(404, "not_found", "Тестовая оплата выключена");
+  const row = kind === "payment" ? await repo.findPayment(id) : await repo.findSubscription(id);
+  if (!row || row.schoolId !== user.schoolId) throw new AppError(404, "not_found", "Платёж не найден");
+  return row;
+}
+
+export async function testInfo(user: AccessTokenPayload, kind: "payment" | "subscription", id: string): Promise<TestPaymentInfo> {
+  const row = await ownTestItem(user, kind, id);
+  return {
+    kind,
+    id: row.id,
+    plan: row.plan as "tutor" | "school",
+    period: row.period as "month" | "year",
+    amountRub: row.amountRub,
+    status: row.status,
+  };
+}
+
+/** Тестовая форма: «оплатить» проводит платёж тем же путём, что callback Platega. */
+export async function testComplete(user: AccessTokenPayload, req: TestPaymentComplete): Promise<void> {
+  const row = await ownTestItem(user, req.kind, req.id);
+  if (req.kind === "payment") {
+    if (row.status !== "pending") return;
+    if (req.result === "success") await repo.confirmPayment(row.id, row.period === "year" ? "1 year" : "1 month");
+    else await repo.setPaymentStatus(row.id, "canceled");
+    return;
+  }
+  if (row.status !== "pending") return;
+  if (req.result === "fail") {
+    await repo.updateSubscription(row.id, { status: "failed" });
+    return;
+  }
+  const chargeId = `test-charge-${randomUUID()}`;
+  const sub = row as Awaited<ReturnType<typeof repo.findSubscription>> & object;
+  await repo.recordSubscriptionCharge({ subscription: sub, providerTxId: chargeId });
+  await repo.markProvider(chargeId, "test");
+  const next = new Date();
+  if (sub.period === "year") next.setFullYear(next.getFullYear() + 1);
+  else next.setMonth(next.getMonth() + 1);
+  await repo.updateSubscription(sub.id, { status: "active", nextChargeAt: next });
 }

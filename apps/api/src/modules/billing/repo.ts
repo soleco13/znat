@@ -27,6 +27,7 @@ export async function insertPayment(input: {
   plan: string;
   period: string;
   amountRub: number;
+  provider?: string;
 }) {
   const [row] = await db.insert(payments).values(input).returning();
   return row!;
@@ -209,9 +210,9 @@ export async function overviewTotals() {
       (select count(*) from ${schools})::int as schools,
       (select count(*) from ${schools} where paid_until > now())::int as paid_schools,
       (select count(*) from ${subscriptions} where status = 'active')::int as active_subs,
-      (select coalesce(sum(amount_rub), 0) from ${payments} where status = 'confirmed')::int as revenue,
-      (select coalesce(sum(amount_rub), 0) from ${payments} where status = 'confirmed' and confirmed_at > now() - interval '30 days')::int as revenue_30d,
-      (select count(*) from ${payments} where status = 'confirmed' and confirmed_at > now() - interval '30 days')::int as payments_30d
+      (select coalesce(sum(amount_rub), 0) from ${payments} where status = 'confirmed' and provider = 'platega')::int as revenue,
+      (select coalesce(sum(amount_rub), 0) from ${payments} where status = 'confirmed' and provider = 'platega' and confirmed_at > now() - interval '30 days')::int as revenue_30d,
+      (select count(*) from ${payments} where status = 'confirmed' and provider = 'platega' and confirmed_at > now() - interval '30 days')::int as payments_30d
   `);
   return result.rows[0]!;
 }
@@ -239,4 +240,19 @@ export async function manualExtend(input: { schoolId: string; userId: string; pl
       .returning({ id: schools.id });
     return school ?? null;
   });
+}
+
+export async function findPayment(id: string) {
+  const [row] = await db.select().from(payments).where(eq(payments.id, id)).limit(1);
+  return row ?? null;
+}
+
+export async function findSubscription(id: string) {
+  const [row] = await db.select().from(subscriptions).where(eq(subscriptions.id, id)).limit(1);
+  return row ?? null;
+}
+
+/** Тестовое списание по подписке: та же запись, что от Platega, но provider = 'test'. */
+export async function markProvider(paymentProviderTxId: string, provider: string) {
+  await db.update(payments).set({ provider }).where(eq(payments.providerTxId, paymentProviderTxId));
 }

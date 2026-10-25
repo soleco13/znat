@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Check, CircleAlert, CircleCheck, Clock } from "lucide-react";
 import { BILLING_PLANS, YEAR_MONTHS_CHARGED, type BillingPeriod, type BillingPlanId } from "@school/shared";
 
@@ -43,6 +43,7 @@ const amountFor = (monthly: number, period: BillingPeriod) => (period === "year"
 
 export function BillingPage() {
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
   const returnedPayment = params.get("payment");
   const returnedFailed = params.get("failed") === "1";
   const state = useAsync(getBillingState, []);
@@ -80,7 +81,10 @@ export function BillingPage() {
         mode === "autopay"
           ? await startSubscription({ plan, period, autopayConsent: true })
           : await startCheckout({ plan, period });
-      window.location.assign(url);
+      // Тестовая форма — своя страница: переходим без перезагрузки и без привязки к домену из настроек.
+      const u = new URL(url, window.location.origin);
+      if (u.pathname === "/billing/test-pay") navigate(u.pathname + u.search);
+      else window.location.assign(url);
     } catch (e) {
       if (e instanceof ApiError && e.code === "payments_unavailable") setUnavailable(true);
       else setError(e instanceof Error ? e.message : "Не удалось начать оплату");
@@ -114,6 +118,14 @@ export function BillingPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader title="Тариф и оплата" subtitle="Разовая оплата на месяц или год, или автопродление через СБП." />
+
+      {s?.testMode ? (
+        <Alert className="mb-6" role="status">
+          <Clock aria-hidden />
+          <AlertTitle>Тестовый режим оплаты</AlertTitle>
+          <AlertDescription>Платёжная система ещё не подключена: оплата проходит на тестовой форме, деньги не списываются.</AlertDescription>
+        </Alert>
+      ) : null}
 
       {returnedPayment ? (
         <ReturnBanner

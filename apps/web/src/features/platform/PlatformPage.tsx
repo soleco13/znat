@@ -67,7 +67,7 @@ export function PlatformPage() {
         { label: "Пользователей", value: rub.format(o.users) },
         { label: "Оплачено школ", value: rub.format(o.paidSchools) },
         { label: "Подписок с автопродлением", value: rub.format(o.activeSubscriptions) },
-        { label: "Выручка за 30 дней", value: `${rub.format(o.revenue30dRub)} ₽`, hint: `${o.payments30d} платежей` },
+        { label: "Выручка за 30 дней (без тестовых)", value: `${rub.format(o.revenue30dRub)} ₽`, hint: `${o.payments30d} платежей` },
         { label: "Выручка всего", value: `${rub.format(o.revenueRub)} ₽` },
       ]
     : [];
@@ -176,7 +176,7 @@ function PaymentsTable({ rows, showSchool = true }: { rows: PlatformPayment[]; s
             <TableCell>
               {planName(p.plan)}, {p.period === "year" ? "год" : "месяц"}
             </TableCell>
-            <TableCell>{p.providerTxId === "вручную" ? "вручную" : p.recurring ? "автопродление" : "разовая"}</TableCell>
+            <TableCell>{p.providerTxId === "вручную" ? "вручную" : `${p.recurring ? "автопродление" : "разовая"}${p.providerTxId?.startsWith("test-") ? ", тест" : ""}`}</TableCell>
             <TableCell className="text-right tabular-nums">{rub.format(p.amountRub)} ₽</TableCell>
             <TableCell>
               <Badge variant={PAY_STATUS[p.status].tone}>{PAY_STATUS[p.status].label}</Badge>

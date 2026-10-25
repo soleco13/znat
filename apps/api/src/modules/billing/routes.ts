@@ -5,7 +5,10 @@ import {
   checkoutResponseSchema,
   plategaCallbackSchema,
   subscribeRequestSchema,
+  testPaymentCompleteSchema,
+  testPaymentInfoSchema,
 } from "@school/shared";
+import { z } from "zod";
 import { AppError } from "../../plugins/errors.js";
 import * as service from "./service.js";
 import { isAuthenticCallback } from "./platega.js";
@@ -35,6 +38,16 @@ export default async function billingRoutes(app: FastifyInstance) {
     staff.addHook("preHandler", staff.authenticate);
 
     staff.get("/billing", async (request, reply) => {
+      return reply.send(billingStateSchema.parse(await service.getState(request.user)));
+    });
+
+    staff.get("/billing/test/info", async (request, reply) => {
+      const q = z.object({ kind: z.enum(["payment", "subscription"]), id: z.string().uuid() }).parse(request.query);
+      return reply.send(testPaymentInfoSchema.parse(await service.testInfo(request.user, q.kind, q.id)));
+    });
+
+    staff.post("/billing/test/complete", async (request, reply) => {
+      await service.testComplete(request.user, testPaymentCompleteSchema.parse(request.body));
       return reply.send(billingStateSchema.parse(await service.getState(request.user)));
     });
 

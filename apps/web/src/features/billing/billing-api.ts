@@ -16,3 +16,11 @@ export function startSubscription(body: import("@school/shared").SubscribeReques
 export function cancelSubscription(): Promise<BillingState> {
   return apiFetch<BillingState>("/billing/subscription/cancel", { method: "POST" });
 }
+
+export function getTestPayment(kind: "payment" | "subscription", id: string) {
+  return apiFetch<import("@school/shared").TestPaymentInfo>(`/billing/test/info?kind=${kind}&id=${id}`);
+}
+
+export function completeTestPayment(body: import("@school/shared").TestPaymentComplete): Promise<BillingState> {
+  return apiFetch<BillingState>("/billing/test/complete", { method: "POST", body: JSON.stringify(body) });
+}
