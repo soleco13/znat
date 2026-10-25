@@ -1,7 +1,30 @@
-import { eq, and, ilike, or, count, inArray, ne, sql } from "drizzle-orm";
+import { eq, and, ilike, or, count, inArray, isNull, ne, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { users } from "../../db/schema.js";
+import { memberships, users } from "../../db/schema.js";
+import { primaryRole } from "../../plugins/roles.js";
 import type { Role } from "@school/shared";
+
+/**
+ * Э15.1: принадлежность к школе и роль — из членства (`memberships`), не из
+ * `users.school_id/role` (там домашнее пространство до полного перехода).
+ * Таблица членства — общая с модулем `memberships`: состав школы — это и
+ * есть членство, отдельный сервис для каждой выборки только дробил бы join.
+ */
+type UserRow = typeof users.$inferSelect;
+type MemberRow = UserRow & { roles: Role[] };
+
+function inSchool(row: UserRow, m: { schoolId: string; roles: Role[]; removedAt: Date | null }): MemberRow {
+  return {
+    ...row,
+    schoolId: m.schoolId,
+    role: primaryRole(m.roles),
+    roles: m.roles,
+    // Отключение в школе = прекращённое членство; глобальное `is_active` — блокировка аккаунта.
+    isActive: row.isActive && m.removedAt === null,
+  };
+}
+
+const memberCols = { schoolId: memberships.schoolId, roles: memberships.roles, removedAt: memberships.removedAt };
 
 export async function insertUser(input: {
   schoolId: string;
@@ -11,70 +34,102 @@ export async function insertUser(input: {
   role: Role;
   emailVerifiedAt?: Date;
 }) {
-  const [row] = await db.insert(users).values(input).returning();
-  return row!;
+  return db.transaction(async (tx) => {
+    const [row] = await tx.insert(users).values(input).returning();
+    await tx.insert(memberships).values({ userId: row!.id, schoolId: input.schoolId, roles: [input.role] });
+    return inSchool(row!, { schoolId: input.schoolId, roles: [input.role], removedAt: null });
+  });
 }
 
 /**
- * Изменение пользователя с защитой от школы без администратора: если правка
- * снимает с активного админа роль или отключает его, в школе должен
- * остаться другой активный админ. Advisory-lock на школу — два админа,
- * одновременно разжалующие друг друга, не оставят школу пустой.
+ * Изменение участника школы с защитой от школы без администратора: если
+ * правка снимает с действующего админа роль или прекращает его членство, в
+ * школе должен остаться другой действующий админ. Advisory-lock на школу —
+ * два админа, одновременно разжалующие друг друга, не оставят школу пустой.
+ * Роль и «отключение» относятся к членству в этой школе, имя — к аккаунту.
  */
 export async function updateUser(
   id: string,
   schoolId: string,
   patch: Partial<{ fullName: string; role: Role; isActive: boolean }>,
-): Promise<{ row: typeof users.$inferSelect } | { row: null } | { lastAdmin: true }> {
+): Promise<{ row: MemberRow } | { row: null } | { lastAdmin: true }> {
   return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${schoolId}))`);
     const [current] = await tx
-      .select()
+      .select({ user: users, ...memberCols })
       .from(users)
-      .where(and(eq(users.id, id), eq(users.schoolId, schoolId)))
+      .innerJoin(memberships, and(eq(memberships.userId, users.id), eq(memberships.schoolId, schoolId)))
+      .where(eq(users.id, id))
       .limit(1);
     if (!current) return { row: null };
+    const isAdminNow = current.roles.includes("admin") && current.removedAt === null && current.user.isActive;
     const losesAdmin =
-      current.role === "admin" &&
-      current.isActive &&
-      ((patch.role !== undefined && patch.role !== "admin") || patch.isActive === false);
+      isAdminNow && ((patch.role !== undefined && patch.role !== "admin") || patch.isActive === false);
     if (losesAdmin) {
       const [other] = await tx
         .select({ n: count() })
-        .from(users)
+        .from(memberships)
+        .innerJoin(users, eq(users.id, memberships.userId))
         .where(
-          and(eq(users.schoolId, schoolId), eq(users.role, "admin"), eq(users.isActive, true), ne(users.id, id)),
+          and(
+            eq(memberships.schoolId, schoolId),
+            isNull(memberships.removedAt),
+            sql`'admin' = ANY(${memberships.roles})`,
+            eq(users.isActive, true),
+            ne(memberships.userId, id),
+          ),
         );
       if ((other?.n ?? 0) === 0) return { lastAdmin: true as const };
     }
-    const [row] = await tx
-      .update(users)
-      .set(patch)
-      .where(and(eq(users.id, id), eq(users.schoolId, schoolId)))
-      .returning();
-    return { row: row ?? null };
+    let roles = current.roles;
+    let removedAt = current.removedAt;
+    if (patch.role !== undefined || patch.isActive !== undefined) {
+      if (patch.role !== undefined) roles = [patch.role];
+      if (patch.isActive !== undefined) removedAt = patch.isActive ? null : new Date();
+      await tx
+        .update(memberships)
+        .set({ roles, removedAt })
+        .where(and(eq(memberships.userId, id), eq(memberships.schoolId, schoolId)));
+      // Домашнее пространство — держим `users.role` в согласии до полного перехода.
+      if (patch.role !== undefined && current.user.schoolId === schoolId) {
+        await tx.update(users).set({ role: patch.role }).where(eq(users.id, id));
+      }
+    }
+    let user = current.user;
+    if (patch.fullName !== undefined) {
+      const [renamed] = await tx.update(users).set({ fullName: patch.fullName }).where(eq(users.id, id)).returning();
+      user = renamed ?? user;
+    }
+    return { row: inSchool(user, { schoolId, roles, removedAt }) };
   });
 }
 
-export async function findUserById(id: string, schoolId: string) {
-  const rows = await db
-    .select()
+/** Пользователь как участник школы (действующее членство) или null. */
+export async function findUserById(id: string, schoolId: string): Promise<MemberRow | null> {
+  const [row] = await db
+    .select({ user: users, ...memberCols })
     .from(users)
-    .where(and(eq(users.id, id), eq(users.schoolId, schoolId)))
+    .innerJoin(
+      memberships,
+      and(eq(memberships.userId, users.id), eq(memberships.schoolId, schoolId), isNull(memberships.removedAt)),
+    )
+    .where(eq(users.id, id))
     .limit(1);
-  return rows[0] ?? null;
+  return row ? inSchool(row.user, row) : null;
 }
 
-/** Имена по набору id (Э12: обогащение списка уроков `teacherName`, журнала посещений). */
+/** Имена по набору id (Э12: `teacherName` в уроках, журнал посещений) — и бывших участников школы. */
 export async function findUsersByIds(
   schoolId: string,
   ids: string[],
 ): Promise<{ id: string; fullName: string; role: Role }[]> {
   if (ids.length === 0) return [];
-  return db
-    .select({ id: users.id, fullName: users.fullName, role: users.role })
+  const rows = await db
+    .select({ id: users.id, fullName: users.fullName, roles: memberships.roles })
     .from(users)
-    .where(and(eq(users.schoolId, schoolId), inArray(users.id, ids)));
+    .innerJoin(memberships, and(eq(memberships.userId, users.id), eq(memberships.schoolId, schoolId)))
+    .where(inArray(users.id, ids));
+  return rows.map((r) => ({ id: r.id, fullName: r.fullName, role: primaryRole(r.roles) }));
 }
 
 export async function listUsers(input: {
@@ -84,27 +139,28 @@ export async function listUsers(input: {
   page: number;
   pageSize: number;
 }) {
-  const conditions = [eq(users.schoolId, input.schoolId)];
-  if (input.role) conditions.push(eq(users.role, input.role));
+  const conditions = [eq(memberships.schoolId, input.schoolId)];
+  if (input.role) conditions.push(sql`${input.role}::role = ANY(${memberships.roles})`);
   if (input.q) {
     conditions.push(or(ilike(users.email, `%${input.q}%`), ilike(users.fullName, `%${input.q}%`))!);
   }
   const where = and(...conditions);
+  const joined = and(eq(memberships.userId, users.id), eq(memberships.schoolId, input.schoolId));
 
   const [rows, totalRows] = await Promise.all([
     db
-      .select()
+      .select({ user: users, ...memberCols })
       .from(users)
+      .innerJoin(memberships, joined)
       .where(where)
       .limit(input.pageSize)
       .offset((input.page - 1) * input.pageSize)
-      .orderBy(users.createdAt),
-    db.select({ total: count() }).from(users).where(where),
+      .orderBy(memberships.createdAt),
+    db.select({ total: count() }).from(users).innerJoin(memberships, joined).where(where),
   ]);
 
-  return { rows, total: totalRows[0]?.total ?? 0 };
+  return { rows: rows.map((r) => inSchool(r.user, r)), total: totalRows[0]?.total ?? 0 };
 }
-
 
 /** Все пользователи сервиса — раздел «Платформа» супер-админа. Без хэшей паролей. */
 export async function listAllUsers(input: { q?: string; schoolId?: string; limit: number }) {
@@ -130,7 +186,11 @@ export async function listAllUsers(input: { q?: string; schoolId?: string; limit
 }
 
 export async function countUsersBySchool() {
-  return db.select({ schoolId: users.schoolId, n: count() }).from(users).groupBy(users.schoolId);
+  return db
+    .select({ schoolId: memberships.schoolId, n: count() })
+    .from(memberships)
+    .where(isNull(memberships.removedAt))
+    .groupBy(memberships.schoolId);
 }
 
 export async function findEmailsByIds(ids: string[]) {

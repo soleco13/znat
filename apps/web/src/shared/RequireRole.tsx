@@ -17,7 +17,10 @@ function homeFor(role: Role | undefined): string {
  */
 export function RequireRole({ roles, children }: { roles: Role[]; children: ReactNode }) {
   const role = useAuthStore((s) => s.user?.role);
-  if (role && !roles.includes(role)) {
+  // Э15.1: подходит любая роль из набора в выбранном пространстве.
+  const mine = useAuthStore((s) => s.user?.roles);
+  const set = mine?.length ? mine : role ? [role] : [];
+  if (role && !set.some((r) => roles.includes(r))) {
     return <Navigate to={homeFor(role)} replace />;
   }
   return <>{children}</>;

@@ -19,6 +19,7 @@ const { repoMock, argonMock, redisMock, mailMock } = vi.hoisted(() => ({
     touchLastLogin: vi.fn().mockResolvedValue(undefined),
     insertRefreshToken: vi.fn().mockResolvedValue(undefined),
     findActiveRefreshToken: vi.fn(),
+    setRefreshTokenSchool: vi.fn(),
     findRefreshTokenByHash: vi.fn(),
     rotateRefreshToken: vi.fn(),
     revokeFamily: vi.fn(),
@@ -31,8 +32,17 @@ vi.mock("./repo.js", () => repoMock);
 vi.mock("argon2", () => ({ default: argonMock }));
 vi.mock("../../db/redis.js", () => ({ redis: redisMock }));
 vi.mock("../mail/service.js", () => mailMock);
+// Э15.1: пространство сессии — из членства; в этих тестах пользователь состоит в одной школе.
+const membershipsMock = vi.hoisted(() => ({
+  resolveSpace: vi.fn(),
+  getActive: vi.fn(),
+  touch: vi.fn(),
+  listSpaces: vi.fn(),
+  hasAnyMembership: vi.fn(),
+}));
+vi.mock("../memberships/service.js", () => membershipsMock);
 
-const { login, refresh, requestPasswordReset, resetPassword, changePassword, issueSessionForUser } = await import(
+const { login, refresh, requestPasswordReset, resetPassword, changePassword, issueSessionForUser, switchSpace } = await import(
   "./service.js"
 );
 
@@ -273,5 +283,46 @@ describe("сброс и смена пароля", () => {
     expect(repoMock.updatePasswordHash).toHaveBeenCalledWith(USER.id, "new-hash");
     expect(repoMock.revokeAllForUser).toHaveBeenCalledWith(USER.id);
     expect(session.refreshToken).toEqual(expect.any(String));
+  });
+});
+
+describe("Э15.1 — пространство сессии", () => {
+  const SCHOOL_B = "99999999-9999-4999-8999-999999999999";
+  const decode = (t: string) => JSON.parse(Buffer.from(t.split(".")[1]!, "base64url").toString());
+
+  it("вход: токен на пространство из членства, роли набором", async () => {
+    repoMock.findUserByEmail.mockResolvedValue(USER);
+    argonMock.verify.mockResolvedValue(true);
+    membershipsMock.resolveSpace.mockResolvedValue({ schoolId: SCHOOL_B, role: "teacher", roles: ["teacher", "methodist"] });
+    const session = await login(USER.email, "password123");
+    expect(decode(session.accessToken)).toMatchObject({ schoolId: SCHOOL_B, role: "teacher", roles: ["teacher", "methodist"] });
+    expect(session.user).toMatchObject({ schoolId: SCHOOL_B, roles: ["teacher", "methodist"] });
+    expect(repoMock.insertRefreshToken).toHaveBeenCalledWith(expect.objectContaining({ schoolId: SCHOOL_B }));
+  });
+
+  it("переключение: не участник — 403, участник — новый токен и сессия запоминает пространство", async () => {
+    repoMock.findActiveRefreshToken.mockResolvedValue({ userId: USER.id, familyId: "f", schoolId: null });
+    repoMock.findUserById.mockResolvedValue(USER);
+    membershipsMock.getActive.mockResolvedValue(null);
+    await expect(switchSpace("rt", USER.id, SCHOOL_B)).rejects.toMatchObject({ code: "not_a_member" });
+
+    membershipsMock.getActive.mockResolvedValue({ schoolId: SCHOOL_B, role: "admin", roles: ["admin"] });
+    const r = await switchSpace("rt", USER.id, SCHOOL_B);
+    expect(decode(r.accessToken)).toMatchObject({ schoolId: SCHOOL_B, role: "admin" });
+    expect(repoMock.setRefreshTokenSchool).toHaveBeenCalledWith(expect.any(String), SCHOOL_B);
+  });
+
+  it("членство везде прекращено — вход отклонён, без отката в домашнюю школу", async () => {
+    repoMock.findUserByEmail.mockResolvedValue(USER);
+    argonMock.verify.mockResolvedValue(true);
+    membershipsMock.resolveSpace.mockResolvedValue(null);
+    membershipsMock.hasAnyMembership.mockResolvedValue(true);
+    await expect(login(USER.email, "password123")).rejects.toMatchObject({ statusCode: 401 });
+    expect(repoMock.insertRefreshToken).not.toHaveBeenCalled();
+  });
+
+  it("чужая сессия не переключается", async () => {
+    repoMock.findActiveRefreshToken.mockResolvedValue({ userId: "someone-else", familyId: "f", schoolId: null });
+    await expect(switchSpace("rt", USER.id, SCHOOL_B)).rejects.toMatchObject({ statusCode: 401 });
   });
 });

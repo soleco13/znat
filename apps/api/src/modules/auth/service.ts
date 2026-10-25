@@ -5,6 +5,7 @@ import { accessTokenPayloadSchema, type AccessTokenPayload, type Role } from "@s
 import { redis } from "../../db/redis.js";
 import { env } from "../../plugins/env.js";
 import * as mailService from "../mail/service.js";
+import * as membershipsService from "../memberships/service.js";
 import { AppError } from "../../plugins/errors.js";
 import * as repo from "./repo.js";
 import { logTaskFailure } from "../../plugins/logger.js";
@@ -84,7 +85,7 @@ async function recallSuccessor(oldToken: string, oldHash: string, successorHash:
   }
 }
 
-async function issueRefreshToken(userId: string, familyId: string) {
+async function issueRefreshToken(userId: string, familyId: string, schoolId: string | null) {
   const token = randomBytes(48).toString("base64url");
   const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
   await repo.insertRefreshToken({
@@ -92,8 +93,30 @@ async function issueRefreshToken(userId: string, familyId: string) {
     familyId,
     tokenHash: hashOpaqueToken(token),
     expiresAt,
+    schoolId,
   });
   return { token, expiresAt };
+}
+
+/**
+ * Э15.1: пространство сессии — запрошенное, если членство в нём действует,
+ * иначе последнее использованное. До переноса в членство (или если его
+ * нет) — домашнее `users.school_id/role`, как раньше.
+ */
+async function spaceFor(user: { id: string; schoolId: string; role: string }, preferred: string | null | undefined) {
+  const space = await membershipsService.resolveSpace(user.id, preferred);
+  if (space) return space;
+  // Членство было, но везде прекращено — доступа нет; в «домашнюю» школу не откатываемся.
+  if (!user.schoolId || (await membershipsService.hasAnyMembership(user.id))) {
+    throw new AppError(401, "invalid_credentials", "Вы больше не состоите ни в одном пространстве");
+  }
+  const role = user.role as Role;
+  return { schoolId: user.schoolId, role, roles: [role] };
+}
+
+/** Пользователь в ответах `/auth/*`: школа и роли — выбранного пространства. */
+function inSpace<T extends object>(user: T, space: { schoolId: string; role: Role; roles: Role[] }) {
+  return { ...user, schoolId: space.schoolId, role: space.role, roles: space.roles };
 }
 
 /**
@@ -104,6 +127,7 @@ async function issueRefreshToken(userId: string, familyId: string) {
  */
 export async function issueSessionForUser<T extends { id: string; schoolId: string; role: string; isActive: boolean }>(
   user: T,
+  preferredSchoolId?: string | null,
 ) {
   // Последний рубеж для всех путей входа: подтверждение почты раньше
   // выдавало сессию отключённому админом аккаунту.
@@ -113,14 +137,12 @@ export async function issueSessionForUser<T extends { id: string; schoolId: stri
   await repo.touchLastLogin(user.id);
 
   const familyId = randomUUID();
-  const accessToken = await issueAccessToken({
-    sub: user.id,
-    schoolId: user.schoolId,
-    role: user.role as Role,
-  });
-  const refresh = await issueRefreshToken(user.id, familyId);
+  const space = await spaceFor(user, preferredSchoolId);
+  await membershipsService.touch(user.id, space.schoolId);
+  const accessToken = await issueAccessToken({ sub: user.id, ...space });
+  const refresh = await issueRefreshToken(user.id, familyId, space.schoolId);
 
-  return { accessToken, refreshToken: refresh.token, refreshExpiresAt: refresh.expiresAt, user };
+  return { accessToken, refreshToken: refresh.token, refreshExpiresAt: refresh.expiresAt, user: inSpace(user, space) };
 }
 
 /**
@@ -230,7 +252,8 @@ export async function refresh(presentedToken: string) {
     throw new AppError(401, "invalid_credentials", "Пользователь недоступен");
   }
 
-  const nextRefresh = await issueRefreshToken(user.id, record.familyId);
+  const space = await spaceFor(user, record.schoolId);
+  const nextRefresh = await issueRefreshToken(user.id, record.familyId, space.schoolId);
   if (!record.revokedAt) {
     await repo.rotateRefreshToken({
       oldTokenHash: presentedHash,
@@ -239,20 +262,20 @@ export async function refresh(presentedToken: string) {
     await rememberSuccessor(presentedToken, presentedHash, nextRefresh.token);
   }
 
-  return sessionFor(user, nextRefresh);
+  return sessionFor(user, nextRefresh, space);
 }
 
-async function sessionFor(user: NonNullable<Awaited<ReturnType<typeof repo.findUserById>>>, refreshToken: { token: string; expiresAt: Date }) {
-  const accessToken = await issueAccessToken({
-    sub: user.id,
-    schoolId: user.schoolId,
-    role: user.role as Role,
-  });
+async function sessionFor(
+  user: NonNullable<Awaited<ReturnType<typeof repo.findUserById>>>,
+  refreshToken: { token: string; expiresAt: Date },
+  space: { schoolId: string; role: Role; roles: Role[] },
+) {
+  const accessToken = await issueAccessToken({ sub: user.id, ...space });
   return {
     accessToken,
     refreshToken: refreshToken.token,
     refreshExpiresAt: refreshToken.expiresAt,
-    user,
+    user: inSpace(user, space),
   };
 }
 
@@ -272,7 +295,8 @@ async function replaySuccessor(presentedToken: string, presentedHash: string, re
   if (!user || !user.isActive) {
     throw new AppError(401, "invalid_credentials", "Пользователь недоступен");
   }
-  return sessionFor(user, { token: successor, expiresAt: successorRecord.expiresAt });
+  const space = await spaceFor(user, successorRecord.schoolId);
+  return sessionFor(user, { token: successor, expiresAt: successorRecord.expiresAt }, space);
 }
 
 const REFRESH_CHAIN_MAX_HOPS = 10;
@@ -375,7 +399,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
  * Смена пароля вошедшим пользователем. Остальные сессии (другие устройства,
  * возможно — чужие) отзываются, текущей выдаётся новая.
  */
-export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
+export async function changePassword(userId: string, currentPassword: string, newPassword: string, schoolId?: string) {
   const user = await repo.findUserById(userId);
   if (!user || !user.isActive) {
     throw new AppError(401, "invalid_credentials", "Пользователь недоступен");
@@ -385,5 +409,29 @@ export async function changePassword(userId: string, currentPassword: string, ne
   }
   await repo.updatePasswordHash(user.id, await hashPassword(newPassword));
   await repo.revokeAllForUser(user.id);
-  return issueSessionForUser(user);
+  return issueSessionForUser(user, schoolId);
+}
+
+/**
+ * Э15.1 — переключение пространства: проверка членства, новое пространство
+ * запоминается в текущей сессии (refresh-токене) и выдаётся новый access.
+ */
+export async function switchSpace(presentedToken: string, userId: string, schoolId: string) {
+  const presentedHash = hashOpaqueToken(presentedToken);
+  const record = await repo.findActiveRefreshToken(presentedHash);
+  if (!record || record.userId !== userId) {
+    throw new AppError(401, "invalid_refresh_token", "Сессия истекла — войдите заново");
+  }
+  const user = await repo.findUserById(userId);
+  if (!user || !user.isActive) throw new AppError(401, "invalid_credentials", "Пользователь недоступен");
+  const space = await membershipsService.getActive(userId, schoolId);
+  if (!space) throw new AppError(403, "not_a_member", "Вы не состоите в этом пространстве");
+  await repo.setRefreshTokenSchool(presentedHash, schoolId);
+  await membershipsService.touch(userId, schoolId);
+  const accessToken = await issueAccessToken({ sub: user.id, ...space });
+  return { accessToken, user: inSpace(user, space) };
+}
+
+export async function listSpaces(userId: string, activeSchoolId: string) {
+  return membershipsService.listSpaces(userId, activeSchoolId);
 }

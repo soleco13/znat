@@ -1,8 +1,9 @@
 import { useLayoutEffect, type ReactNode } from "react";
 import { Link, NavLink, useMatch, useNavigate } from "react-router-dom";
-import { CalendarDays, ChevronsUpDown, KeyRound, Library, LogOut, PlayCircle, CreditCard } from "lucide-react";
+import { CalendarDays, ChevronsUpDown, KeyRound, Library, LogOut, PlayCircle, CreditCard, SquarePen } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useBillingAccess } from "./billing-access.js";
+import { SpaceMenuItems, useSpaces } from "./SpaceSwitcher.js";
 
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/shared/api-client";
@@ -45,6 +46,7 @@ interface NavItem {
 }
 
 const BILLING_ITEM: NavItem = { to: "/billing", label: "Тариф", icon: CreditCard };
+const EDITOR_ITEM: NavItem = { to: "/materials/edit", label: "Редактор", icon: SquarePen };
 
 const NAV: NavItem[] = [
   { to: "/lessons", label: "Уроки", icon: CalendarDays },
@@ -62,6 +64,7 @@ function AccountMenu({
   side: "bottom" | "right";
 }) {
   const user = useAuthStore((s) => s.user);
+  const spaces = useSpaces();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
@@ -75,6 +78,7 @@ function AccountMenu({
             <DropdownMenuSeparator />
           </>
         ) : null}
+        <SpaceMenuItems spaces={spaces} />
         <DropdownMenuItem asChild>
           <Link to="/account/password">
             <KeyRound aria-hidden />
@@ -116,7 +120,9 @@ function SidebarLink({ item: { to, label, icon: Icon, end } }: { item: NavItem }
 export function TeacherShell({ children }: { children: ReactNode }) {
   // «Тариф» — только репетитору в своём личном пространстве (решает сервер).
   const billing = useBillingAccess(true);
-  const nav = billing ? [...NAV, BILLING_ITEM] : NAV;
+  // Э15.1: учитель, который ещё и методист в этом пространстве, видит редактор материалов.
+  const methodist = useAuthStore((s) => s.user?.roles?.includes("methodist") ?? false);
+  const nav = [...NAV, ...(methodist ? [EDITOR_ITEM] : []), ...(billing ? [BILLING_ITEM] : [])];
   const user = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const navigate = useNavigate();

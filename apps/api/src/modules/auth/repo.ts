@@ -21,8 +21,14 @@ export async function insertRefreshToken(input: {
   tokenHash: string;
   familyId: string;
   expiresAt: Date;
+  schoolId?: string | null;
 }) {
   await db.insert(refreshTokens).values(input);
+}
+
+/** Э15.1: сессия переключилась на другое пространство. */
+export async function setRefreshTokenSchool(tokenHash: string, schoolId: string) {
+  await db.update(refreshTokens).set({ schoolId }).where(eq(refreshTokens.tokenHash, tokenHash));
 }
 
 export async function findActiveRefreshToken(tokenHash: string) {

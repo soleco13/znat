@@ -1,6 +1,6 @@
 import { and, count, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
-import { schools, users, emailVerificationTokens, schoolInvites } from "../../db/schema.js";
+import { schools, users, emailVerificationTokens, schoolInvites, memberships } from "../../db/schema.js";
 import type { Role, SchoolKind } from "@school/shared";
 
 export async function slugExists(slug: string): Promise<boolean> {
@@ -49,6 +49,8 @@ export async function registerSchoolWithAdmin(input: {
         personalDataConsentAt: new Date(),
       })
       .returning();
+    // Э15.1: состав пространства — членство.
+    await tx.insert(memberships).values({ userId: user!.id, schoolId: school!.id, roles: [input.role] });
     await tx.insert(emailVerificationTokens).values({
       userId: user!.id,
       tokenHash: input.verificationTokenHash,
@@ -103,6 +105,7 @@ export async function joinSchoolViaInvite(input: {
         personalDataConsentAt: new Date(),
       })
       .returning();
+    await tx.insert(memberships).values({ userId: user!.id, schoolId: invite.schoolId, roles: [invite.role] });
     await tx.insert(emailVerificationTokens).values({
       userId: user!.id,
       tokenHash: input.verificationTokenHash,

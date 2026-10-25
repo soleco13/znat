@@ -352,6 +352,8 @@ export const refreshTokens = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    /** Э15.1: пространство, выбранное в этой сессии (переключатель в шапке); null — по умолчанию. */
+    schoolId: uuid("school_id").references(() => schools.id, { onDelete: "set null" }),
     // Уникальный индекс: каждое обновление токена ищет строку по хэшу — без него полный скан растущей таблицы.
     tokenHash: text("token_hash").notNull().unique(),
     familyId: uuid("family_id").notNull(),
@@ -876,4 +878,33 @@ export const subscriptions = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("subscriptions_school_idx").on(t.schoolId, t.createdAt)],
+);
+
+/**
+ * Э15.1 — членство пользователя в пространстве (docs/roles). Один аккаунт
+ * (почта и пароль) состоит в нескольких пространствах: личное пространство
+ * репетитора и школы. Роли — набором на каждое пространство (учитель и
+ * методист совмещаются). `users.school_id/role` остаются домашним
+ * пространством до полного перехода; права в запросе — только из членства.
+ * Прекращение членства — `removed_at`, аккаунт и данные пространства целы.
+ */
+export const memberships = pgTable(
+  "memberships",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    schoolId: uuid("school_id")
+      .notNull()
+      .references(() => schools.id, { onDelete: "cascade" }),
+    roles: roleEnum("roles").array().notNull(),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("memberships_user_school_uq").on(t.userId, t.schoolId),
+    index("memberships_school_idx").on(t.schoolId),
+  ],
 );

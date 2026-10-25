@@ -5,7 +5,10 @@ import {
   loginRequestSchema,
   meResponseSchema,
   resetPasswordRequestSchema,
+  spaceSchema,
+  switchSpaceRequestSchema,
 } from "@school/shared";
+import { z } from "zod";
 import * as authService from "./service.js";
 import { AppError } from "../../plugins/errors.js";
 import { env } from "../../plugins/env.js";
@@ -29,14 +32,24 @@ function failureReason(err: unknown): string {
   return err instanceof AppError ? err.code : "internal_error";
 }
 
-function toMeResponse(user: { id: string; schoolId: string; email: string; fullName: string; role: string }) {
+function toMeResponse(user: { id: string; schoolId: string; email: string; fullName: string; role: string; roles?: string[] }) {
   return meResponseSchema.parse({
     id: user.id,
     schoolId: user.schoolId,
     email: user.email,
     fullName: user.fullName,
     role: user.role,
+    roles: user.roles ?? [user.role],
   });
+}
+
+function presentedRefresh(request: import("fastify").FastifyRequest): string {
+  const presented = request.cookies[REFRESH_COOKIE];
+  const unsigned = presented ? request.unsignCookie(presented) : null;
+  if (!unsigned?.valid || !unsigned.value) {
+    throw new AppError(401, "invalid_refresh_token", "Сессия истекла — войдите заново");
+  }
+  return unsigned.value;
 }
 
 export default async function authRoutes(app: FastifyInstance) {
@@ -110,7 +123,7 @@ export default async function authRoutes(app: FastifyInstance) {
     { preHandler: app.authenticate, ...passwordLimited },
     async (request, reply) => {
       const body = changePasswordRequestSchema.parse(request.body);
-      const result = await authService.changePassword(request.user.sub, body.currentPassword, body.newPassword);
+      const result = await authService.changePassword(request.user.sub, body.currentPassword, body.newPassword, request.user.schoolId);
       setRefreshCookie(reply, result.refreshToken, result.refreshExpiresAt);
       return reply.send({ accessToken: result.accessToken, user: toMeResponse(result.user) });
     },
@@ -118,6 +131,25 @@ export default async function authRoutes(app: FastifyInstance) {
 
   app.get("/auth/me", { preHandler: app.authenticate }, async (request, reply) => {
     const user = await authService.getUserOrThrow(request.user.sub);
-    return reply.send(toMeResponse(user));
+    // Э15.1: школа и роли — выбранного пространства (из токена), не домашние.
+    return reply.send(
+      toMeResponse({ ...user, schoolId: request.user.schoolId, role: request.user.role, roles: request.user.roles }),
+    );
+  });
+
+  /** Э15.1 — пространства пользователя (переключатель в шапке). */
+  app.get("/auth/spaces", { preHandler: app.authenticate }, async (request, reply) => {
+    if (request.user.lessonScope) throw new AppError(403, "forbidden", "Недоступно в гостевой сессии");
+    const spaces = await authService.listSpaces(request.user.sub, request.user.schoolId);
+    return reply.send(z.array(spaceSchema).parse(spaces));
+  });
+
+  /** Э15.1 — переключение пространства: новая пара прав для выбранного членства. */
+  app.post("/auth/switch", { preHandler: app.authenticate }, async (request, reply) => {
+    if (request.user.lessonScope) throw new AppError(403, "forbidden", "Недоступно в гостевой сессии");
+    const body = switchSpaceRequestSchema.parse(request.body);
+    const result = await authService.switchSpace(presentedRefresh(request), request.user.sub, body.schoolId);
+    setLogContext({ userId: result.user.id, schoolId: result.user.schoolId });
+    return reply.send({ accessToken: result.accessToken, user: toMeResponse(result.user) });
   });
 }

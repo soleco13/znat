@@ -267,6 +267,13 @@
       "when": 1792923135600,
       "tag": "0037_billing_subscriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1792930394812,
+      "tag": "0038_memberships",
+      "breakpoints": true
     }
   ]
 }

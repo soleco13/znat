@@ -14,6 +14,7 @@ import {
   Ticket, CreditCard, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { usePlatformAccess } from "./platform-access.js";
+import { SpaceSwitcher } from "./SpaceSwitcher.js";
 import type { Role } from "@school/shared";
 
 import { cn } from "@/lib/utils";
@@ -40,7 +41,10 @@ const PLATFORM_ITEM: NavItem = { to: "/platform", label: "Платформа", i
 /** Пункты меню роли; «Платформа» — только супер-админу (решает сервер). */
 function useNavItems(role: Role | null): NavItem[] {
   const platform = usePlatformAccess(role === "admin");
-  const items = role ? NAV.filter((n) => n.roles.includes(role)) : [];
+  // Э15.1: роли — набором (учитель и методист совмещаются).
+  const roles = useAuthStore((s) => s.user?.roles);
+  const set = roles?.length ? roles : role ? [role] : [];
+  const items = NAV.filter((n) => n.roles.some((r) => set.includes(r)));
   return platform ? [...items, PLATFORM_ITEM] : items;
 }
 
@@ -237,6 +241,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
 
           <div className="flex-1" />
+
+          <SpaceSwitcher />
 
           {user ? (
             <div className="flex items-center gap-3">

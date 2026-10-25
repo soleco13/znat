@@ -44,12 +44,19 @@ export const changePasswordRequestSchema = z.object({
 });
 export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>;
 
+/**
+ * Э15.1: `schoolId` — выбранное (активное) пространство, `role` — основная
+ * роль в нём (админ > учитель > методист, по ней выбирается каркас
+ * интерфейса), `roles` — полный набор ролей в этом пространстве (учитель и
+ * методист могут совмещаться).
+ */
 export const meResponseSchema = z.object({
   id: z.string().uuid(),
   schoolId: z.string().uuid(),
   email: z.string().email(),
   fullName: z.string(),
   role: roleSchema,
+  roles: z.array(roleSchema).default([]),
 });
 export type MeResponse = z.infer<typeof meResponseSchema>;
 
@@ -57,6 +64,8 @@ export const accessTokenPayloadSchema = z.object({
   sub: z.string().uuid(),
   schoolId: z.string().uuid(),
   role: roleSchema,
+  /** Э15.1: все роли в пространстве `schoolId`; у токенов до Э15.1 нет — тогда `[role]`. */
+  roles: z.array(roleSchema).optional(),
   /**
    * Только у гостя с правами учителя (выдаёт администратор): сервер
    * действует от имени учителя урока, но строго внутри этого урока.
@@ -65,3 +74,15 @@ export const accessTokenPayloadSchema = z.object({
   lessonScope: z.string().uuid().optional(),
 });
 export type AccessTokenPayload = z.infer<typeof accessTokenPayloadSchema>;
+
+/** Пространство, в котором состоит пользователь (переключатель в шапке). */
+export const spaceSchema = z.object({
+  schoolId: z.string().uuid(),
+  name: z.string(),
+  kind: z.string(),
+  roles: z.array(roleSchema),
+  active: z.boolean(),
+});
+export type Space = z.infer<typeof spaceSchema>;
+
+export const switchSpaceRequestSchema = z.object({ schoolId: z.string().uuid() });
