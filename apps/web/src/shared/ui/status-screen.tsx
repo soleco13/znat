@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { LegalLinks } from "@/features/legal/LegalDocument";
 import { cn } from "@/lib/utils";
 
 /**
@@ -9,10 +10,11 @@ import { cn } from "@/lib/utils";
  */
 export function StatusScreen({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-background p-6">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-5 bg-background p-6">
       <div className={cn("w-full max-w-[400px] rounded-lg border border-border bg-card p-8 shadow-xs", className)}>
         {children}
       </div>
+      <LegalLinks />
     </div>
   );
 }

@@ -22,7 +22,11 @@ const LoginPage = lazyNamed(() => import("./features/auth/LoginPage.js"), "Login
 const ChangePasswordPage = lazyNamed(() => import("./features/account/ChangePasswordPage.js"), "ChangePasswordPage");
 const ForgotPasswordPage = lazyNamed(() => import("./features/account/ForgotPasswordPage.js"), "ForgotPasswordPage");
 const ResetPasswordPage = lazyNamed(() => import("./features/account/ResetPasswordPage.js"), "ResetPasswordPage");
-const PrivacyPolicyPage = lazyNamed(() => import("./features/legal/PrivacyPolicyPage.js"), "PrivacyPolicyPage");
+const PrivacyPolicyPage = lazyNamed(() => import("./features/legal/LegalPages.js"), "PrivacyPolicyPage");
+const TermsPage = lazyNamed(() => import("./features/legal/LegalPages.js"), "TermsPage");
+const ConsentPage = lazyNamed(() => import("./features/legal/LegalPages.js"), "ConsentPage");
+const LessonConsentPage = lazyNamed(() => import("./features/legal/LegalPages.js"), "LessonConsentPage");
+const RequisitesPage = lazyNamed(() => import("./features/legal/LegalPages.js"), "RequisitesPage");
 const RegisterChoicePage = lazyNamed(() => import("./features/registration/RegisterChoicePage.js"), "RegisterChoicePage");
 const IndividualRegisterPage = lazyNamed(() => import("./features/registration/IndividualRegisterPage.js"), "IndividualRegisterPage");
 const OrganizationRegisterPage = lazyNamed(() => import("./features/registration/OrganizationRegisterPage.js"), "OrganizationRegisterPage");
@@ -95,6 +99,10 @@ export function App() {
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/consent" element={<ConsentPage />} />
+        <Route path="/consent/lesson" element={<LessonConsentPage />} />
+        <Route path="/requisites" element={<RequisitesPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/account/password" element={<Shell><ChangePasswordPage /></Shell>} />
         {/* Э14.1/Э14.2 — публичная визитка пространства и приём приглашения, вне AppShell/RequireAuth. */}

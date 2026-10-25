@@ -8,6 +8,7 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import "./auth.css";
 import { BrandMark } from "@/shared/ui/brand-mark";
+import { LegalLinks } from "@/features/legal/LegalDocument";
 
 /** Задержка появления (мс) для каскада `.auth-rise` / `.auth-pop`. */
 export const stagger = (ms: number) => ({ ["--d" as string]: `${ms}ms` }) as CSSProperties;
@@ -25,6 +26,7 @@ export function AuthLayout({ children, aside }: { children: ReactNode; aside: Re
           </Link>
         </header>
         <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-center py-10">{children}</div>
+        <LegalLinks />
       </main>
       <aside aria-hidden className="auth-notebook hidden overflow-hidden border-l border-border lg:block">
         {aside}

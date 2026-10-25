@@ -380,9 +380,13 @@ export function GuestJoinPage() {
 
               {/* Согласие — нажатием «Продолжить» (решение владельца 2026-10-15), без галочки. */}
               <p className="text-xs text-muted-foreground">
-                Нажимая «Продолжить», вы даёте согласие на обработку персональных данных в соответствии с{" "}
+                Нажимая «Продолжить», вы даёте{" "}
+                <Link to="/consent/lesson" target="_blank" className="font-medium text-primary hover:underline">
+                  согласие на обработку персональных данных
+                </Link>{" "}
+                и знакомитесь с{" "}
                 <Link to="/privacy" target="_blank" className="font-medium text-primary hover:underline">
-                  политикой обработки персональных данных
+                  политикой обработки данных
                 </Link>
                 .
               </p>

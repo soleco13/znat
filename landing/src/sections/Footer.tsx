@@ -23,10 +23,10 @@ const GROUPS = [
   {
     title: "Компания",
     links: [
-      { label: "О платформе", href: "#" },
-      { label: "Политика конфиденциальности", href: "#" },
-      { label: "Обработка данных (152-ФЗ)", href: "#" },
-      { label: "Контакты", href: "#" },
+      { label: "Пользовательское соглашение", href: "/terms" },
+      { label: "Политика конфиденциальности", href: "/privacy" },
+      { label: "Согласие на обработку данных", href: "/consent" },
+      { label: "Реквизиты и контакты", href: "/requisites" },
     ],
   },
 ];
@@ -74,7 +74,7 @@ export function Footer() {
         </div>
 
         <div className="mt-12 border-t border-border pt-6 text-caption text-text-3">
-          © {new Date().getFullYear()} «Матис». Все права защищены.
+          © {new Date().getFullYear()} «Матис». ИП Скрипак А. С., ИНН 226702096920, ОГРНИП 326220200038927.
         </div>
       </div>
     </footer>
