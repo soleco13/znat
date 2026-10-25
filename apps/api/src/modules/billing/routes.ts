@@ -34,11 +34,15 @@ export default async function billingRoutes(app: FastifyInstance) {
     return reply.send({ ok: true });
   });
 
-  // Тариф и оплата — только администратор пространства (репетитор в своём
-  // кабинете или админ школы); учителя и методисты школы о тарифе не знают.
+  // Тариф и оплата — админ школы или репетитор в своём личном пространстве;
+  // учителя и методисты школы о тарифе не знают (`assertBillingAccess`).
   await app.register(async (staff) => {
     staff.addHook("preHandler", staff.authenticate);
-    staff.addHook("preHandler", staff.requireRole("admin"));
+    staff.addHook("preHandler", async (request) => {
+      await service.assertBillingAccess(request.user);
+    });
+
+    staff.get("/billing/access", async () => ({ ok: true }));
 
     staff.get("/billing", async (request, reply) => {
       return reply.send(billingStateSchema.parse(await service.getState(request.user)));

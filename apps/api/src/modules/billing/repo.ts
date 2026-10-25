@@ -256,3 +256,8 @@ export async function findSubscription(id: string) {
 export async function markProvider(paymentProviderTxId: string, provider: string) {
   await db.update(payments).set({ provider }).where(eq(payments.providerTxId, paymentProviderTxId));
 }
+
+export async function getSchoolKind(schoolId: string): Promise<string | null> {
+  const [row] = await db.select({ kind: schools.kind }).from(schools).where(eq(schools.id, schoolId)).limit(1);
+  return row?.kind ?? null;
+}

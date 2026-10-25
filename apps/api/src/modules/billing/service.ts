@@ -310,3 +310,14 @@ export async function testComplete(user: AccessTokenPayload, req: TestPaymentCom
   else next.setMonth(next.getMonth() + 1);
   await repo.updateSubscription(sub.id, { status: "active", nextChargeAt: next });
 }
+
+/**
+ * Кто видит тариф и платит (схема владельца 2026-10-25): администратор школы
+ * и репетитор в своём личном пространстве (учитель в пространстве
+ * `individual`). Учителя и методисты школы о тарифе не знают.
+ */
+export async function assertBillingAccess(user: AccessTokenPayload): Promise<void> {
+  if (user.role === "admin") return;
+  if (user.role === "teacher" && (await repo.getSchoolKind(user.schoolId)) === "individual") return;
+  throw new AppError(403, "forbidden", "Тариф и оплата доступны только администратору школы");
+}

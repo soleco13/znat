@@ -148,8 +148,8 @@ export function App() {
         {/* Э13: библиотека — просмотр/выбор (весь персонал); редактор —
             создание/правка (admin + methodist). Сам лист `/materials/edit/:id`
             открывают все — учитель попадает в него в режиме «Просмотр». */}
-        <Route path="/billing" element={<Shell roles={["admin"]}><BillingPage /></Shell>} />
-        <Route path="/billing/test-pay" element={<Shell roles={["admin"]}><TestPayPage /></Shell>} />
+        <Route path="/billing" element={<Shell roles={["admin", "teacher"]}><BillingPage /></Shell>} />
+        <Route path="/billing/test-pay" element={<Shell roles={["admin", "teacher"]}><TestPayPage /></Shell>} />
         <Route path="/platform" element={<Shell roles={["admin"]}><PlatformPage /></Shell>} />
         <Route path="/materials" element={<Shell><LibraryRoute /></Shell>} />
         <Route

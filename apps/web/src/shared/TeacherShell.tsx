@@ -1,7 +1,8 @@
 import { useLayoutEffect, type ReactNode } from "react";
 import { Link, NavLink, useMatch, useNavigate } from "react-router-dom";
-import { CalendarDays, ChevronsUpDown, KeyRound, Library, LogOut, PlayCircle } from "lucide-react";
+import { CalendarDays, ChevronsUpDown, KeyRound, Library, LogOut, PlayCircle, CreditCard } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useBillingAccess } from "./billing-access.js";
 
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/shared/api-client";
@@ -42,6 +43,8 @@ interface NavItem {
   /** Активна только при точном совпадении пути («Библиотека» vs лист материала). */
   end?: boolean;
 }
+
+const BILLING_ITEM: NavItem = { to: "/billing", label: "Тариф", icon: CreditCard };
 
 const NAV: NavItem[] = [
   { to: "/lessons", label: "Уроки", icon: CalendarDays },
@@ -111,6 +114,9 @@ function SidebarLink({ item: { to, label, icon: Icon, end } }: { item: NavItem }
 }
 
 export function TeacherShell({ children }: { children: ReactNode }) {
+  // «Тариф» — только репетитору в своём личном пространстве (решает сервер).
+  const billing = useBillingAccess(true);
+  const nav = billing ? [...NAV, BILLING_ITEM] : NAV;
   const user = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const navigate = useNavigate();
@@ -147,7 +153,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
             <span className="hidden text-xl font-bold tracking-[-0.03em] text-foreground lg:inline">Матис</span>
           </Link>
           <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-2">
-            {NAV.map((item) => (
+            {nav.map((item) => (
               <SidebarLink key={item.to} item={item} />
             ))}
           </nav>
@@ -192,7 +198,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
           aria-label="Разделы"
           className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-card pb-[env(safe-area-inset-bottom)] md:hidden"
         >
-          {NAV.map(({ to, label, icon: Icon, end }) => (
+          {nav.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
