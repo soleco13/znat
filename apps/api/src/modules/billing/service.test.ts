@@ -9,17 +9,26 @@ const { repoMock, plategaMock } = vi.hoisted(() => ({
     findPaymentByProviderTxId: vi.fn(),
     confirmPayment: vi.fn(),
     setPaymentStatus: vi.fn(),
+    currentSubscription: vi.fn(),
+    insertSubscription: vi.fn(),
+    setSubscriptionProviderId: vi.fn(),
+    findSubscriptionByProviderId: vi.fn(),
+    updateSubscription: vi.fn(),
+    recordSubscriptionCharge: vi.fn(),
   },
   plategaMock: {
     plategaConfigured: vi.fn(() => true),
     createTransaction: vi.fn(),
     getTransactionStatus: vi.fn(),
+    createSubscription: vi.fn(),
+    getSubscription: vi.fn(),
+    cancelSubscription: vi.fn(),
   },
 }));
 vi.mock("./repo.js", () => repoMock);
 vi.mock("./platega.js", () => plategaMock);
 
-const { priceRub, checkout, handleCallback } = await import("./service.js");
+const { priceRub, checkout, handleCallback, subscribe, cancelAutopay } = await import("./service.js");
 
 const user = { sub: "11111111-1111-4111-8111-111111111111", schoolId: "22222222-2222-4222-8222-222222222222", role: "admin" as const };
 const payment = { id: "p1", schoolId: user.schoolId, plan: "tutor", period: "month", amountRub: 990, status: "pending" };
@@ -55,26 +64,65 @@ describe("billing", () => {
   it("CONFIRMED продлевает тариф только после перепроверки статуса", async () => {
     repoMock.findPaymentByProviderTxId.mockResolvedValue(payment);
     plategaMock.getTransactionStatus.mockResolvedValue("CONFIRMED");
-    await handleCallback({ id: "tx-1", amount: 990, currency: "RUB", status: "CONFIRMED" });
+    await handleCallback({ id: "tx-1", amount: 990, currency: "RUB", status: "CONFIRMED" }, true);
     expect(repoMock.confirmPayment).toHaveBeenCalledWith("p1", "1 month");
   });
 
   it("CONFIRMED без подтверждения у Platega — ничего не продлеваем", async () => {
     repoMock.findPaymentByProviderTxId.mockResolvedValue(payment);
     plategaMock.getTransactionStatus.mockResolvedValue("PENDING");
-    await expect(handleCallback({ id: "tx-1", amount: 990, currency: "RUB", status: "CONFIRMED" })).rejects.toBeTruthy();
+    await expect(handleCallback({ id: "tx-1", amount: 990, currency: "RUB", status: "CONFIRMED" }, true)).rejects.toBeTruthy();
     expect(repoMock.confirmPayment).not.toHaveBeenCalled();
   });
 
   it("сумма не совпадает — платёж не подтверждается", async () => {
     repoMock.findPaymentByProviderTxId.mockResolvedValue(payment);
-    await handleCallback({ id: "tx-1", amount: 1, currency: "RUB", status: "CONFIRMED" });
+    await handleCallback({ id: "tx-1", amount: 1, currency: "RUB", status: "CONFIRMED" }, true);
     expect(repoMock.confirmPayment).not.toHaveBeenCalled();
   });
 
   it("CANCELED помечает платёж отменённым", async () => {
     repoMock.findPaymentByProviderTxId.mockResolvedValue(payment);
-    await handleCallback({ id: "tx-1", amount: 990, currency: "RUB", status: "CANCELED" });
+    await handleCallback({ id: "tx-1", amount: 990, currency: "RUB", status: "CANCELED" }, true);
     expect(repoMock.setPaymentStatus).toHaveBeenCalledWith("p1", "canceled");
+  });
+
+  it("деньги без ключей Platega не принимаются", async () => {
+    await expect(handleCallback({ id: "tx-1", amount: 990, currency: "RUB", status: "CONFIRMED" }, false)).rejects.toMatchObject({ code: "unauthorized" });
+    expect(repoMock.confirmPayment).not.toHaveBeenCalled();
+  });
+
+  it("подписка: без согласия схема не пропустит, с согласием — ссылка на привязку", async () => {
+    repoMock.currentSubscription.mockResolvedValue(null);
+    repoMock.insertSubscription.mockResolvedValue({ id: "s1" });
+    plategaMock.createSubscription.mockResolvedValue({ subscriptionId: "ps-1", url: "https://pay.platega.io/subscription/ps-1" });
+    const r = await subscribe(user, { plan: "tutor", period: "month", autopayConsent: true });
+    expect(plategaMock.createSubscription).toHaveBeenCalledWith(expect.objectContaining({ amountRub: 990, period: "month" }));
+    expect(repoMock.setSubscriptionProviderId).toHaveBeenCalledWith("s1", "ps-1");
+    expect(r.url).toContain("subscription");
+  });
+
+  it("вторая подписка при действующей — отказ", async () => {
+    repoMock.currentSubscription.mockResolvedValue({ id: "s1", status: "active", createdAt: new Date() });
+    await expect(subscribe(user, { plan: "tutor", period: "month", autopayConsent: true })).rejects.toMatchObject({ code: "subscription_exists" });
+  });
+
+  it("списание по подписке продлевает тариф, статус подписки — из API Platega", async () => {
+    const sub = { id: "s1", schoolId: user.schoolId, userId: user.sub, plan: "tutor", period: "month", amountRub: 990, status: "active" };
+    repoMock.findSubscriptionByProviderId.mockResolvedValue(sub);
+    plategaMock.getTransactionStatus.mockResolvedValue("CONFIRMED");
+    await handleCallback({ id: "ch-1", amount: 990, currency: "RUB", status: "CONFIRMED", subscriptionId: "ps-1", nextChargeAt: "2026-12-25T10:00:00Z" }, true);
+    expect(repoMock.recordSubscriptionCharge).toHaveBeenCalledWith({ subscription: sub, providerTxId: "ch-1" });
+
+    plategaMock.getSubscription.mockResolvedValue({ status: "Cancelled", nextChargeAt: null });
+    await handleCallback({ id: "ps-1", amount: 990, currency: "RUB", status: "SUBSCRIPTION_CANCELLED", subscriptionId: "ps-1" }, false);
+    expect(repoMock.updateSubscription).toHaveBeenLastCalledWith("s1", { status: "cancelled", nextChargeAt: null });
+  });
+
+  it("отключение автопродления отменяет подписку у Platega", async () => {
+    repoMock.currentSubscription.mockResolvedValue({ id: "s1", status: "active", providerSubId: "ps-1" });
+    await cancelAutopay(user);
+    expect(plategaMock.cancelSubscription).toHaveBeenCalledWith("ps-1");
+    expect(repoMock.updateSubscription).toHaveBeenCalledWith("s1", { status: "cancelled", nextChargeAt: null });
   });
 });

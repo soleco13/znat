@@ -7,6 +7,7 @@ for (const [w, h, mobile] of [[1440, 900, false], [390, 844, true]]) {
   await T.send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: 1, mobile });
   await T.goto("http://172.31.0.1:3100/billing" + (process.env.Q || ""));
   await sleep(2500);
+  if (process.env.MODE) { await T.eval(`[...document.querySelectorAll("button")].find(b => b.textContent.trim() === "Автопродление")?.click()`); await sleep(500); }
   await shot(T, `billing-${process.env.TAG || "on"}-${w}`);
 }
 if (process.env.CLICK) {

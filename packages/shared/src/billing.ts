@@ -3,8 +3,8 @@ import { z } from "zod";
 /**
  * Тарифы и оплата (запрос владельца 2026-10-25, подключение Platega).
  *
- * Оплата разовая, на месяц или на год, без автосписаний: так не нужно
- * отдельное согласие на рекуррентные платежи, а продлевает клиент сам.
+ * Два способа: разовая оплата на месяц или год (продлевает клиент сам) и
+ * подписка с автосписанием через СБП (Platega списывает по расписанию).
  * Цены — те же, что на лендинге (`landing/src/sections/Pricing.tsx`); годовая
  * оплата — 10 месяцев вместо 12. Сумму платежа считает сервер по этому
  * каталогу, клиент присылает только тариф и период.
@@ -64,6 +64,16 @@ export const billingStateSchema = z.object({
   /** Платёжная система подключена (иначе кнопка «Оплатить» показывает заглушку). */
   paymentsEnabled: z.boolean(),
   supportEmail: z.string(),
+  /** Подписка с автосписанием через СБП; null — не оформляли или она закончилась. */
+  subscription: z
+    .object({
+      status: z.enum(["pending", "active", "past_due", "cancelled", "failed"]),
+      plan: billingPlanIdSchema,
+      period: billingPeriodSchema,
+      amountRub: z.number().int(),
+      nextChargeAt: z.string().nullable(),
+    })
+    .nullable(),
   /** Последний платёж школы — для экрана после возврата с платёжной формы. */
   lastPayment: z
     .object({
@@ -90,13 +100,40 @@ export const checkoutResponseSchema = z.object({
 });
 export type CheckoutResponse = z.infer<typeof checkoutResponseSchema>;
 
-/** Callback Platega об изменении статуса транзакции (docs.platega.io). */
+/**
+ * Подписка с автосписанием через СБП. Согласие на автоплатежи — отдельное и
+ * явное (галочка не стоит заранее), без него сервер подписку не создаёт.
+ */
+export const subscribeRequestSchema = z.object({
+  plan: billingPlanIdSchema,
+  period: billingPeriodSchema,
+  autopayConsent: z.literal(true),
+});
+export type SubscribeRequest = z.infer<typeof subscribeRequestSchema>;
+
+/**
+ * Callback Platega (docs.platega.io): разовый платёж, списание по подписке
+ * (есть `subscriptionId`) или смена статуса подписки (`SUBSCRIPTION_*`).
+ * Platega присылает поля то с маленькой, то с большой буквы — сервер
+ * приводит первую букву к маленькой до разбора.
+ */
 export const plategaCallbackSchema = z.object({
   id: z.string(),
   amount: z.number(),
   currency: z.string(),
-  status: z.enum(["PENDING", "CONFIRMED", "CANCELED", "CHARGEBACKED"]),
+  status: z.enum([
+    "PENDING",
+    "CONFIRMED",
+    "CANCELED",
+    "CHARGEBACKED",
+    "SUBSCRIPTION_ACTIVATED",
+    "SUBSCRIPTION_PAST_DUE",
+    "SUBSCRIPTION_CANCELLED",
+    "SUBSCRIPTION_FAILED",
+  ]),
   paymentMethod: z.number().optional(),
   payload: z.string().optional().nullable(),
+  subscriptionId: z.string().optional().nullable(),
+  nextChargeAt: z.string().optional().nullable(),
 });
 export type PlategaCallback = z.infer<typeof plategaCallbackSchema>;

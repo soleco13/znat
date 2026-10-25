@@ -260,6 +260,13 @@
       "when": 1792922054888,
       "tag": "0036_billing_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1792923135600,
+      "tag": "0037_billing_subscriptions",
+      "breakpoints": true
     }
   ]
 }

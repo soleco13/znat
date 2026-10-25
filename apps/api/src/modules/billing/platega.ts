@@ -54,6 +54,63 @@ export async function createTransaction(input: {
   return { transactionId: data.transactionId, url: data.url };
 }
 
+/**
+ * Подписка с автосписанием через СБП: `paymentMethod: 6`, интервал 3 — месяц,
+ * 4 — год. В ответе `transactionId` — это ID подписки, `redirect` — форма
+ * привязки счёта (действует 30 минут).
+ */
+export async function createSubscription(input: {
+  amountRub: number;
+  period: "month" | "year";
+  description: string;
+}): Promise<{ subscriptionId: string; url: string }> {
+  const res = await fetch(`${base()}/transaction/process`, {
+    method: "POST",
+    headers: headers(),
+    signal: AbortSignal.timeout(15_000),
+    body: JSON.stringify({
+      paymentMethod: 6,
+      paymentDetails: {
+        amount: input.amountRub,
+        currency: "RUB",
+        interval: input.period === "year" ? 4 : 3,
+        intervalCount: 1,
+      },
+      description: input.description,
+    }),
+  });
+  const data = res.ok ? ((await res.json()) as { transactionId?: string; redirect?: string }) : {};
+  if (!data.transactionId || !data.redirect) {
+    throw new AppError(502, "payment_provider_error", "Платёжная система не ответила — попробуйте ещё раз через минуту");
+  }
+  return { subscriptionId: data.transactionId, url: data.redirect };
+}
+
+/** Подписка у Platega: источник правды о её статусе и дате следующего списания. */
+export async function getSubscription(
+  subscriptionId: string,
+): Promise<{ status: string; nextChargeAt: string | null } | null> {
+  const res = await fetch(`${base()}/subscription/${encodeURIComponent(subscriptionId)}`, {
+    headers: headers(),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as { status?: string; nextChargeAt?: string | null };
+  return data.status ? { status: data.status, nextChargeAt: data.nextChargeAt ?? null } : null;
+}
+
+/** Отмена будущих списаний (идемпотентно). */
+export async function cancelSubscription(subscriptionId: string): Promise<void> {
+  const res = await fetch(`${base()}/subscription/${encodeURIComponent(subscriptionId)}/cancel`, {
+    method: "POST",
+    headers: headers(),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) {
+    throw new AppError(502, "payment_provider_error", "Не удалось отключить автопродление — попробуйте ещё раз через минуту");
+  }
+}
+
 /** Статус транзакции у Platega: перепроверка перед продлением тарифа. */
 export async function getTransactionStatus(transactionId: string): Promise<string | null> {
   const res = await fetch(`${base()}/transaction/${encodeURIComponent(transactionId)}`, {

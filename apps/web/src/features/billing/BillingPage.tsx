@@ -12,10 +12,23 @@ import { Card } from "@/shared/ui/card";
 import { ErrorState } from "@/shared/ui/error-state";
 import { PageHeader } from "@/shared/ui/page-header";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { getBillingState, startCheckout } from "./billing-api.js";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/ui/alert-dialog";
+import { Checkbox } from "@/shared/ui/checkbox";
+import { cancelSubscription, getBillingState, startCheckout, startSubscription } from "./billing-api.js";
 
 /**
- * Тариф и оплата (Platega, 2026-10-25). Путь покупки: тариф → цена →
+ * Тариф и оплата (Platega, 2026-10-25). Два способа: разовая оплата и
+ * автопродление через СБП (отдельное согласие на автосписания, отключение
+ * здесь же, в один шаг). Путь покупки: тариф → цена →
  * «Оплатить» → платёжная форма Platega → возврат сюда (`?payment=<id>`),
  * пока callback не подтвердит платёж, страница опрашивает статус. Пока
  * ключей Platega нет, кнопка кликается и показывает заглушку (требование
@@ -36,6 +49,10 @@ export function BillingPage() {
   // С лендинга приходят `?plan=…&period=…` — сохраняем выбранный период.
   const [period, setPeriod] = useState<BillingPeriod>(() => (params.get("period") === "year" ? "year" : "month"));
   const [busy, setBusy] = useState<BillingPlanId | null>(null);
+  const [mode, setMode] = useState<"once" | "autopay">("once");
+  const [consent, setConsent] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,12 +76,27 @@ export function BillingPage() {
     setUnavailable(false);
     setBusy(plan);
     try {
-      const { url } = await startCheckout({ plan, period });
+      const { url } =
+        mode === "autopay"
+          ? await startSubscription({ plan, period, autopayConsent: true })
+          : await startCheckout({ plan, period });
       window.location.assign(url);
     } catch (e) {
       if (e instanceof ApiError && e.code === "payments_unavailable") setUnavailable(true);
       else setError(e instanceof Error ? e.message : "Не удалось начать оплату");
       setBusy(null);
+    }
+  };
+
+  const cancelAutopay = async () => {
+    setCancelling(true);
+    try {
+      state.setData(await cancelSubscription());
+      setConfirmCancel(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Не удалось отключить автопродление");
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -75,10 +107,13 @@ export function BillingPage() {
   const paidUntil = s?.paidUntil ? new Date(s.paidUntil) : null;
   const active = paidUntil && paidUntil.getTime() > Date.now();
   const currentPlan = BILLING_PLANS.find((p) => p.id === s?.plan);
+  const sub = s?.subscription ?? null;
+  const subPlan = BILLING_PLANS.find((p) => p.id === sub?.plan);
+  const autopayOn = sub?.status === "active";
 
   return (
     <div className="mx-auto max-w-5xl">
-      <PageHeader title="Тариф и оплата" subtitle="Оплата разовая, на месяц или на год, без автопродления." />
+      <PageHeader title="Тариф и оплата" subtitle="Разовая оплата на месяц или год, или автопродление через СБП." />
 
       {returnedPayment ? (
         <ReturnBanner
@@ -107,6 +142,43 @@ export function BillingPage() {
           <PeriodSwitch value={period} onChange={setPeriod} />
         </Card>
       )}
+
+      {sub && subPlan ? (
+        <Card className="mb-6 flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+          <div>
+            <p className="text-sm text-muted-foreground">Автопродление через СБП</p>
+            <p className="font-semibold text-foreground">
+              {sub.status === "active"
+                ? `Включено: ${rub.format(sub.amountRub)} ₽ ${sub.period === "year" ? "раз в год" : "раз в месяц"}${sub.nextChargeAt ? `, следующее списание ${dateFmt.format(new Date(sub.nextChargeAt))}` : ""}`
+                : sub.status === "pending"
+                  ? "Ждём подтверждения привязки в приложении банка"
+                  : "Последнее списание не прошло, автопродление остановлено"}
+            </p>
+          </div>
+          {sub.status !== "past_due" ? (
+            <Button variant="secondary" onClick={() => setConfirmCancel(true)}>
+              Отключить автопродление
+            </Button>
+          ) : null}
+        </Card>
+      ) : null}
+
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <ModeSwitch value={mode} onChange={setMode} />
+        {mode === "autopay" ? (
+          <span className="text-sm text-muted-foreground">Только через СБП. Списание в начале каждого периода.</span>
+        ) : null}
+      </div>
+      {mode === "autopay" && !autopayOn ? (
+        <label className="mb-6 flex items-start gap-2.5 text-sm text-foreground">
+          <Checkbox checked={consent} onCheckedChange={(v) => setConsent(v === true)} className="mt-0.5" />
+          <span>
+            Согласен на автоматическое списание стоимости выбранного тарифа {period === "year" ? "раз в год" : "раз в месяц"}{" "}
+            через СБП до отмены. Отключить автопродление можно в любой момент на этой странице или по ссылке из письма о
+            списании.
+          </span>
+        </label>
+      ) : null}
 
       {unavailable ? (
         <Alert className="mb-6" role="status">
@@ -157,8 +229,18 @@ export function BillingPage() {
                   </li>
                 ))}
               </ul>
-              <Button className="mt-6 w-full" size="lg" loading={busy === p.id} disabled={busy !== null} onClick={() => void pay(p.id)}>
-                {isCurrent ? "Продлить" : "Оплатить"} {rub.format(amount)} ₽
+              <Button
+                className="mt-6 w-full"
+                size="lg"
+                loading={busy === p.id}
+                disabled={busy !== null || (mode === "autopay" && (!consent || autopayOn))}
+                onClick={() => void pay(p.id)}
+              >
+                {mode === "autopay"
+                  ? autopayOn
+                    ? "Автопродление уже включено"
+                    : `Подписаться: ${rub.format(amount)} ₽ ${period === "year" ? "в год" : "в месяц"}`
+                  : `${isCurrent ? "Продлить" : "Оплатить"} ${rub.format(amount)} ₽`}
               </Button>
             </Card>
           );
@@ -176,7 +258,8 @@ export function BillingPage() {
       </Card>
 
       <p className="mt-6 text-sm text-muted-foreground [text-wrap:pretty]">
-        После оплаты тариф включается сразу, чек приходит на почту. Деньги за неиспользованные дни можно вернуть по
+        После оплаты тариф включается сразу, чек приходит на почту. При отключении автопродления оплаченный срок
+        сохраняется. Деньги за неиспользованные дни можно вернуть по
         заявлению на <a className="font-medium text-primary hover:underline" href={`mailto:${support}`}>{support}</a>.
         Условия — в{" "}
         <Link to="/terms" className="font-medium text-primary hover:underline">
@@ -184,6 +267,45 @@ export function BillingPage() {
         </Link>
         .
       </p>
+      <AlertDialog open={confirmCancel} onOpenChange={(v) => !v && setConfirmCancel(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Отключить автопродление?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Новых списаний не будет. Тариф работает до конца оплаченного срока
+              {paidUntil ? `, до ${dateFmt.format(paidUntil)}` : ""}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Оставить</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void cancelAutopay()} disabled={cancelling}>
+              Отключить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+function ModeSwitch({ value, onChange }: { value: "once" | "autopay"; onChange: (v: "once" | "autopay") => void }) {
+  const opt = (v: "once" | "autopay", label: string) => (
+    <button
+      type="button"
+      aria-pressed={value === v}
+      onClick={() => onChange(v)}
+      className={cn(
+        "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+        value === v ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div role="group" aria-label="Способ оплаты" className="inline-flex rounded-lg bg-muted p-1">
+      {opt("once", "Разовая оплата")}
+      {opt("autopay", "Автопродление")}
     </div>
   );
 }

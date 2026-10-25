@@ -45,6 +45,7 @@ export const materialStatusEnum = pgEnum("material_status", ["draft", "review", 
 /** Э9.7: `video` сознательно не входит — план ограничивает подзадачу «картинки/аудио», видео в медиатеке — отдельная работа (транскодирование/превью не в этом срезе). */
 export const mediaAssetKindEnum = pgEnum("media_asset_kind", ["image", "audio", "video"]);
 export const paymentStatusEnum = pgEnum("payment_status", ["pending", "confirmed", "canceled", "chargebacked"]);
+export const subscriptionStatusEnum = pgEnum("subscription_status", ["pending", "active", "past_due", "cancelled", "failed"]);
 /**
  * Э10 (§10.4 ТЗ). Проекция `livekit.EgressStatus` + собственное `deleted`
  * (удаление файла по ретеншну). Строкой, не числом LiveKit — журнал
@@ -844,8 +845,35 @@ export const payments = pgTable(
     status: paymentStatusEnum("status").notNull().default("pending"),
     provider: text("provider").notNull().default("platega"),
     providerTxId: text("provider_tx_id").unique(),
+    /** Списание по подписке с автопродлением; null — разовый платёж. */
+    subscriptionId: uuid("subscription_id").references(() => subscriptions.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
   },
   (t) => [index("payments_school_idx").on(t.schoolId, t.createdAt)],
+);
+
+/**
+ * Подписки с автосписанием через СБП (Platega, 2026-10-25). Списания делает
+ * Platega по расписанию и присылает callback на каждое; статус подписки мы
+ * берём из API Platega, а не из тела callback (его могут прислать без ключей).
+ */
+export const subscriptions = pgTable(
+  "subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    schoolId: uuid("school_id")
+      .notNull()
+      .references(() => schools.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    plan: text("plan").notNull(),
+    period: text("period").notNull(),
+    amountRub: integer("amount_rub").notNull(),
+    status: subscriptionStatusEnum("status").notNull().default("pending"),
+    providerSubId: text("provider_sub_id").unique(),
+    nextChargeAt: timestamp("next_charge_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("subscriptions_school_idx").on(t.schoolId, t.createdAt)],
 );
