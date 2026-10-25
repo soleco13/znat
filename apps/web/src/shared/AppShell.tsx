@@ -56,7 +56,7 @@ const NAV: NavItem[] = [
   },
   { to: "/materials/edit", label: "Редактор", icon: SquarePen, roles: ["admin", "methodist"] },
   { to: "/admin/settings", label: "Параметры", icon: Settings, roles: ["admin"] },
-  { to: "/billing", label: "Тариф", icon: CreditCard, roles: ["admin", "methodist", "teacher"] },
+  { to: "/billing", label: "Тариф", icon: CreditCard, roles: ["admin"] },
   { to: "/admin/invites", label: "Приглашения", icon: Ticket, roles: ["admin"] },
 ];
 

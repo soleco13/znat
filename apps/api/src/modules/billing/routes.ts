@@ -14,7 +14,7 @@ import * as service from "./service.js";
 import { isAuthenticCallback } from "./platega.js";
 import * as usersService from "../users/service.js";
 
-/** Тарифы и оплата: страница «Тариф» (любой сотрудник школы) и callback Platega. */
+/** Тарифы и оплата: страница «Тариф» (администратор пространства) и callback Platega. */
 export default async function billingRoutes(app: FastifyInstance) {
   // Callback без входа. Ключи X-MerchantId/X-Secret: если пришли — должны
   // совпасть; без них принимаем только смену статуса подписки (её Platega
@@ -34,8 +34,11 @@ export default async function billingRoutes(app: FastifyInstance) {
     return reply.send({ ok: true });
   });
 
+  // Тариф и оплата — только администратор пространства (репетитор в своём
+  // кабинете или админ школы); учителя и методисты школы о тарифе не знают.
   await app.register(async (staff) => {
     staff.addHook("preHandler", staff.authenticate);
+    staff.addHook("preHandler", staff.requireRole("admin"));
 
     staff.get("/billing", async (request, reply) => {
       return reply.send(billingStateSchema.parse(await service.getState(request.user)));

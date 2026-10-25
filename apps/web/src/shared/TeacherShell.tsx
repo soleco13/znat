@@ -1,6 +1,6 @@
 import { useLayoutEffect, type ReactNode } from "react";
 import { Link, NavLink, useMatch, useNavigate } from "react-router-dom";
-import { CalendarDays, ChevronsUpDown, KeyRound, Library, LogOut, PlayCircle, CreditCard } from "lucide-react";
+import { CalendarDays, ChevronsUpDown, KeyRound, Library, LogOut, PlayCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -47,7 +47,6 @@ const NAV: NavItem[] = [
   { to: "/lessons", label: "Уроки", icon: CalendarDays },
   { to: "/recordings", label: "Записи", icon: PlayCircle },
   { to: "/materials", label: "Библиотека", icon: Library, end: true },
-  { to: "/billing", label: "Тариф", icon: CreditCard },
 ];
 
 function AccountMenu({
