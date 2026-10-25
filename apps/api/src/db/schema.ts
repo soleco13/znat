@@ -178,6 +178,9 @@ export const schoolInvites = pgTable(
     useCount: integer("use_count").notNull().default(0),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    /** Э15.2: приглашение на почту — принять может только аккаунт с этим адресом. */
+    email: text("email"),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("school_invites_school_idx").on(t.schoolId)],

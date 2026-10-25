@@ -11,7 +11,7 @@ import {
   PanelLeftOpen,
   Settings,
   SquarePen,
-  Ticket, CreditCard, ShieldCheck } from "lucide-react";
+  Ticket, CreditCard, ShieldCheck, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { usePlatformAccess } from "./platform-access.js";
 import { SpaceSwitcher } from "./SpaceSwitcher.js";
@@ -61,6 +61,7 @@ const NAV: NavItem[] = [
   { to: "/materials/edit", label: "Редактор", icon: SquarePen, roles: ["admin", "methodist"] },
   { to: "/admin/settings", label: "Параметры", icon: Settings, roles: ["admin"] },
   { to: "/billing", label: "Тариф", icon: CreditCard, roles: ["admin"] },
+  { to: "/admin/members", label: "Участники", icon: Users, roles: ["admin"] },
   { to: "/admin/invites", label: "Приглашения", icon: Ticket, roles: ["admin"] },
 ];
 

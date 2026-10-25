@@ -50,3 +50,5 @@ export const setRemoved = repo.setRemoved;
 export async function hasAnyMembership(userId: string): Promise<boolean> {
   return (await repo.countAllForUser(userId)) > 0;
 }
+
+export const grantRole = repo.grantRole;

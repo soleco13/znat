@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Copy, Ticket, Trash2 } from "lucide-react";
+import { Copy, Mail, RotateCw, Ticket, Trash2 } from "lucide-react";
 import type { CreateInviteResponse, InviteSummary, Role } from "@school/shared";
 
 import { ApiError } from "@/shared/api-client";
@@ -33,7 +33,7 @@ import {
 import { CenteredSpinner } from "@/shared/ui/spinner";
 import { notify } from "@/shared/ui/notify";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
-import { createInvite, listInvites, revokeInvite } from "./invites-api.js";
+import { createInvite, listInvites, resendInvite, revokeInvite } from "./invites-api.js";
 
 const ROLE_LABEL: Record<Role, string> = {
   admin: "Администратор",
@@ -52,7 +52,7 @@ function inviteStatus(invite: InviteSummary): { label: string; variant: "default
     return { label: "Истекло", variant: "secondary" };
   }
   if (invite.maxUses != null && invite.useCount >= invite.maxUses) {
-    return { label: "Исчерпано", variant: "secondary" };
+    return { label: invite.email ? "Принято" : "Исчерпано", variant: "secondary" };
   }
   return { label: "Активно", variant: "default" };
 }
@@ -81,6 +81,43 @@ export function InvitesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<CreateInviteResponse | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<InviteSummary | null>(null);
+  const [email, setEmail] = useState("");
+  const [emailRole, setEmailRole] = useState<Role>("teacher");
+  const [sending, setSending] = useState(false);
+  const [resending, setResending] = useState<string | null>(null);
+
+  // Э15.2: приглашение на почту — одноразовое, 14 дней, принять может только этот адрес.
+  async function onSendEmail(e: FormEvent) {
+    e.preventDefault();
+    setSending(true);
+    try {
+      const invite = await createInvite({ role: emailRole, email: email.trim() });
+      if (invite.emailed) {
+        notify.success(`Приглашение отправлено на ${email.trim()}`);
+        setEmail("");
+      } else {
+        notify.error("Приглашение создано, но письмо не ушло — нажмите «Отправить ещё раз» в списке");
+      }
+      invites.reload();
+    } catch (err) {
+      notify.error(err instanceof ApiError ? err.message : "Не удалось отправить приглашение");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function onResend(invite: InviteSummary) {
+    setResending(invite.id);
+    try {
+      await resendInvite(invite.id);
+      notify.success(`Письмо отправлено ещё раз на ${invite.email}`);
+      invites.reload();
+    } catch (err) {
+      notify.error(err instanceof ApiError ? err.message : "Не удалось отправить письмо");
+    } finally {
+      setResending(null);
+    }
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -117,10 +154,46 @@ export function InvitesPage() {
     <div>
       <PageHeader
         title="Приглашения"
-        subtitle="Ссылка для присоединения к вашему пространству — только по прямой ссылке, без открытого поиска."
+        subtitle="Пригласите учителя или методиста по почте или по ссылке. Если у человека уже есть аккаунт в Матисе, второй заводить не нужно."
       />
+      <Card className="mb-4 p-6">
+        <h2 className="mb-4 font-semibold text-foreground">По почте</h2>
+        <form onSubmit={onSendEmail} className="flex flex-wrap items-end gap-4">
+          <div className="flex min-w-[240px] flex-1 flex-col gap-1.5">
+            <Label htmlFor="invite-email">Почта</Label>
+            <Input
+              id="invite-email"
+              type="email"
+              autoComplete="off"
+              placeholder="teacher@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="invite-email-role">Роль</Label>
+            <Select value={emailRole} onValueChange={(v) => setEmailRole(v as Role)}>
+              <SelectTrigger id="invite-email-role" className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="teacher">Учитель</SelectItem>
+                <SelectItem value="methodist">Методист</SelectItem>
+                <SelectItem value="admin">Администратор</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button type="submit" loading={sending} disabled={!email.trim()}>
+            <Mail aria-hidden />
+            Отправить приглашение
+          </Button>
+        </form>
+        <p className="mt-3 text-xs text-muted-foreground">Ссылка в письме одноразовая и действует 14 дней.</p>
+      </Card>
 
       <Card className="mb-6 p-6">
+        <h2 className="mb-4 font-semibold text-foreground">По ссылке</h2>
         <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="invite-role">Роль</Label>
@@ -180,6 +253,7 @@ export function InvitesPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Кому</TableHead>
                 <TableHead>Роль</TableHead>
                 <TableHead>Использовано</TableHead>
                 <TableHead>Статус</TableHead>
@@ -193,6 +267,9 @@ export function InvitesPage() {
                 const status = inviteStatus(invite);
                 return (
                   <TableRow key={invite.id}>
+                    <TableCell className="max-w-[16rem] truncate">
+                      {invite.email ?? <span className="text-muted-foreground">по ссылке</span>}
+                    </TableCell>
                     <TableCell>{ROLE_LABEL[invite.role]}</TableCell>
                     <TableCell>
                       {invite.useCount}
@@ -203,7 +280,19 @@ export function InvitesPage() {
                     </TableCell>
                     <TableCell>{formatDateTime(invite.expiresAt)}</TableCell>
                     <TableCell>{formatDateTime(invite.createdAt)}</TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap text-right">
+                      {invite.email && (status.label === "Активно" || status.label === "Истекло") ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Отправить ещё раз"
+                          title="Отправить ещё раз"
+                          loading={resending === invite.id}
+                          onClick={() => void onResend(invite)}
+                        >
+                          <RotateCw className="size-4" aria-hidden />
+                        </Button>
+                      ) : null}
                       {status.label === "Активно" ? (
                         <Button
                           variant="ghost"

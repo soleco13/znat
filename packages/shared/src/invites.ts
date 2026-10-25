@@ -7,6 +7,8 @@ import { roleSchema } from "./roles.js";
  */
 export const createInviteRequestSchema = z.object({
   role: roleSchema,
+  /** Э15.2: приглашение на почту — одноразовое, принять может только этот адрес. */
+  email: z.string().trim().toLowerCase().email().max(200).optional(),
   maxUses: z.number().int().min(1).max(1000).optional(),
   expiresInDays: z.number().int().min(1).max(365).optional(),
 });
@@ -21,6 +23,8 @@ export const createInviteResponseSchema = z.object({
   maxUses: z.number().nullable(),
   expiresAt: z.string().nullable(),
   createdAt: z.string(),
+  /** Э15.2: письмо с приглашением отправлено. */
+  emailed: z.boolean().default(false),
 });
 export type CreateInviteResponse = z.infer<typeof createInviteResponseSchema>;
 
@@ -33,6 +37,8 @@ export const inviteSummarySchema = z.object({
   expiresAt: z.string().nullable(),
   revokedAt: z.string().nullable(),
   createdAt: z.string(),
+  email: z.string().nullable().default(null),
+  sentAt: z.string().nullable().default(null),
 });
 export type InviteSummary = z.infer<typeof inviteSummarySchema>;
 
@@ -42,5 +48,12 @@ export const invitePublicInfoSchema = z.object({
   schoolSlug: z.string(),
   role: roleSchema,
   valid: z.boolean(),
+  /** Э15.2: приглашение на почту — адрес частично скрыт (`a***@mail.ru`). */
+  forEmail: z.string().nullable().default(null),
 });
 export type InvitePublicInfo = z.infer<typeof invitePublicInfoSchema>;
+
+/** Э15.2 — принять приглашение вошедшим аккаунтом (репетитор, участник другой школы). */
+export const acceptInviteRequestSchema = z.object({ code: z.string().min(1).max(200) });
+export const acceptInviteResponseSchema = z.object({ schoolId: z.string().uuid(), roles: z.array(roleSchema) });
+export type AcceptInviteResponse = z.infer<typeof acceptInviteResponseSchema>;

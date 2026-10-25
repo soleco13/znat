@@ -68,3 +68,24 @@ export async function countAllForUser(userId: string): Promise<number> {
   const rows = await db.select({ id: memberships.id }).from(memberships).where(eq(memberships.userId, userId));
   return rows.length;
 }
+
+/**
+ * Э15.2: принятое приглашение добавляет роль к действующему членству
+ * (учитель + методист); прекращённое членство возвращается с этой ролью.
+ */
+export async function grantRole(userId: string, schoolId: string, role: Role): Promise<Role[]> {
+  const [row] = await db
+    .insert(memberships)
+    .values({ userId, schoolId, roles: [role] })
+    .onConflictDoUpdate({
+      target: [memberships.userId, memberships.schoolId],
+      set: {
+        roles: sql`case when ${memberships.removedAt} is null
+          then (select array_agg(distinct r) from unnest(${memberships.roles} || array[${role}]::role[]) r)
+          else array[${role}]::role[] end`,
+        removedAt: null,
+      },
+    })
+    .returning({ roles: memberships.roles });
+  return row!.roles;
+}

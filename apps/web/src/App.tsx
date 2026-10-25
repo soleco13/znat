@@ -29,6 +29,7 @@ const LessonConsentPage = lazyNamed(() => import("./features/legal/LegalPages.js
 const RequisitesPage = lazyNamed(() => import("./features/legal/LegalPages.js"), "RequisitesPage");
 const BillingPage = lazyNamed(() => import("./features/billing/BillingPage.js"), "BillingPage");
 const TestPayPage = lazyNamed(() => import("./features/billing/TestPayPage.js"), "TestPayPage");
+const MembersPage = lazyNamed(() => import("./features/members/MembersPage.js"), "MembersPage");
 const PlatformPage = lazyNamed(() => import("./features/platform/PlatformPage.js"), "PlatformPage");
 const RegisterChoicePage = lazyNamed(() => import("./features/registration/RegisterChoicePage.js"), "RegisterChoicePage");
 const IndividualRegisterPage = lazyNamed(() => import("./features/registration/IndividualRegisterPage.js"), "IndividualRegisterPage");
@@ -151,6 +152,7 @@ export function App() {
         <Route path="/billing" element={<Shell roles={["admin", "teacher"]}><BillingPage /></Shell>} />
         <Route path="/billing/test-pay" element={<Shell roles={["admin", "teacher"]}><TestPayPage /></Shell>} />
         <Route path="/platform" element={<Shell roles={["admin"]}><PlatformPage /></Shell>} />
+        <Route path="/admin/members" element={<Shell roles={["admin"]}><MembersPage /></Shell>} />
         <Route path="/materials" element={<Shell><LibraryRoute /></Shell>} />
         <Route
           path="/materials/edit"

@@ -51,7 +51,7 @@ export async function insertUser(input: {
 export async function updateUser(
   id: string,
   schoolId: string,
-  patch: Partial<{ fullName: string; role: Role; isActive: boolean }>,
+  patch: Partial<{ fullName: string; role: Role; roles: Role[]; isActive: boolean }>,
 ): Promise<{ row: MemberRow } | { row: null } | { lastAdmin: true }> {
   return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${schoolId}))`);
@@ -63,8 +63,8 @@ export async function updateUser(
       .limit(1);
     if (!current) return { row: null };
     const isAdminNow = current.roles.includes("admin") && current.removedAt === null && current.user.isActive;
-    const losesAdmin =
-      isAdminNow && ((patch.role !== undefined && patch.role !== "admin") || patch.isActive === false);
+    const nextRoles = patch.roles ?? (patch.role !== undefined ? [patch.role] : null);
+    const losesAdmin = isAdminNow && ((nextRoles !== null && !nextRoles.includes("admin")) || patch.isActive === false);
     if (losesAdmin) {
       const [other] = await tx
         .select({ n: count() })
@@ -83,16 +83,16 @@ export async function updateUser(
     }
     let roles = current.roles;
     let removedAt = current.removedAt;
-    if (patch.role !== undefined || patch.isActive !== undefined) {
-      if (patch.role !== undefined) roles = [patch.role];
+    if (nextRoles !== null || patch.isActive !== undefined) {
+      if (nextRoles !== null) roles = [...new Set(nextRoles)];
       if (patch.isActive !== undefined) removedAt = patch.isActive ? null : new Date();
       await tx
         .update(memberships)
         .set({ roles, removedAt })
         .where(and(eq(memberships.userId, id), eq(memberships.schoolId, schoolId)));
       // Домашнее пространство — держим `users.role` в согласии до полного перехода.
-      if (patch.role !== undefined && current.user.schoolId === schoolId) {
-        await tx.update(users).set({ role: patch.role }).where(eq(users.id, id));
+      if (nextRoles !== null && current.user.schoolId === schoolId) {
+        await tx.update(users).set({ role: primaryRole(roles) }).where(eq(users.id, id));
       }
     }
     let user = current.user;

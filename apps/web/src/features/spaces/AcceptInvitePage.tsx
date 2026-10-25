@@ -1,9 +1,11 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Link2Off } from "lucide-react";
 import type { Role } from "@school/shared";
 
-import { ApiError } from "@/shared/api-client";
+import { apiFetch, ApiError, hasStaffSession } from "@/shared/api-client";
+import { useAuthStore } from "@/shared/auth-store";
+import { switchSpace } from "@/shared/SpaceSwitcher";
 import { useAsync } from "@/shared/hooks/use-async";
 import { Button } from "@/shared/ui/button";
 import { PersonalDataConsent } from "@/shared/PersonalDataConsent";
@@ -12,7 +14,7 @@ import { Label } from "@/shared/ui/label";
 import { CenteredSpinner } from "@/shared/ui/spinner";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/shared/ui/empty";
 import { StatusScreen } from "@/shared/ui/status-screen";
-import { getInvitePublicInfo } from "@/features/invites/invites-api";
+import { acceptInvite, getInvitePublicInfo } from "@/features/invites/invites-api";
 import { registerIndividual } from "@/features/registration/registration-api";
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -37,6 +39,36 @@ export function AcceptInvitePage() {
   const [error, setError] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Э15.2: уже вошедший аккаунт (репетитор, участник другой школы) принимает
+  // приглашение без регистрации — школа добавляется к его аккаунту.
+  const [session, setSession] = useState<"checking" | "in" | "out">("checking");
+  const me = useAuthStore((st) => st.user);
+  const [accepting, setAccepting] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void hasStaffSession().then((ok) => alive && setSession(ok ? "in" : "out"));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  async function onAccept() {
+    setError(null);
+    setAccepting(true);
+    try {
+      const r = await acceptInvite(code);
+      await switchSpace(r.schoolId);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Не удалось принять приглашение");
+      setAccepting(false);
+    }
+  }
+
+  async function onOtherAccount() {
+    await apiFetch("/auth/logout", { method: "POST" }).catch(() => undefined);
+    useAuthStore.getState().clearAuth();
+    setSession("out");
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -84,9 +116,38 @@ export function AcceptInvitePage() {
               <h1 className="text-2xl font-heavy tracking-tight">Приглашение в «{info.data.schoolName}»</h1>
               <p className="mt-1.5 text-sm text-muted-foreground">
                 Вас приглашают в роли {ROLE_LABEL[info.data.role]}
+                {info.data.forEmail ? `. Приглашение для ${info.data.forEmail}` : ""}
               </p>
             </div>
-
+            {session === "checking" ? (
+              <CenteredSpinner label="Проверяем вход…" />
+            ) : session === "in" && me ? (
+              <div className="flex flex-col gap-4">
+                <p className="text-sm text-foreground">
+                  Вы вошли как <span className="font-semibold">{me.fullName}</span> ({me.email}). Школа добавится к
+                  вашему аккаунту, личный кабинет и другие школы сохранятся.
+                </p>
+                {error ? (
+                  <p className="text-sm font-medium text-destructive" role="alert">
+                    {error}
+                  </p>
+                ) : null}
+                <Button size="lg" className="w-full" loading={accepting} onClick={() => void onAccept()}>
+                  Принять приглашение
+                </Button>
+                <button type="button" className="text-sm font-medium text-primary hover:underline" onClick={() => void onOtherAccount()}>
+                  Войти в другой аккаунт
+                </button>
+              </div>
+            ) : (
+            <>
+            <p className="mb-5 text-sm text-muted-foreground">
+              Уже есть аккаунт в Матисе?{" "}
+              <Link to="/login" state={{ from: window.location.pathname }} className="font-medium text-primary hover:underline">
+                Войдите
+              </Link>
+              , и школа добавится к нему. Если аккаунта нет, заполните форму.
+            </p>
             <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="invite-name">Имя и фамилия</Label>
@@ -135,14 +196,10 @@ export function AcceptInvitePage() {
                 {submitting ? "Присоединяемся…" : "Присоединиться"}
               </Button>
             </form>
+            </>
+            )}
           </>
         )}
-
-        <p className="mt-5 text-center text-sm text-muted-foreground">
-          <Link to="/login" className="font-medium text-primary hover:underline">
-            Уже есть аккаунт? Войти
-          </Link>
-        </p>
     </StatusScreen>
   );
 }

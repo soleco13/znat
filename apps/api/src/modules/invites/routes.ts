@@ -4,6 +4,8 @@ import {
   createInviteResponseSchema,
   inviteSummarySchema,
   invitePublicInfoSchema,
+  acceptInviteRequestSchema,
+  acceptInviteResponseSchema,
 } from "@school/shared";
 import * as service from "./service.js";
 
@@ -24,6 +26,15 @@ export default async function invitesRoutes(app: FastifyInstance) {
     },
   );
 
+  // Э15.2: принять приглашение может любой вошедший аккаунт (роль в его нынешнем пространстве не важна).
+  await app.register(async (memberApp) => {
+    memberApp.addHook("preHandler", memberApp.authenticate);
+    memberApp.post("/invites/accept", async (request, reply) => {
+      const body = acceptInviteRequestSchema.parse(request.body);
+      return reply.send(acceptInviteResponseSchema.parse(await service.acceptInvite(request.user, body.code)));
+    });
+  });
+
   await app.register(async (adminApp) => {
     adminApp.addHook("preHandler", adminApp.authenticate);
     adminApp.addHook("preHandler", adminApp.requireRole("admin"));
@@ -37,6 +48,10 @@ export default async function invitesRoutes(app: FastifyInstance) {
     adminApp.get("/invites", async (request, reply) => {
       const invites = await service.listInvites(request.user);
       return reply.send({ items: invites.map((i) => inviteSummarySchema.parse(i)) });
+    });
+
+    adminApp.post<{ Params: { id: string } }>("/invites/:id/resend", async (request, reply) => {
+      return reply.send(inviteSummarySchema.parse(await service.resendInvite(request.user, request.params.id)));
     });
 
     adminApp.post<{ Params: { id: string } }>("/invites/:id/revoke", async (request, reply) => {

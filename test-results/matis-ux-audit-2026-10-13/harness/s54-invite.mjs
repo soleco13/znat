@@ -1,0 +1,25 @@
+// 2026-10-25 Э15.2: репетитор принимает приглашение в школу своим аккаунтом; админ видит «Участников».
+import fs from "node:fs";
+import { openBrowsers, P, login, finish, sleep, shot, check } from "./lib.mjs";
+const URL = process.env.INVITE_URL;
+await openBrowsers(["teacher", "s1"]);
+const T = P.teacher, A = P.s1;
+await login(T, "tutor@stage.dev");
+await T.send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+await T.goto(URL);
+await sleep(3000);
+await shot(T, "invite-logged-in");
+check("shows accept for logged-in", /Принять приглашение/.test(await T.eval("document.body.innerText")));
+await T.eval(`[...document.querySelectorAll("button")].find(b => /Принять приглашение/.test(b.textContent))?.click()`);
+await sleep(4000);
+check("after accept in school", (await T.eval("location.pathname")) !== "/" , { path: await T.eval("location.pathname"), nav: await T.eval(`[...document.querySelectorAll("aside a")].map(a=>a.textContent.trim()).join("|")`) });
+await shot(T, "after-accept");
+await login(A, "admin@school.dev");
+await A.send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+await A.goto("http://172.31.0.1:3100/admin/members");
+await sleep(2500);
+await shot(A, "members");
+await A.goto("http://172.31.0.1:3100/admin/invites");
+await sleep(2500);
+await shot(A, "invites");
+await finish();

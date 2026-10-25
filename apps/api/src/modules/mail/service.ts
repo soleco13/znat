@@ -56,3 +56,29 @@ export async function sendPasswordResetEmail(to: string, resetLink: string) {
   );
   await sendMail({ to, subject, html, text });
 }
+
+/** Э15.2 — приглашение в школу на почту. */
+export async function sendInviteEmail(
+  to: string,
+  input: { schoolName: string; roleLabel: string; inviterName: string | null; url: string; expiresAt: Date | null },
+) {
+  const subject = `Приглашение в «${input.schoolName}» в Матисе`;
+  const until = input.expiresAt
+    ? `Приглашение действует до ${input.expiresAt.toLocaleDateString("ru-RU", { day: "numeric", month: "long" })}. `
+    : "";
+  const { html, text } = renderEmail(
+    {
+      subject,
+      preheader: `Вас приглашают в роли ${input.roleLabel}.`,
+      heading: `Приглашение в «${input.schoolName}»`,
+      paragraphs: [
+        `${input.inviterName ? `${input.inviterName} приглашает` : "Вас приглашают"} вас в школу «${input.schoolName}» в роли ${input.roleLabel}.`,
+        "Если у вас уже есть аккаунт в Матисе, войдите в него: школа добавится к вашему кабинету, второй аккаунт не нужен.",
+      ],
+      button: { label: "Принять приглашение", url: input.url },
+      note: `${until}Если вы не ждали этого письма, просто удалите его.`,
+    },
+    env.PUBLIC_ORIGIN,
+  );
+  await sendMail({ to, subject, html, text });
+}

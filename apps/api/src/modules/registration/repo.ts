@@ -87,6 +87,8 @@ export async function joinSchoolViaInvite(input: {
           isNull(schoolInvites.revokedAt),
           or(isNull(schoolInvites.expiresAt), gt(schoolInvites.expiresAt, now)),
           or(isNull(schoolInvites.maxUses), lt(schoolInvites.useCount, schoolInvites.maxUses)),
+          // Э15.2: приглашение на почту — только на этот адрес.
+          or(isNull(schoolInvites.email), eq(schoolInvites.email, input.email.toLowerCase())),
         ),
       )
       .returning();

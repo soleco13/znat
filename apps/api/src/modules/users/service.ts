@@ -20,6 +20,7 @@ export function toUserResponse(row: {
   email: string;
   fullName: string;
   role: Role;
+  roles?: Role[];
   isActive: boolean;
   lastLoginAt: Date | null;
   createdAt: Date;
@@ -30,6 +31,7 @@ export function toUserResponse(row: {
     email: row.email,
     fullName: row.fullName,
     role: row.role,
+    roles: row.roles ?? [row.role],
     isActive: row.isActive,
     lastLoginAt: row.lastLoginAt ? row.lastLoginAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
