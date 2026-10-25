@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { env } from "../../plugins/env.js";
+import { renderEmail } from "./template.js";
 
 /**
  * Э14.1 — отправка почты через собственный SMTP-релей на этом же сервере
@@ -25,19 +26,33 @@ export async function sendMail(input: { to: string; subject: string; html: strin
 }
 
 export async function sendVerificationEmail(to: string, verifyLink: string) {
-  await sendMail({
-    to,
-    subject: "Подтверждение почты",
-    text: `Чтобы подтвердить почту и активировать аккаунт, перейдите по ссылке: ${verifyLink}\n\nСсылка действует 24 часа.`,
-    html: `<p>Чтобы подтвердить почту и активировать аккаунт, перейдите по ссылке:</p><p><a href="${verifyLink}">${verifyLink}</a></p><p>Ссылка действует 24 часа.</p>`,
-  });
+  const subject = "Подтвердите почту в Матисе";
+  const { html, text } = renderEmail(
+    {
+      subject,
+      preheader: "Один шаг до входа в аккаунт: подтвердите адрес почты.",
+      heading: "Подтвердите почту",
+      paragraphs: ["Нажмите кнопку, чтобы подтвердить адрес и войти в Матис."],
+      button: { label: "Подтвердить почту", url: verifyLink },
+      note: "Ссылка действует 24 часа. Если вы не регистрировались в Матисе, просто удалите это письмо.",
+    },
+    env.PUBLIC_ORIGIN,
+  );
+  await sendMail({ to, subject, html, text });
 }
 
 export async function sendPasswordResetEmail(to: string, resetLink: string) {
-  await sendMail({
-    to,
-    subject: "Сброс пароля",
-    text: `Чтобы задать новый пароль, перейдите по ссылке: ${resetLink}\n\nСсылка действует 1 час. Если вы не запрашивали сброс — просто проигнорируйте письмо, пароль останется прежним.`,
-    html: `<p>Чтобы задать новый пароль, перейдите по ссылке:</p><p><a href="${resetLink}">${resetLink}</a></p><p>Ссылка действует 1 час. Если вы не запрашивали сброс — просто проигнорируйте письмо, пароль останется прежним.</p>`,
-  });
+  const subject = "Сброс пароля в Матисе";
+  const { html, text } = renderEmail(
+    {
+      subject,
+      preheader: "Ссылка для нового пароля действует 1 час.",
+      heading: "Задайте новый пароль",
+      paragraphs: ["Мы получили запрос на сброс пароля от вашего аккаунта в Матисе."],
+      button: { label: "Задать новый пароль", url: resetLink },
+      note: "Ссылка действует 1 час. Если вы не запрашивали сброс, ничего не делайте: пароль останется прежним.",
+    },
+    env.PUBLIC_ORIGIN,
+  );
+  await sendMail({ to, subject, html, text });
 }
