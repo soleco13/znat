@@ -145,3 +145,98 @@ export async function recordSubscriptionCharge(input: {
     return p;
   });
 }
+
+/* ---------- Раздел «Платформа» супер-админа ---------- */
+
+export async function listSchoolsWithBilling(schoolId?: string) {
+  return db
+    .select({
+      id: schools.id,
+      name: schools.name,
+      slug: schools.slug,
+      kind: schools.kind,
+      createdAt: schools.createdAt,
+      billingPlan: schools.billingPlan,
+      paidUntil: schools.paidUntil,
+      subscriptionStatus: sql<string | null>`(
+        select s.status from ${subscriptions} s
+        where s.school_id = ${schools.id} and s.status in ('pending','active','past_due')
+        order by s.created_at desc limit 1)`,
+    })
+    .from(schools)
+    .where(schoolId ? eq(schools.id, schoolId) : undefined)
+    .orderBy(desc(schools.createdAt));
+}
+
+export async function listPayments(input: { schoolId?: string; limit: number }) {
+  return db
+    .select({
+      id: payments.id,
+      schoolId: payments.schoolId,
+      schoolName: schools.name,
+      userId: payments.userId,
+      plan: payments.plan,
+      period: payments.period,
+      amountRub: payments.amountRub,
+      status: payments.status,
+      provider: payments.provider,
+      subscriptionId: payments.subscriptionId,
+      providerTxId: payments.providerTxId,
+      createdAt: payments.createdAt,
+      confirmedAt: payments.confirmedAt,
+    })
+    .from(payments)
+    .innerJoin(schools, eq(schools.id, payments.schoolId))
+    .where(input.schoolId ? eq(payments.schoolId, input.schoolId) : undefined)
+    .orderBy(desc(payments.createdAt))
+    .limit(input.limit);
+}
+
+export async function listSubscriptions(schoolId: string) {
+  return db.select().from(subscriptions).where(eq(subscriptions.schoolId, schoolId)).orderBy(desc(subscriptions.createdAt));
+}
+
+export async function overviewTotals() {
+  const result = await db.execute<{
+    schools: number;
+    paid_schools: number;
+    active_subs: number;
+    revenue: number;
+    revenue_30d: number;
+    payments_30d: number;
+  }>(sql`
+    select
+      (select count(*) from ${schools})::int as schools,
+      (select count(*) from ${schools} where paid_until > now())::int as paid_schools,
+      (select count(*) from ${subscriptions} where status = 'active')::int as active_subs,
+      (select coalesce(sum(amount_rub), 0) from ${payments} where status = 'confirmed')::int as revenue,
+      (select coalesce(sum(amount_rub), 0) from ${payments} where status = 'confirmed' and confirmed_at > now() - interval '30 days')::int as revenue_30d,
+      (select count(*) from ${payments} where status = 'confirmed' and confirmed_at > now() - interval '30 days')::int as payments_30d
+  `);
+  return result.rows[0]!;
+}
+
+/** Ручное включение тарифа: продление школы и запись в истории платежей (provider `manual`, 0 ₽). */
+export async function manualExtend(input: { schoolId: string; userId: string; plan: string; period: string; interval: string }) {
+  return db.transaction(async (tx) => {
+    await tx.insert(payments).values({
+      schoolId: input.schoolId,
+      userId: input.userId,
+      plan: input.plan,
+      period: input.period,
+      amountRub: 0,
+      status: "confirmed",
+      provider: "manual",
+      confirmedAt: new Date(),
+    });
+    const [school] = await tx
+      .update(schools)
+      .set({
+        billingPlan: input.plan,
+        paidUntil: sql`greatest(coalesce(${schools.paidUntil}, now()), now()) + ${input.interval}::interval`,
+      })
+      .where(eq(schools.id, input.schoolId))
+      .returning({ id: schools.id });
+    return school ?? null;
+  });
+}

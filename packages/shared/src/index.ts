@@ -20,3 +20,4 @@ export * from "./registration.js";
 export * from "./invites.js";
 export * from "./telemetry.js";
 export * from "./billing.js";
+export * from "./platform.js";

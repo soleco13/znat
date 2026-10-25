@@ -11,8 +11,9 @@ import {
   PanelLeftOpen,
   Settings,
   SquarePen,
-  Ticket, CreditCard } from "lucide-react";
+  Ticket, CreditCard, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { usePlatformAccess } from "./platform-access.js";
 import type { Role } from "@school/shared";
 
 import { cn } from "@/lib/utils";
@@ -32,6 +33,15 @@ interface NavItem {
   roles: Role[];
   /** NavLink `end` — активна только при точном совпадении пути (см. «Библиотека» vs «Редактор»). */
   end?: boolean;
+}
+
+const PLATFORM_ITEM: NavItem = { to: "/platform", label: "Платформа", icon: ShieldCheck, roles: ["admin"] };
+
+/** Пункты меню роли; «Платформа» — только супер-админу (решает сервер). */
+function useNavItems(role: Role | null): NavItem[] {
+  const platform = usePlatformAccess(role === "admin");
+  const items = role ? NAV.filter((n) => n.roles.includes(role)) : [];
+  return platform ? [...items, PLATFORM_ITEM] : items;
 }
 
 const NAV: NavItem[] = [
@@ -70,7 +80,7 @@ function Wordmark({ compact = false }: { compact?: boolean }) {
 }
 
 function NavItems({ role, onNavigate }: { role: Role | null; onNavigate?: () => void }) {
-  const items = role ? NAV.filter((n) => n.roles.includes(role)) : [];
+  const items = useNavItems(role);
   return (
     <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
       {items.map(({ to, label, icon: Icon, end }) => (
@@ -107,8 +117,8 @@ function SidebarContent({
   onToggleCollapse?: () => void;
   onNavigate?: () => void;
 }) {
+  const items = useNavItems(role);
   if (collapsed) {
-    const items = role ? NAV.filter((n) => n.roles.includes(role)) : [];
     return (
       <div className="flex h-full flex-col items-center">
         <div className="flex h-header w-full items-center justify-center border-b border-border">

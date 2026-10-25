@@ -214,3 +214,30 @@ async function handlePaymentCallback(body: PlategaCallback): Promise<void> {
     await repo.setPaymentStatus(payment.id, "chargebacked");
   }
 }
+
+/* ---------- Раздел «Платформа» супер-админа ---------- */
+
+export const listSchoolsWithBilling = (schoolId?: string) => repo.listSchoolsWithBilling(schoolId);
+export const listPayments = (input: { schoolId?: string; limit: number }) => repo.listPayments(input);
+export const listSubscriptions = (schoolId: string) => repo.listSubscriptions(schoolId);
+export const overviewTotals = () => repo.overviewTotals();
+
+/** Ручное включение тарифа супер-админом (оплата мимо Platega, по договору или в подарок). */
+export async function manualExtend(input: {
+  schoolId: string;
+  byUserId: string;
+  plan: CheckoutRequest["plan"];
+  period: CheckoutRequest["period"];
+  count: number;
+}): Promise<void> {
+  const interval = `${input.count} ${input.period === "year" ? "year" : "month"}`;
+  const ok = await repo.manualExtend({
+    schoolId: input.schoolId,
+    userId: input.byUserId,
+    plan: input.plan,
+    period: input.period,
+    interval,
+  });
+  if (!ok) throw new AppError(404, "not_found", "Школа не найдена");
+  logEvent("payment_created", { schoolId: input.schoolId, manual: true, plan: input.plan, interval, by: input.byUserId });
+}

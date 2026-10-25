@@ -28,6 +28,7 @@ const ConsentPage = lazyNamed(() => import("./features/legal/LegalPages.js"), "C
 const LessonConsentPage = lazyNamed(() => import("./features/legal/LegalPages.js"), "LessonConsentPage");
 const RequisitesPage = lazyNamed(() => import("./features/legal/LegalPages.js"), "RequisitesPage");
 const BillingPage = lazyNamed(() => import("./features/billing/BillingPage.js"), "BillingPage");
+const PlatformPage = lazyNamed(() => import("./features/platform/PlatformPage.js"), "PlatformPage");
 const RegisterChoicePage = lazyNamed(() => import("./features/registration/RegisterChoicePage.js"), "RegisterChoicePage");
 const IndividualRegisterPage = lazyNamed(() => import("./features/registration/IndividualRegisterPage.js"), "IndividualRegisterPage");
 const OrganizationRegisterPage = lazyNamed(() => import("./features/registration/OrganizationRegisterPage.js"), "OrganizationRegisterPage");
@@ -147,6 +148,7 @@ export function App() {
             создание/правка (admin + methodist). Сам лист `/materials/edit/:id`
             открывают все — учитель попадает в него в режиме «Просмотр». */}
         <Route path="/billing" element={<Shell><BillingPage /></Shell>} />
+        <Route path="/platform" element={<Shell roles={["admin"]}><PlatformPage /></Shell>} />
         <Route path="/materials" element={<Shell><LibraryRoute /></Shell>} />
         <Route
           path="/materials/edit"

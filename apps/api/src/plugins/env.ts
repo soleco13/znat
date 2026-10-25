@@ -179,6 +179,14 @@ const envSchema = z.object({
   PLATEGA_SECRET: z.string().min(1).optional(),
   /** Почта поддержки — показывается на странице тарифов. */
   SUPPORT_EMAIL: z.string().email().default("support@matis-edu.ru"),
+  /**
+   * Супер-админы сервиса (раздел «Платформа»: все школы, пользователи,
+   * платежи) — адреса через запятую. Пусто — раздела нет ни у кого.
+   */
+  SUPER_ADMIN_EMAILS: z
+    .string()
+    .default("")
+    .transform((v) => v.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean)),
 });
 
 export const env = envSchema.parse(process.env);

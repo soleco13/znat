@@ -106,3 +106,18 @@ export type { Role };
 function isUniqueViolation(err: unknown): boolean {
   return typeof err === "object" && err !== null && "code" in err && (err as { code?: string }).code === "23505";
 }
+
+/** Раздел «Платформа»: все пользователи сервиса (без хэшей паролей). */
+export async function listAllUsers(input: { q?: string; schoolId?: string; limit: number }) {
+  return repo.listAllUsers(input);
+}
+
+export async function countUsersBySchool(): Promise<Map<string, number>> {
+  const rows = await repo.countUsersBySchool();
+  return new Map(rows.map((r) => [r.schoolId, Number(r.n)]));
+}
+
+export async function emailsByIds(ids: string[]): Promise<Map<string, string>> {
+  const rows = await repo.findEmailsByIds([...new Set(ids)]);
+  return new Map(rows.map((r) => [r.id, r.email]));
+}

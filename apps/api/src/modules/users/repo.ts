@@ -105,3 +105,35 @@ export async function listUsers(input: {
   return { rows, total: totalRows[0]?.total ?? 0 };
 }
 
+
+/** Все пользователи сервиса — раздел «Платформа» супер-админа. Без хэшей паролей. */
+export async function listAllUsers(input: { q?: string; schoolId?: string; limit: number }) {
+  const conds = [];
+  if (input.schoolId) conds.push(eq(users.schoolId, input.schoolId));
+  if (input.q) conds.push(or(ilike(users.email, `%${input.q}%`), ilike(users.fullName, `%${input.q}%`)));
+  return db
+    .select({
+      id: users.id,
+      schoolId: users.schoolId,
+      email: users.email,
+      fullName: users.fullName,
+      role: users.role,
+      isActive: users.isActive,
+      emailVerifiedAt: users.emailVerifiedAt,
+      lastLoginAt: users.lastLoginAt,
+      createdAt: users.createdAt,
+    })
+    .from(users)
+    .where(conds.length ? and(...conds) : undefined)
+    .orderBy(sql`${users.createdAt} desc`)
+    .limit(input.limit);
+}
+
+export async function countUsersBySchool() {
+  return db.select({ schoolId: users.schoolId, n: count() }).from(users).groupBy(users.schoolId);
+}
+
+export async function findEmailsByIds(ids: string[]) {
+  if (!ids.length) return [];
+  return db.select({ id: users.id, email: users.email }).from(users).where(inArray(users.id, ids));
+}
