@@ -1,6 +1,7 @@
 import {
   BILLING_PLANS,
   FREE_LIMITS,
+  PLATFORM_LIMITS,
   YEAR_MONTHS_CHARGED,
   type AccessTokenPayload,
   type BillingPlanId,
@@ -49,7 +50,10 @@ export async function planLimits(schoolId: string): Promise<{ plan: BillingPlanI
   const school = await repo.getSchoolBilling(schoolId);
   const active = school?.paidUntil && school.paidUntil.getTime() > Date.now();
   const plan = active ? BILLING_PLANS.find((p) => p.id === school.billingPlan) : undefined;
-  const value = { plan: plan?.id ?? null, limits: plan?.limits ?? FREE_LIMITS };
+  const value = {
+    plan: plan?.id ?? null,
+    limits: school?.kind === "platform" ? PLATFORM_LIMITS : (plan?.limits ?? FREE_LIMITS),
+  };
   limitsCache.set(schoolId, { value, at: Date.now() });
   if (limitsCache.size > 5000) limitsCache.delete(limitsCache.keys().next().value!);
   return value;

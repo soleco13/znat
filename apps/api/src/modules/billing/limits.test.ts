@@ -61,4 +61,12 @@ describe("Э15.6: лимиты тарифа", () => {
     repoMock.getSchoolBilling.mockResolvedValue({ billingPlan: "school", paidUntil: future(), kind: "organization" });
     await expect(assertRecordingAllowed(school(), async () => 10_000 * 3600)).resolves.toBeUndefined();
   });
+
+  it("пространство «Матис» (platform) — не школа: без тарифа и без ограничений", async () => {
+    repoMock.getSchoolBilling.mockResolvedValue({ billingPlan: null, paidUntil: null, kind: "platform" });
+    const id = school();
+    expect((await planLimits(id)).limits).toMatchObject({ rooms: null, teachers: null, studentsPerLesson: null, recordingHoursPerMonth: null, matisLibrary: true });
+    await expect(assertRoleSeat(id, "methodist")).resolves.toBeUndefined();
+    await expect(assertRecordingAllowed(id, async () => 1e9)).resolves.toBeUndefined();
+  });
 });

@@ -22,14 +22,14 @@ export type BillingPeriod = z.infer<typeof billingPeriodSchema>;
  * лимита (по порядку создания) не открываются для уроков.
  */
 export interface PlanLimits {
-  /** Аудиторий (постоянных комнат уроков) в пространстве. */
-  rooms: number;
-  /** Участников с ролью учителя. */
-  teachers: number;
+  /** Аудиторий (постоянных комнат уроков) в пространстве; `null` — без ограничения. */
+  rooms: number | null;
+  /** Участников с ролью учителя; `null` — без ограничения. */
+  teachers: number | null;
   /** Участников с ролью методиста; `null` — без ограничения. */
   methodists: number | null;
-  /** Учеников одновременно в уроке. */
-  studentsPerLesson: number;
+  /** Учеников одновременно в уроке; `null` — сколько выдерживает сервер (`LESSON_MAX_GUESTS`). */
+  studentsPerLesson: number | null;
   /** Часов записи в календарный месяц; 0 — записи нет, `null` — без ограничения. */
   recordingHoursPerMonth: number | null;
   /** Библиотека «Матиса» (Э15.5, docs/roles/spec §6.1). */
@@ -44,6 +44,19 @@ export const FREE_LIMITS: PlanLimits = {
   studentsPerLesson: 6,
   recordingHoursPerMonth: 0,
   matisLibrary: false,
+};
+
+/**
+ * Пространство «Матис» (`kind: platform`) — не школа и без тарифа: команда
+ * Матиса и супер-админ работают в нём без ограничений.
+ */
+export const PLATFORM_LIMITS: PlanLimits = {
+  rooms: null,
+  teachers: null,
+  methodists: null,
+  studentsPerLesson: null,
+  recordingHoursPerMonth: null,
+  matisLibrary: true,
 };
 
 export interface BillingPlan {
@@ -92,10 +105,10 @@ export const BILLING_PLANS: readonly BillingPlan[] = [
 export const YEAR_MONTHS_CHARGED = 10;
 
 const planLimitsSchema = z.object({
-  rooms: z.number().int(),
-  teachers: z.number().int(),
+  rooms: z.number().int().nullable(),
+  teachers: z.number().int().nullable(),
   methodists: z.number().int().nullable(),
-  studentsPerLesson: z.number().int(),
+  studentsPerLesson: z.number().int().nullable(),
   recordingHoursPerMonth: z.number().nullable(),
   matisLibrary: z.boolean(),
 });

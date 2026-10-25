@@ -406,7 +406,7 @@ export async function join(
   const isStaff = actor.kind === "staff";
   // Э15.6: аудитория сверх лимита тарифа не открывается; учеников — не больше, чем даёт тариф.
   await lessonsService.assertRoomWithinPlan(schoolId, lessonId);
-  const maxGuests = Math.min(env.LESSON_MAX_GUESTS, (await billingService.planLimits(schoolId)).limits.studentsPerLesson);
+  const maxGuests = Math.min(env.LESSON_MAX_GUESTS, (await billingService.planLimits(schoolId)).limits.studentsPerLesson ?? Infinity);
 
   // Несколько вкладок с аккаунта персонала (2026-10-17): слот выбираем до
   // любых изменений — шестой вход отказом, ничего не тронув. Без `tabId`

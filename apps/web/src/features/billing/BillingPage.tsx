@@ -313,19 +313,28 @@ function LimitsCard({ state, tutor }: { state: BillingState; tutor: boolean }) {
   const rows: { label: string; value: string; over?: boolean }[] = [
     {
       label: "Аудитории",
-      value: u.rooms > l.rooms ? `${u.rooms} из ${l.rooms}: для уроков открыты первые ${l.rooms}` : `${u.rooms} из ${l.rooms}`,
-      over: u.rooms > l.rooms,
+      value:
+        l.rooms === null
+          ? `${u.rooms}, без ограничения`
+          : u.rooms > l.rooms
+            ? `${u.rooms} из ${l.rooms}: для уроков открыты первые ${l.rooms}`
+            : `${u.rooms} из ${l.rooms}`,
+      over: l.rooms !== null && u.rooms > l.rooms,
     },
     ...(tutor
       ? []
       : [
-          { label: "Учителя", value: `${u.teachers} из ${l.teachers}`, over: u.teachers > l.teachers },
+          {
+            label: "Учителя",
+            value: l.teachers === null ? `${u.teachers}, без ограничения` : `${u.teachers} из ${l.teachers}`,
+            over: l.teachers !== null && u.teachers > l.teachers,
+          },
           {
             label: "Методисты",
             value: l.methodists === null ? `${u.methodists}, без ограничения` : l.methodists === 0 ? "нет в тарифе" : `${u.methodists} из ${l.methodists}`,
           },
         ]),
-    { label: "Учеников в уроке", value: `до ${l.studentsPerLesson}` },
+    { label: "Учеников в уроке", value: l.studentsPerLesson === null ? "без ограничения" : `до ${l.studentsPerLesson}` },
     {
       label: "Запись уроков",
       value: rec === null ? "без ограничения" : rec === 0 ? "нет в тарифе" : `${hoursFmt.format(u.recordingHoursThisMonth)} из ${rec} ч в этом месяце`,

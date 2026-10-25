@@ -334,14 +334,14 @@ export const countLessons = (schoolId: string) => repo.countLessons(schoolId);
 /** Э15.6: можно ли создать ещё одну аудиторию. */
 export async function assertRoomSlot(schoolId: string): Promise<void> {
   const { plan, limits } = await billingService.planLimits(schoolId);
-  if ((await repo.countLessons(schoolId)) < limits.rooms) return;
+  if (limits.rooms === null || (await repo.countLessons(schoolId)) < limits.rooms) return;
   throw new AppError(403, "plan_limit", `По тарифу аудиторий не больше ${limits.rooms}.${billingService.upgradeHint(plan)}`);
 }
 
 /** Э15.6: аудитория сверх лимита (по порядку создания) для уроков не открывается; данные в ней сохраняются. */
 export async function assertRoomWithinPlan(schoolId: string, lessonId: string): Promise<void> {
   const { plan, limits } = await billingService.planLimits(schoolId);
-  if ((await repo.lessonRank(schoolId, lessonId)) <= limits.rooms) return;
+  if (limits.rooms === null || (await repo.lessonRank(schoolId, lessonId)) <= limits.rooms) return;
   throw new AppError(
     403,
     "room_over_limit",
@@ -353,5 +353,5 @@ export async function assertRoomWithinPlan(schoolId: string, lessonId: string): 
 billingService.onPaid(async ({ schoolId, kind, limits }) => {
   if (kind !== "individual") return;
   const [tutorId, ...rest] = await membershipsService.activeUserIdsWithRole(schoolId, "teacher");
-  if (tutorId && rest.length === 0) await ensureRooms(schoolId, tutorId, limits.rooms);
+  if (tutorId && rest.length === 0 && limits.rooms !== null) await ensureRooms(schoolId, tutorId, limits.rooms);
 });

@@ -14,7 +14,7 @@ import {
   Ticket, CreditCard, ShieldCheck, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { usePlatformAccess } from "./platform-access.js";
-import { SpaceSwitcher, useSpaces } from "./SpaceSwitcher.js";
+import { SpaceSwitcher } from "./SpaceSwitcher.js";
 import type { Role } from "@school/shared";
 
 import { cn } from "@/lib/utils";
@@ -45,10 +45,7 @@ function useNavItems(role: Role | null): NavItem[] {
   const roles = useAuthStore((s) => s.user?.roles);
   const set = roles?.length ? roles : role ? [role] : [];
   const items = NAV.filter((n) => n.roles.some((r) => set.includes(r)));
-  // Э15.5: в пространстве библиотеки «Матиса» нет уроков, записей и тарифа — только материалы.
-  const inLibrary = useSpaces().find((s) => s.active)?.kind === "platform";
-  const visible = inLibrary ? items.filter((n) => n.to.startsWith("/materials")) : items;
-  return platform ? [...visible, PLATFORM_ITEM] : visible;
+  return platform ? [...items, PLATFORM_ITEM] : items;
 }
 
 const NAV: NavItem[] = [
