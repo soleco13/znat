@@ -16,7 +16,9 @@ import { Skeleton } from "@/shared/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { notify } from "@/shared/ui/notify";
-import { extendSchool, getOverview, getPayments, getSchool, getSchools, getUsers } from "./platform-api.js";
+import { blockSchool, blockUser, extendSchool, getOverview, getPayments, getSchool, getSchools, getUsers } from "./platform-api.js";
+import { switchSpace } from "@/shared/SpaceSwitcher";
+import { useAuthStore } from "@/shared/auth-store";
 
 /**
  * «Платформа» — раздел супер-админа (запрос владельца 2026-10-25): обзор,
@@ -115,9 +117,31 @@ function TableCard({ children }: { children: React.ReactNode }) {
 
 function SchoolsTab({ onOpen }: { onOpen: (id: string) => void }) {
   const s = useAsync(getSchools, []);
+  // Э15.4 (docs/roles §2.2): индивидуальные репетиторы — отдельным списком.
+  const [kind, setKind] = useState<"all" | "organization" | "individual">("all");
   if (s.error) return <ErrorState description={s.error} onRetry={s.reload} />;
   if (s.loading) return <Skeleton className="h-64 rounded-lg" />;
+  const rows = (s.data ?? []).filter((r) => kind === "all" || r.kind === kind);
+  const opt = (v: typeof kind, label: string) => (
+    <button
+      type="button"
+      aria-pressed={kind === v}
+      onClick={() => setKind(v)}
+      className={cn(
+        "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+        kind === v ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {label}
+    </button>
+  );
   return (
+    <div className="space-y-3">
+    <div role="group" aria-label="Тип пространства" className="inline-flex rounded-lg bg-muted p-1">
+      {opt("all", "Все")}
+      {opt("organization", "Школы")}
+      {opt("individual", "Репетиторы")}
+    </div>
     <TableCard>
       <Table>
         <TableHeader>
@@ -131,12 +155,17 @@ function SchoolsTab({ onOpen }: { onOpen: (id: string) => void }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {(s.data ?? []).map((r) => (
+          {rows.map((r) => (
             <TableRow key={r.id} className="cursor-pointer" onClick={() => onOpen(r.id)}>
               <TableCell>
                 <button type="button" className="text-left font-medium text-foreground hover:underline" onClick={() => onOpen(r.id)}>
                   {r.name}
                 </button>
+                {r.blockedAt ? (
+                  <Badge variant="destructive" className="ml-2">
+                    заблокировано
+                  </Badge>
+                ) : null}
                 <div className="text-xs text-muted-foreground">/s/{r.slug}</div>
               </TableCell>
               <TableCell>{KIND[r.kind] ?? r.kind}</TableCell>
@@ -149,6 +178,7 @@ function SchoolsTab({ onOpen }: { onOpen: (id: string) => void }) {
         </TableBody>
       </Table>
     </TableCard>
+    </div>
   );
 }
 
@@ -207,6 +237,16 @@ function UsersTab({ onOpenSchool }: { onOpenSchool: (id: string) => void }) {
     return () => clearTimeout(t);
   }, [q]);
   const u = useAsync(() => getUsers(query), [query]);
+  const myId = useAuthStore((st) => st.user?.id);
+  const toggleBlock = async (id: string, blocked: boolean) => {
+    try {
+      await blockUser(id, blocked);
+      notify.success(blocked ? "Аккаунт заблокирован" : "Аккаунт разблокирован");
+      u.reload();
+    } catch (e) {
+      notify.error(e instanceof Error ? e.message : "Не удалось изменить блокировку");
+    }
+  };
   return (
     <div className="space-y-3">
       <Input
@@ -231,6 +271,7 @@ function UsersTab({ onOpenSchool }: { onOpenSchool: (id: string) => void }) {
                 <TableHead>Почта</TableHead>
                 <TableHead>Последний вход</TableHead>
                 <TableHead>Создан</TableHead>
+                <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -240,7 +281,7 @@ function UsersTab({ onOpenSchool }: { onOpenSchool: (id: string) => void }) {
                     <div className="font-medium text-foreground">{r.fullName}</div>
                     <div className="text-xs text-muted-foreground">{r.email}</div>
                   </TableCell>
-                  <TableCell>{ROLE[r.role]}{r.isActive ? "" : " · отключён"}</TableCell>
+                  <TableCell>{ROLE[r.role]}{r.isActive ? "" : " · заблокирован"}</TableCell>
                   <TableCell>
                     <button type="button" className="text-left hover:underline" onClick={() => onOpenSchool(r.schoolId)}>
                       {r.schoolName}
@@ -249,6 +290,13 @@ function UsersTab({ onOpenSchool }: { onOpenSchool: (id: string) => void }) {
                   <TableCell>{r.emailVerified ? "подтверждена" : <span className="text-muted-foreground">не подтверждена</span>}</TableCell>
                   <TableCell className="whitespace-nowrap">{r.lastLoginAt ? dtt.format(new Date(r.lastLoginAt)) : "—"}</TableCell>
                   <TableCell className="whitespace-nowrap">{d(r.createdAt)}</TableCell>
+                  <TableCell className="text-right">
+                    {r.id === myId ? null : (
+                      <Button variant="ghost" size="sm" onClick={() => void toggleBlock(r.id, r.isActive)}>
+                        {r.isActive ? "Заблокировать" : "Разблокировать"}
+                      </Button>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -266,6 +314,23 @@ function SchoolSheet({ id, onClose, onChanged }: { id: string | null; onClose: (
   const [period, setPeriod] = useState<BillingPeriod>("month");
   const [count, setCount] = useState("1");
   const [saving, setSaving] = useState(false);
+  const [blocking, setBlocking] = useState(false);
+
+  const toggleSchoolBlock = async () => {
+    if (!id || !data) return;
+    const blocked = !data.school.blockedAt;
+    if (blocked && !window.confirm(`Заблокировать «${data.school.name}»? Участники и ученики не смогут войти, данные сохранятся.`)) return;
+    setBlocking(true);
+    try {
+      setData(await blockSchool(id, blocked));
+      notify.success(blocked ? "Пространство заблокировано" : "Пространство разблокировано");
+      onChanged();
+    } catch (e) {
+      notify.error(e instanceof Error ? e.message : "Не удалось изменить блокировку");
+    } finally {
+      setBlocking(false);
+    }
+  };
 
   useEffect(() => {
     setData(null);
@@ -306,6 +371,16 @@ function SchoolSheet({ id, onClose, onChanged }: { id: string | null; onClose: (
         {!data && !error ? <Skeleton className="mx-4 h-64 rounded-lg" /> : null}
         {data ? (
           <div className="space-y-6 px-4 pb-8">
+            <section className="mt-2 flex flex-wrap items-center gap-2">
+              {/* Э15.4: супер-админ входит в пространство администратором — видит аудитории, записи и материалы, может войти в урок. */}
+              <Button onClick={() => void switchSpace(data.school.id)}>Открыть пространство</Button>
+              <Button variant="outline" className={data.school.blockedAt ? undefined : "text-destructive hover:text-destructive"} loading={blocking} onClick={() => void toggleSchoolBlock()}>
+                {data.school.blockedAt ? "Разблокировать" : "Заблокировать"}
+              </Button>
+              {data.school.blockedAt ? (
+                <span className="text-sm text-destructive">Заблокировано {d(data.school.blockedAt)}</span>
+              ) : null}
+            </section>
             <section>
               <h3 className="mb-2 font-semibold text-foreground">Тариф</h3>
               <p className="text-sm">{paidLabel(data.school)}</p>

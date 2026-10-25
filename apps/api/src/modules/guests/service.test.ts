@@ -19,6 +19,8 @@ const { lessonsServiceMock, schoolSettingsServiceMock, redisMock } = vi.hoisted(
 vi.mock("../lessons/service.js", () => lessonsServiceMock);
 vi.mock("../school-settings/service.js", () => schoolSettingsServiceMock);
 vi.mock("../../db/redis.js", () => ({ redis: redisMock }));
+// Э15.4: блокировки читаются из базы — в этих тестах ничего не заблокировано.
+vi.mock("../../plugins/blocklist.js", () => ({ assertNotBlocked: vi.fn().mockResolvedValue(undefined), isSchoolBlocked: vi.fn().mockResolvedValue(false), invalidateBlocklist: vi.fn() }));
 
 const {
   enterAsGuest,

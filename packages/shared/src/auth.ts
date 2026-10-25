@@ -66,6 +66,8 @@ export const accessTokenPayloadSchema = z.object({
   role: roleSchema,
   /** Э15.1: все роли в пространстве `schoolId`; у токенов до Э15.1 нет — тогда `[role]`. */
   roles: z.array(roleSchema).optional(),
+  /** Э15.4: супер-админ сервиса (`SUPER_ADMIN_EMAILS`) — входит в любое пространство, блокировки его не держат. */
+  superAdmin: z.boolean().optional(),
   /**
    * Только у гостя с правами учителя (выдаёт администратор): сервер
    * действует от имени учителя урока, но строго внутри этого урока.

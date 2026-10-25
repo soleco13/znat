@@ -103,12 +103,18 @@ async function issueRefreshToken(userId: string, familyId: string, schoolId: str
  * иначе последнее использованное. До переноса в членство (или если его
  * нет) — домашнее `users.school_id/role`, как раньше.
  */
-async function spaceFor(user: { id: string; schoolId: string; role: string }, preferred: string | null | undefined) {
-  const space = await membershipsService.resolveSpace(user.id, preferred);
-  if (space) return space;
+/** Э15.4: супер-админ — адрес из `SUPER_ADMIN_EMAILS` (тот же список, что у раздела «Платформа»). */
+function isSuperAdmin(user: { email?: string | null }): boolean {
+  return Boolean(user.email && env.SUPER_ADMIN_EMAILS.includes(user.email.toLowerCase()));
+}
+
+async function spaceFor(user: { id: string; schoolId: string; role: string; email?: string | null }, preferred: string | null | undefined) {
+  const superAdmin = isSuperAdmin(user);
+  const found = await membershipsService.resolveSpace(user.id, preferred, superAdmin);
+  if (found) return superAdmin ? { ...found, superAdmin: true as const } : found;
   // Членство было, но везде прекращено — доступа нет; в «домашнюю» школу не откатываемся.
   if (!user.schoolId || (await membershipsService.hasAnyMembership(user.id))) {
-    throw new AppError(401, "invalid_credentials", "Вы больше не состоите ни в одном пространстве");
+    throw new AppError(401, "invalid_credentials", "Нет доступных пространств: членство прекращено или пространство заблокировано");
   }
   const role = user.role as Role;
   return { schoolId: user.schoolId, role, roles: [role] };
@@ -119,13 +125,21 @@ function inSpace<T extends object>(user: T, space: { schoolId: string; role: Rol
   return { ...user, schoolId: space.schoolId, role: space.role, roles: space.roles };
 }
 
+/** Поля пространства в access-токене (без лишнего из объекта пространства). */
+const claims = (space: { schoolId: string; role: Role; roles: Role[]; superAdmin?: true }) => ({
+  schoolId: space.schoolId,
+  role: space.role,
+  roles: space.roles,
+  ...(space.superAdmin ? { superAdmin: true } : {}),
+});
+
 /**
  * Э14.1 — минт новой сессии (access + refresh, новая `familyId`) для уже
  * аутентифицированного пользователя. Общая точка для `login()` и
  * подтверждения почты при self-signup (`registration` модуль) — токены не
  * дублируются в двух местах.
  */
-export async function issueSessionForUser<T extends { id: string; schoolId: string; role: string; isActive: boolean }>(
+export async function issueSessionForUser<T extends { id: string; schoolId: string; role: string; isActive: boolean; email?: string | null }>(
   user: T,
   preferredSchoolId?: string | null,
 ) {
@@ -139,7 +153,7 @@ export async function issueSessionForUser<T extends { id: string; schoolId: stri
   const familyId = randomUUID();
   const space = await spaceFor(user, preferredSchoolId);
   await membershipsService.touch(user.id, space.schoolId);
-  const accessToken = await issueAccessToken({ sub: user.id, ...space });
+  const accessToken = await issueAccessToken({ sub: user.id, ...claims(space) });
   const refresh = await issueRefreshToken(user.id, familyId, space.schoolId);
 
   return { accessToken, refreshToken: refresh.token, refreshExpiresAt: refresh.expiresAt, user: inSpace(user, space) };
@@ -270,7 +284,7 @@ async function sessionFor(
   refreshToken: { token: string; expiresAt: Date },
   space: { schoolId: string; role: Role; roles: Role[] },
 ) {
-  const accessToken = await issueAccessToken({ sub: user.id, ...space });
+  const accessToken = await issueAccessToken({ sub: user.id, ...claims(space) });
   return {
     accessToken,
     refreshToken: refreshToken.token,
@@ -424,14 +438,22 @@ export async function switchSpace(presentedToken: string, userId: string, school
   }
   const user = await repo.findUserById(userId);
   if (!user || !user.isActive) throw new AppError(401, "invalid_credentials", "Пользователь недоступен");
-  const space = await membershipsService.getActive(userId, schoolId);
-  if (!space) throw new AppError(403, "not_a_member", "Вы не состоите в этом пространстве");
+  const superAdmin = isSuperAdmin(user);
+  const member = await membershipsService.getActive(userId, schoolId, superAdmin);
+  const found = member ?? (superAdmin ? await membershipsService.superAdminSpace(schoolId) : null);
+  if (!found) throw new AppError(403, "not_a_member", "Вы не состоите в этом пространстве или оно заблокировано");
+  const space = superAdmin ? { ...found, superAdmin: true as const } : found;
   await repo.setRefreshTokenSchool(presentedHash, schoolId);
   await membershipsService.touch(userId, schoolId);
-  const accessToken = await issueAccessToken({ sub: user.id, ...space });
+  const accessToken = await issueAccessToken({ sub: user.id, ...claims(space) });
   return { accessToken, user: inSpace(user, space) };
 }
 
-export async function listSpaces(userId: string, activeSchoolId: string) {
-  return membershipsService.listSpaces(userId, activeSchoolId);
+export async function listSpaces(userId: string, activeSchoolId: string, superAdmin = false) {
+  return membershipsService.listSpaces(userId, activeSchoolId, superAdmin);
+}
+
+/** Э15.4: заблокированный аккаунт — все сессии отзываются. */
+export async function revokeAllSessions(userId: string): Promise<void> {
+  await repo.revokeAllForUser(userId);
 }

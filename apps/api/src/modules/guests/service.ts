@@ -10,6 +10,7 @@ import {
 import { redis } from "../../db/redis.js";
 import { env } from "../../plugins/env.js";
 import { AppError } from "../../plugins/errors.js";
+import { isSchoolBlocked } from "../../plugins/blocklist.js";
 import * as lessonsService from "../lessons/service.js";
 import * as schoolSettingsService from "../school-settings/service.js";
 
@@ -86,6 +87,10 @@ export function hashJoinToken(joinToken: string): string {
  */
 export async function resolveLessonForGuestEntry(joinToken: string): Promise<{ id: string; schoolId: string }> {
   const lesson = await lessonsService.resolveJoinToken(joinToken);
+  // Э15.4: в заблокированное пространство гости не входят.
+  if (await isSchoolBlocked(lesson.schoolId)) {
+    throw new AppError(403, "space_blocked", "Урок недоступен — пространство заблокировано");
+  }
   const settings = await schoolSettingsService.getSchoolSettings(lesson.schoolId);
   if (!settings.guestAccessEnabled) {
     throw new AppError(403, "guest_access_disabled", "Вход без аккаунта отключён администратором школы");
@@ -140,6 +145,10 @@ export async function enterAsGuest(
   autoName?: (lessonId: string, reusedGuestId: string | null) => Promise<string>,
 ): Promise<GuestSessionIssued> {
   const lesson = await lessonsService.resolveJoinToken(joinToken);
+  // Э15.4: в заблокированное пространство гости не входят.
+  if (await isSchoolBlocked(lesson.schoolId)) {
+    throw new AppError(403, "space_blocked", "Урок недоступен — пространство заблокировано");
+  }
   // Параметры школы (§10.10 ТЗ, запрос 2026-09-14): admin может закрыть вход
   // без аккаунта целиком. Карточку урока (`getPublicLessonInfo`) не гейтим —
   // без активного входа она безвредна, а гейт здесь достаточен, чтобы
@@ -210,7 +219,7 @@ export async function resolveGuestSession(token: string): Promise<Extract<Lesson
   }
 
   const lesson = await lessonsService.getLessonForGuestSession(payload.lessonId);
-  if (!lesson) {
+  if (!lesson || (await isSchoolBlocked(lesson.schoolId))) {
     throw new AppError(401, "invalid_guest_session", "Урок недоступен");
   }
   // Ссылку проверяем раньше отзыва: при перевыпуске ссылки гостей тоже

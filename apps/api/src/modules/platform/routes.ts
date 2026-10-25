@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import {
+  platformBlockRequestSchema,
   platformExtendRequestSchema,
   platformListQuerySchema,
   platformOverviewSchema,
@@ -33,6 +34,18 @@ export default async function platformRoutes(app: FastifyInstance) {
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
     await service.extend(request.user, id, platformExtendRequestSchema.parse(request.body));
     return platformSchoolDetailSchema.parse(await service.schoolDetail(id));
+  });
+
+  app.post("/platform/schools/:id/block", async (request) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
+    await service.blockSchool(id, platformBlockRequestSchema.parse(request.body).blocked);
+    return platformSchoolDetailSchema.parse(await service.schoolDetail(id));
+  });
+
+  app.post("/platform/users/:id/block", async (request) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
+    await service.blockUser(request.user, id, platformBlockRequestSchema.parse(request.body).blocked);
+    return { ok: true };
   });
 
   app.get("/platform/users", async (request) => {

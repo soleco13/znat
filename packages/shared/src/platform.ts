@@ -33,6 +33,8 @@ export const platformSchoolSchema = z.object({
   billingPlan: z.string().nullable(),
   paidUntil: z.string().nullable(),
   subscriptionStatus: subscriptionStatus.nullable(),
+  /** Э15.4: заблокировано супер-админом. */
+  blockedAt: z.string().nullable().default(null),
 });
 export type PlatformSchool = z.infer<typeof platformSchoolSchema>;
 
@@ -97,3 +99,6 @@ export const platformListQuerySchema = z.object({
   q: z.string().trim().max(100).optional(),
   limit: z.coerce.number().int().min(1).max(500).default(200),
 });
+
+/** Э15.4: блокировка пространства или аккаунта супер-админом. */
+export const platformBlockRequestSchema = z.object({ blocked: z.boolean() });

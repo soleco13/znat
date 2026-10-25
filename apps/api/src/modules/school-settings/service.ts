@@ -85,3 +85,8 @@ export async function updateSettings(
   await repo.updateRawSettings(user.schoolId, next);
   return next;
 }
+
+/** Э15.4: блокировка пространства (только «Платформа» супер-админа). */
+export async function setSchoolBlocked(schoolId: string, blocked: boolean): Promise<boolean> {
+  return repo.setBlocked(schoolId, blocked);
+}

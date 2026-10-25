@@ -5,9 +5,20 @@ import { memberships, schools } from "../../db/schema.js";
 
 export async function findActive(userId: string, schoolId: string) {
   const [row] = await db
-    .select()
+    .select({ schoolId: memberships.schoolId, roles: memberships.roles, blockedAt: schools.blockedAt })
     .from(memberships)
+    .innerJoin(schools, eq(schools.id, memberships.schoolId))
     .where(and(eq(memberships.userId, userId), eq(memberships.schoolId, schoolId), isNull(memberships.removedAt)))
+    .limit(1);
+  return row ?? null;
+}
+
+/** Э15.4: пространство по id (вход супер-админа без членства). */
+export async function findSchool(schoolId: string) {
+  const [row] = await db
+    .select({ id: schools.id, name: schools.name, kind: schools.kind, blockedAt: schools.blockedAt })
+    .from(schools)
+    .where(eq(schools.id, schoolId))
     .limit(1);
   return row ?? null;
 }
@@ -21,6 +32,7 @@ export async function listActiveForUser(userId: string) {
       lastUsedAt: memberships.lastUsedAt,
       name: schools.name,
       kind: schools.kind,
+      blockedAt: schools.blockedAt,
     })
     .from(memberships)
     .innerJoin(schools, eq(schools.id, memberships.schoolId))

@@ -197,3 +197,9 @@ export async function findEmailsByIds(ids: string[]) {
   if (!ids.length) return [];
   return db.select({ id: users.id, email: users.email }).from(users).where(inArray(users.id, ids));
 }
+
+/** Э15.4: блокировка аккаунта супер-админом — глобально, во всех пространствах. */
+export async function setAccountActive(id: string, active: boolean): Promise<boolean> {
+  const rows = await db.update(users).set({ isActive: active }).where(eq(users.id, id)).returning({ id: users.id });
+  return rows.length > 0;
+}

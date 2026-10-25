@@ -15,30 +15,51 @@ export interface ActiveSpace {
 
 const toSpace = (schoolId: string, roles: Role[]): ActiveSpace => ({ schoolId, roles, role: primaryRole(roles) });
 
-/** Действующее членство в пространстве или null. */
-export async function getActive(userId: string, schoolId: string): Promise<ActiveSpace | null> {
+/**
+ * Действующее членство в пространстве или null. Э15.4: заблокированное
+ * пространство для участников закрыто (`includeBlocked` — только супер-админу).
+ */
+export async function getActive(userId: string, schoolId: string, includeBlocked = false): Promise<ActiveSpace | null> {
   const row = await repo.findActive(userId, schoolId);
-  return row && row.roles.length ? toSpace(row.schoolId, row.roles) : null;
+  if (!row || !row.roles.length || (row.blockedAt && !includeBlocked)) return null;
+  return toSpace(row.schoolId, row.roles);
+}
+
+/** Э15.4: супер-админ входит в любое существующее пространство администратором. */
+export async function superAdminSpace(schoolId: string): Promise<ActiveSpace | null> {
+  const school = await repo.findSchool(schoolId);
+  return school ? toSpace(school.id, ["admin"]) : null;
 }
 
 /**
  * Пространство для сессии: запрошенное, если членство действует, иначе
  * последнее использованное. null — пользователь нигде не состоит.
  */
-export async function resolveSpace(userId: string, preferred: string | null | undefined): Promise<ActiveSpace | null> {
+export async function resolveSpace(
+  userId: string,
+  preferred: string | null | undefined,
+  superAdmin = false,
+): Promise<ActiveSpace | null> {
   if (preferred) {
-    const wanted = await getActive(userId, preferred);
+    const wanted = (await getActive(userId, preferred, superAdmin)) ?? (superAdmin ? await superAdminSpace(preferred) : null);
     if (wanted) return wanted;
   }
-  const [first] = await repo.listActiveForUser(userId);
-  return first && first.roles.length ? toSpace(first.schoolId, first.roles) : null;
+  const rows = await repo.listActiveForUser(userId);
+  const first = rows.find((r) => r.roles.length && (superAdmin || !r.blockedAt));
+  return first ? toSpace(first.schoolId, first.roles) : null;
 }
 
-export async function listSpaces(userId: string, activeSchoolId: string): Promise<Space[]> {
+export async function listSpaces(userId: string, activeSchoolId: string, superAdmin = false): Promise<Space[]> {
   const rows = await repo.listActiveForUser(userId);
-  return rows
-    .filter((r) => r.roles.length)
+  const spaces = rows
+    .filter((r) => r.roles.length && (superAdmin || !r.blockedAt))
     .map((r) => ({ schoolId: r.schoolId, name: r.name, kind: r.kind, roles: r.roles, active: r.schoolId === activeSchoolId }));
+  // Супер-админ открыл чужое пространство — оно тоже в списке, чтобы было видно, где он сейчас.
+  if (superAdmin && !spaces.some((s) => s.active)) {
+    const school = await repo.findSchool(activeSchoolId);
+    if (school) spaces.unshift({ schoolId: school.id, name: school.name, kind: school.kind, roles: ["admin"], active: true });
+  }
+  return spaces;
 }
 
 export const touch = repo.touch;

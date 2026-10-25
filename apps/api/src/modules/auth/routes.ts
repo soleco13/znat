@@ -140,7 +140,7 @@ export default async function authRoutes(app: FastifyInstance) {
   /** Э15.1 — пространства пользователя (переключатель в шапке). */
   app.get("/auth/spaces", { preHandler: app.authenticate }, async (request, reply) => {
     if (request.user.lessonScope) throw new AppError(403, "forbidden", "Недоступно в гостевой сессии");
-    const spaces = await authService.listSpaces(request.user.sub, request.user.schoolId);
+    const spaces = await authService.listSpaces(request.user.sub, request.user.schoolId, request.user.superAdmin === true);
     return reply.send(z.array(spaceSchema).parse(spaces));
   });
 

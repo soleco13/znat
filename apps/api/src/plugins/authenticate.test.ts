@@ -33,6 +33,8 @@ vi.mock("../modules/rooms/service.js", () => ({
   assertGuestNotLockedOut: vi.fn(async () => undefined),
   isLessonCohost: vi.fn(async () => cohost.value),
 }));
+// Э15.4: блокировки читаются из базы — в этих тестах ничего не заблокировано.
+vi.mock("./blocklist.js", () => ({ assertNotBlocked: vi.fn().mockResolvedValue(undefined), isSchoolBlocked: vi.fn().mockResolvedValue(false), invalidateBlocklist: vi.fn() }));
 
 const { default: authenticatePlugin } = await import("./authenticate.js");
 const { default: errorsPlugin } = await import("./errors.js");

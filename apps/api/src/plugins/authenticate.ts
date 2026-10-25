@@ -7,6 +7,7 @@ import * as lessonsService from "../modules/lessons/service.js";
 import * as roomsService from "../modules/rooms/service.js";
 import { AppError } from "./errors.js";
 import { setLogContext } from "./logger.js";
+import { assertNotBlocked } from "./blocklist.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -105,6 +106,7 @@ export default fp(async function authenticatePlugin(app: FastifyInstance) {
       const delegated = await resolveDelegatedTeacher(request);
       if (delegated) {
         request.user = delegated;
+        await assertNotBlocked(delegated);
         return;
       }
       throw new AppError(401, "missing_token", "Отсутствует access-токен");
@@ -120,5 +122,6 @@ export default fp(async function authenticatePlugin(app: FastifyInstance) {
       throw new AppError(401, "invalid_token", "Недействительный или просроченный access-токен");
     }
     setLogContext({ userId: request.user.sub, schoolId: request.user.schoolId });
+    await assertNotBlocked(request.user);
   });
 });

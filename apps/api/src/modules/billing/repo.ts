@@ -159,6 +159,7 @@ export async function listSchoolsWithBilling(schoolId?: string) {
       createdAt: schools.createdAt,
       billingPlan: schools.billingPlan,
       paidUntil: schools.paidUntil,
+      blockedAt: schools.blockedAt,
       subscriptionStatus: sql<string | null>`(
         select s.status from ${subscriptions} s
         where s.school_id = ${schools.id} and s.status in ('pending','active','past_due')

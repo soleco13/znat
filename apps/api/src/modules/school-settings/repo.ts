@@ -30,3 +30,13 @@ export async function findSchoolName(schoolId: string): Promise<string | null> {
   const [row] = await db.select({ name: schools.name }).from(schools).where(eq(schools.id, schoolId)).limit(1);
   return row?.name ?? null;
 }
+
+/** Э15.4: блокировка пространства супер-админом. */
+export async function setBlocked(schoolId: string, blocked: boolean): Promise<boolean> {
+  const rows = await db
+    .update(schools)
+    .set({ blockedAt: blocked ? new Date() : null })
+    .where(eq(schools.id, schoolId))
+    .returning({ id: schools.id });
+  return rows.length > 0;
+}

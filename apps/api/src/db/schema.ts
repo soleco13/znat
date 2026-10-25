@@ -93,6 +93,8 @@ export const schools = pgTable("schools", {
   billingPlan: text("billing_plan"),
   /** До какого момента оплачено; продлевается каждым подтверждённым платежом. */
   paidUntil: timestamp("paid_until", { withTimezone: true }),
+  /** Э15.4: заблокировано супер-админом — участники и гости не входят, данные сохраняются. */
+  blockedAt: timestamp("blocked_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

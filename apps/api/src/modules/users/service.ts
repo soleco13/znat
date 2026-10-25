@@ -123,3 +123,7 @@ export async function emailsByIds(ids: string[]): Promise<Map<string, string>> {
   const rows = await repo.findEmailsByIds([...new Set(ids)]);
   return new Map(rows.map((r) => [r.id, r.email]));
 }
+
+export async function setAccountActive(id: string, active: boolean): Promise<boolean> {
+  return repo.setAccountActive(id, active);
+}

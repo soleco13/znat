@@ -9,7 +9,10 @@ import type {
 } from "@school/shared";
 import { env } from "../../plugins/env.js";
 import { AppError } from "../../plugins/errors.js";
+import * as authService from "../auth/service.js";
 import * as billingService from "../billing/service.js";
+import * as schoolSettingsService from "../school-settings/service.js";
+import { invalidateBlocklist } from "../../plugins/blocklist.js";
 import * as usersService from "../users/service.js";
 
 /**
@@ -20,8 +23,9 @@ import * as usersService from "../users/service.js";
  */
 export async function isSuperAdmin(user: AccessTokenPayload): Promise<boolean> {
   if (!env.SUPER_ADMIN_EMAILS.length || user.lessonScope) return false;
-  const me = await usersService.getUserForAuth(user.schoolId, user.sub);
-  return Boolean(me && me.isActive && env.SUPER_ADMIN_EMAILS.includes(me.email.toLowerCase()));
+  // Э15.4: супер-админ может открыть чужое пространство — проверяем аккаунт, не членство в текущем.
+  const email = (await usersService.emailsByIds([user.sub])).get(user.sub);
+  return Boolean(email && env.SUPER_ADMIN_EMAILS.includes(email.toLowerCase()));
 }
 
 export async function requireSuperAdmin(user: AccessTokenPayload): Promise<void> {
@@ -55,6 +59,7 @@ async function schoolsWithCounts(schoolId?: string): Promise<PlatformSchool[]> {
     billingPlan: r.billingPlan,
     paidUntil: iso(r.paidUntil),
     subscriptionStatus: (r.subscriptionStatus as PlatformSchool["subscriptionStatus"]) ?? null,
+    blockedAt: iso(r.blockedAt),
   }));
 }
 
@@ -122,4 +127,23 @@ export async function schoolDetail(schoolId: string): Promise<PlatformSchoolDeta
 
 export async function extend(user: AccessTokenPayload, schoolId: string, req: PlatformExtendRequest): Promise<void> {
   await billingService.manualExtend({ schoolId, byUserId: user.sub, plan: req.plan, period: req.period, count: req.count });
+}
+
+/**
+ * Э15.4 — блокировка пространства: участники и гости не входят, данные
+ * сохраняются; супер-админ продолжает видеть пространство.
+ */
+export async function blockSchool(schoolId: string, blocked: boolean): Promise<void> {
+  if (!(await schoolSettingsService.setSchoolBlocked(schoolId, blocked))) {
+    throw new AppError(404, "not_found", "Пространство не найдено");
+  }
+  invalidateBlocklist();
+}
+
+/** Э15.4 — блокировка аккаунта во всех пространствах; сессии отзываются. Себя заблокировать нельзя. */
+export async function blockUser(actor: AccessTokenPayload, userId: string, blocked: boolean): Promise<void> {
+  if (blocked && userId === actor.sub) throw new AppError(409, "cannot_block_self", "Нельзя заблокировать собственный аккаунт");
+  if (!(await usersService.setAccountActive(userId, !blocked))) throw new AppError(404, "not_found", "Пользователь не найден");
+  if (blocked) await authService.revokeAllSessions(userId);
+  invalidateBlocklist();
 }
