@@ -13,6 +13,7 @@ const { repoMock, authServiceMock, mailServiceMock, invitesServiceMock, redisMoc
     joinSchoolViaInvite: vi.fn(),
     findEmailVerificationTokenByHash: vi.fn(),
     consumeVerificationToken: vi.fn(),
+    findSchoolKind: vi.fn().mockResolvedValue("organization"),
   },
   authServiceMock: {
     hashPassword: vi.fn().mockResolvedValue("hashed"),
@@ -31,6 +32,8 @@ vi.mock("../../db/redis.js", () => ({ redis: redisMock }));
 vi.mock("../auth/service.js", () => authServiceMock);
 vi.mock("../mail/service.js", () => mailServiceMock);
 vi.mock("../invites/service.js", () => invitesServiceMock);
+const lessonsServiceMock = vi.hoisted(() => ({ ensureStarterRoom: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("../lessons/service.js", () => lessonsServiceMock);
 
 const {
   registerIndividual,
@@ -150,7 +153,7 @@ describe("registerIndividual", () => {
 
     expect(result).toEqual({ status: "pending_verification", email: "tutor@example.com" });
     expect(repoMock.registerSchoolWithAdmin).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: "individual", role: "admin", email: "tutor@example.com" }),
+      expect.objectContaining({ kind: "individual", role: "teacher", email: "tutor@example.com" }),
     );
     expect(mailServiceMock.sendVerificationEmail).toHaveBeenCalledWith(
       "tutor@example.com",
@@ -313,5 +316,20 @@ describe("getSpacePublicInfo", () => {
   it("не найдено → 404", async () => {
     repoMock.findSchoolBySlug.mockResolvedValue(null);
     await expect(getSpacePublicInfo("missing")).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+describe("Э15.3 — стартовая аудитория репетитора", () => {
+  it("после подтверждения почты репетитору выдаётся аудитория, школе — нет", async () => {
+    repoMock.findEmailVerificationTokenByHash.mockResolvedValue({ id: "t", userId: "u", consumedAt: null, expiresAt: new Date(Date.now() + 1e6) });
+    repoMock.consumeVerificationToken.mockResolvedValue({ id: "u", schoolId: "s", role: "teacher", isActive: true });
+    authServiceMock.issueSessionForUser.mockResolvedValue({ accessToken: "a" });
+    repoMock.findSchoolKind.mockResolvedValueOnce("individual");
+    await confirmEmail("raw");
+    expect(lessonsServiceMock.ensureStarterRoom).toHaveBeenCalledWith("s", "u");
+    lessonsServiceMock.ensureStarterRoom.mockClear();
+    repoMock.findSchoolKind.mockResolvedValueOnce("organization");
+    await confirmEmail("raw");
+    expect(lessonsServiceMock.ensureStarterRoom).not.toHaveBeenCalled();
   });
 });

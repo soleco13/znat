@@ -304,3 +304,13 @@ export async function unassignLessonMaterial(
 export async function getLessonMaterialIds(lessonId: string): Promise<string[]> {
   return repo.findLessonMaterialIds(lessonId);
 }
+
+/**
+ * Э15.3 (docs/roles §5): репетитор аудитории не создаёт — они выдаются ему
+ * вместе с кабинетом. Пока лимиты тарифов не заданы (Э15.6), после
+ * подтверждения почты выдаётся одна «Моя аудитория».
+ */
+export async function ensureStarterRoom(schoolId: string, teacherId: string): Promise<void> {
+  if ((await repo.countLessons(schoolId)) > 0) return;
+  await createLesson(schoolId, { title: "Моя аудитория", teacherId });
+}

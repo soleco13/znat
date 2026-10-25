@@ -115,7 +115,7 @@ export async function findMaterialVersionById(
  */
 export interface MaterialForEditRow extends MaterialVersionRow {
   status: MaterialStatus;
-  createdBy: string;
+  createdBy: string | null;
   currentVersionId: string | null;
 }
 
@@ -269,7 +269,7 @@ export async function setMaterialStatus(materialId: string, status: MaterialStat
 export interface MaterialVersionSummaryRow {
   versionId: string;
   version: number;
-  createdBy: string;
+  createdBy: string | null;
   createdAt: Date;
   isCurrent: boolean;
 }
@@ -304,7 +304,7 @@ export interface MaterialSummaryRow {
   grades: number[];
   topic: string | null;
   status: MaterialStatus;
-  createdBy: string;
+  createdBy: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

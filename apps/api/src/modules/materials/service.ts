@@ -11,6 +11,7 @@ import {
   type MaterialStatus,
   type MaterialValidationIssue,
 } from "@school/shared";
+import { hasRole } from "../../plugins/roles.js";
 import { AppError } from "../../plugins/errors.js";
 import * as schoolSettingsService from "../school-settings/service.js";
 import * as repo from "./repo.js";
@@ -63,6 +64,15 @@ function parseVersion(row: repo.MaterialVersionRow): LoadedMaterial {
 // доступа (CLAUDE.md, «не делегировать вслепую») — читано построчно.
 
 /** id служебного пространства, если оно заведено и это не сама школа пользователя. */
+/**
+ * Э15.3 (docs/roles §4): создавать и править материалы школы может
+ * администратор или методист — в том числе учитель, совмещающий роль
+ * методиста. Только учитель — читатель опубликованных.
+ */
+function canAuthor(user: AccessTokenPayload): boolean {
+  return hasRole(user, "admin") || hasRole(user, "methodist");
+}
+
 async function foreignPlatformSchoolId(schoolId: string): Promise<string | null> {
   const platform = await schoolSettingsService.getPlatformSchool();
   return platform && platform.id !== schoolId ? platform.id : null;
@@ -130,7 +140,7 @@ export async function getMaterialVersion(versionId: string): Promise<LoadedMater
 /** Полное содержимое версии + владение/статус — то, что грузит редактор (Э9.2). */
 export interface EditableMaterial extends LoadedMaterial {
   status: MaterialStatus;
-  createdBy: string;
+  createdBy: string | null;
   /** Это версия, которую сейчас видит школа (Э9.8, `materials.currentVersionId`)? См. `materialDetailSchema.isCurrent`, `packages/shared`. */
   isCurrent: boolean;
 }
@@ -164,7 +174,7 @@ export async function getMaterialForEdit(
 
   // Ревизия Э12.7: учитель видит ТОЛЬКО опубликованную версию (просмотр),
   // непроверенные черновики/форки — не его дело. admin/methodist — последнюю.
-  if (user.role !== "teacher") {
+  if (canAuthor(user)) {
     return { ...parseVersion(latest), status: latest.status, createdBy: latest.createdBy, isCurrent: latest.versionId === latest.currentVersionId };
   }
 
@@ -202,7 +212,7 @@ export async function updateMaterialDraft(
   content: Material,
 ): Promise<void> {
   // Ревизия Э12.7: правит материалы только admin/methodist.
-  if (user.role === "teacher") {
+  if (!canAuthor(user)) {
     throw new AppError(403, "forbidden", "Редактировать материалы может методист или администратор");
   }
   const row = await repo.findLatestMaterialVersionForEdit(user.schoolId, materialId);
@@ -230,7 +240,7 @@ export async function updateMaterialDraft(
  * у `publish` ниже: отправить свой черновик на ревью может и сам автор.
  */
 export async function submitForReview(user: AccessTokenPayload, materialId: string): Promise<MaterialStatus> {
-  if (user.role === "teacher") {
+  if (!canAuthor(user)) {
     throw new AppError(403, "forbidden", "Отправить материал на ревью может методист или администратор");
   }
   const row = await repo.findLatestMaterialVersionForEdit(user.schoolId, materialId);
@@ -252,7 +262,7 @@ export async function submitForReview(user: AccessTokenPayload, materialId: stri
  * у activities).
  */
 export async function returnToDraft(user: AccessTokenPayload, materialId: string): Promise<MaterialStatus> {
-  if (user.role === "teacher") {
+  if (!canAuthor(user)) {
     throw new AppError(403, "forbidden", "Вернуть материал из ревью может только методист/администратор");
   }
   const row = await repo.findLatestMaterialVersionForEdit(user.schoolId, materialId);
@@ -286,7 +296,7 @@ export async function publish(
   user: AccessTokenPayload,
   materialId: string,
 ): Promise<{ version: number; versionId: string }> {
-  if (user.role === "teacher") {
+  if (!canAuthor(user)) {
     throw new AppError(403, "forbidden", "Публиковать материалы может только методист/администратор");
   }
   const row = await repo.findLatestMaterialVersionForEdit(user.schoolId, materialId);
@@ -336,7 +346,7 @@ export async function listMaterialVersions(
 ): Promise<repo.MaterialVersionSummaryRow[]> {
   const row = await repo.findLatestMaterialVersionForEdit(user.schoolId, materialId);
   if (!row) throw new AppError(404, "material_not_found", "Материал не найден");
-  if (user.role === "teacher" && row.createdBy !== user.sub) {
+  if (!canAuthor(user) && row.createdBy !== user.sub) {
     throw new AppError(404, "material_not_found", "Материал не найден");
   }
   return repo.listMaterialVersions(user.schoolId, materialId);
@@ -359,7 +369,7 @@ export async function createMaterial(
 ): Promise<{ materialId: string; versionId: string }> {
   // Ревизия Э12.7: материалы создают только admin/methodist. Учитель —
   // читатель (выбирает готовый на урок / смотрит в ЛК).
-  if (user.role === "teacher") {
+  if (!canAuthor(user)) {
     throw new AppError(403, "forbidden", "Материалы создаёт методист или администратор");
   }
   return repo.insertMaterial(user.schoolId, user.sub, content);
@@ -417,7 +427,7 @@ export async function listMaterials(
   }
   // Ревизия Э12.7: учитель видит в библиотеке только ОПУБЛИКОВАННЫЕ
   // материалы (выбирает готовый на урок / открывает на просмотр).
-  const teacher = user.role === "teacher";
+  const teacher = !canAuthor(user);
   return repo.listMaterials(user.schoolId, {
     subject: query.subject,
     grade: query.grade,

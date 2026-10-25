@@ -21,6 +21,7 @@ import { paginateMaterial, stripMaterialAnswerKeys } from "@school/shared";
 import { cn } from "@/lib/utils";
 
 import { useAuthStore } from "@/shared/auth-store";
+import { canAuthorMaterials } from "@/shared/roles";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import {
@@ -76,7 +77,8 @@ type EditorMode = "edit" | "preview";
 export function MaterialEditorPage() {
   const { id } = useParams<{ id: string }>();
   const currentUser = useAuthStore((s) => s.user);
-  const canEdit = currentUser?.role === "admin" || currentUser?.role === "methodist";
+  // Э15.3: учитель, совмещающий роль методиста, правит материалы школы.
+  const canEdit = canAuthorMaterials(currentUser);
 
   const [material, setMaterial] = useState<Material | null>(null);
   const [status, setStatus] = useState<MaterialStatus | null>(null);
@@ -181,7 +183,7 @@ export function MaterialEditorPage() {
         status={status}
         isCurrent={isCurrent}
         canEdit={canEdit}
-        role={currentUser?.role ?? null}
+        role={canEdit && currentUser?.role === "teacher" ? "methodist" : (currentUser?.role ?? null)}
         mode={mode}
         onModeChange={setMode}
         autosaveStatus={autosave.status}

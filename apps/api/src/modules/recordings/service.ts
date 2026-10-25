@@ -102,7 +102,8 @@ async function toWithDownload(row: RecordingRow): Promise<RecordingWithDownload>
 
 /**
  * Право работать с записями урока. Ученику — нет вообще (§10.10 ТЗ:
- * «ученикам — нет»). Учитель — только свой урок. admin/methodist — любой.
+ * «ученикам — нет»). Учитель — только свой урок, админ — любой. Методист
+ * записей не видит (Э15.3, docs/roles §4.3).
  */
 async function assertRecordingAccess(
   user: AccessTokenPayload,
@@ -111,7 +112,7 @@ async function assertRecordingAccess(
   // Э12.9: роль `student` из модели убрана, но выданный до деплоя access-JWT
   // живёт ещё 15 минут — проверяем по белому списку персонала, а не по
   // отсутствующей роли, чтобы такой токен не получил доступ к записям.
-  if (user.role !== "admin" && user.role !== "methodist" && user.role !== "teacher") {
+  if (user.role !== "admin" && user.role !== "teacher") {
     throw new AppError(403, "forbidden", "Записи уроков доступны только персоналу");
   }
   const lesson = await lessonsService.getLesson(user.schoolId, lessonId);

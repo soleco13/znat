@@ -213,3 +213,8 @@ export async function listUnverifiedUsersCreatedBefore(before: Date, limit: numb
     .limit(limit);
   return rows.map((r) => r.id);
 }
+
+export async function findSchoolKind(schoolId: string): Promise<string | null> {
+  const [row] = await db.select({ kind: schools.kind }).from(schools).where(eq(schools.id, schoolId)).limit(1);
+  return row?.kind ?? null;
+}

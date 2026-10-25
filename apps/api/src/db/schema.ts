@@ -397,9 +397,9 @@ export const materials = pgTable(
     schoolId: uuid("school_id")
       .notNull()
       .references(() => schools.id, { onDelete: "cascade" }),
+    /** Э15.3: материал принадлежит пространству; автор — справочное поле, удаление аккаунта материал не трогает. */
     createdBy: uuid("created_by")
-      .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
+      .references(() => users.id, { onDelete: "set null" }),
     title: text("title").notNull(),
     subject: text("subject").notNull(),
     /** Массив номеров классов (`materialSchema.grades`), jsonb — не native PG array (нет прецедента в схеме, проще фильтровать через `@>`). */
@@ -449,9 +449,9 @@ export const materialVersions = pgTable(
       .references(() => materials.id, { onDelete: "cascade" }),
     version: integer("version").notNull(),
     content: jsonb("content").notNull(),
+    /** Э15.3: материал принадлежит пространству; автор — справочное поле, удаление аккаунта материал не трогает. */
     createdBy: uuid("created_by")
-      .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
+      .references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique("material_versions_material_version_idx").on(t.materialId, t.version)],
@@ -498,9 +498,9 @@ export const mediaAssets = pgTable(
     schoolId: uuid("school_id")
       .notNull()
       .references(() => schools.id, { onDelete: "cascade" }),
+    /** Э15.3: материал принадлежит пространству; автор — справочное поле, удаление аккаунта материал не трогает. */
     uploadedBy: uuid("uploaded_by")
-      .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
+      .references(() => users.id, { onDelete: "set null" }),
     kind: mediaAssetKindEnum("kind").notNull(),
     originalName: text("original_name").notNull(),
     mimeType: text("mime_type").notNull(),

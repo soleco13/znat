@@ -11,6 +11,7 @@ import { env } from "../../plugins/env.js";
 import { AppError } from "../../plugins/errors.js";
 import * as authService from "../auth/service.js";
 import * as invitesService from "../invites/service.js";
+import * as lessonsService from "../lessons/service.js";
 import * as mailService from "../mail/service.js";
 import * as repo from "./repo.js";
 import { logTaskFailure } from "../../plugins/logger.js";
@@ -100,7 +101,9 @@ async function registerAndSendVerification(input: {
       email: input.email,
       passwordHash,
       fullName: input.fullName,
-      role: "admin",
+      // Э15.3 (docs/roles): репетитор — учитель своего личного пространства,
+      // администратор есть только у школы.
+      role: input.kind === "individual" ? "teacher" : "admin",
       verificationTokenHash: tokenHash,
       verificationExpiresAt,
     });
@@ -197,6 +200,13 @@ export async function confirmEmail(token: string) {
     throw new AppError(400, "token_already_used", "Ссылка уже была использована");
   }
 
+  if ((await repo.findSchoolKind(user.schoolId)) === "individual") {
+    try {
+      await lessonsService.ensureStarterRoom(user.schoolId, user.id);
+    } catch (err) {
+      logTaskFailure("registration.starter_room", err, { userId: user.id });
+    }
+  }
   return authService.issueSessionForUser(user);
 }
 

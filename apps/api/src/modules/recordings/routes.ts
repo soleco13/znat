@@ -34,7 +34,8 @@ export default async function recordingsRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { id: string } }>(
     "/lessons/:id/recordings",
-    { preHandler: app.requireRole("admin", "methodist", "teacher") },
+    // Э15.3 (docs/roles §4.3): методист записей уроков не видит.
+    { preHandler: app.requireRole("admin", "teacher") },
     async (request, reply) => {
       const lessonId = parseLessonId(request.params.id);
       const result = await recordingsService.getLessonRecordings(request.user, lessonId);

@@ -189,3 +189,9 @@ export async function findLessonMaterialIds(lessonId: string): Promise<string[]>
     .where(eq(lessonMaterials.lessonId, lessonId));
   return rows.map((r) => r.materialId);
 }
+
+/** Э15.3: есть ли в пространстве хоть одна аудитория (стартовая аудитория репетитора). */
+export async function countLessons(schoolId: string): Promise<number> {
+  const rows = await db.select({ id: lessons.id }).from(lessons).where(eq(lessons.schoolId, schoolId)).limit(1);
+  return rows.length;
+}

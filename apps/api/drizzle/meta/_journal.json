@@ -281,6 +281,20 @@
       "when": 1792931426258,
       "tag": "0039_invites_email",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1792932742129,
+      "tag": "0040_materials_author_nullable",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1792932943875,
+      "tag": "0041_tutors_are_teachers",
+      "breakpoints": true
     }
   ]
 }

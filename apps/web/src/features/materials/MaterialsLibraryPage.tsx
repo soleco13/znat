@@ -4,6 +4,7 @@ import { FileText, Library, SquarePen } from "lucide-react";
 import type { ListMaterialsQuery, MaterialStatus, MaterialSummary } from "@school/shared";
 
 import { useAuthStore } from "@/shared/auth-store";
+import { canAuthorMaterials } from "@/shared/roles";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
@@ -40,8 +41,8 @@ const ANY_STATUS = "__any__";
 export function MaterialsLibraryPage() {
   // Ревизия Э12.7: создают/правят материалы только admin/methodist.
   // Учитель — читатель: библиотека, просмотр материала, выбор на урок.
-  const role = useAuthStore((s) => s.user?.role);
-  const isAuthor = role === "admin" || role === "methodist";
+  // Э15.3: в т. ч. учитель, совмещающий роль методиста.
+  const isAuthor = useAuthStore((s) => canAuthorMaterials(s.user));
   const [subject, setSubject] = useState("");
   const [grade, setGrade] = useState("");
   const [topic, setTopic] = useState("");

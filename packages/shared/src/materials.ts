@@ -446,7 +446,7 @@ export const materialSummarySchema = z.object({
   grades: z.array(z.number().int().positive()),
   topic: z.string().nullable(),
   status: materialStatusSchema,
-  createdBy: z.string(),
+  createdBy: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -514,7 +514,7 @@ export const materialDetailSchema = z.object({
   versionId: z.string(),
   version: z.number().int().positive(),
   status: materialStatusSchema,
-  createdBy: z.string(),
+  createdBy: z.string().nullable(),
   material: materialSchema,
   /**
    * Возвращённая версия — та же, что сейчас видит школа (Э9.8,
@@ -551,7 +551,7 @@ export type PublishMaterialResult = z.infer<typeof publishMaterialResultSchema>;
 export const materialVersionSummarySchema = z.object({
   versionId: z.string(),
   version: z.number().int().positive(),
-  createdBy: z.string(),
+  createdBy: z.string().nullable(),
   createdAt: z.string(),
   /** Это ровно та версия, что сейчас видит школа (`materials.currentVersionId`) — не обязательно последняя по номеру: может копиться новый форк поверх. */
   isCurrent: z.boolean(),
