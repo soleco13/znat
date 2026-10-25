@@ -127,3 +127,6 @@ export async function emailsByIds(ids: string[]): Promise<Map<string, string>> {
 export async function setAccountActive(id: string, active: boolean): Promise<boolean> {
   return repo.setAccountActive(id, active);
 }
+
+/** Э15.6: роли участника и исключён ли он (лимиты тарифа при смене ролей и возврате). */
+export const getMemberRoles = (schoolId: string, userId: string) => repo.findMemberRoles(schoolId, userId);

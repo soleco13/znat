@@ -16,6 +16,7 @@ import { AppError } from "../../plugins/errors.js";
 import { env } from "../../plugins/env.js";
 import * as lessonsService from "../lessons/service.js";
 import * as roomsService from "../rooms/service.js";
+import * as billingService from "../billing/service.js";
 import * as schoolSettingsService from "../school-settings/service.js";
 import * as usersService from "../users/service.js";
 import { signRecorderToken } from "../recorder-auth/service.js";
@@ -149,6 +150,8 @@ export async function startLessonRecording(
 
   const existing = await repo.findActiveRecordingForLesson(lessonId, user.schoolId);
   if (existing) return toSummary(existing);
+  // Э15.6: часы записи по тарифу (бесплатный минимум — без записи).
+  await billingService.assertRecordingAllowed(user.schoolId, () => repo.recordedSecondsThisMonth(user.schoolId));
 
   // Метод записи (docs/experimental-recording.md): без явного включения для
   // школы (env) и урока (lesson_recording_modes) — всегда `egress`, и путь
@@ -786,3 +789,6 @@ export async function handleLivekitEventForRawRecording(event: {
   });
   if (event.event === "room_finished") await rawService.handleRawRoomFinished(event.roomName);
 }
+
+/** Э15.6: секунд записи школы в этом календарном месяце — лимит тарифа и страница «Тариф». */
+export const recordedSecondsThisMonth = (schoolId: string) => repo.recordedSecondsThisMonth(schoolId);

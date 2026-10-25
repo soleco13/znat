@@ -27,6 +27,8 @@ export default async function lessonsRoutes(app: FastifyInstance) {
 
   app.post("/lessons", adminOnly, async (request, reply) => {
     const body = adminCreateLessonRequestSchema.parse(request.body);
+    // Э15.6: аудиторий — не больше, чем даёт тариф.
+    await lessonsService.assertRoomSlot(request.user.schoolId);
     const lesson = await lessonsService.createLesson(request.user.schoolId, body);
     return reply.status(201).send(lesson);
   });

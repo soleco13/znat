@@ -309,6 +309,13 @@
       "when": 1792935424721,
       "tag": "0043_platform_library",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1792937717652,
+      "tag": "0044_lessons_created_at",
+      "breakpoints": true
     }
   ]
 }

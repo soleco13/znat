@@ -1,7 +1,11 @@
 import {
   BILLING_PLANS,
+  FREE_LIMITS,
   YEAR_MONTHS_CHARGED,
   type AccessTokenPayload,
+  type BillingPlanId,
+  type PlanLimits,
+  type Role,
   type BillingState,
   type CheckoutRequest,
   type PlategaCallback,
@@ -13,6 +17,7 @@ import { randomUUID } from "node:crypto";
 import { env } from "../../plugins/env.js";
 import { AppError } from "../../plugins/errors.js";
 import { logEvent } from "../../plugins/logger.js";
+import * as membershipsService from "../memberships/service.js";
 import * as platega from "./platega.js";
 import * as repo from "./repo.js";
 
@@ -28,23 +33,111 @@ export function priceRub(plan: CheckoutRequest["plan"], period: CheckoutRequest[
   return period === "year" ? p.monthlyRub * YEAR_MONTHS_CHARGED : p.monthlyRub;
 }
 
+// ─── Э15.6: лимиты тарифа ─────────────────────────────────────────────────────
+
+/** Кеш лимитов пространства: вход в урок спрашивает их на каждом входе. Потеря кеша безвредна. */
+const LIMITS_CACHE_MS = 30_000;
+const limitsCache = new Map<string, { value: { plan: BillingPlanId | null; limits: PlanLimits }; at: number }>();
+
 /**
- * Э15.5 (docs/roles/spec §6.1): библиотека «Матиса» открыта пространству,
- * пока оплачен тариф, в который она входит. Не оплачено или срок вышел —
- * библиотеки нет: тариф не даёт её, значит доступа нет.
+ * Лимиты, которые действуют сейчас: оплаченный тариф или бесплатный
+ * минимум (`FREE_LIMITS`), пока не оплачено или срок вышел.
  */
-export async function hasMatisLibrary(schoolId: string): Promise<boolean> {
+export async function planLimits(schoolId: string): Promise<{ plan: BillingPlanId | null; limits: PlanLimits }> {
+  const hit = limitsCache.get(schoolId);
+  if (hit && Date.now() - hit.at < LIMITS_CACHE_MS) return hit.value;
   const school = await repo.getSchoolBilling(schoolId);
-  if (!school?.paidUntil || school.paidUntil.getTime() <= Date.now()) return false;
-  return BILLING_PLANS.find((p) => p.id === school.billingPlan)?.matisLibrary ?? false;
+  const active = school?.paidUntil && school.paidUntil.getTime() > Date.now();
+  const plan = active ? BILLING_PLANS.find((p) => p.id === school.billingPlan) : undefined;
+  const value = { plan: plan?.id ?? null, limits: plan?.limits ?? FREE_LIMITS };
+  limitsCache.set(schoolId, { value, at: Date.now() });
+  if (limitsCache.size > 5000) limitsCache.delete(limitsCache.keys().next().value!);
+  return value;
 }
 
-export async function getState(user: AccessTokenPayload): Promise<BillingState> {
+
+/** Э15.5: библиотека «Матиса» — пока оплачен тариф, в который она входит. */
+export async function hasMatisLibrary(schoolId: string): Promise<boolean> {
+  return (await planLimits(schoolId)).limits.matisLibrary;
+}
+
+/** Можно ли добавить ещё одного участника с ролью (приглашение, принятие, смена ролей). */
+export async function assertRoleSeat(schoolId: string, role: Role): Promise<void> {
+  if (role === "admin") return;
+  const { plan, limits } = await planLimits(schoolId);
+  const max = role === "teacher" ? limits.teachers : limits.methodists;
+  if (max === null) return;
+  if (role === "methodist" && max === 0) {
+    throw new AppError(403, "plan_limit", "Методисты доступны в тарифе «Школа»");
+  }
+  const used = (await membershipsService.activeUserIdsWithRole(schoolId, role)).length;
+  if (used < max) return;
+  throw new AppError(403, "plan_limit", `По тарифу ${role === "teacher" ? "учителей" : "методистов"} не больше ${max}.${upgradeHint(plan)}`);
+}
+
+/** Подсказка к отказу по лимиту — куда расти с текущего тарифа. */
+export const upgradeHint = (plan: BillingPlanId | null) =>
+  plan === "school" ? "" : plan === "tutor" ? " Больше — в тарифе «Школа»." : " Больше — в платных тарифах, раздел «Тариф».";
+
+/** Можно ли начать запись: `recordedSec` — уже записано школой в этом месяце. */
+export async function assertRecordingAllowed(schoolId: string, recordedSec: () => Promise<number>): Promise<void> {
+  const { plan, limits } = await planLimits(schoolId);
+  const hours = limits.recordingHoursPerMonth;
+  if (hours === null) return;
+  if (hours === 0) throw new AppError(403, "plan_limit", "Запись уроков доступна в платных тарифах — раздел «Тариф»");
+  if ((await recordedSec()) < hours * 3600) return;
+  throw new AppError(403, "plan_limit", `Лимит записи на этот месяц исчерпан: ${hours} ч.${upgradeHint(plan)}`);
+}
+
+type PaidListener = (input: { schoolId: string; kind: string; limits: PlanLimits }) => Promise<void>;
+const paidListeners: PaidListener[] = [];
+
+/**
+ * Подписка на оплату. Её делает `lessons` — выдаёт репетитору аудитории по
+ * тарифу (сам он их не создаёт, решение владельца 2026-10-25). billing не
+ * может импортировать lessons: lessons → materials → billing уже есть.
+ */
+export function onPaid(listener: PaidListener): void {
+  paidListeners.push(listener);
+}
+
+/** После оплаты: сбросить кеш лимитов и известить подписчиков. Их сбой не отменяет оплату. */
+async function afterPaid(schoolId: string): Promise<void> {
+  limitsCache.delete(schoolId);
+  const school = await repo.getSchoolBilling(schoolId);
+  if (!school) return;
+  const { limits } = await planLimits(schoolId);
+  for (const listener of paidListeners) {
+    await listener({ schoolId, kind: school.kind, limits }).catch((err: unknown) =>
+      logEvent("billing_rooms_failed", { schoolId, err: err instanceof Error ? err.message : String(err) }, "warn"),
+    );
+  }
+}
+
+export async function getState(
+  user: AccessTokenPayload,
+  /** Аудитории и секунды записи считают их модули (оба сами зависят от billing). */
+  counts: { rooms: () => Promise<number>; recordedSec: () => Promise<number> },
+): Promise<BillingState> {
   const school = await repo.getSchoolBilling(user.schoolId);
+  const { limits } = await planLimits(user.schoolId);
+  const [rooms, teachers, methodists, seconds] = await Promise.all([
+    counts.rooms(),
+    membershipsService.activeUserIdsWithRole(user.schoolId, "teacher"),
+    membershipsService.activeUserIdsWithRole(user.schoolId, "methodist"),
+    counts.recordedSec(),
+  ]);
   const last = await repo.lastPayment(user.schoolId);
   const plan = school?.billingPlan;
   const sub = await repo.currentSubscription(user.schoolId);
   return {
+    limits,
+    usage: {
+      rooms,
+      teachers: teachers.length,
+      methodists: methodists.length,
+      recordingHoursThisMonth: Math.round((seconds / 3600) * 10) / 10,
+    },
     subscription: sub
       ? {
           status: sub.status,
@@ -218,6 +311,7 @@ async function handleSubscriptionCharge(body: PlategaCallback): Promise<void> {
     const actual = await platega.getTransactionStatus(body.id);
     if (actual !== "CONFIRMED") throw new AppError(409, "payment_not_confirmed", "Статус списания не подтверждён");
     await repo.recordSubscriptionCharge({ subscription: sub, providerTxId: body.id });
+    await afterPaid(sub.schoolId);
     await repo.updateSubscription(sub.id, {
       status: "active",
       nextChargeAt: body.nextChargeAt ? new Date(body.nextChargeAt) : null,
@@ -243,6 +337,7 @@ async function handlePaymentCallback(body: PlategaCallback): Promise<void> {
       throw new AppError(409, "payment_not_confirmed", "Статус платежа не подтверждён");
     }
     await repo.confirmPayment(payment.id, payment.period === "year" ? "1 year" : "1 month");
+    await afterPaid(payment.schoolId);
   } else if (body.status === "CANCELED" && payment.status === "pending") {
     await repo.setPaymentStatus(payment.id, "canceled");
   } else if (body.status === "CHARGEBACKED") {
@@ -274,6 +369,7 @@ export async function manualExtend(input: {
     interval,
   });
   if (!ok) throw new AppError(404, "not_found", "Школа не найдена");
+  await afterPaid(input.schoolId);
   logEvent("payment_created", { schoolId: input.schoolId, manual: true, plan: input.plan, interval, by: input.byUserId });
 }
 
@@ -303,8 +399,10 @@ export async function testComplete(user: AccessTokenPayload, req: TestPaymentCom
   const row = await ownTestItem(user, req.kind, req.id);
   if (req.kind === "payment") {
     if (row.status !== "pending") return;
-    if (req.result === "success") await repo.confirmPayment(row.id, row.period === "year" ? "1 year" : "1 month");
-    else await repo.setPaymentStatus(row.id, "canceled");
+    if (req.result === "success") {
+      await repo.confirmPayment(row.id, row.period === "year" ? "1 year" : "1 month");
+      await afterPaid(row.schoolId);
+    } else await repo.setPaymentStatus(row.id, "canceled");
     return;
   }
   if (row.status !== "pending") return;
@@ -315,6 +413,7 @@ export async function testComplete(user: AccessTokenPayload, req: TestPaymentCom
   const chargeId = `test-charge-${randomUUID()}`;
   const sub = row as Awaited<ReturnType<typeof repo.findSubscription>> & object;
   await repo.recordSubscriptionCharge({ subscription: sub, providerTxId: chargeId });
+  await afterPaid(sub.schoolId);
   await repo.markProvider(chargeId, "test");
   const next = new Date();
   if (sub.period === "year") next.setFullYear(next.getFullYear() + 1);

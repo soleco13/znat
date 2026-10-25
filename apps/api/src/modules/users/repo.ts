@@ -203,3 +203,13 @@ export async function setAccountActive(id: string, active: boolean): Promise<boo
   const rows = await db.update(users).set({ isActive: active }).where(eq(users.id, id)).returning({ id: users.id });
   return rows.length > 0;
 }
+
+/** Э15.6: роли участника в школе и исключён ли он — для лимитов тарифа на «Участниках». */
+export async function findMemberRoles(schoolId: string, userId: string): Promise<{ roles: Role[]; removed: boolean } | null> {
+  const [row] = await db
+    .select({ roles: memberships.roles, removedAt: memberships.removedAt })
+    .from(memberships)
+    .where(and(eq(memberships.schoolId, schoolId), eq(memberships.userId, userId)))
+    .limit(1);
+  return row ? { roles: row.roles, removed: row.removedAt !== null } : null;
+}

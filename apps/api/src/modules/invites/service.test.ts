@@ -25,6 +25,14 @@ vi.mock("./repo.js", () => repoMock);
 vi.mock("../mail/service.js", () => mailMock);
 vi.mock("../memberships/service.js", () => membershipsMock);
 vi.mock("../users/service.js", () => usersMock);
+vi.mock("../billing/service.js", () => ({
+  // Э15.6: лимиты тарифа — в этих тестах школе всё разрешено.
+  planLimits: vi.fn().mockResolvedValue({ plan: "school", limits: { rooms: 99, teachers: 99, methodists: null, studentsPerLesson: 1000, recordingHoursPerMonth: null, matisLibrary: true } }),
+  assertRoleSeat: vi.fn().mockResolvedValue(undefined),
+  assertRecordingAllowed: vi.fn().mockResolvedValue(undefined),
+  upgradeHint: () => "",
+  onPaid: vi.fn(),
+}));
 
 const { createInvite, listInvites, revokeInvite, getInvitePublicInfo, acceptInvite, resendInvite } = await import("./service.js");
 

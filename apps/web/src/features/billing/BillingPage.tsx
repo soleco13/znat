@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Check, CircleAlert, CircleCheck, Clock } from "lucide-react";
-import { BILLING_PLANS, YEAR_MONTHS_CHARGED, type BillingPeriod, type BillingPlanId } from "@school/shared";
+import { BILLING_PLANS, YEAR_MONTHS_CHARGED, type BillingPeriod, type BillingPlanId, type BillingState } from "@school/shared";
 
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/shared/api-client";
 import { useAsync } from "@/shared/hooks/use-async";
+import { useAuthStore } from "@/shared/auth-store";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
@@ -47,6 +48,8 @@ export function BillingPage() {
   const returnedPayment = params.get("payment");
   const returnedFailed = params.get("failed") === "1";
   const state = useAsync(getBillingState, []);
+  // Репетитор (учитель личного пространства) — один, без участников: строки про учителей и методистов ему не нужны.
+  const isTutor = useAuthStore((st) => st.user?.role) === "teacher";
   // С лендинга приходят `?plan=…&period=…` — сохраняем выбранный период.
   const [period, setPeriod] = useState<BillingPeriod>(() => (params.get("period") === "year" ? "year" : "month"));
   const [busy, setBusy] = useState<BillingPlanId | null>(null);
@@ -148,12 +151,14 @@ export function BillingPage() {
                 ? `«${currentPlan.name}», оплачено до ${dateFmt.format(paidUntil)}`
                 : paidUntil && currentPlan
                   ? `«${currentPlan.name}», оплата закончилась ${dateFmt.format(paidUntil)}`
-                  : "Пробный период, тариф ещё не оплачен"}
+                  : "Бесплатный минимум — тариф не оплачен"}
             </p>
           </div>
           <PeriodSwitch value={period} onChange={setPeriod} />
         </Card>
       )}
+
+      {s ? <LimitsCard state={s} tutor={isTutor} /> : null}
 
       {sub && subPlan ? (
         <Card className="mb-6 flex flex-wrap items-center justify-between gap-3 px-5 py-4">
@@ -299,6 +304,51 @@ export function BillingPage() {
     </div>
   );
 }
+
+/** Э15.6: что даёт тариф сейчас (или бесплатный минимум) и сколько занято. */
+function LimitsCard({ state, tutor }: { state: BillingState; tutor: boolean }) {
+  const { limits: l, usage: u } = state;
+  const rec = l.recordingHoursPerMonth;
+  // Оранжевым — только то, что упёрлось в лимит и мешает работать.
+  const rows: { label: string; value: string; over?: boolean }[] = [
+    {
+      label: "Аудитории",
+      value: u.rooms > l.rooms ? `${u.rooms} из ${l.rooms}: для уроков открыты первые ${l.rooms}` : `${u.rooms} из ${l.rooms}`,
+      over: u.rooms > l.rooms,
+    },
+    ...(tutor
+      ? []
+      : [
+          { label: "Учителя", value: `${u.teachers} из ${l.teachers}`, over: u.teachers > l.teachers },
+          {
+            label: "Методисты",
+            value: l.methodists === null ? `${u.methodists}, без ограничения` : l.methodists === 0 ? "нет в тарифе" : `${u.methodists} из ${l.methodists}`,
+          },
+        ]),
+    { label: "Учеников в уроке", value: `до ${l.studentsPerLesson}` },
+    {
+      label: "Запись уроков",
+      value: rec === null ? "без ограничения" : rec === 0 ? "нет в тарифе" : `${hoursFmt.format(u.recordingHoursThisMonth)} из ${rec} ч в этом месяце`,
+      over: rec !== null && rec > 0 && u.recordingHoursThisMonth >= rec,
+    },
+    { label: "Библиотека Матиса", value: l.matisLibrary ? "есть" : "нет в тарифе" },
+  ];
+  return (
+    <Card className="mb-6 px-5 py-4">
+      <h2 className="mb-3 text-sm text-muted-foreground">Что доступно сейчас</h2>
+      <dl className="grid gap-x-8 gap-y-2.5 sm:grid-cols-2 lg:grid-cols-3">
+        {rows.map((r) => (
+          <div key={r.label} className="flex items-baseline justify-between gap-3 border-b border-border pb-2 sm:block sm:border-0 sm:pb-0">
+            <dt className="text-sm text-muted-foreground">{r.label}</dt>
+            <dd className={cn("text-sm font-semibold tabular-nums text-foreground", r.over && "text-warning")}>{r.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </Card>
+  );
+}
+
+const hoursFmt = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 });
 
 function ModeSwitch({ value, onChange }: { value: "once" | "autopay"; onChange: (v: "once" | "autopay") => void }) {
   const opt = (v: "once" | "autopay", label: string) => (

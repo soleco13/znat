@@ -13,6 +13,15 @@ import { AppError } from "../../plugins/errors.js";
 import * as service from "./service.js";
 import { isAuthenticCallback } from "./platega.js";
 import * as usersService from "../users/service.js";
+import * as lessonsService from "../lessons/service.js";
+import * as recordingsService from "../recordings/service.js";
+import type { AccessTokenPayload } from "@school/shared";
+
+const state = (user: AccessTokenPayload) =>
+  service.getState(user, {
+    rooms: () => lessonsService.countLessons(user.schoolId),
+    recordedSec: () => recordingsService.recordedSecondsThisMonth(user.schoolId),
+  });
 
 /** Тарифы и оплата: страница «Тариф» (администратор пространства) и callback Platega. */
 export default async function billingRoutes(app: FastifyInstance) {
@@ -45,7 +54,7 @@ export default async function billingRoutes(app: FastifyInstance) {
     staff.get("/billing/access", async () => ({ ok: true }));
 
     staff.get("/billing", async (request, reply) => {
-      return reply.send(billingStateSchema.parse(await service.getState(request.user)));
+      return reply.send(billingStateSchema.parse(await state(request.user)));
     });
 
     staff.get("/billing/test/info", async (request, reply) => {
@@ -55,7 +64,7 @@ export default async function billingRoutes(app: FastifyInstance) {
 
     staff.post("/billing/test/complete", async (request, reply) => {
       await service.testComplete(request.user, testPaymentCompleteSchema.parse(request.body));
-      return reply.send(billingStateSchema.parse(await service.getState(request.user)));
+      return reply.send(billingStateSchema.parse(await state(request.user)));
     });
 
     staff.post("/billing/subscribe", async (request, reply) => {
@@ -65,7 +74,7 @@ export default async function billingRoutes(app: FastifyInstance) {
 
     staff.post("/billing/subscription/cancel", async (request, reply) => {
       await service.cancelAutopay(request.user);
-      return reply.send(billingStateSchema.parse(await service.getState(request.user)));
+      return reply.send(billingStateSchema.parse(await state(request.user)));
     });
 
     staff.post("/billing/checkout", async (request, reply) => {

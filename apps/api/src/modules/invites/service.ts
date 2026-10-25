@@ -9,6 +9,7 @@ import type {
 import { env } from "../../plugins/env.js";
 import { AppError } from "../../plugins/errors.js";
 import { logTaskFailure } from "../../plugins/logger.js";
+import * as billingService from "../billing/service.js";
 import * as mailService from "../mail/service.js";
 import * as membershipsService from "../memberships/service.js";
 import * as usersService from "../users/service.js";
@@ -86,6 +87,8 @@ export async function createInvite(
   input: CreateInviteRequest,
 ): Promise<CreateInviteResponse> {
   assertAdmin(user);
+  // Э15.6: учителей и методистов — не больше, чем даёт тариф (проверяется и при принятии).
+  await billingService.assertRoleSeat(user.schoolId, input.role);
 
   const rawCode = randomBytes(24).toString("base64url");
   const days = input.expiresInDays ?? (input.email ? EMAIL_INVITE_DAYS : undefined);
@@ -149,6 +152,7 @@ export async function acceptInvite(user: AccessTokenPayload, code: string): Prom
   if (info.email && info.email !== email) {
     throw new AppError(403, "invite_other_email", "Приглашение отправлено на другой адрес почты — войдите в аккаунт с этим адресом");
   }
+  await billingService.assertRoleSeat(info.schoolId, info.role);
   const invite = await repo.claimInvite(codeHash, email);
   if (!invite) throw new AppError(410, "invite_invalid", "Приглашение отозвано, просрочено или уже использовано");
   try {
@@ -158,6 +162,12 @@ export async function acceptInvite(user: AccessTokenPayload, code: string): Prom
     await repo.releaseInvite(invite.id);
     throw err;
   }
+}
+
+/** Э15.6: регистрация по приглашению — есть ли место по тарифу (недействительное приглашение отклонит регистрация). */
+export async function assertInviteSeat(code: string): Promise<void> {
+  const info = await repo.findInviteWithSchoolByCodeHash(hashInviteCode(code));
+  if (info) await billingService.assertRoleSeat(info.schoolId, info.role);
 }
 
 export async function listInvites(user: AccessTokenPayload): Promise<InviteSummary[]> {

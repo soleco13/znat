@@ -101,3 +101,12 @@ export async function grantRole(userId: string, schoolId: string, role: Role): P
     .returning({ roles: memberships.roles });
   return row!.roles;
 }
+
+/** Э15.6: действующие участники с ролью — для лимитов тарифа. */
+export async function activeUserIdsWithRole(schoolId: string, role: Role): Promise<string[]> {
+  const rows = await db
+    .select({ userId: memberships.userId })
+    .from(memberships)
+    .where(and(eq(memberships.schoolId, schoolId), isNull(memberships.removedAt), sql`${role}::role = ANY(${memberships.roles})`));
+  return rows.map((r) => r.userId);
+}

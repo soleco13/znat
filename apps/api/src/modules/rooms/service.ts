@@ -20,6 +20,7 @@ import { AppError } from "../../plugins/errors.js";
 import * as canvasService from "../canvas/service.js";
 import * as guestsService from "../guests/service.js";
 import type { LessonActor } from "../guests/service.js";
+import * as billingService from "../billing/service.js";
 import * as lessonsService from "../lessons/service.js";
 import * as mediaService from "../media/service.js";
 import * as schoolSettingsService from "../school-settings/service.js";
@@ -381,8 +382,8 @@ export async function assertGuestNotLockedOut(lessonId: string, guestId: string)
  * Проверяется атомарно вместе с записью в presence (`presence.admitGuest`);
  * закрытый вход — отдельно (`assertGuestNotLockedOut`).
  */
-function lessonFullError(): AppError {
-  return new AppError(403, "lesson_full", `В уроке уже ${env.LESSON_MAX_GUESTS} учеников — это максимум`);
+function lessonFullError(max: number): AppError {
+  return new AppError(403, "lesson_full", `В уроке уже ${max} учеников — это максимум по тарифу`);
 }
 
 export async function join(
@@ -403,6 +404,9 @@ export async function join(
   const schoolId = actor.schoolId;
   const participantId = actor.participantId;
   const isStaff = actor.kind === "staff";
+  // Э15.6: аудитория сверх лимита тарифа не открывается; учеников — не больше, чем даёт тариф.
+  await lessonsService.assertRoomWithinPlan(schoolId, lessonId);
+  const maxGuests = Math.min(env.LESSON_MAX_GUESTS, (await billingService.planLimits(schoolId)).limits.studentsPerLesson);
 
   // Несколько вкладок с аккаунта персонала (2026-10-17): слот выбираем до
   // любых изменений — шестой вход отказом, ничего не тронув. Без `tabId`
@@ -477,10 +481,10 @@ export async function join(
       lessonId,
       participantId,
       entry,
-      env.LESSON_MAX_GUESTS,
+      maxGuests,
       history?.latest ? undefined : { max: newGuestsPerWindow(), windowMs: NEW_GUESTS_WINDOW_MS },
     );
-    if (admitted === "full") throw lessonFullError();
+    if (admitted === "full") throw lessonFullError(maxGuests);
     if (admitted === "throttled") {
       throw new AppError(429, "lesson_entry_busy", "Сейчас в урок входит слишком много новых участников — попробуйте через минуту");
     }

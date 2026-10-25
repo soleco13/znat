@@ -23,6 +23,7 @@ const { repoMock, authServiceMock, mailServiceMock, invitesServiceMock, redisMoc
     sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
   },
   invitesServiceMock: {
+    assertInviteSeat: vi.fn().mockResolvedValue(undefined),
     hashInviteCode: vi.fn((code: string) => `hash(${code})`),
   },
 }));

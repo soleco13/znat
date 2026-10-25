@@ -192,6 +192,16 @@ export async function findLessonMaterialIds(lessonId: string): Promise<string[]>
 
 /** Э15.3: есть ли в пространстве хоть одна аудитория (стартовая аудитория репетитора). */
 export async function countLessons(schoolId: string): Promise<number> {
-  const rows = await db.select({ id: lessons.id }).from(lessons).where(eq(lessons.schoolId, schoolId)).limit(1);
-  return rows.length;
+  const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(lessons).where(eq(lessons.schoolId, schoolId));
+  return row?.n ?? 0;
+}
+
+/** Э15.6: место аудитории в пространстве по порядку создания (1 — первая). 0 — не найдена. */
+export async function lessonRank(schoolId: string, lessonId: string): Promise<number> {
+  const result = await db.execute<{ rank: number }>(sql`
+    select rank::int as rank from (
+      select id, row_number() over (order by created_at, id) as rank
+      from ${lessons} where school_id = ${schoolId}
+    ) r where id = ${lessonId}`);
+  return result.rows[0]?.rank ?? 0;
 }

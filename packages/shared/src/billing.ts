@@ -15,17 +15,44 @@ export type BillingPlanId = z.infer<typeof billingPlanIdSchema>;
 export const billingPeriodSchema = z.enum(["month", "year"]);
 export type BillingPeriod = z.infer<typeof billingPeriodSchema>;
 
+/**
+ * Э15.6 — лимиты тарифа (решение владельца 2026-10-25). `null` — без
+ * ограничения. Уже созданные аудитории, участники и записи при снижении
+ * лимита не удаляются: лишнее не даёт добавлять новое, а аудитории сверх
+ * лимита (по порядку создания) не открываются для уроков.
+ */
+export interface PlanLimits {
+  /** Аудиторий (постоянных комнат уроков) в пространстве. */
+  rooms: number;
+  /** Участников с ролью учителя. */
+  teachers: number;
+  /** Участников с ролью методиста; `null` — без ограничения. */
+  methodists: number | null;
+  /** Учеников одновременно в уроке. */
+  studentsPerLesson: number;
+  /** Часов записи в календарный месяц; 0 — записи нет, `null` — без ограничения. */
+  recordingHoursPerMonth: number | null;
+  /** Библиотека «Матиса» (Э15.5, docs/roles/spec §6.1). */
+  matisLibrary: boolean;
+}
+
+/** Пока тариф не оплачен или срок вышел — бесплатный минимум. */
+export const FREE_LIMITS: PlanLimits = {
+  rooms: 1,
+  teachers: 1,
+  methodists: 0,
+  studentsPerLesson: 6,
+  recordingHoursPerMonth: 0,
+  matisLibrary: false,
+};
+
 export interface BillingPlan {
   id: BillingPlanId;
   name: string;
   tagline: string;
   /** Рублей за месяц при помесячной оплате. */
   monthlyRub: number;
-  /**
-   * Э15.5: открыта ли библиотека «Матиса» (docs/roles/spec §6.1). Пока тариф
-   * не оплачен или закончился, библиотеки нет.
-   */
-  matisLibrary: boolean;
+  limits: PlanLimits;
   features: string[];
 }
 
@@ -35,9 +62,10 @@ export const BILLING_PLANS: readonly BillingPlan[] = [
     name: "Репетитор",
     tagline: "Индивидуальные занятия и мини-группы",
     monthlyRub: 990,
-    matisLibrary: true,
+    // Аудитория репетитору выдаётся сама (при подтверждении почты и оплате) — создавать он не может.
+    limits: { rooms: 1, teachers: 1, methodists: 0, studentsPerLesson: 6, recordingHoursPerMonth: 20, matisLibrary: true },
     features: [
-      "1 учитель, до 6 учеников в уроке",
+      "1 учитель и 1 аудитория, до 6 учеников в уроке",
       "Видеоуроки, доска, слайды, задания",
       "Библиотека материалов",
       "Запись урока (до 20 ч в месяц)",
@@ -49,11 +77,11 @@ export const BILLING_PLANS: readonly BillingPlan[] = [
     name: "Школа",
     tagline: "Для онлайн-школы или учебного центра",
     monthlyRub: 6900,
-    matisLibrary: true,
+    limits: { rooms: 15, teachers: 15, methodists: null, studentsPerLesson: 30, recordingHoursPerMonth: null, matisLibrary: true },
     features: [
-      "До 15 учителей, класс до 30 учеников",
+      "До 15 учителей и 15 аудиторий, класс до 30 учеников",
       "Всё из «Репетитора»",
-      "Редактор материалов для методистов",
+      "Методисты без ограничения, редактор материалов",
       "Запись без лимита минут",
       "Роли: администратор, методист, учитель",
     ],
@@ -63,7 +91,24 @@ export const BILLING_PLANS: readonly BillingPlan[] = [
 /** Годовая оплата — 10 месяцев вместо 12. */
 export const YEAR_MONTHS_CHARGED = 10;
 
+const planLimitsSchema = z.object({
+  rooms: z.number().int(),
+  teachers: z.number().int(),
+  methodists: z.number().int().nullable(),
+  studentsPerLesson: z.number().int(),
+  recordingHoursPerMonth: z.number().nullable(),
+  matisLibrary: z.boolean(),
+});
+
 export const billingStateSchema = z.object({
+  /** Э15.6: лимиты, которые действуют сейчас (оплаченный тариф или бесплатный минимум), и что из них занято. */
+  limits: planLimitsSchema,
+  usage: z.object({
+    rooms: z.number().int(),
+    teachers: z.number().int(),
+    methodists: z.number().int(),
+    recordingHoursThisMonth: z.number(),
+  }),
   /** Оплаченный тариф; null — ещё не платили. */
   plan: billingPlanIdSchema.nullable(),
   /** До какого момента оплачено (ISO); null — не оплачено. */

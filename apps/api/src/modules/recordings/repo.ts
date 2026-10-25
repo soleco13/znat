@@ -189,3 +189,14 @@ export async function listExpiredRecordings(limit = 50): Promise<RecordingRow[]>
 export async function listReadyRecordings(): Promise<RecordingRow[]> {
   return db.select().from(recordings).where(eq(recordings.status, "ready"));
 }
+
+/** Э15.6: секунд записи школы с начала календарного месяца (идущие — до текущего момента). */
+export async function recordedSecondsThisMonth(schoolId: string): Promise<number> {
+  const [row] = await db
+    .select({
+      s: sql<number>`coalesce(sum(coalesce(${recordings.durationSec}, extract(epoch from coalesce(${recordings.endedAt}, now()) - ${recordings.startedAt}))), 0)::float`,
+    })
+    .from(recordings)
+    .where(and(eq(recordings.schoolId, schoolId), sql`${recordings.startedAt} >= date_trunc('month', now())`));
+  return row?.s ?? 0;
+}

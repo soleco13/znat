@@ -125,6 +125,8 @@ async function joinViaInvite(
   input: { email: string; password: string; fullName: string },
 ): Promise<RegisterResponse> {
   await freeEmailIfStale(input.email);
+  // Э15.6: место по тарифу — до создания аккаунта.
+  await invitesService.assertInviteSeat(inviteCode);
   const passwordHash = await authService.hashPassword(input.password);
   const { rawToken, tokenHash, expiresAt: verificationExpiresAt } = newVerificationToken();
 

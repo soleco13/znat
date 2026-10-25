@@ -13,7 +13,9 @@ import {
   type UpdateLessonRequest,
 } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
+import * as billingService from "../billing/service.js";
 import * as materialsService from "../materials/service.js";
+import * as membershipsService from "../memberships/service.js";
 import * as usersService from "../users/service.js";
 import * as repo from "./repo.js";
 import { logTaskFailure } from "../../plugins/logger.js";
@@ -311,6 +313,45 @@ export async function getLessonMaterialIds(lessonId: string): Promise<string[]> 
  * подтверждения почты выдаётся одна «Моя аудитория».
  */
 export async function ensureStarterRoom(schoolId: string, teacherId: string): Promise<void> {
-  if ((await repo.countLessons(schoolId)) > 0) return;
-  await createLesson(schoolId, { title: "Моя аудитория", teacherId });
+  await ensureRooms(schoolId, teacherId, 1);
 }
+
+/**
+ * Э15.6: репетитору аудитории выдаются по тарифу — сам он их не создаёт.
+ * Досоздаёт до `count` (после оплаты); лишние не удаляет.
+ */
+export async function ensureRooms(schoolId: string, teacherId: string, count: number): Promise<void> {
+  let n = await repo.countLessons(schoolId);
+  while (n < count) {
+    await createLesson(schoolId, { title: n === 0 ? "Моя аудитория" : `Аудитория ${n + 1}`, teacherId });
+    n += 1;
+  }
+}
+
+/** Э15.6: аудиторий в пространстве. */
+export const countLessons = (schoolId: string) => repo.countLessons(schoolId);
+
+/** Э15.6: можно ли создать ещё одну аудиторию. */
+export async function assertRoomSlot(schoolId: string): Promise<void> {
+  const { plan, limits } = await billingService.planLimits(schoolId);
+  if ((await repo.countLessons(schoolId)) < limits.rooms) return;
+  throw new AppError(403, "plan_limit", `По тарифу аудиторий не больше ${limits.rooms}.${billingService.upgradeHint(plan)}`);
+}
+
+/** Э15.6: аудитория сверх лимита (по порядку создания) для уроков не открывается; данные в ней сохраняются. */
+export async function assertRoomWithinPlan(schoolId: string, lessonId: string): Promise<void> {
+  const { plan, limits } = await billingService.planLimits(schoolId);
+  if ((await repo.lessonRank(schoolId, lessonId)) <= limits.rooms) return;
+  throw new AppError(
+    403,
+    "room_over_limit",
+    `Эта аудитория недоступна по тарифу: ${limits.rooms === 1 ? "открыта только первая аудитория" : `открыты первые ${limits.rooms}`}.${billingService.upgradeHint(plan)}`,
+  );
+}
+
+// Э15.6: репетитору аудитории выдаются по оплаченному тарифу.
+billingService.onPaid(async ({ schoolId, kind, limits }) => {
+  if (kind !== "individual") return;
+  const [tutorId, ...rest] = await membershipsService.activeUserIdsWithRole(schoolId, "teacher");
+  if (tutorId && rest.length === 0) await ensureRooms(schoolId, tutorId, limits.rooms);
+});

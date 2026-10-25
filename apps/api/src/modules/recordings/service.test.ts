@@ -70,6 +70,14 @@ vi.mock("./repo.js", () => repoMock);
 vi.mock("./poster.js", () => posterMock);
 vi.mock("./egress-client.js", () => egressMock);
 vi.mock("../lessons/service.js", () => lessonsMock);
+vi.mock("../billing/service.js", () => ({
+  // Э15.6: лимиты тарифа — в этих тестах школе всё разрешено.
+  planLimits: vi.fn().mockResolvedValue({ plan: "school", limits: { rooms: 99, teachers: 99, methodists: null, studentsPerLesson: 1000, recordingHoursPerMonth: null, matisLibrary: true } }),
+  assertRoleSeat: vi.fn().mockResolvedValue(undefined),
+  assertRecordingAllowed: vi.fn().mockResolvedValue(undefined),
+  upgradeHint: () => "",
+  onPaid: vi.fn(),
+}));
 vi.mock("../rooms/service.js", () => roomsMock);
 vi.mock("../storage/service.js", () => storageMock);
 vi.mock("../school-settings/service.js", () => schoolSettingsMock);

@@ -73,3 +73,6 @@ export async function hasAnyMembership(userId: string): Promise<boolean> {
 }
 
 export const grantRole = repo.grantRole;
+
+/** Э15.6: действующие участники с ролью (лимиты тарифа: учителя, методисты). */
+export const activeUserIdsWithRole = repo.activeUserIdsWithRole;

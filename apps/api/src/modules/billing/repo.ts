@@ -4,7 +4,7 @@ import { payments, schools, subscriptions } from "../../db/schema.js";
 
 export async function getSchoolBilling(schoolId: string) {
   const [row] = await db
-    .select({ billingPlan: schools.billingPlan, paidUntil: schools.paidUntil })
+    .select({ billingPlan: schools.billingPlan, paidUntil: schools.paidUntil, kind: schools.kind })
     .from(schools)
     .where(eq(schools.id, schoolId))
     .limit(1);

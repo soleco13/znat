@@ -220,6 +220,8 @@ export const lessons = pgTable(
       .default(sql`encode(gen_random_bytes(24), 'hex')`),
     livekitRoom: text("livekit_room"),
     settings: jsonb("settings").notNull().default({}),
+    /** Э15.6: порядок аудиторий — сверх лимита тарифа не открываются последние созданные. */
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("lessons_school_starts_idx").on(t.schoolId, t.startsAt)],
 );
