@@ -473,7 +473,7 @@ export type MaterialSource = z.infer<typeof materialSourceSchema>;
 
 /**
  * Ответ `GET /materials/sources` — вкладки библиотеки. `platform` есть,
- * если служебное пространство заведено; `school` — только если в своём
+ * если библиотека «Матиса» заведена и открыта тарифом пространства (Э15.5); `school` — только если в своём
  * пространстве есть материалы, видимые этому пользователю (учителю —
  * опубликованные). `label` — «Матис» или название пространства.
  */
@@ -516,6 +516,8 @@ export const materialDetailSchema = z.object({
   status: materialStatusSchema,
   createdBy: z.string().nullable(),
   material: materialSchema,
+  /** Э15.5: материал библиотеки «Матиса», открытый из другого пространства, — только просмотр и копия. */
+  fromPlatform: z.boolean().optional(),
   /**
    * Возвращённая версия — та же, что сейчас видит школа (Э9.8,
    * `materials.currentVersionId`)? `false` — либо материал ещё никогда не

@@ -42,6 +42,11 @@ export function createMaterial(content: Material): Promise<CreateMaterialResult>
   return apiFetch<CreateMaterialResult>("/materials", { method: "POST", body: JSON.stringify(content) });
 }
 
+/** Э15.5: копия материала «Матиса» в библиотеку своей школы — черновиком, оригинал не меняется. */
+export function copyPlatformMaterial(id: string): Promise<CreateMaterialResult> {
+  return apiFetch<CreateMaterialResult>(`/materials/${id}/copy`, { method: "POST" });
+}
+
 /**
  * Автосохранение (Э9.3/9.8, §8 ТЗ). Пока материал никогда не публиковался
  * — правит единственную версию на месте; если уже опубликован — правка

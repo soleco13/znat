@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AccessTokenPayload, Material } from "@school/shared";
 
-const { repoMock, validationMock, schoolSettingsMock } = vi.hoisted(() => ({
+const { repoMock, validationMock, schoolSettingsMock, billingMock } = vi.hoisted(() => ({
   schoolSettingsMock: { getPlatformSchool: vi.fn(), getSchoolName: vi.fn() },
+  billingMock: { hasMatisLibrary: vi.fn() },
   repoMock: {
     findPublishedMaterialVersion: vi.fn(),
     findMaterialSummariesByIds: vi.fn(),
@@ -23,6 +24,7 @@ const { repoMock, validationMock, schoolSettingsMock } = vi.hoisted(() => ({
 vi.mock("./repo.js", () => repoMock);
 vi.mock("./validation.js", () => validationMock);
 vi.mock("../school-settings/service.js", () => schoolSettingsMock);
+vi.mock("../billing/service.js", () => billingMock);
 
 const {
   listMaterials,
@@ -39,6 +41,7 @@ const {
   getMaterialSummaries,
   assertMaterialInSchool,
   listMaterialSources,
+  copyPlatformMaterial,
 } = await import("./service.js");
 
 const SCHOOL = "11111111-1111-1111-1111-111111111111";
@@ -504,6 +507,7 @@ describe("материалы «Матис»: чтение для всех про
   beforeEach(() => {
     vi.clearAllMocks();
     schoolSettingsMock.getPlatformSchool.mockResolvedValue({ id: PLATFORM, name: "Матис" });
+    billingMock.hasMatisLibrary.mockResolvedValue(true);
   });
 
   it("список source=platform — только опубликованное служебного пространства, для любой роли", async () => {
@@ -590,5 +594,38 @@ describe("материалы «Матис»: чтение для всех про
     repoMock.listMaterials.mockResolvedValueOnce([summary("p1", "published")]).mockResolvedValueOnce([]);
     const res = await listMaterialSources(TEACHER);
     expect(res.items.map((i) => i.source)).toEqual(["platform"]);
+  });
+
+  // Э15.5: библиотека «Матиса» — по тарифу пространства.
+  it("тариф не открывает библиотеку: ни вкладки, ни списка, ни выдачи на урок", async () => {
+    billingMock.hasMatisLibrary.mockResolvedValue(false);
+    repoMock.listMaterials.mockResolvedValue([summary("o1", "published")]);
+    schoolSettingsMock.getSchoolName.mockResolvedValueOnce("Лицей №1");
+    expect((await listMaterialSources(TEACHER)).items.map((i) => i.source)).toEqual(["school"]);
+    repoMock.listMaterials.mockClear();
+    expect(await listMaterials(TEACHER, { source: "platform" })).toEqual([]);
+    expect(repoMock.listMaterials).not.toHaveBeenCalled();
+    repoMock.findPublishedMaterialVersion.mockResolvedValueOnce(null);
+    repoMock.findLatestMaterialVersionForEdit.mockResolvedValueOnce(null);
+    await expect(getLatestMaterial(SCHOOL, "pm1")).rejects.toMatchObject({ statusCode: 404 });
+    expect(repoMock.findPublishedMaterialVersion).toHaveBeenCalledTimes(1);
+    expect(billingMock.hasMatisLibrary).toHaveBeenCalledWith(SCHOOL);
+  });
+
+  it("копия в библиотеку школы: опубликованная версия Матиса → черновик своей школы, автор — копирующий", async () => {
+    repoMock.findPublishedMaterialVersion.mockResolvedValueOnce(versionRow());
+    repoMock.insertMaterial.mockResolvedValueOnce({ materialId: "own1", versionId: "ov1" });
+    expect(await copyPlatformMaterial(METHODIST, "pm1")).toEqual({ materialId: "own1", versionId: "ov1" });
+    expect(repoMock.findPublishedMaterialVersion).toHaveBeenCalledWith(PLATFORM, "pm1");
+    expect(repoMock.insertMaterial).toHaveBeenCalledWith(SCHOOL, METHODIST.sub, VALID_CONTENT);
+  });
+
+  it("копия: учитель — 403; без тарифа или черновик Матиса — 404", async () => {
+    await expect(copyPlatformMaterial(TEACHER, "pm1")).rejects.toMatchObject({ statusCode: 403 });
+    repoMock.findPublishedMaterialVersion.mockResolvedValueOnce(null);
+    await expect(copyPlatformMaterial(ADMIN, "pm-draft")).rejects.toMatchObject({ statusCode: 404 });
+    billingMock.hasMatisLibrary.mockResolvedValue(false);
+    await expect(copyPlatformMaterial(ADMIN, "pm1")).rejects.toMatchObject({ statusCode: 404 });
+    expect(repoMock.insertMaterial).not.toHaveBeenCalled();
   });
 });

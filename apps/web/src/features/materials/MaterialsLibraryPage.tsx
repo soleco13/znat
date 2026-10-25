@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { FileText, Library, SquarePen } from "lucide-react";
-import type { ListMaterialsQuery, MaterialStatus, MaterialSummary } from "@school/shared";
+import { Link, useNavigate } from "react-router-dom";
+import { Copy, FileText, Library, SquarePen } from "lucide-react";
+import type { ListMaterialsQuery, MaterialSource, MaterialStatus, MaterialSummary } from "@school/shared";
 
 import { useAuthStore } from "@/shared/auth-store";
 import { canAuthorMaterials } from "@/shared/roles";
@@ -20,7 +20,9 @@ import {
   SelectValue,
 } from "@/shared/ui/select";
 import { Skeleton } from "@/shared/ui/skeleton";
-import { listMaterials } from "./materials-api.js";
+import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+import { notify } from "@/shared/ui/notify";
+import { copyPlatformMaterial, listMaterialSources, listMaterials } from "./materials-api.js";
 
 const STATUS_LABEL: Record<MaterialStatus, string> = {
   draft: "Черновик",
@@ -50,16 +52,28 @@ export function MaterialsLibraryPage() {
   const [q, setQ] = useState("");
   const [items, setItems] = useState<MaterialSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Э15.5 (docs/roles/spec §6.4): «Материалы школы» и «Материалы Матиса» —
+  // вторая вкладка есть, если тариф открывает библиотеку «Матиса».
+  const [source, setSource] = useState<MaterialSource>("school");
+  const [hasPlatform, setHasPlatform] = useState(false);
+  const fromPlatform = source === "platform";
+
+  useEffect(() => {
+    listMaterialSources()
+      .then((r) => setHasPlatform(r.items.some((i) => i.source === "platform")))
+      .catch(() => setHasPlatform(false));
+  }, []);
 
   const query = useMemo<ListMaterialsQuery>(
     () => ({
+      source,
       subject: subject.trim() || undefined,
       grade: grade.trim() ? Number(grade.trim()) : undefined,
       topic: topic.trim() || undefined,
-      status: status || undefined,
+      status: (!fromPlatform && status) || undefined,
       q: q.trim() || undefined,
     }),
-    [subject, grade, topic, status, q],
+    [source, fromPlatform, subject, grade, topic, status, q],
   );
 
   useEffect(() => {
@@ -98,6 +112,15 @@ export function MaterialsLibraryPage() {
         }
       />
 
+      {hasPlatform ? (
+        <Tabs value={source} onValueChange={(v) => setSource(v as MaterialSource)} className="mb-4">
+          <TabsList>
+            <TabsTrigger value="school">Материалы школы</TabsTrigger>
+            <TabsTrigger value="platform">Материалы Матиса</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      ) : null}
+
       <Card className="mb-6 p-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Предмет">
@@ -114,7 +137,7 @@ export function MaterialsLibraryPage() {
           <Field label="Тема">
             <Input value={topic} onChange={(e) => setTopic(e.target.value)} />
           </Field>
-          {isAuthor ? (
+          {isAuthor && !fromPlatform ? (
             <Field label="Статус">
               <Select
                 value={status || ANY_STATUS}
@@ -153,12 +176,14 @@ export function MaterialsLibraryPage() {
           description={
             hasFilters
               ? "Попробуйте изменить фильтры."
-              : isAuthor
+              : fromPlatform
+                ? "Команда Матиса ещё не опубликовала материалы."
+                : isAuthor
                 ? "В библиотеке пока нет материалов."
                 : "В библиотеке пока нет опубликованных материалов."
           }
           action={
-            isAuthor ? (
+            isAuthor && !fromPlatform ? (
               <Button asChild size="sm">
                 <Link to="/materials/edit">
                   <SquarePen aria-hidden />
@@ -185,7 +210,7 @@ export function MaterialsLibraryPage() {
                           </h4>
                           <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-card">
                             {materials.map((m) => (
-                              <MaterialRow key={m.id} material={m} />
+                              <MaterialRow key={m.id} material={m} canCopy={fromPlatform && isAuthor} />
                             ))}
                           </ul>
                         </div>
@@ -211,12 +236,28 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function MaterialRow({ material }: { material: MaterialSummary }) {
+function MaterialRow({ material, canCopy }: { material: MaterialSummary; canCopy: boolean }) {
+  const navigate = useNavigate();
+  const [copying, setCopying] = useState(false);
+
+  // Э15.5: копия материала Матиса — черновик школы; сразу открываем её в редакторе.
+  async function copy() {
+    setCopying(true);
+    try {
+      const { materialId } = await copyPlatformMaterial(material.id);
+      notify.success("Копия в библиотеке школы — черновиком, оригинал Матиса не изменится");
+      navigate(`/materials/edit/${materialId}`);
+    } catch (e) {
+      notify.error(e instanceof Error ? e.message : "Не удалось скопировать материал");
+      setCopying(false);
+    }
+  }
+
   return (
-    <li>
+    <li className="flex items-center">
       <Link
         to={`/materials/edit/${material.id}`}
-        className="flex min-w-0 items-center gap-2 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-none"
+        className="flex min-w-0 flex-1 items-center gap-2 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-none"
       >
         <span className="truncate">{material.title}</span>
         {material.status !== "published" ? (
@@ -225,6 +266,13 @@ function MaterialRow({ material }: { material: MaterialSummary }) {
           </Badge>
         ) : null}
       </Link>
+      {canCopy ? (
+        <Button variant="ghost" size="sm" className="mr-2 shrink-0" loading={copying} onClick={() => void copy()}>
+          <Copy aria-hidden />
+          <span className="hidden sm:inline">В библиотеку школы</span>
+          <span className="sm:hidden">Копировать</span>
+        </Button>
+      ) : null}
     </li>
   );
 }

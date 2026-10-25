@@ -21,6 +21,11 @@ export interface BillingPlan {
   tagline: string;
   /** Рублей за месяц при помесячной оплате. */
   monthlyRub: number;
+  /**
+   * Э15.5: открыта ли библиотека «Матиса» (docs/roles/spec §6.1). Пока тариф
+   * не оплачен или закончился, библиотеки нет.
+   */
+  matisLibrary: boolean;
   features: string[];
 }
 
@@ -30,6 +35,7 @@ export const BILLING_PLANS: readonly BillingPlan[] = [
     name: "Репетитор",
     tagline: "Индивидуальные занятия и мини-группы",
     monthlyRub: 990,
+    matisLibrary: true,
     features: [
       "1 учитель, до 6 учеников в уроке",
       "Видеоуроки, доска, слайды, задания",
@@ -43,6 +49,7 @@ export const BILLING_PLANS: readonly BillingPlan[] = [
     name: "Школа",
     tagline: "Для онлайн-школы или учебного центра",
     monthlyRub: 6900,
+    matisLibrary: true,
     features: [
       "До 15 учителей, класс до 30 учеников",
       "Всё из «Репетитора»",

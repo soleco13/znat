@@ -26,6 +26,19 @@ export async function findPlatformSchool(): Promise<{ id: string; name: string }
   return row ?? null;
 }
 
+/**
+ * Э15.5: завести пространство библиотеки «Матиса». Адрес без проверки
+ * занятости: дефолтный `space-xxxxxxxx` уникален, а публичных путей у этого
+ * пространства нет.
+ */
+export async function insertPlatformSchool(): Promise<{ id: string; name: string }> {
+  const [row] = await db
+    .insert(schools)
+    .values({ name: "Библиотека Матиса", kind: "platform" })
+    .returning({ id: schools.id, name: schools.name });
+  return row!;
+}
+
 export async function findSchoolName(schoolId: string): Promise<string | null> {
   const [row] = await db.select({ name: schools.name }).from(schools).where(eq(schools.id, schoolId)).limit(1);
   return row?.name ?? null;

@@ -63,7 +63,13 @@ async function schoolsWithCounts(schoolId?: string): Promise<PlatformSchool[]> {
   }));
 }
 
-export const listSchools = () => schoolsWithCounts();
+// Э15.5: пространство библиотеки «Матиса» — не клиент, в списке школ его нет.
+export const listSchools = async () => (await schoolsWithCounts()).filter((s) => s.kind !== "platform");
+
+/** Э15.5: пространство библиотеки «Матиса» (заводится при первом открытии) — супер-админ входит в него через `/auth/switch`. */
+export async function library(): Promise<{ schoolId: string }> {
+  return { schoolId: (await schoolSettingsService.ensurePlatformSchool()).id };
+}
 
 export async function listUsers(input: { q?: string; schoolId?: string; limit: number }): Promise<PlatformUser[]> {
   const [rows, schools] = await Promise.all([usersService.listAllUsers(input), billingService.listSchoolsWithBilling()]);

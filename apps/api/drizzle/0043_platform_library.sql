@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "schools_one_platform_idx" ON "schools" USING btree ("kind") WHERE kind = 'platform';

@@ -208,7 +208,7 @@ export async function overviewTotals() {
     payments_30d: number;
   }>(sql`
     select
-      (select count(*) from ${schools})::int as schools,
+      (select count(*) from ${schools} where kind <> 'platform')::int as schools,
       (select count(*) from ${schools} where paid_until > now())::int as paid_schools,
       (select count(*) from ${subscriptions} where status = 'active')::int as active_subs,
       (select coalesce(sum(amount_rub), 0) from ${payments} where status = 'confirmed' and provider = 'platega')::int as revenue,

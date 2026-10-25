@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   AlertTriangle,
   CheckCircle2,
   ChevronLeft,
   CircleHelp,
+  Copy,
   History,
   Settings2,
 } from "lucide-react";
@@ -50,6 +51,7 @@ import { TextbookView } from "./textbook/TextbookView.js";
 import { isPlaceholderMeta } from "./material-templates.js";
 import { MaterialDocEditor } from "./editor/MaterialDocEditor.js";
 import {
+  copyPlatformMaterial,
   getMaterial,
   getMaterialVersions,
   publishMaterial,
@@ -78,7 +80,11 @@ export function MaterialEditorPage() {
   const { id } = useParams<{ id: string }>();
   const currentUser = useAuthStore((s) => s.user);
   // Э15.3: учитель, совмещающий роль методиста, правит материалы школы.
-  const canEdit = canAuthorMaterials(currentUser);
+  const isAuthor = canAuthorMaterials(currentUser);
+  // Э15.5: материал библиотеки «Матиса» не правят из школы — только просмотр и копия.
+  const [fromPlatform, setFromPlatform] = useState(false);
+  const canEdit = isAuthor && !fromPlatform;
+  const navigate = useNavigate();
 
   const [material, setMaterial] = useState<Material | null>(null);
   const [status, setStatus] = useState<MaterialStatus | null>(null);
@@ -108,6 +114,10 @@ export function MaterialEditorPage() {
         setMaterial(detail.material);
         setStatus(detail.status);
         setIsCurrent(detail.isCurrent);
+        if (detail.fromPlatform) {
+          setFromPlatform(true);
+          setMode("preview");
+        }
       })
       .catch(() => !cancelled && setError("Не удалось загрузить материал"));
     return () => {
@@ -183,6 +193,19 @@ export function MaterialEditorPage() {
         status={status}
         isCurrent={isCurrent}
         canEdit={canEdit}
+        onCopyToSchool={
+          fromPlatform && isAuthor && id
+            ? async () => {
+                try {
+                  const { materialId } = await copyPlatformMaterial(id);
+                  notify.success("Копия в библиотеке школы — черновиком, оригинал Матиса не изменится");
+                  navigate(`/materials/edit/${materialId}`);
+                } catch (e) {
+                  notify.error(e instanceof Error ? e.message : "Не удалось скопировать материал");
+                }
+              }
+            : undefined
+        }
         role={canEdit && currentUser?.role === "teacher" ? "methodist" : (currentUser?.role ?? null)}
         mode={mode}
         onModeChange={setMode}
@@ -202,7 +225,17 @@ export function MaterialEditorPage() {
       />
 
       {mode === "preview" ? (
-        <PreviewSheet material={material} readOnly={readOnly} />
+        <PreviewSheet
+          material={material}
+          readOnly={readOnly}
+          notice={
+            fromPlatform
+              ? isAuthor
+                ? "Материал команды Матиса. Чтобы изменить его для своих уроков, скопируйте в библиотеку школы."
+                : "Материал команды Матиса — выдайте его на уроке как есть."
+              : null
+          }
+        />
       ) : (
         <div className="mx-auto w-full max-w-[760px] pb-24">
           <SheetMeta material={material} onChange={patchMaterial} />
@@ -227,6 +260,7 @@ function EditorTopBar({
   status,
   isCurrent,
   canEdit,
+  onCopyToSchool,
   role,
   mode,
   onModeChange,
@@ -245,6 +279,8 @@ function EditorTopBar({
   status: MaterialStatus | null;
   isCurrent: boolean;
   canEdit: boolean;
+  /** Э15.5: материал «Матиса» — кнопка копии в библиотеку школы. */
+  onCopyToSchool?: () => Promise<void>;
   role: string | null;
   mode: EditorMode;
   onModeChange: (m: EditorMode) => void;
@@ -265,6 +301,7 @@ function EditorTopBar({
   onSelectBlock: (blockId: string) => void;
 }) {
   const metaReady = !isPlaceholderMeta(material);
+  const [copying, setCopying] = useState(false);
   return (
     <div className="sticky top-header z-20 -mx-4 mb-4 border-b border-border bg-background px-4 py-2 sm:-mx-6 sm:px-6">
       <Link
@@ -274,7 +311,7 @@ function EditorTopBar({
         <ChevronLeft className="size-3.5" aria-hidden /> Все материалы
       </Link>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2 max-sm:basis-full">
           <span className="truncate text-sm font-semibold text-foreground">{material.title}</span>
           {status ? (
             <Badge variant={STATUS_META[status].variant} className="shrink-0">
@@ -298,6 +335,15 @@ function EditorTopBar({
         </Tabs>
 
         <div className="flex flex-wrap items-center gap-1.5">
+          {onCopyToSchool ? (
+            <Button variant="outline" size="sm" className="shrink-0" loading={copying} onClick={() => {
+              setCopying(true);
+              void onCopyToSchool().finally(() => setCopying(false));
+            }}>
+              <Copy aria-hidden />
+              В библиотеку школы
+            </Button>
+          ) : null}
           {canEdit && materialId ? <VersionHistory materialId={materialId} /> : null}
           {canEdit ? (
             <ValidationButton
@@ -588,14 +634,16 @@ function MetaChip({
 
 // ─── Просмотр глазами ученика ────────────────────────────────────────────
 
-function PreviewSheet({ material, readOnly }: { material: Material; readOnly: boolean }) {
+function PreviewSheet({ material, readOnly, notice }: { material: Material; readOnly: boolean; notice: string | null }) {
   const [responses, setResponses] = useState<Record<string, QuestionResponse>>({});
   const publicMaterial = stripMaterialAnswerKeys(material, "editor-preview");
 
   return (
     <div className="mx-auto w-full max-w-[1440px] pb-24">
       <div className="mx-auto mb-6 max-w-[720px] rounded-lg border border-border bg-secondary/50 px-3 py-2 text-xs text-muted-foreground">
-        {readOnly
+        {notice
+          ? notice
+          : readOnly
           ? "Просмотр материала. Редактируют методист и администратор."
           : "Так материал видит ученик. Ответы можно потыкать, они не сохраняются."}
       </div>

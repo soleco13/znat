@@ -102,3 +102,7 @@ export const platformListQuerySchema = z.object({
 
 /** Э15.4: блокировка пространства или аккаунта супер-админом. */
 export const platformBlockRequestSchema = z.object({ blocked: z.boolean() });
+
+/** Э15.5: пространство библиотеки «Матиса» — супер-админ входит в него и правит материалы. */
+export const platformLibraryResponseSchema = z.object({ schoolId: z.string().uuid() });
+export type PlatformLibraryResponse = z.infer<typeof platformLibraryResponseSchema>;

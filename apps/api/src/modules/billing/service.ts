@@ -28,6 +28,17 @@ export function priceRub(plan: CheckoutRequest["plan"], period: CheckoutRequest[
   return period === "year" ? p.monthlyRub * YEAR_MONTHS_CHARGED : p.monthlyRub;
 }
 
+/**
+ * Э15.5 (docs/roles/spec §6.1): библиотека «Матиса» открыта пространству,
+ * пока оплачен тариф, в который она входит. Не оплачено или срок вышел —
+ * библиотеки нет: тариф не даёт её, значит доступа нет.
+ */
+export async function hasMatisLibrary(schoolId: string): Promise<boolean> {
+  const school = await repo.getSchoolBilling(schoolId);
+  if (!school?.paidUntil || school.paidUntil.getTime() <= Date.now()) return false;
+  return BILLING_PLANS.find((p) => p.id === school.billingPlan)?.matisLibrary ?? false;
+}
+
 export async function getState(user: AccessTokenPayload): Promise<BillingState> {
   const school = await repo.getSchoolBilling(user.schoolId);
   const last = await repo.lastPayment(user.schoolId);

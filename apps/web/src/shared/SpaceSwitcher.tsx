@@ -43,14 +43,14 @@ export function useSpaces(): Space[] {
   return spaces;
 }
 
-export async function switchSpace(schoolId: string): Promise<void> {
+export async function switchSpace(schoolId: string, to = "/"): Promise<void> {
   try {
     const r = await apiFetch<{ accessToken: string; user: MeResponse }>("/auth/switch", {
       method: "POST",
       body: JSON.stringify({ schoolId }),
     });
     useAuthStore.getState().setAuth(r.accessToken, r.user);
-    window.location.assign("/");
+    window.location.assign(to);
   } catch (e) {
     notify.error(e instanceof Error ? e.message : "Не удалось переключить пространство");
   }

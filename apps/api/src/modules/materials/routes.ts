@@ -81,6 +81,7 @@ export default async function materialsRoutes(app: FastifyInstance) {
           createdBy: loaded.createdBy,
           material: loaded.material,
           isCurrent: loaded.isCurrent,
+          fromPlatform: loaded.fromPlatform,
         }),
       );
     },
@@ -95,6 +96,18 @@ export default async function materialsRoutes(app: FastifyInstance) {
       const content = materialSchema.parse(request.body);
       await materialsService.updateMaterialDraft(request.user, parsed.data, content);
       return reply.send(updateMaterialResultSchema.parse({ savedAt: new Date().toISOString() }));
+    },
+  );
+
+  // Э15.5: копия материала «Матиса» в библиотеку своей школы (черновиком).
+  app.post<{ Params: { id: string } }>(
+    "/materials/:id/copy",
+    authorOnly,
+    async (request, reply) => {
+      const parsed = uuidParam.safeParse(request.params.id);
+      if (!parsed.success) throw new AppError(400, "bad_material_id", "Некорректный идентификатор материала");
+      const result = await materialsService.copyPlatformMaterial(request.user, parsed.data);
+      return reply.status(201).send(createMaterialResultSchema.parse({ materialId: result.materialId }));
     },
   );
 

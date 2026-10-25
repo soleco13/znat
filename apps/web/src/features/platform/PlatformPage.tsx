@@ -16,7 +16,8 @@ import { Skeleton } from "@/shared/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { notify } from "@/shared/ui/notify";
-import { blockSchool, blockUser, extendSchool, getOverview, getPayments, getSchool, getSchools, getUsers } from "./platform-api.js";
+import { Library } from "lucide-react";
+import { blockSchool, blockUser, extendSchool, getOverview, getPayments, getSchool, getSchools, getUsers, openLibrary } from "./platform-api.js";
 import { switchSpace } from "@/shared/SpaceSwitcher";
 import { useAuthStore } from "@/shared/auth-store";
 
@@ -60,6 +61,20 @@ function paidLabel(s: PlatformSchool) {
 export function PlatformPage() {
   const overview = useAsync(getOverview, []);
   const [schoolId, setSchoolId] = useState<string | null>(null);
+  const [openingLibrary, setOpeningLibrary] = useState(false);
+
+  // Э15.5: библиотеку «Матиса» супер-админ правит в её пространстве — тем же редактором, что и школы.
+  async function goToLibrary() {
+    setOpeningLibrary(true);
+    try {
+      const { schoolId: libraryId } = await openLibrary();
+      await switchSpace(libraryId, "/materials");
+    } catch (e) {
+      notify.error(e instanceof Error ? e.message : "Не удалось открыть библиотеку");
+    } finally {
+      setOpeningLibrary(false);
+    }
+  }
 
   if (overview.error) return <ErrorState description={overview.error} onRetry={overview.reload} />;
   const o = overview.data;
@@ -76,7 +91,16 @@ export function PlatformPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <PageHeader title="Платформа" subtitle="Все школы, пользователи и платежи сервиса." />
+      <PageHeader
+        title="Платформа"
+        subtitle="Все школы, пользователи и платежи сервиса."
+        actions={
+          <Button variant="outline" loading={openingLibrary} onClick={() => void goToLibrary()}>
+            <Library aria-hidden />
+            Библиотека Матиса
+          </Button>
+        }
+      />
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         {overview.loading
           ? Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-[84px] rounded-lg" />)

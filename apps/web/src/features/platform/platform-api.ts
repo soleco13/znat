@@ -1,5 +1,6 @@
 import type {
   PlatformExtendRequest,
+  PlatformLibraryResponse,
   PlatformOverview,
   PlatformPayment,
   PlatformSchool,
@@ -15,6 +16,9 @@ export const getPayments = () => apiFetch<PlatformPayment[]>("/platform/payments
 export const getUsers = (q: string) => apiFetch<PlatformUser[]>(`/platform/users${q ? `?q=${encodeURIComponent(q)}` : ""}`);
 export const extendSchool = (id: string, body: PlatformExtendRequest) =>
   apiFetch<PlatformSchoolDetail>(`/platform/schools/${id}/extend`, { method: "POST", body: JSON.stringify(body) });
+
+/** Э15.5: пространство библиотеки «Матиса» (заводится при первом открытии). */
+export const openLibrary = () => apiFetch<PlatformLibraryResponse>("/platform/library", { method: "POST" });
 
 /** Э15.4: блокировка пространства / аккаунта. */
 export const blockSchool = (id: string, blocked: boolean) =>

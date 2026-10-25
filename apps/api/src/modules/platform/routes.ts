@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   platformBlockRequestSchema,
   platformExtendRequestSchema,
+  platformLibraryResponseSchema,
   platformListQuerySchema,
   platformOverviewSchema,
   platformPaymentSchema,
@@ -41,6 +42,8 @@ export default async function platformRoutes(app: FastifyInstance) {
     await service.blockSchool(id, platformBlockRequestSchema.parse(request.body).blocked);
     return platformSchoolDetailSchema.parse(await service.schoolDetail(id));
   });
+
+  app.post("/platform/library", async () => platformLibraryResponseSchema.parse(await service.library()));
 
   app.post("/platform/users/:id/block", async (request) => {
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params);

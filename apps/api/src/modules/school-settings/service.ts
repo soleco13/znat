@@ -51,6 +51,20 @@ export async function getPlatformSchool(): Promise<{ id: string; name: string } 
   return value;
 }
 
+/**
+ * Э15.5: библиотека «Матиса» — супер-админ открывает её из «Платформы»;
+ * при первом открытии пространство заводится.
+ */
+export async function ensurePlatformSchool(): Promise<{ id: string; name: string }> {
+  const existing = await repo.findPlatformSchool();
+  // Два одновременных первых открытия: второе упрётся в уникальный индекс
+  // (миграция 0043) — тогда берём заведённое первым.
+  const value = existing ?? (await repo.insertPlatformSchool().catch(async () => repo.findPlatformSchool()));
+  if (!value) throw new Error("Не удалось завести библиотеку Матиса");
+  platformCache = { value, at: Date.now() };
+  return value;
+}
+
 /** Название пространства — для вкладки библиотеки с его материалами. */
 export async function getSchoolName(schoolId: string): Promise<string | null> {
   return repo.findSchoolName(schoolId);

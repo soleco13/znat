@@ -13,6 +13,7 @@ import {
 } from "@school/shared";
 import { hasRole } from "../../plugins/roles.js";
 import { AppError } from "../../plugins/errors.js";
+import * as billingService from "../billing/service.js";
 import * as schoolSettingsService from "../school-settings/service.js";
 import * as repo from "./repo.js";
 import { validateMaterial } from "./validation.js";
@@ -62,8 +63,12 @@ function parseVersion(row: repo.MaterialVersionRow): LoadedMaterial {
 // запись остаются только у самого служебного пространства — все пути записи
 // ниже по-прежнему ищут материал строго в `user.schoolId`. Область прав
 // доступа (CLAUDE.md, «не делегировать вслепую») — читано построчно.
+//
+// Э15.5: служебное пространство — библиотека «Матиса», им управляет только
+// супер-админ (входит из «Платформы»). Читать её материалы пространство
+// может, пока это даёт оплаченный тариф (`billingService.hasMatisLibrary`).
+// Уже выданные на урок версии читаются по id версии и не отзываются.
 
-/** id служебного пространства, если оно заведено и это не сама школа пользователя. */
 /**
  * Э15.3 (docs/roles §4): создавать и править материалы школы может
  * администратор или методист — в том числе учитель, совмещающий роль
@@ -73,9 +78,11 @@ function canAuthor(user: AccessTokenPayload): boolean {
   return hasRole(user, "admin") || hasRole(user, "methodist");
 }
 
+/** id библиотеки «Матиса», если она заведена, это не сама школа и тариф школы её открывает. */
 async function foreignPlatformSchoolId(schoolId: string): Promise<string | null> {
   const platform = await schoolSettingsService.getPlatformSchool();
-  return platform && platform.id !== schoolId ? platform.id : null;
+  if (!platform || platform.id === schoolId) return null;
+  return (await billingService.hasMatisLibrary(schoolId)) ? platform.id : null;
 }
 
 /**
@@ -143,6 +150,8 @@ export interface EditableMaterial extends LoadedMaterial {
   createdBy: string | null;
   /** Это версия, которую сейчас видит школа (Э9.8, `materials.currentVersionId`)? См. `materialDetailSchema.isCurrent`, `packages/shared`. */
   isCurrent: boolean;
+  /** Э15.5: материал библиотеки «Матиса» из другого пространства. */
+  fromPlatform?: boolean;
 }
 
 /**
@@ -169,7 +178,7 @@ export async function getMaterialForEdit(
     const platformId = await foreignPlatformSchoolId(user.schoolId);
     const published = platformId ? await repo.findPublishedMaterialVersionForEdit(platformId, materialId) : null;
     if (!published) throw new AppError(404, "material_not_found", "Материал не найден");
-    return { ...parseVersion(published), status: "published", createdBy: published.createdBy, isCurrent: true };
+    return { ...parseVersion(published), status: "published", createdBy: published.createdBy, isCurrent: true, fromPlatform: true };
   }
 
   // Ревизия Э12.7: учитель видит ТОЛЬКО опубликованную версию (просмотр),
@@ -376,6 +385,25 @@ export async function createMaterial(
 }
 
 /**
+ * Э15.5 (docs/roles/spec §6.1): копия материала «Матиса» в библиотеку своей
+ * школы — черновиком, автор копии — тот, кто копировал. Оригинал не
+ * меняется; дальше копия живёт как любой материал школы. Картинки и аудио
+ * остаются файлами библиотеки «Матиса» (`media-library.ts` их отдаёт).
+ */
+export async function copyPlatformMaterial(
+  user: AccessTokenPayload,
+  materialId: string,
+): Promise<{ materialId: string; versionId: string }> {
+  if (!canAuthor(user)) {
+    throw new AppError(403, "forbidden", "Копировать в библиотеку школы может методист или администратор");
+  }
+  const platformId = await foreignPlatformSchoolId(user.schoolId);
+  const row = platformId ? await repo.findPublishedMaterialVersion(platformId, materialId) : null;
+  if (!row) throw new AppError(404, "material_not_found", "Материал не найден");
+  return repo.insertMaterial(user.schoolId, user.sub, parseVersion(row).material);
+}
+
+/**
  * Библиотека материалов (Э9.1, §7.2 ТЗ). Видимость по роли — «личная папка»
  * учителя (§4.2 ТЗ, «учитель создаёт материалы только в личной папке, без
  * публикации в общую библиотеку»): учитель видит свои материалы ЛЮБОГО
@@ -413,10 +441,10 @@ export async function listMaterials(
   query: ListMaterialsQuery,
 ): Promise<repo.MaterialSummaryRow[]> {
   if (query.source === "platform") {
-    // Вкладка «Матис»: только опубликованное, для любой роли.
-    const platform = await schoolSettingsService.getPlatformSchool();
-    if (!platform) return [];
-    return repo.listMaterials(platform.id, {
+    // Вкладка «Матис»: только опубликованное, для любой роли, если тариф открывает библиотеку.
+    const platformId = await foreignPlatformSchoolId(user.schoolId);
+    if (!platformId) return [];
+    return repo.listMaterials(platformId, {
       subject: query.subject,
       grade: query.grade,
       topic: query.topic,
@@ -453,7 +481,7 @@ export async function listMaterialSources(user: AccessTokenPayload): Promise<Mat
     items.push({ source: "school", label: "Матис", count: own.length });
     return { items };
   }
-  if (platform) {
+  if (platform && (await foreignPlatformSchoolId(user.schoolId))) {
     const rows = await listMaterials(user, { source: "platform" });
     items.push({ source: "platform", label: "Матис", count: rows.length });
   }

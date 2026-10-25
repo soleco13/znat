@@ -96,7 +96,10 @@ export const schools = pgTable("schools", {
   /** Э15.4: заблокировано супер-админом — участники и гости не входят, данные сохраняются. */
   blockedAt: timestamp("blocked_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+},
+  // Э15.5: библиотека «Матиса» — одно пространство `platform` на сервис.
+  (t) => [uniqueIndex("schools_one_platform_idx").on(t.kind).where(sql`kind = 'platform'`)],
+);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
