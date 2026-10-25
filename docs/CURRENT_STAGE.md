@@ -8,8 +8,9 @@
 > `TURN_DOMAIN`, cpuset под 12 CPU (docker-compose.prod.yml), запись на этом же
 > хосте (CPU 4,5,10,11). TURN на TCP 443 — сделан (sni-proxy, docs/turn-tls-443.md);
 > запись: 2 одновременных (замер, reports/server-capacity-report.md); converter — профиль `converter`, выключен: 403 от
-> database.clamav.net; SMTP не настроен — подтверждение почты при регистрации
-> не уходит; restic-репозиторий не задан (бэкап только локальный).
+> database.clamav.net; SMTP — ящик confirmation@matis-edu.ru на хостинге reg.ru
+> (sm38.hosting.reg.ru:465, SSL, с 2026-10-25; пароль только в `.env` сервера), SPF
+> домена есть, DKIM не включён, DMARC записан на сам домен вместо `_dmarc`; restic-репозиторий не задан (бэкап только локальный).
 >
 > 2026-09-23: **Э14.2 закрыт** — приглашения в пространство (`school_invites`,
 > модуль `invites`, страница `/admin/invites`, приём по ссылке
