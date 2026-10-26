@@ -1,9 +1,10 @@
-import { useLayoutEffect, type ReactNode } from "react";
+import { useLayoutEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, useMatch, useNavigate } from "react-router-dom";
-import { CalendarDays, ChevronsUpDown, KeyRound, Library, LogOut, PlayCircle, CreditCard, SquarePen } from "lucide-react";
+import { CalendarDays, ChevronsUpDown, KeyRound, LifeBuoy, Library, LogOut, PlayCircle, CreditCard, SquarePen } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useBillingAccess } from "./billing-access.js";
 import { SpaceMenuItems, useSpaces } from "./SpaceSwitcher.js";
+import { SupportDialog } from "./SupportContacts.js";
 
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/shared/api-client";
@@ -65,7 +66,9 @@ function AccountMenu({
 }) {
   const user = useAuthStore((s) => s.user);
   const spaces = useSpaces();
+  const [supportOpen, setSupportOpen] = useState(false);
   return (
+    <>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
       <DropdownMenuContent side={side} align="end" className="w-56">
@@ -85,12 +88,18 @@ function AccountMenu({
             Сменить пароль
           </Link>
         </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => setSupportOpen(true)}>
+          <LifeBuoy aria-hidden />
+          Поддержка
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={onLogout}>
           <LogOut aria-hidden />
           Выйти
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    <SupportDialog open={supportOpen} onOpenChange={setSupportOpen} />
+    </>
   );
 }
 

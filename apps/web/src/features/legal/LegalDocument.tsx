@@ -11,6 +11,17 @@ import { BrandMark } from "@/shared/ui/brand-mark";
  */
 const ORIGIN = "https://matis-edu.ru";
 
+/**
+ * Путь внутри приложения для ссылки на наш сайт. Главная страница и её якоря
+ * (`/#pricing`) — это лендинг, он не часть SPA: такие ссылки открываются
+ * обычным переходом, а не через роутер.
+ */
+function internalPath(url: string): string | null {
+  const path = url.startsWith(ORIGIN + "/") ? url.slice(ORIGIN.length) : url.startsWith("/") ? url : null;
+  if (path === null || path === "/" || path.startsWith("/#")) return null;
+  return path;
+}
+
 type Block =
   | { kind: "h"; level: 1 | 2 | 3; text: string }
   | { kind: "p"; text: string }
@@ -105,7 +116,7 @@ function renderInline(text: string): ReactNode[] {
     } else {
       const label = m[2]!;
       const url = m[3]!;
-      const internal = url.startsWith(ORIGIN + "/") ? url.slice(ORIGIN.length) : url.startsWith("/") ? url : null;
+      const internal = internalPath(url);
       out.push(
         internal ? (
           <Link key={key++} to={internal} className="font-medium text-primary underline-offset-2 hover:underline">
@@ -135,7 +146,7 @@ function linkify(nodes: ReactNode[]): ReactNode[] {
     n.split(/(https?:\/\/[^\s)]+[^\s).,;]|[\w.+-]+@[\w-]+\.[\w.-]+[\w-])/g).forEach((p, j) => {
       const key = `${idx}-${j}`;
       if (/^https?:\/\//.test(p)) {
-        const internal = p.startsWith(ORIGIN + "/") ? p.slice(ORIGIN.length) : null;
+        const internal = p.startsWith(ORIGIN + "/") ? internalPath(p) : null;
         out.push(
           internal ? (
             <Link key={key} to={internal} className="font-medium text-primary underline-offset-2 hover:underline">

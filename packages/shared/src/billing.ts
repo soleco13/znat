@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { supportContactsSchema } from "./support.js";
+
 /**
  * Тарифы и оплата (запрос владельца 2026-10-25, подключение Platega).
  *
@@ -184,7 +186,8 @@ export const billingStateSchema = z.object({
   paymentsEnabled: z.boolean(),
   /** Тестовый режим: вместо Platega — своя тестовая форма, деньги не списываются. */
   testMode: z.boolean(),
-  supportEmail: z.string(),
+  /** Контакты поддержки по виду пространства: репетитору — только Telegram. */
+  support: supportContactsSchema,
   /** Подписка с автосписанием через СБП; null — не оформляли или она закончилась. */
   subscription: z
     .object({

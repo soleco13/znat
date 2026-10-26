@@ -6,6 +6,7 @@ import { Reveal } from "@/components/Reveal";
 import { SectionHeading } from "@/components/SectionHeading";
 import { buttonVariants } from "@/components/ui/button";
 import { LBadge } from "@/lesson/parts";
+import { SUPPORT_EMAIL, SUPPORT_TELEGRAM, SUPPORT_TELEGRAM_URL } from "@/lib/contacts";
 
 /**
  * Сетка владельца 2026-10-25. Цены и
@@ -343,9 +344,19 @@ export function Pricing() {
             </ul>
 
             {plan.monthly === null ? (
-              <a href="mailto:support@matis-edu.ru?subject=Тариф «Выделенный»" className={cn(buttonVariants({ size: "cta" }), "mt-9")}>
-                Обсудить внедрение
-              </a>
+              <div className="mt-9 flex flex-wrap items-center gap-x-5 gap-y-3">
+                <a href={`mailto:${SUPPORT_EMAIL}?subject=Тариф «Выделенный»`} className={buttonVariants({ size: "cta" })}>
+                  Обсудить внедрение
+                </a>
+                <a
+                  href={SUPPORT_TELEGRAM_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-small font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                >
+                  или в Telegram {SUPPORT_TELEGRAM}
+                </a>
+              </div>
             ) : (
               <div className="mt-9 flex flex-wrap items-center gap-x-5 gap-y-3">
                 {/* Путь покупки: тариф → цена → «Оплатить» → кабинет «Тариф» (после входа). */}
@@ -412,8 +423,19 @@ export function Pricing() {
           </p>
         </Reveal>
 
-        <Reveal className="mt-10 text-small text-muted-foreground">
-          Все платные тарифы — 14 дней бесплатно, без карты. Ученики никогда не платят и не заводят аккаунт.
+        <Reveal className="mt-10 space-y-3 text-small text-muted-foreground">
+          <p>Все платные тарифы — 14 дней бесплатно, без карты. Ученики никогда не платят и не заводят аккаунт.</p>
+          <p>
+            Вопросы по тарифам, оплате и возврату: Telegram{" "}
+            <a href={SUPPORT_TELEGRAM_URL} target="_blank" rel="noreferrer" className="font-medium text-foreground underline-offset-4 hover:underline">
+              {SUPPORT_TELEGRAM}
+            </a>
+            ; школам и организациям — также{" "}
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium text-foreground underline-offset-4 hover:underline">
+              {SUPPORT_EMAIL}
+            </a>
+            .
+          </p>
         </Reveal>
       </div>
     </section>

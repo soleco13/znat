@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Check, CircleAlert, CircleCheck, Clock } from "lucide-react";
-import { BILLING_PLANS, DEDICATED_PLAN_FROM_RUB, YEAR_MONTHS_CHARGED, type BillingPeriod, type BillingPlanId, type BillingState } from "@school/shared";
+import { BILLING_PLANS, DEDICATED_PLAN_FROM_RUB, YEAR_MONTHS_CHARGED, supportContactsFor, type BillingPeriod, type BillingPlanId, type BillingState } from "@school/shared";
 
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/shared/api-client";
 import { useAsync } from "@/shared/hooks/use-async";
 import { useAuthStore } from "@/shared/auth-store";
+import { SupportLinks } from "@/shared/SupportContacts";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
@@ -110,7 +111,8 @@ export function BillingPage() {
   if (state.error) return <ErrorState description={state.error} onRetry={state.reload} />;
 
   const s = state.data;
-  const support = s?.supportEmail ?? "support@matis-edu.ru";
+  // Пока состояние не пришло — только Telegram: почту репетиторам не показываем (решение владельца 2026-10-26).
+  const support = s?.support ?? supportContactsFor("individual");
   const paidUntil = s?.paidUntil ? new Date(s.paidUntil) : null;
   const active = paidUntil && paidUntil.getTime() > Date.now();
   const currentPlan = BILLING_PLANS.find((p) => p.id === s?.plan);
@@ -135,7 +137,7 @@ export function BillingPage() {
           failed={returnedFailed || last?.status === "canceled"}
           confirmed={last?.id === returnedPayment && last.status === "confirmed"}
           waiting={waiting}
-          support={support}
+          support={<SupportLinks contacts={support} />}
           onClose={() => setParams({}, { replace: true })}
         />
       ) : null}
@@ -202,11 +204,8 @@ export function BillingPage() {
           <Clock aria-hidden />
           <AlertTitle>Оплата пока недоступна</AlertTitle>
           <AlertDescription>
-            Мы подключаем платёжную систему. Напишите на{" "}
-            <a className="font-medium text-primary hover:underline" href={`mailto:${support}`}>
-              {support}
-            </a>
-            , и мы включим тариф вручную.
+            Мы подключаем платёжную систему. Напишите нам: <SupportLinks contacts={support} />, и мы включим тариф
+            вручную.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -272,7 +271,13 @@ export function BillingPage() {
           </p>
         </div>
         <Button variant="secondary" asChild>
-          <a href={`mailto:${support}?subject=${encodeURIComponent("Тариф «Выделенный»")}`}>Обсудить внедрение</a>
+          {support.email ? (
+            <a href={`mailto:${support.email}?subject=${encodeURIComponent("Тариф «Выделенный»")}`}>Обсудить внедрение</a>
+          ) : (
+            <a href={support.telegramUrl} target="_blank" rel="noreferrer">
+              Написать в Telegram
+            </a>
+          )}
         </Button>
       </Card>
 
@@ -283,7 +288,7 @@ export function BillingPage() {
       <p className="mt-3 text-sm text-muted-foreground [text-wrap:pretty]">
         После оплаты тариф включается сразу, чек приходит на почту. При отключении автопродления оплаченный срок
         сохраняется. Деньги за неиспользованные дни можно вернуть по
-        заявлению на <a className="font-medium text-primary hover:underline" href={`mailto:${support}`}>{support}</a>.
+        заявлению в поддержку: <SupportLinks contacts={support} />.
         Условия — в{" "}
         <Link to="/terms" className="font-medium text-primary hover:underline">
           пользовательском соглашении
@@ -422,7 +427,7 @@ function ReturnBanner({
   failed: boolean;
   confirmed: boolean;
   waiting: boolean;
-  support: string;
+  support: ReactNode;
   onClose: () => void;
 }) {
   if (failed) {
@@ -431,7 +436,7 @@ function ReturnBanner({
         <CircleAlert aria-hidden />
         <AlertTitle>Оплата не прошла</AlertTitle>
         <AlertDescription>
-          Деньги не списаны. Попробуйте ещё раз или напишите на {support}.{" "}
+          Деньги не списаны. Попробуйте ещё раз или напишите в поддержку: {support}.{" "}
           <button type="button" className="font-medium underline" onClick={onClose}>
             Скрыть
           </button>
@@ -453,7 +458,7 @@ function ReturnBanner({
       <Clock aria-hidden />
       <AlertTitle>{waiting ? "Проверяем оплату…" : "Платёж обрабатывается"}</AlertTitle>
       <AlertDescription>
-        Обычно это занимает до минуты. Если тариф не включится, напишите на {support}.
+        Обычно это занимает до минуты. Если тариф не включится, напишите в поддержку: {support}.
       </AlertDescription>
     </Alert>
   );

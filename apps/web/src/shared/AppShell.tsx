@@ -5,6 +5,7 @@ import {
   HardDrive,
   KeyRound,
   Library,
+  LifeBuoy,
   LogOut,
   Menu,
   PanelLeftClose,
@@ -15,6 +16,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { usePlatformAccess } from "./platform-access.js";
 import { SpaceSwitcher } from "./SpaceSwitcher.js";
+import { SupportDialog } from "./SupportContacts.js";
 import type { Role } from "@school/shared";
 
 import { cn } from "@/lib/utils";
@@ -190,6 +192,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
 
   // Э12.9: роли `student` больше нет — до подгрузки профиля показываем
   // оболочку без пунктов навигации, а не «как ученику».
@@ -252,6 +255,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <div className="text-xs text-muted-foreground">{ROLE_LABEL[user.role]}</div>
               </div>
               <UserAvatar colorKey={user.id} role={markRoleOf("staff", user.role)} size={38} />
+              <SimpleTooltip content="Поддержка">
+                <Button variant="ghost" size="icon" onClick={() => setSupportOpen(true)} aria-label="Поддержка">
+                  <LifeBuoy />
+                </Button>
+              </SimpleTooltip>
               <SimpleTooltip content="Сменить пароль">
                 <Button variant="ghost" size="icon" asChild aria-label="Сменить пароль">
                   <Link to="/account/password">
@@ -273,6 +281,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           ) : null}
         </header>
+        <SupportDialog open={supportOpen} onOpenChange={setSupportOpen} />
 
         {/* Content */}
         <main

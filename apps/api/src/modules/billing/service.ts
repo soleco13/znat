@@ -3,6 +3,7 @@ import {
   FREE_LIMITS,
   PLATFORM_LIMITS,
   YEAR_MONTHS_CHARGED,
+  supportContactsFor,
   type AccessTokenPayload,
   type BillingPlanId,
   type PlanLimits,
@@ -162,7 +163,7 @@ export async function getState(
     paidUntil: school?.paidUntil ? school.paidUntil.toISOString() : null,
     paymentsEnabled: platega.plategaConfigured() || testMode(),
     testMode: testMode(),
-    supportEmail: env.SUPPORT_EMAIL,
+    support: supportContactsFor(school?.kind, env.SUPPORT_EMAIL),
     lastPayment: last
       ? {
           id: last.id,

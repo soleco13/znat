@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { Reveal } from "@/components/Reveal";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { SUPPORT_EMAIL, SUPPORT_TELEGRAM, SUPPORT_TELEGRAM_URL } from "@/lib/contacts";
 
 export function CTA() {
   return (
@@ -22,13 +23,14 @@ export function CTA() {
             Начать бесплатно
             <ArrowRight className="transition-transform duration-150 group-hover:translate-x-0.5" aria-hidden />
           </a>
-          <a href="#demo" className={buttonVariants({ variant: "quiet", size: "cta" })}>
+          <a href={SUPPORT_TELEGRAM_URL} target="_blank" rel="noreferrer" className={buttonVariants({ variant: "quiet", size: "cta" })}>
             Запросить демонстрацию
           </a>
         </Reveal>
 
         <Reveal delay={300} className="mt-6 text-small text-text-3">
-          Есть вопросы по внедрению в сеть школ? Напишите — покажем на вашем материале.
+          Есть вопросы по внедрению в сеть школ? Напишите в Telegram {SUPPORT_TELEGRAM} или на {SUPPORT_EMAIL} — покажем
+          на вашем материале.
         </Reveal>
       </div>
     </section>
