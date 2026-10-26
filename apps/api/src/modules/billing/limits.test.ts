@@ -22,13 +22,13 @@ describe("Э15.6: лимиты тарифа", () => {
     repoMock.getSchoolBilling.mockResolvedValueOnce({ billingPlan: "school", paidUntil: new Date(Date.now() - 1000), kind: "organization" });
     const r = await planLimits(school());
     expect(r.plan).toBeNull();
-    expect(r.limits).toMatchObject({ rooms: 1, teachers: 1, methodists: 0, studentsPerLesson: 6, recordingHoursPerMonth: 0, matisLibrary: false });
+    expect(r.limits).toMatchObject({ rooms: 1, teachers: 1, methodists: 0, studentsPerLesson: 3, recordingHoursPerMonth: 0, matisLibrary: false });
   });
 
   it("оплачена «Школа» — её лимиты; результат кешируется", async () => {
     const id = school();
     repoMock.getSchoolBilling.mockResolvedValue({ billingPlan: "school", paidUntil: future(), kind: "organization" });
-    expect((await planLimits(id)).limits).toMatchObject({ rooms: 15, teachers: 15, methodists: null, studentsPerLesson: 30 });
+    expect((await planLimits(id)).limits).toMatchObject({ rooms: null, teachers: null, methodists: null, studentsPerLesson: 30, recordingRetentionDays: 90 });
     expect(await hasMatisLibrary(id)).toBe(true);
     expect(repoMock.getSchoolBilling).toHaveBeenCalledTimes(1);
   });
@@ -39,27 +39,29 @@ describe("Э15.6: лимиты тарифа", () => {
     membershipsMock.activeUserIdsWithRole.mockResolvedValueOnce([]);
     await expect(assertRoleSeat(id, "teacher")).resolves.toBeUndefined();
     membershipsMock.activeUserIdsWithRole.mockResolvedValueOnce(["t1"]);
-    await expect(assertRoleSeat(id, "teacher")).rejects.toMatchObject({ statusCode: 403, code: "plan_limit", message: expect.stringContaining("«Школа»") });
+    await expect(assertRoleSeat(id, "teacher")).rejects.toMatchObject({ statusCode: 403, code: "plan_limit", message: expect.stringContaining("«Мини-школа»") });
   });
 
-  it("методисты: без тарифа «Школа» нельзя, в «Школе» — без ограничения; админ не считается", async () => {
+  it("методисты: на бесплатном нельзя, в «Школе» — без ограничения; админ не считается", async () => {
     repoMock.getSchoolBilling.mockResolvedValueOnce({ billingPlan: null, paidUntil: null, kind: "organization" });
-    await expect(assertRoleSeat(school(), "methodist")).rejects.toMatchObject({ message: "Методисты доступны в тарифе «Школа»" });
+    await expect(assertRoleSeat(school(), "methodist")).rejects.toMatchObject({ message: "Методисты доступны с тарифа «Мини-школа»" });
     repoMock.getSchoolBilling.mockResolvedValueOnce({ billingPlan: "school", paidUntil: future(), kind: "organization" });
     await expect(assertRoleSeat(school(), "methodist")).resolves.toBeUndefined();
     await expect(assertRoleSeat(school(), "admin")).resolves.toBeUndefined();
     expect(membershipsMock.activeUserIdsWithRole).not.toHaveBeenCalled();
   });
 
-  it("запись: бесплатно — нет, «Репетитор» — до 20 ч в месяц, «Школа» — без ограничения", async () => {
+  it("запись: бесплатно — нет, «Репетитор» — до 10 ч в месяц, «Школа» — до 150 ч с подсказкой «Школы Про»", async () => {
     repoMock.getSchoolBilling.mockResolvedValueOnce({ billingPlan: null, paidUntil: null, kind: "individual" });
     await expect(assertRecordingAllowed(school(), async () => 0)).rejects.toMatchObject({ code: "plan_limit" });
     repoMock.getSchoolBilling.mockResolvedValue({ billingPlan: "tutor", paidUntil: future(), kind: "individual" });
     const tutor = school();
-    await expect(assertRecordingAllowed(tutor, async () => 19 * 3600)).resolves.toBeUndefined();
-    await expect(assertRecordingAllowed(tutor, async () => 20 * 3600)).rejects.toMatchObject({ message: expect.stringContaining("20 ч") });
+    await expect(assertRecordingAllowed(tutor, async () => 9 * 3600)).resolves.toBeUndefined();
+    await expect(assertRecordingAllowed(tutor, async () => 10 * 3600)).rejects.toMatchObject({ message: expect.stringContaining("10 ч") });
     repoMock.getSchoolBilling.mockResolvedValue({ billingPlan: "school", paidUntil: future(), kind: "organization" });
-    await expect(assertRecordingAllowed(school(), async () => 10_000 * 3600)).resolves.toBeUndefined();
+    const sch = school();
+    await expect(assertRecordingAllowed(sch, async () => 149 * 3600)).resolves.toBeUndefined();
+    await expect(assertRecordingAllowed(sch, async () => 150 * 3600)).rejects.toMatchObject({ message: expect.stringContaining("«Школа Про»") });
   });
 
   it("пространство «Матис» (platform) — не школа: без тарифа и без ограничений", async () => {

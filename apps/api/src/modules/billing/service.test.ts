@@ -40,9 +40,10 @@ beforeEach(() => {
 
 describe("billing", () => {
   it("цена считается на сервере: год — 10 месяцев", () => {
-    expect(priceRub("tutor", "month")).toBe(990);
-    expect(priceRub("tutor", "year")).toBe(9900);
-    expect(priceRub("school", "year")).toBe(69000);
+    expect(priceRub("tutor", "month")).toBe(790);
+    expect(priceRub("tutor", "year")).toBe(7900);
+    expect(priceRub("school", "year")).toBe(89900);
+    expect(priceRub("network", "month")).toBe(59900);
   });
 
   it("без ключей Platega — заглушка payments_unavailable", async () => {
@@ -55,8 +56,8 @@ describe("billing", () => {
     repoMock.insertPayment.mockResolvedValue({ ...payment, id: "pay-1" });
     plategaMock.createTransaction.mockResolvedValue({ transactionId: "tx-1", url: "https://pay.platega.io/?id=tx-1" });
     const r = await checkout(user, "a@b.ru", { plan: "school", period: "year" });
-    expect(repoMock.insertPayment).toHaveBeenCalledWith(expect.objectContaining({ amountRub: 69000, plan: "school", period: "year" }));
-    expect(plategaMock.createTransaction).toHaveBeenCalledWith(expect.objectContaining({ amountRub: 69000, orderId: "pay-1" }));
+    expect(repoMock.insertPayment).toHaveBeenCalledWith(expect.objectContaining({ amountRub: 89900, plan: "school", period: "year" }));
+    expect(plategaMock.createTransaction).toHaveBeenCalledWith(expect.objectContaining({ amountRub: 89900, orderId: "pay-1" }));
     expect(repoMock.setProviderTxId).toHaveBeenCalledWith("pay-1", "tx-1");
     expect(r.url).toContain("pay.platega.io");
   });
@@ -97,7 +98,7 @@ describe("billing", () => {
     repoMock.insertSubscription.mockResolvedValue({ id: "s1" });
     plategaMock.createSubscription.mockResolvedValue({ subscriptionId: "ps-1", url: "https://pay.platega.io/subscription/ps-1" });
     const r = await subscribe(user, { plan: "tutor", period: "month", autopayConsent: true });
-    expect(plategaMock.createSubscription).toHaveBeenCalledWith(expect.objectContaining({ amountRub: 990, period: "month" }));
+    expect(plategaMock.createSubscription).toHaveBeenCalledWith(expect.objectContaining({ amountRub: 790, period: "month" }));
     expect(repoMock.setSubscriptionProviderId).toHaveBeenCalledWith("s1", "ps-1");
     expect(r.url).toContain("subscription");
   });

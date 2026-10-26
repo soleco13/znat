@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Check, CircleAlert, CircleCheck, Clock } from "lucide-react";
-import { BILLING_PLANS, YEAR_MONTHS_CHARGED, type BillingPeriod, type BillingPlanId, type BillingState } from "@school/shared";
+import { BILLING_PLANS, DEDICATED_PLAN_FROM_RUB, YEAR_MONTHS_CHARGED, type BillingPeriod, type BillingPlanId, type BillingState } from "@school/shared";
 
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/shared/api-client";
@@ -218,7 +218,7 @@ export function BillingPage() {
         </Alert>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {BILLING_PLANS.map((p) => {
           const amount = amountFor(p.monthlyRub, period);
           const isCurrent = active && s?.plan === p.id;
@@ -266,15 +266,21 @@ export function BillingPage() {
 
       <Card className="mt-4 flex flex-wrap items-center justify-between gap-3 px-6 py-5">
         <div>
-          <h2 className="font-bold text-foreground">Сеть</h2>
-          <p className="text-sm text-muted-foreground">Несколько школ, свой сервер и домен. Цена по договорённости.</p>
+          <h2 className="font-bold text-foreground">Выделенный</h2>
+          <p className="text-sm text-muted-foreground">
+            Свои серверы для вашей школы, домен и связка с CRM. От {rub.format(DEDICATED_PLAN_FROM_RUB)} ₽ в месяц, по договору.
+          </p>
         </div>
         <Button variant="secondary" asChild>
-          <a href={`mailto:${support}?subject=${encodeURIComponent("Тариф «Сеть»")}`}>Обсудить внедрение</a>
+          <a href={`mailto:${support}?subject=${encodeURIComponent("Тариф «Выделенный»")}`}>Обсудить внедрение</a>
         </Button>
       </Card>
 
       <p className="mt-6 text-sm text-muted-foreground [text-wrap:pretty]">
+        Ученико-час — час, который один ученик провёл на уроке. Если часы тарифа закончились, уроки не прерываются: мы
+        напишем и предложим тариф побольше или 1 000 ученико-часов за 3 490 ₽.
+      </p>
+      <p className="mt-3 text-sm text-muted-foreground [text-wrap:pretty]">
         После оплаты тариф включается сразу, чек приходит на почту. При отключении автопродления оплаченный срок
         сохраняется. Деньги за неиспользованные дни можно вернуть по
         заявлению на <a className="font-medium text-primary hover:underline" href={`mailto:${support}`}>{support}</a>.
@@ -340,6 +346,9 @@ function LimitsCard({ state, tutor }: { state: BillingState; tutor: boolean }) {
       value: rec === null ? "без ограничения" : rec === 0 ? "нет в тарифе" : `${hoursFmt.format(u.recordingHoursThisMonth)} из ${rec} ч в этом месяце`,
       over: rec !== null && rec > 0 && u.recordingHoursThisMonth >= rec,
     },
+    ...(rec === 0 || l.recordingRetentionDays === null
+      ? []
+      : [{ label: "Хранение записей", value: `${l.recordingRetentionDays} дней` }]),
     { label: "Библиотека Матиса", value: l.matisLibrary ? "есть" : "нет в тарифе" },
   ];
   return (

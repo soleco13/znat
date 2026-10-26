@@ -22,6 +22,7 @@ import { ACTIVE_RAW_RECORDING_STATUSES } from "@school/shared";
 import { AppError } from "../../plugins/errors.js";
 import { env } from "../../plugins/env.js";
 import { logEvent, logTaskFailure, logger } from "../../plugins/logger.js";
+import * as billingService from "../billing/service.js";
 import * as lessonsService from "../lessons/service.js";
 import * as roomsService from "../rooms/service.js";
 import * as schoolSettingsService from "../school-settings/service.js";
@@ -47,6 +48,15 @@ export const MAX_RENDER_ATTEMPTS = 3;
 const RECORDER_HEARTBEAT_SEC = 5;
 /** Исходники упавшей сборки храним дольше — для разбора и ручной пересборки. */
 const FAILED_SOURCE_RETENTION_MS = 14 * 24 * 3600_000;
+
+/**
+ * Когда удалить новую запись (обоих методов): срок хранения по тарифу школы,
+ * без срока в тарифе — настройка сервера `RECORDING_RETENTION_DAYS`.
+ */
+export async function recordingExpiresAt(schoolId: string, from: Date): Promise<Date> {
+  const { limits } = await billingService.planLimits(schoolId);
+  return new Date(from.getTime() + (limits.recordingRetentionDays ?? env.RECORDING_RETENTION_DAYS) * 86_400_000);
+}
 
 // ─── Включение метода ──────────────────────────────────────────────────────
 
@@ -519,7 +529,7 @@ export async function renderFinished(
     renderStep: "done",
     lastError: null,
     endedAt: now,
-    expiresAt: new Date(now.getTime() + env.RECORDING_RETENTION_DAYS * 86_400_000),
+    expiresAt: await recordingExpiresAt(row.schoolId, now),
     rawExpiresAt: new Date(now.getTime() + env.RAW_RECORDING_SOURCE_RETENTION_HOURS * 3600_000),
   });
   if (!updated) throw new AppError(409, "lease_lost", "Задание рендера передано другому или завершено");

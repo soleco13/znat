@@ -300,6 +300,18 @@ describe("applyEgressEvent (Э10 — статус от вебхука к стр�
     expect(posterMock.enqueuePoster).toHaveBeenCalledWith(expect.stringMatching(/\.mp4$/), 3600);
   });
 
+  it("ready: срок хранения — по тарифу школы, если он там задан", async () => {
+    const billing = await import("../billing/service.js");
+    vi.mocked(billing.planLimits).mockResolvedValueOnce({
+      plan: "pro",
+      limits: { rooms: null, teachers: null, methodists: null, studentsPerLesson: 50, recordingHoursPerMonth: 500, recordingRetentionDays: 180, matisLibrary: true },
+    });
+    repoMock.findRecordingByEgressId.mockResolvedValue(row({ status: "recording" }));
+    await service.applyEgressEvent({ egressId: "EG_1", status: "ready", fileSizeBytes: 1, fileDurationNanos: 1, endedAtEpochMs: Date.parse("2026-09-05T11:00:00Z") });
+    const patch = repoMock.updateRecording.mock.calls[0]![1] as Record<string, unknown>;
+    expect((patch.expiresAt as Date).toISOString()).toBe("2027-03-04T11:00:00.000Z"); // +180 дней
+  });
+
   it("не откатывает терминальный статус более ранним из вебхука не по порядку", async () => {
     repoMock.findRecordingByEgressId.mockResolvedValue(row({ status: "ready" }));
     await service.applyEgressEvent({ egressId: "EG_1", status: "recording" });

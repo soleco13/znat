@@ -575,7 +575,7 @@ export async function applyEgressEvent(input: {
     patch.durationSec = durationSec ?? null;
     patch.sizeBytes = input.fileSizeBytes ?? row.sizeBytes;
     patch.endedAt = endedAt;
-    patch.expiresAt = new Date(endedAt.getTime() + env.RECORDING_RETENTION_DAYS * 86_400_000);
+    patch.expiresAt = await rawService.recordingExpiresAt(row.schoolId, endedAt);
   } else if (isTerminal(input.status)) {
     patch.endedAt = input.endedAtEpochMs ? new Date(input.endedAtEpochMs) : new Date();
   }

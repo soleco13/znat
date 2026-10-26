@@ -8,8 +8,13 @@ import { z } from "zod";
  * Цены — те же, что на лендинге (`landing/src/sections/Pricing.tsx`); годовая
  * оплата — 10 месяцев вместо 12. Сумму платежа считает сервер по этому
  * каталогу, клиент присылает только тариф и период.
+ *
+ * Сетка владельца 2026-10-25: объём —
+ * ученико-часы в месяц, мягкий потолок (урок не прерывается, сервер их пока не
+ * считает); аудитории и учителя в школьных тарифах без ограничений. «Выделенный»
+ * (свои серверы школы) — по договору, в каталоге оплаты его нет.
  */
-export const billingPlanIdSchema = z.enum(["tutor", "school"]);
+export const billingPlanIdSchema = z.enum(["tutor", "mini", "school", "pro", "network"]);
 export type BillingPlanId = z.infer<typeof billingPlanIdSchema>;
 
 export const billingPeriodSchema = z.enum(["month", "year"]);
@@ -32,17 +37,20 @@ export interface PlanLimits {
   studentsPerLesson: number | null;
   /** Часов записи в календарный месяц; 0 — записи нет, `null` — без ограничения. */
   recordingHoursPerMonth: number | null;
+  /** Дней хранения новой записи; `null` — по настройке сервера (`RECORDING_RETENTION_DAYS`). */
+  recordingRetentionDays: number | null;
   /** Библиотека «Матиса» (Э15.5, docs/roles/spec §6.1). */
   matisLibrary: boolean;
 }
 
-/** Пока тариф не оплачен или срок вышел — бесплатный минимум. */
+/** Пока тариф не оплачен или срок вышел — бесплатный «Старт» (10 ученико-часов в месяц, без записи). */
 export const FREE_LIMITS: PlanLimits = {
   rooms: 1,
   teachers: 1,
   methodists: 0,
-  studentsPerLesson: 6,
+  studentsPerLesson: 3,
   recordingHoursPerMonth: 0,
+  recordingRetentionDays: null,
   matisLibrary: false,
 };
 
@@ -56,6 +64,7 @@ export const PLATFORM_LIMITS: PlanLimits = {
   methodists: null,
   studentsPerLesson: null,
   recordingHoursPerMonth: null,
+  recordingRetentionDays: null,
   matisLibrary: true,
 };
 
@@ -73,33 +82,77 @@ export const BILLING_PLANS: readonly BillingPlan[] = [
   {
     id: "tutor",
     name: "Репетитор",
-    tagline: "Индивидуальные занятия и мини-группы",
-    monthlyRub: 990,
+    tagline: "Один преподаватель: занятия один на один и мини-группы",
+    monthlyRub: 790,
     // Аудитория репетитору выдаётся сама (при подтверждении почты и оплате) — создавать он не может.
-    limits: { rooms: 1, teachers: 1, methodists: 0, studentsPerLesson: 6, recordingHoursPerMonth: 20, matisLibrary: true },
+    limits: { rooms: 1, teachers: 1, methodists: 0, studentsPerLesson: 8, recordingHoursPerMonth: 10, recordingRetentionDays: 30, matisLibrary: true },
     features: [
-      "1 учитель и 1 аудитория, до 6 учеников в уроке",
-      "Видеоуроки, доска, слайды, задания",
+      "1 учитель, своя аудитория с постоянной ссылкой",
+      "300 ученико-часов в месяц, до 8 учеников в уроке",
+      "Доска, слайды, задания с автопроверкой",
       "Библиотека материалов",
-      "Запись урока (до 20 ч в месяц)",
-      "Вход учеников по ссылке",
+      "Запись уроков: 10 ч в месяц, хранение 30 дней",
+    ],
+  },
+  {
+    id: "mini",
+    name: "Мини-школа",
+    tagline: "Несколько преподавателей и группы",
+    monthlyRub: 2990,
+    limits: { rooms: null, teachers: null, methodists: null, studentsPerLesson: 15, recordingHoursPerMonth: 40, recordingRetentionDays: 60, matisLibrary: true },
+    features: [
+      "Учителя и аудитории без ограничений",
+      "1 500 ученико-часов в месяц, до 15 учеников в уроке",
+      "Роли: администратор, методист, учитель",
+      "Редактор материалов для методистов",
+      "Запись уроков: 40 ч в месяц, хранение 60 дней",
     ],
   },
   {
     id: "school",
     name: "Школа",
-    tagline: "Для онлайн-школы или учебного центра",
-    monthlyRub: 6900,
-    limits: { rooms: 15, teachers: 15, methodists: null, studentsPerLesson: 30, recordingHoursPerMonth: null, matisLibrary: true },
+    tagline: "Онлайн-школа или учебный центр",
+    monthlyRub: 8990,
+    limits: { rooms: null, teachers: null, methodists: null, studentsPerLesson: 30, recordingHoursPerMonth: 150, recordingRetentionDays: 90, matisLibrary: true },
     features: [
-      "До 15 учителей и 15 аудиторий, класс до 30 учеников",
-      "Всё из «Репетитора»",
-      "Методисты без ограничения, редактор материалов",
-      "Запись без лимита минут",
-      "Роли: администратор, методист, учитель",
+      "Всё из «Мини-школы»",
+      "5 000 ученико-часов в месяц, класс до 30 учеников",
+      "Успеваемость по каждому классу и ученику",
+      "Запись уроков: 150 ч в месяц, хранение 90 дней",
+      "Приоритетная поддержка",
+    ],
+  },
+  {
+    id: "pro",
+    name: "Школа Про",
+    tagline: "Большая школа",
+    monthlyRub: 17900,
+    limits: { rooms: null, teachers: null, methodists: null, studentsPerLesson: 50, recordingHoursPerMonth: 500, recordingRetentionDays: 180, matisLibrary: true },
+    features: [
+      "Всё из «Школы»",
+      "12 000 ученико-часов в месяц, до 50 учеников в уроке",
+      "Запись уроков: 500 ч в месяц, хранение 180 дней",
+      "Персональный менеджер",
+    ],
+  },
+  {
+    id: "network",
+    name: "Сеть",
+    tagline: "Крупная школа или несколько филиалов",
+    monthlyRub: 59900,
+    limits: { rooms: null, teachers: null, methodists: null, studentsPerLesson: 100, recordingHoursPerMonth: 1000, recordingRetentionDays: 365, matisLibrary: true },
+    features: [
+      "Всё из «Школы Про»",
+      "40 000 ученико-часов в месяц, до 100 учеников в уроке",
+      "Запись уроков: 1 000 ч в месяц, хранение 365 дней",
+      "Свой домен и связка с вашей CRM — настраиваем при подключении",
+      "Помощь с переносом материалов и обучением учителей",
     ],
   },
 ] as const;
+
+/** «Выделенный» — свои серверы школы, по договору; в каталоге оплаты его нет. */
+export const DEDICATED_PLAN_FROM_RUB = 129000;
 
 /** Годовая оплата — 10 месяцев вместо 12. */
 export const YEAR_MONTHS_CHARGED = 10;
@@ -110,6 +163,7 @@ const planLimitsSchema = z.object({
   methodists: z.number().int().nullable(),
   studentsPerLesson: z.number().int().nullable(),
   recordingHoursPerMonth: z.number().nullable(),
+  recordingRetentionDays: z.number().int().nullable(),
   matisLibrary: z.boolean(),
 });
 

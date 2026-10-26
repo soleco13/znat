@@ -72,16 +72,23 @@ export async function assertRoleSeat(schoolId: string, role: Role): Promise<void
   const max = role === "teacher" ? limits.teachers : limits.methodists;
   if (max === null) return;
   if (role === "methodist" && max === 0) {
-    throw new AppError(403, "plan_limit", "Методисты доступны в тарифе «Школа»");
+    throw new AppError(403, "plan_limit", "Методисты доступны с тарифа «Мини-школа»");
   }
   const used = (await membershipsService.activeUserIdsWithRole(schoolId, role)).length;
   if (used < max) return;
   throw new AppError(403, "plan_limit", `По тарифу ${role === "teacher" ? "учителей" : "методистов"} не больше ${max}.${upgradeHint(plan)}`);
 }
 
-/** Подсказка к отказу по лимиту — куда расти с текущего тарифа. */
-export const upgradeHint = (plan: BillingPlanId | null) =>
-  plan === "school" ? "" : plan === "tutor" ? " Больше — в тарифе «Школа»." : " Больше — в платных тарифах, раздел «Тариф».";
+/** Подсказка к отказу по лимиту — куда расти с текущего тарифа (следующий в каталоге). */
+export const upgradeHint = (plan: BillingPlanId | null) => {
+  if (plan === null) return " Больше — в платных тарифах, раздел «Тариф».";
+  const next = BILLING_PLANS[BILLING_PLANS.findIndex((p) => p.id === plan) + 1];
+  return next ? ` Больше — в тарифе «${next.name}».` : "";
+};
+
+/** Сохранённый в базе тариф, если он есть в каталоге. */
+const knownPlan = (plan: string | null | undefined): BillingPlanId | null =>
+  BILLING_PLANS.find((p) => p.id === plan)?.id ?? null;
 
 /** Можно ли начать запись: `recordedSec` — уже записано школой в этом месяце. */
 export async function assertRecordingAllowed(schoolId: string, recordedSec: () => Promise<number>): Promise<void> {
@@ -145,13 +152,13 @@ export async function getState(
     subscription: sub
       ? {
           status: sub.status,
-          plan: sub.plan as "tutor" | "school",
+          plan: sub.plan as BillingPlanId,
           period: sub.period as "month" | "year",
           amountRub: sub.amountRub,
           nextChargeAt: sub.nextChargeAt ? sub.nextChargeAt.toISOString() : null,
         }
       : null,
-    plan: plan === "tutor" || plan === "school" ? plan : null,
+    plan: knownPlan(plan),
     paidUntil: school?.paidUntil ? school.paidUntil.toISOString() : null,
     paymentsEnabled: platega.plategaConfigured() || testMode(),
     testMode: testMode(),
@@ -160,7 +167,7 @@ export async function getState(
       ? {
           id: last.id,
           status: last.status,
-          plan: last.plan as "tutor" | "school",
+          plan: last.plan as BillingPlanId,
           period: last.period as "month" | "year",
           amountRub: last.amountRub,
           createdAt: last.createdAt.toISOString(),
@@ -391,7 +398,7 @@ export async function testInfo(user: AccessTokenPayload, kind: "payment" | "subs
   return {
     kind,
     id: row.id,
-    plan: row.plan as "tutor" | "school",
+    plan: row.plan as BillingPlanId,
     period: row.period as "month" | "year",
     amountRub: row.amountRub,
     status: row.status,
