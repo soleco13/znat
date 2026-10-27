@@ -4,7 +4,7 @@ import tailwindcssAnimate from "tailwindcss-animate";
 /**
  * Дизайн-система «Матис» (Shkola / AutoCheck) — те же токены, что в
  * apps/web/tailwind.config.js. Значения приходят из src/index.css.
- * Лендинг добавляет только типографическую шкалу (text-caption … text-display):
+ * Лендинг добавляет только типографическую шкалу (text-caption … text-hero):
  * один источник размеров вместо десятка «13.5px / 15.5px / 16.5px».
  */
 export default {
@@ -100,7 +100,7 @@ export default {
         md: "var(--shadow-md)",
         lg: "var(--shadow-lg)",
       },
-      /* Шкала ~1.25: подпись → текст → лид → h3 → h2 → дисплей. */
+      /* Шкала ~1.25: подпись → текст → лид → h3 → h2 → заголовок первого экрана. */
       fontSize: {
         caption: ["13px", { lineHeight: "1.45" }],
         small: ["15px", { lineHeight: "1.6" }],
@@ -108,7 +108,8 @@ export default {
         lead: ["20px", { lineHeight: "1.55" }],
         h3: ["26px", { lineHeight: "1.15", letterSpacing: "-0.025em", fontWeight: "700" }],
         h2: ["clamp(2.125rem, 1.4rem + 2.4vw, 3.25rem)", { lineHeight: "1.05", letterSpacing: "-0.035em", fontWeight: "800" }],
-        display: ["clamp(2.75rem, 1rem + 5.6vw, 5.5rem)", { lineHeight: "1.02", letterSpacing: "-0.035em", fontWeight: "800" }],
+        /* Заголовок первого экрана: два-три слова, а не предложение. */
+        hero: ["clamp(2.6rem, 1.2rem + 4.4vw, 4.9rem)", { lineHeight: "1.02", letterSpacing: "-0.035em", fontWeight: "800" }],
       },
       maxWidth: { content: "1120px" },
       letterSpacing: {

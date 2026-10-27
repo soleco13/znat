@@ -24,7 +24,7 @@
 		Referrer-Policy strict-origin-when-cross-origin
 		-Server
 	}
-	@app_pages not path / /landing/* /files/*
+	@app_pages not path / /pricing /contacts /landing/* /files/*
 	header @app_pages Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' blob:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'"
 	@user_files path /files/*
 	header @user_files Content-Security-Policy "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'; sandbox"
@@ -41,7 +41,7 @@
 	respond @sourcemaps 404
 	@landing_assets path /landing/assets/*
 	header @landing_assets Cache-Control "public, max-age=31536000, immutable"
-	@landing_page path /
+	@landing_page path / /pricing /contacts
 	header @landing_page Cache-Control "no-cache"
 }
 
@@ -87,6 +87,29 @@
 		file_server {
 			precompressed br
 		}
+	}
+	# Ещё две страницы лендинга — /pricing и /contacts (multi-page сборка,
+	# landing/vite.config.ts → PAGES): файлы dist/<страница>/index.html. Адрес
+	# без хвостового слеша, как в ссылках сайта и в canonical; со слешем —
+	# редирект. Короткие ссылки уроков `/<код>` с ними не пересекаются: код —
+	# 12 символов с цифрой (lessonJoinCodeSchema).
+	redir /pricing/ /pricing permanent
+	redir /contacts/ /contacts permanent
+	@landing_pages path /pricing /contacts
+	handle @landing_pages {
+		root * /srv/landing
+		rewrite * {path}/index.html
+		# Файл задан явно — без канонических редиректов file_server на «/pricing/».
+		file_server {
+			precompressed br
+			disable_canonical_uris
+		}
+	}
+	# robots.txt и sitemap.xml кладёт сборка лендинга (по VITE_SITE_URL).
+	@landing_seo path /robots.txt /sitemap.xml
+	handle @landing_seo {
+		root * /srv/landing
+		file_server
 	}
 	handle_path /landing/* {
 		root * /srv/landing
@@ -150,6 +173,29 @@ https://213.21.241.28 {
 		file_server {
 			precompressed br
 		}
+	}
+	# Ещё две страницы лендинга — /pricing и /contacts (multi-page сборка,
+	# landing/vite.config.ts → PAGES): файлы dist/<страница>/index.html. Адрес
+	# без хвостового слеша, как в ссылках сайта и в canonical; со слешем —
+	# редирект. Короткие ссылки уроков `/<код>` с ними не пересекаются: код —
+	# 12 символов с цифрой (lessonJoinCodeSchema).
+	redir /pricing/ /pricing permanent
+	redir /contacts/ /contacts permanent
+	@landing_pages path /pricing /contacts
+	handle @landing_pages {
+		root * /srv/landing
+		rewrite * {path}/index.html
+		# Файл задан явно — без канонических редиректов file_server на «/pricing/».
+		file_server {
+			precompressed br
+			disable_canonical_uris
+		}
+	}
+	# robots.txt и sitemap.xml кладёт сборка лендинга (по VITE_SITE_URL).
+	@landing_seo path /robots.txt /sitemap.xml
+	handle @landing_seo {
+		root * /srv/landing
+		file_server
 	}
 	handle_path /landing/* {
 		root * /srv/landing

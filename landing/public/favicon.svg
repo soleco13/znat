@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 325 325" width="32" height="32">
+  <title>Матис — фавикон</title>
+  <!-- Для 16–32 px: «спутник» крупнее и прорезает край диска, чтобы читался на маленьком размере. -->
+  <defs>
+    <mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="325" height="325">
+      <rect width="325" height="325" fill="#fff"/>
+      <circle cx="162.5" cy="162.5" r="72" fill="#000"/>
+      <circle cx="162.5" cy="14" r="44" fill="#000"/>
+    </mask>
+  </defs>
+  <circle cx="162.5" cy="162.5" r="162.5" fill="#1d4ed8" mask="url(#m)"/>
+</svg>
