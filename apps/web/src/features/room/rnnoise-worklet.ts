@@ -6,9 +6,11 @@
  * Здесь: вход копится кадрами по 480 отсчётов (10 мс при 48 кГц), кадр уходит
  * в Worker, выход отстаёт на `DELAY_FRAMES` кадров. К моменту воспроизведения
  * кадра берём обработанный, если Worker успел, иначе — необработанный
- * (переход между ними — косинусный, `FADE` отсчётов, без щелчков). Если за
- * окно `WINDOW_FRAMES` обработано меньше `MIN_DENOISED` кадров — сообщаем
- * `fallback`: контроллер переключит на встроенное шумоподавление.
+ * (переход между ними — косинусный, `FADE` отсчётов, без щелчков). Каждые
+ * `WINDOW_FRAMES` кадров сообщаем `stats` — сколько кадров ушло
+ * обработанными; решение о переходе на встроенное принимает контроллер
+ * (`noise-suppression.ts`): сырые кадры вперемешку с обработанными на слух —
+ * «шум, который то появляется, то пропадает» (урок 2026-10-26).
  */
 
 declare abstract class AudioWorkletProcessor {
@@ -24,15 +26,13 @@ const FRAME = 480;
 const DELAY_FRAMES = 2;
 const SLOTS = 16;
 const FADE = 128;
-/** Окно оценки «успевает ли Worker»: 60 с кадров по 10 мс. */
-const WINDOW_FRAMES = 6000;
-const MIN_DENOISED = 0.5;
+/** Окно отчёта «успевает ли Worker»: 10 с кадров по 10 мс. */
+const WINDOW_FRAMES = 1000;
 
 class MatisRnnoiseProcessor extends AudioWorkletProcessor {
   private worker: MessagePort | null = null;
   private ready = false;
   private stopped = false;
-  private fellBack = false;
   private input = new Float32Array(FRAME);
   private filled = 0;
   private seq = 0;
@@ -130,14 +130,11 @@ class MatisRnnoiseProcessor extends AudioWorkletProcessor {
   }
 
   private countFrame(denoised: boolean) {
-    if (!this.ready || this.fellBack) return;
+    if (!this.ready) return;
     this.totalFrames++;
     if (denoised) this.denoisedFrames++;
     if (this.totalFrames < WINDOW_FRAMES) return;
-    if (this.denoisedFrames / this.totalFrames < MIN_DENOISED) {
-      this.fellBack = true;
-      this.port.postMessage({ type: "fallback", denoised: this.denoisedFrames, total: this.totalFrames });
-    }
+    this.port.postMessage({ type: "stats", denoised: this.denoisedFrames, total: this.totalFrames });
     this.totalFrames = 0;
     this.denoisedFrames = 0;
   }

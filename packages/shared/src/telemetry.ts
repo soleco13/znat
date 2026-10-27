@@ -37,6 +37,8 @@ export const CLIENT_EVENT_NAMES = [
   "device_profile",
   /** Шумоподавление микрофона: какой режим включён и почему (noise-suppression.ts). */
   "noise_suppression",
+  /** Раз в минуту при «сильном» шумоподавлении: сколько звука RNNoise не успел обработать (noise-suppression.ts). */
+  "noise_suppression_stats",
   /** Звук собеседника «застрял» с задержкой после скачка сети — приём перезапущен (AudioLagGuard.tsx). */
   "audio_lag_reset",
   "websocket_disconnected",

@@ -12,7 +12,7 @@ import {
 import type { ClientMediaSettings, NoiseSuppressionMode } from "@school/shared";
 
 import { track } from "../../shared/telemetry.js";
-import { cpuLoadLevel, subscribeCpuLoadLevel } from "./cpu-load-engine.js";
+import { cpuLoadLevel, currentPressure, subscribeCpuLoadLevel } from "./cpu-load-engine.js";
 import { deviceProfileNow, type DeviceProfile } from "./device-profile.js";
 import workletUrl from "./rnnoise-worklet.ts?worker&url";
 import RnnoiseWorker from "./rnnoise-worker.ts?worker";
@@ -34,9 +34,15 @@ import RnnoiseWorker from "./rnnoise-worker.ts?worker";
  * выбрать свой в настройках урока; «Сильное» на слабом устройстве недоступно.
  * Выбор участника живёт до закрытия страницы (без localStorage, CLAUDE.md).
  *
- * Если с RNNoise устройство начало захлёбываться (`cpu-load-engine` дошёл до
- * ступени `CPU_FALLBACK_LEVEL`) или RNNoise не запустился — молча переходим
- * на встроенное до конца урока, в журнал — `noise_suppression`.
+ * Если с RNNoise устройство начало захлёбываться — молча переходим на
+ * встроенное до конца урока, в журнал — `noise_suppression`. Признаки:
+ * RNNoise не успевает обработать часть звука (`LateGuard`), процессор
+ * перегружен по Compute Pressure (`PressureGuard`), `cpu-load-engine` дошёл
+ * до ступени `CPU_FALLBACK_LEVEL`, или RNNoise не запустился. Урок
+ * 2026-10-26: у ученика (4 ядра, без камеры) процессор полчаса был в
+ * «serious»/«critical», ступень видео не росла, а старый порог «не успел
+ * в половине кадров за минуту» не сработал — учитель слышал шумы.
+ * Раз в минуту — `noise_suppression_stats`: доля необработанного звука.
  */
 
 export type NoiseTier = "strong" | "weak" | "very_weak";
@@ -55,6 +61,16 @@ const VERY_WEAK_SCORE = 18;
 /** Ступень `cpu-load-engine`, на которой RNNoise отключаем (SHARE_LEVEL — урезана уже демонстрация). */
 const CPU_FALLBACK_LEVEL = 2;
 const READY_TIMEOUT_MS = 8_000;
+/** Окно worklet (10 с): не успел больше — сразу на встроенное. */
+const LATE_HARD = 0.2;
+/** Не успел больше — два окна подряд — на встроенное. */
+const LATE_SOFT = 0.05;
+/** Compute Pressure: «critical» столько подряд — на встроенное. */
+const PRESSURE_CRITICAL_MS = 6_000;
+/** «serious» (или выше) столько подряд — на встроенное. */
+const PRESSURE_SERIOUS_MS = 30_000;
+const PRESSURE_POLL_MS = 2_000;
+const STATS_EVERY_MS = 60_000;
 const PROCESSOR_NAME = "matis-rnnoise";
 
 export function noiseTier(profile: DeviceProfile | null): NoiseTier {
@@ -142,6 +158,63 @@ export function useNoiseVersion(): number {
 }
 
 /**
+ * Сколько звука RNNoise не успел обработать. Окна по 10 с от worklet;
+ * первое окно после запуска пропускаем — Worker прогревается.
+ */
+class LateGuard {
+  private windows = 0;
+  private softInRow = 0;
+  /** Накопление за минуту — для журнала. */
+  total = 0;
+  denoised = 0;
+  worstPct = 0;
+
+  /** Вернёт причину перехода на встроенное или `null`. */
+  add(denoised: number, total: number): string | null {
+    if (total <= 0) return null;
+    this.windows++;
+    if (this.windows === 1) return null;
+    this.total += total;
+    this.denoised += denoised;
+    const late = 1 - denoised / total;
+    this.worstPct = Math.max(this.worstPct, Math.round(late * 1000) / 10);
+    if (late > LATE_HARD) return "rnnoise_late";
+    this.softInRow = late > LATE_SOFT ? this.softInRow + 1 : 0;
+    return this.softInRow >= 2 ? "rnnoise_late" : null;
+  }
+
+  /** Доля необработанного за накопленное время, % (null — нечего считать) — и сброс. */
+  take(): { latePct: number | null; worstPct: number; frames: number } {
+    const out = {
+      latePct: this.total > 0 ? Math.round((1 - this.denoised / this.total) * 1000) / 10 : null,
+      worstPct: this.worstPct,
+      frames: this.total,
+    };
+    this.total = 0;
+    this.denoised = 0;
+    this.worstPct = 0;
+    return out;
+  }
+}
+
+let lateGuard = new LateGuard();
+
+/** Перегрузка процессора по Compute Pressure (Chromium); без API — молчит. */
+export function pressureVerdict(
+  level: string | null,
+  since: { critical: number; serious: number },
+  now: number,
+): { since: { critical: number; serious: number }; reason: string | null } {
+  const critical = level === "critical" ? since.critical || now : 0;
+  const serious = level === "critical" || level === "serious" ? since.serious || now : 0;
+  const reason =
+    (critical && now - critical >= PRESSURE_CRITICAL_MS) || (serious && now - serious >= PRESSURE_SERIOUS_MS)
+      ? "cpu_pressure"
+      : null;
+  return { since: { critical, serious }, reason };
+}
+
+/**
  * Процессор LiveKit: микрофон → свой AudioContext 48 кГц (частота RNNoise) →
  * worklet → MediaStreamDestination; `processedTrack` уходит на сервер вместо
  * исходного. Смену микрофона LiveKit доводит до нас через `restart`.
@@ -188,16 +261,17 @@ class RnnoiseProcessor implements TrackProcessor<Track.Kind.Audio, AudioProcesso
     });
     const ready = new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error("rnnoise_timeout")), READY_TIMEOUT_MS);
-      node.port.onmessage = (e: MessageEvent<{ type?: string; message?: string }>) => {
+      node.port.onmessage = (e: MessageEvent<{ type?: string; message?: string; denoised?: number; total?: number }>) => {
         if (e.data?.type === "ready") {
           clearTimeout(timer);
           resolve();
         } else if (e.data?.type === "error") {
           clearTimeout(timer);
           reject(new Error(e.data.message ?? "rnnoise_error"));
-        } else if (e.data?.type === "fallback") {
-          // Worker не успевал в половине кадров за минуту — до конца урока встроенное.
-          blockStrong("rnnoise_late");
+        } else if (e.data?.type === "stats") {
+          // Окно 10 с: RNNoise не успевает — до конца урока встроенное.
+          const reason = lateGuard.add(e.data.denoised ?? 0, e.data.total ?? 0);
+          if (reason) blockStrong(reason);
         }
       };
     });
@@ -336,18 +410,53 @@ export function NoiseSuppressionController({ schoolMode }: { schoolMode: NoiseSu
     room.on(RoomEvent.Connected, apply);
     apply();
 
-    const unsubscribeCpu =
-      effective === "strong"
-        ? subscribeCpuLoadLevel(() => {
-            if (cpuLoadLevel() >= CPU_FALLBACK_LEVEL) blockStrong("cpu_overload");
-          })
-        : () => undefined;
+    const strong = effective === "strong";
+    const unsubscribeCpu = strong
+      ? subscribeCpuLoadLevel(() => {
+          if (cpuLoadLevel() >= CPU_FALLBACK_LEVEL) blockStrong("cpu_overload");
+        })
+      : () => undefined;
+
+    // Перегрузка процессора по Compute Pressure — и без камеры (ступень
+    // `cpu-load-engine` растёт только от видео и провалов захвата звука).
+    let since = { critical: 0, serious: 0 };
+    let worstPressure: string | null = null;
+    const pressureTimer = strong
+      ? setInterval(() => {
+          const level = currentPressure();
+          if (level === "critical" || (level === "serious" && worstPressure !== "critical")) worstPressure = level;
+          const v = pressureVerdict(level, since, Date.now());
+          since = v.since;
+          if (v.reason) blockStrong(v.reason);
+        }, PRESSURE_POLL_MS)
+      : null;
+
+    const report = (final: boolean) => {
+      const s = lateGuard.take();
+      if (s.frames === 0 && !final) return;
+      track("noise_suppression_stats", {
+        livekitRoom: room.name || null,
+        latePct: s.latePct,
+        worstWindowPct: s.worstPct,
+        seconds: Math.round(s.frames / 100),
+        pressure: worstPressure,
+        blocked: strongBlocked,
+        final,
+      });
+      worstPressure = null;
+    };
+    if (strong) lateGuard = new LateGuard();
+    const statsTimer = strong ? setInterval(() => report(false), STATS_EVERY_MS) : null;
 
     return () => {
       cancelled = true;
       room.localParticipant.off(ParticipantEvent.LocalTrackPublished, onPublished);
       room.off(RoomEvent.Connected, apply);
       unsubscribeCpu();
+      if (pressureTimer) clearInterval(pressureTimer);
+      if (statsTimer) clearInterval(statsTimer);
+      // Последние секунды «сильного» (в т. ч. причина перехода на встроенное).
+      if (strong) report(true);
     };
   }, [room, mode, effective]);
 
