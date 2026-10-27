@@ -44,7 +44,7 @@ async function load(pageName, path, prof, extra = {}) {
   console.log(JSON.stringify(row));
   return r;
 }
-for (const prof of Object.keys(PROFILES)) for (const [n, p] of [["home", "/"], ["pricing", "/pricing"], ["contacts", "/contacts"]]) await load(n, p, prof);
+for (const prof of Object.keys(PROFILES).filter((k) => !process.env.PROFS || process.env.PROFS.split(",").includes(k))) for (const [n, p] of [["home", "/"], ["pricing", "/pricing"], ["contacts", "/contacts"]]) await load(n, p, prof);
 
 // Нагрузка на устройство: простой после загрузки (3D-знак «перетекает» раз в ~9 с), с прокруткой, свёрнутая вкладка, reduced-motion.
 async function idleCpu(label, seconds, setup) {
@@ -64,6 +64,7 @@ async function idleCpu(label, seconds, setup) {
   const row = { idle: label, seconds: Math.round(dt), cpuPctOfCore: +cpu.toFixed(2), scriptPct: +scr.toFixed(2), heapMB: +((await metric("JSHeapUsedSize")) / 1048576).toFixed(1), nodes: await metric("Nodes") };
   out.push(row); console.log(JSON.stringify(row));
 }
+if (process.env.QUICK) { fs.writeFileSync(`${process.env.OUT || "/out"}/perf.json`, JSON.stringify(out, null, 1)); await T.send("Emulation.setCPUThrottlingRate", { rate: 1 }); await finish(); process.exit(0); }
 await idleCpu("home, стоим на первом экране", 30);
 await idleCpu("home, прокрутка вниз-вверх", 30, { during: async (s) => { const end = Date.now() + s * 1000; while (Date.now() < end) { await T.eval(`window.scrollBy(0, 400)`); await sleep(400); if (await T.eval(`window.innerHeight + scrollY >= document.documentElement.scrollHeight - 5`)) await T.eval(`window.scrollTo(0, 0)`); } } });
 await idleCpu("home, prefers-reduced-motion", 20, { before: async () => T.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] }) });
