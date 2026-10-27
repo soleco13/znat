@@ -91,7 +91,7 @@ export const PLANS: Plan[] = [
     recordingHours: 150,
     retentionDays: 90,
     library: true,
-    extra: "Успеваемость по каждому классу и ученику",
+    extra: "Приоритетная поддержка",
   },
   {
     id: "pro",

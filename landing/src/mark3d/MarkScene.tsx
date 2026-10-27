@@ -24,6 +24,13 @@ export function MarkScene({ className }: { className?: string }) {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const coarse = window.matchMedia("(pointer: coarse)").matches;
 
+    // Режим экономии трафика: 3D-сцену не грузим, остаётся плоский знак.
+    const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
+    if (saveData) {
+      setState("flat");
+      return;
+    }
+
     import("./renderer")
       .then(({ createMarkRenderer }) => {
         if (disposed) return;

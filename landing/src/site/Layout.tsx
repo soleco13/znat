@@ -172,7 +172,7 @@ function Footer() {
             <ul className="mt-3 space-y-2">
               {g.links.map((l) => (
                 <li key={l.href}>
-                  <a href={l.href} className="text-small text-text-2 transition-colors duration-150 hover:text-foreground">
+                  <a href={l.href} className="-my-1 inline-block py-1.5 text-small text-text-2 transition-colors duration-150 hover:text-foreground">
                     {l.label}
                   </a>
                 </li>
@@ -185,12 +185,12 @@ function Footer() {
           <h2 className="text-caption font-semibold text-text-3">Связь</h2>
           <ul className="mt-3 space-y-2">
             <li>
-              <a href={SUPPORT_TELEGRAM_URL} target="_blank" rel="noreferrer" className="text-small text-text-2 transition-colors duration-150 hover:text-foreground">
+              <a href={SUPPORT_TELEGRAM_URL} target="_blank" rel="noreferrer" className="-my-1 inline-block py-1.5 text-small text-text-2 transition-colors duration-150 hover:text-foreground">
                 Telegram {SUPPORT_TELEGRAM}
               </a>
             </li>
             <li>
-              <a href={`mailto:${SUPPORT_EMAIL}`} className="text-small text-text-2 transition-colors duration-150 hover:text-foreground">
+              <a href={`mailto:${SUPPORT_EMAIL}`} className="-my-1 inline-block py-1.5 text-small text-text-2 transition-colors duration-150 hover:text-foreground">
                 {SUPPORT_EMAIL}
               </a>
             </li>

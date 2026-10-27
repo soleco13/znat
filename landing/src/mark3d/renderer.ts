@@ -234,10 +234,18 @@ export function createMarkRenderer(canvas: HTMLCanvasElement, opts: MarkRenderer
     depth: false,
     stencil: false,
     powerPreference: "low-power",
+    // Без видеокарты (программный рендеринг, старые ПК) шейдер грузит ядро процессора
+    // почти на 100 % в каждом перетекании — браузер вернёт null, покажем плоский знак.
+    failIfMajorPerformanceCaveat: true,
     // Статичный режим рисует один кадр — он не должен пропасть при перекомпоновке страницы.
     preserveDrawingBuffer: opts.still,
   });
   if (!gl) throw new Error("webgl");
+  // Программный рендеринг (SwiftShader, llvmpipe и т. п.) браузер иногда не считает «серьёзной
+  // потерей» — проверяем сами: на таком устройстве сцена съедала бы ядро процессора.
+  const info = gl.getExtension("WEBGL_debug_renderer_info");
+  const gpu = info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : "";
+  if (/swiftshader|llvmpipe|softpipe|software|basic render/i.test(gpu)) throw new Error("software_gl");
 
   const prog = gl.createProgram();
   if (!prog) throw new Error("program");
