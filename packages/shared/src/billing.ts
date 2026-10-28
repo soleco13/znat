@@ -70,8 +70,22 @@ export const PLATFORM_LIMITS: PlanLimits = {
   matisLibrary: true,
 };
 
+/**
+ * ВРЕМЕННО СКРЫТО (2026-10-28, решение владельца): у Platega лимит 19 000 ₽
+ * на одну транзакцию — школьные тарифы и «Выделенный» сняты с витрины, в
+ * документах о них не пишем. Из каталога не удалены: `hidden: true` прячет
+ * тариф на сайте и странице «Тариф», сервер не принимает за него онлайн-оплату;
+ * супер-админ может включить его вручную («Платформа»). Вернуть: убрать
+ * `hidden` у тарифов и поставить `DEDICATED_PLAN_PUBLIC = true` (и то же в
+ * landing/src/lib/plans.ts), вернуть абзацы в документы — см. память
+ * matis-hidden-school-plans.
+ */
+export const PAYMENT_MAX_RUB = 19000;
+
 export interface BillingPlan {
   id: BillingPlanId;
+  /** Скрыт с витрины и онлайн-оплаты (см. `PAYMENT_MAX_RUB`). */
+  hidden?: boolean;
   name: string;
   tagline: string;
   /** Рублей за месяц при помесячной оплате. */
@@ -98,6 +112,7 @@ export const BILLING_PLANS: readonly BillingPlan[] = [
   },
   {
     id: "mini",
+    hidden: true,
     name: "Мини-школа",
     tagline: "Несколько преподавателей и группы",
     monthlyRub: 2990,
@@ -112,6 +127,7 @@ export const BILLING_PLANS: readonly BillingPlan[] = [
   },
   {
     id: "school",
+    hidden: true,
     name: "Школа",
     tagline: "Онлайн-школа или учебный центр",
     monthlyRub: 8990,
@@ -125,6 +141,7 @@ export const BILLING_PLANS: readonly BillingPlan[] = [
   },
   {
     id: "pro",
+    hidden: true,
     name: "Школа Про",
     tagline: "Большая школа",
     monthlyRub: 17900,
@@ -138,6 +155,7 @@ export const BILLING_PLANS: readonly BillingPlan[] = [
   },
   {
     id: "network",
+    hidden: true,
     name: "Сеть",
     tagline: "Крупная школа или несколько филиалов",
     monthlyRub: 59900,
@@ -154,6 +172,11 @@ export const BILLING_PLANS: readonly BillingPlan[] = [
 
 /** «Выделенный» — свои серверы школы, по договору; в каталоге оплаты его нет. */
 export const DEDICATED_PLAN_FROM_RUB = 129000;
+/** «Выделенный» на витрине — временно скрыт (см. `PAYMENT_MAX_RUB`). */
+export const DEDICATED_PLAN_PUBLIC = false;
+
+/** Тарифы, которые сейчас видны и оплачиваются онлайн. */
+export const PUBLIC_BILLING_PLANS: readonly BillingPlan[] = BILLING_PLANS.filter((p) => !p.hidden);
 
 /** Годовая оплата — 10 месяцев вместо 12. */
 export const YEAR_MONTHS_CHARGED = 10;

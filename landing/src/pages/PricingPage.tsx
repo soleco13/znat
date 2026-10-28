@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { Layout } from "@/site/Layout";
 import { APP, DEMO_HREF, billingHref } from "@/lib/site";
-import { DEDICATED_FROM, PLANS, YEAR_MONTHS_CHARGED, num, rub, type Plan } from "@/lib/plans";
+import { DEDICATED_FROM, DEDICATED_PUBLIC, VISIBLE_PLANS as PLANS, YEAR_MONTHS_CHARGED, num, rub, type Plan } from "@/lib/plans";
 import { SUPPORT_TELEGRAM, SUPPORT_TELEGRAM_URL } from "@/lib/contacts";
 
 const TUTOR = PLANS.filter((p) => p.id === "start" || p.id === "tutor");
@@ -28,13 +28,15 @@ export function PricingPage() {
       </section>
 
       <PlanGroup title="Репетиторам" note="Один преподаватель, своя аудитория с постоянной ссылкой." plans={TUTOR} yearly={yearly} />
-      <PlanGroup
-        title="Школам"
-        note="Учителя и аудитории без ограничений, роли администратора и методиста."
-        plans={SCHOOL}
-        yearly={yearly}
-      />
-      <Dedicated />
+      {SCHOOL.length > 0 ? (
+        <PlanGroup
+          title="Школам"
+          note="Учителя и аудитории без ограничений, роли администратора и методиста."
+          plans={SCHOOL}
+          yearly={yearly}
+        />
+      ) : null}
+      {DEDICATED_PUBLIC ? <Dedicated /> : null}
       <Compare />
       <Notes />
     </Layout>

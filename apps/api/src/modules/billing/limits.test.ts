@@ -39,12 +39,12 @@ describe("Э15.6: лимиты тарифа", () => {
     membershipsMock.activeUserIdsWithRole.mockResolvedValueOnce([]);
     await expect(assertRoleSeat(id, "teacher")).resolves.toBeUndefined();
     membershipsMock.activeUserIdsWithRole.mockResolvedValueOnce(["t1"]);
-    await expect(assertRoleSeat(id, "teacher")).rejects.toMatchObject({ statusCode: 403, code: "plan_limit", message: expect.stringContaining("«Мини-школа»") });
+    await expect(assertRoleSeat(id, "teacher")).rejects.toMatchObject({ statusCode: 403, code: "plan_limit", message: expect.stringContaining("по запросу") });
   });
 
   it("методисты: на бесплатном нельзя, в «Школе» — без ограничения; админ не считается", async () => {
     repoMock.getSchoolBilling.mockResolvedValueOnce({ billingPlan: null, paidUntil: null, kind: "organization" });
-    await expect(assertRoleSeat(school(), "methodist")).rejects.toMatchObject({ message: "Методисты доступны с тарифа «Мини-школа»" });
+    await expect(assertRoleSeat(school(), "methodist")).rejects.toMatchObject({ message: expect.stringContaining("Методисты доступны в тарифах для школ") });
     repoMock.getSchoolBilling.mockResolvedValueOnce({ billingPlan: "school", paidUntil: future(), kind: "organization" });
     await expect(assertRoleSeat(school(), "methodist")).resolves.toBeUndefined();
     await expect(assertRoleSeat(school(), "admin")).resolves.toBeUndefined();
@@ -61,7 +61,7 @@ describe("Э15.6: лимиты тарифа", () => {
     repoMock.getSchoolBilling.mockResolvedValue({ billingPlan: "school", paidUntil: future(), kind: "organization" });
     const sch = school();
     await expect(assertRecordingAllowed(sch, async () => 149 * 3600)).resolves.toBeUndefined();
-    await expect(assertRecordingAllowed(sch, async () => 150 * 3600)).rejects.toMatchObject({ message: expect.stringContaining("«Школа Про»") });
+    await expect(assertRecordingAllowed(sch, async () => 150 * 3600)).rejects.toMatchObject({ message: expect.stringContaining("по запросу") });
   });
 
   it("пространство «Матис» (platform) — не школа: без тарифа и без ограничений", async () => {

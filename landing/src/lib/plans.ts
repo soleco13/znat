@@ -30,6 +30,8 @@ export type Plan = {
   library: boolean;
   /** Чем тариф отличается от предыдущего — одна строка. */
   extra: string | null;
+  /** Временно скрыт с сайта (лимит Platega 19 000 ₽ на платёж, 2026-10-28) — как `hidden` в billing.ts. */
+  hidden?: boolean;
 };
 
 export const PLANS: Plan[] = [
@@ -65,6 +67,7 @@ export const PLANS: Plan[] = [
   },
   {
     id: "mini",
+    hidden: true,
     name: "Мини-школа",
     forWhom: "Несколько преподавателей и группы",
     monthly: 2990,
@@ -80,6 +83,7 @@ export const PLANS: Plan[] = [
   },
   {
     id: "school",
+    hidden: true,
     name: "Школа",
     forWhom: "Онлайн-школа или учебный центр",
     monthly: 8990,
@@ -95,6 +99,7 @@ export const PLANS: Plan[] = [
   },
   {
     id: "pro",
+    hidden: true,
     name: "Школа Про",
     forWhom: "Большая школа",
     monthly: 17900,
@@ -110,6 +115,7 @@ export const PLANS: Plan[] = [
   },
   {
     id: "network",
+    hidden: true,
     name: "Сеть",
     forWhom: "Крупная школа или несколько филиалов",
     monthly: 59900,
@@ -127,6 +133,16 @@ export const PLANS: Plan[] = [
 
 /** «Выделенный» — свои серверы школы, по договору; онлайн-оплаты нет. */
 export const DEDICATED_FROM = 129000;
+/** «Выделенный» на сайте — временно скрыт, как `DEDICATED_PLAN_PUBLIC` в billing.ts. */
+export const DEDICATED_PUBLIC = false;
+
+/**
+ * ВРЕМЕННО (2026-10-28): у Platega лимит 19 000 ₽ на одну транзакцию — на
+ * сайте только тарифы для репетиторов; школьные и «Выделенный» скрыты, не
+ * удалены. Вернуть: убрать `hidden` и `DEDICATED_PUBLIC = true` здесь и в
+ * packages/shared/src/billing.ts.
+ */
+export const VISIBLE_PLANS = PLANS.filter((p) => !p.hidden);
 
 /** Годовая оплата — 10 месяцев вместо 12. */
 export const YEAR_MONTHS_CHARGED = 10;

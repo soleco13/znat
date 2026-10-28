@@ -55,11 +55,22 @@ describe("billing", () => {
   it("checkout создаёт платёж с серверной суммой и возвращает ссылку Platega", async () => {
     repoMock.insertPayment.mockResolvedValue({ ...payment, id: "pay-1" });
     plategaMock.createTransaction.mockResolvedValue({ transactionId: "tx-1", url: "https://pay.platega.io/?id=tx-1" });
-    const r = await checkout(user, "a@b.ru", { plan: "school", period: "year" });
-    expect(repoMock.insertPayment).toHaveBeenCalledWith(expect.objectContaining({ amountRub: 89900, plan: "school", period: "year" }));
-    expect(plategaMock.createTransaction).toHaveBeenCalledWith(expect.objectContaining({ amountRub: 89900, orderId: "pay-1" }));
+    const r = await checkout(user, "a@b.ru", { plan: "tutor", period: "year" });
+    expect(repoMock.insertPayment).toHaveBeenCalledWith(expect.objectContaining({ amountRub: 7900, plan: "tutor", period: "year" }));
+    expect(plategaMock.createTransaction).toHaveBeenCalledWith(expect.objectContaining({ amountRub: 7900, orderId: "pay-1" }));
     expect(repoMock.setProviderTxId).toHaveBeenCalledWith("pay-1", "tx-1");
     expect(r.url).toContain("pay.platega.io");
+  });
+
+  // 2026-10-28: лимит Platega 19 000 ₽ на транзакцию — школьные тарифы скрыты, онлайн их не оплатить.
+  it("скрытый тариф онлайн не оплачивается — ни разово, ни подпиской", async () => {
+    plategaMock.plategaConfigured.mockReturnValue(true);
+    for (const plan of ["mini", "school", "pro", "network"] as const) {
+      await expect(checkout(user, "a@b.ru", { plan, period: "month" })).rejects.toMatchObject({ code: "plan_unavailable" });
+      await expect(subscribe(user, { plan, period: "year", autopayConsent: true })).rejects.toMatchObject({ code: "plan_unavailable" });
+    }
+    expect(repoMock.insertPayment).not.toHaveBeenCalled();
+    expect(plategaMock.createTransaction).not.toHaveBeenCalled();
   });
 
   it("CONFIRMED продлевает тариф только после перепроверки статуса", async () => {

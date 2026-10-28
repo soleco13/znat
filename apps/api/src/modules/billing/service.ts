@@ -1,5 +1,6 @@
 import {
   BILLING_PLANS,
+  PAYMENT_MAX_RUB,
   FREE_LIMITS,
   PLATFORM_LIMITS,
   YEAR_MONTHS_CHARGED,
@@ -29,6 +30,20 @@ import * as repo from "./repo.js";
  * продлевает `schools.paid_until`. Без ключей Platega checkout отвечает
  * `payments_unavailable`, и страница показывает заглушку.
  */
+/**
+ * Онлайн-оплата только за открытые тарифы и не дороже лимита Platega на одну
+ * транзакцию (`PAYMENT_MAX_RUB`). Скрытые тариф включает супер-админ вручную.
+ */
+function assertPurchasable(plan: CheckoutRequest["plan"], period: CheckoutRequest["period"]): void {
+  const p = BILLING_PLANS.find((x) => x.id === plan);
+  if (!p || p.hidden) {
+    throw new AppError(400, "plan_unavailable", "Этот тариф сейчас подключаем по запросу — напишите в поддержку");
+  }
+  if (priceRub(plan, period) > PAYMENT_MAX_RUB) {
+    throw new AppError(400, "payment_over_limit", "Сумма больше лимита онлайн-оплаты — выберите помесячную оплату или напишите в поддержку");
+  }
+}
+
 export function priceRub(plan: CheckoutRequest["plan"], period: CheckoutRequest["period"]): number {
   const p = BILLING_PLANS.find((x) => x.id === plan);
   if (!p) throw new AppError(400, "unknown_plan", "Такого тарифа нет");
@@ -73,7 +88,7 @@ export async function assertRoleSeat(schoolId: string, role: Role): Promise<void
   const max = role === "teacher" ? limits.teachers : limits.methodists;
   if (max === null) return;
   if (role === "methodist" && max === 0) {
-    throw new AppError(403, "plan_limit", "Методисты доступны с тарифа «Мини-школа»");
+    throw new AppError(403, "plan_limit", "Методисты доступны в тарифах для школ — подключаем по запросу, напишите в поддержку");
   }
   const used = (await membershipsService.activeUserIdsWithRole(schoolId, role)).length;
   if (used < max) return;
@@ -84,6 +99,7 @@ export async function assertRoleSeat(schoolId: string, role: Role): Promise<void
 export const upgradeHint = (plan: BillingPlanId | null) => {
   if (plan === null) return " Больше — в платных тарифах, раздел «Тариф».";
   const next = BILLING_PLANS[BILLING_PLANS.findIndex((p) => p.id === plan) + 1];
+  if (next?.hidden) return " Больше — по запросу, напишите в поддержку.";
   return next ? ` Больше — в тарифе «${next.name}».` : "";
 };
 
@@ -182,6 +198,7 @@ const testMode = () => env.BILLING_TEST_MODE && !platega.plategaConfigured();
 const publicOrigin = () => env.PUBLIC_ORIGIN.replace(/\/+$/, "");
 
 export async function checkout(user: AccessTokenPayload, email: string, req: CheckoutRequest): Promise<{ url: string }> {
+  assertPurchasable(req.plan, req.period);
   if (testMode()) {
     const payment = await repo.insertPayment({
       schoolId: user.schoolId,
@@ -229,6 +246,7 @@ const PENDING_SUB_TTL_MS = 35 * 60 * 1000;
  * незавершённая привязка старше 30 минут считается неудавшейся.
  */
 export async function subscribe(user: AccessTokenPayload, req: SubscribeRequest): Promise<{ url: string }> {
+  assertPurchasable(req.plan, req.period);
   if (!platega.plategaConfigured() && !testMode()) {
     throw new AppError(503, "payments_unavailable", "Оплата пока недоступна");
   }

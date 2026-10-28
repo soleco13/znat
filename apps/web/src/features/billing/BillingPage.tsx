@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Check, CircleAlert, CircleCheck, Clock } from "lucide-react";
-import { BILLING_PLANS, DEDICATED_PLAN_FROM_RUB, YEAR_MONTHS_CHARGED, supportContactsFor, type BillingPeriod, type BillingPlanId, type BillingState } from "@school/shared";
+import { BILLING_PLANS, DEDICATED_PLAN_FROM_RUB, DEDICATED_PLAN_PUBLIC, PUBLIC_BILLING_PLANS, YEAR_MONTHS_CHARGED, supportContactsFor, type BillingPeriod, type BillingPlanId, type BillingState } from "@school/shared";
 
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/shared/api-client";
@@ -218,7 +218,8 @@ export function BillingPage() {
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {BILLING_PLANS.map((p) => {
+        {/* Временно только открытые тарифы: школьные скрыты из-за лимита Platega 19 000 ₽ на платёж (2026-10-28). */}
+        {PUBLIC_BILLING_PLANS.map((p) => {
           const amount = amountFor(p.monthlyRub, period);
           const isCurrent = active && s?.plan === p.id;
           return (
@@ -263,6 +264,18 @@ export function BillingPage() {
         })}
       </div>
 
+      {/* Школа или организация: тарифы для школ пока подключаем вручную, без онлайн-оплаты. */}
+      {support.email ? (
+        <Card className="mt-4 px-6 py-5">
+          <h2 className="font-bold text-foreground">Тарифы для школ</h2>
+          <p className="mt-1 text-sm text-muted-foreground [text-wrap:pretty]">
+            Подключаем по запросу: подберём объём под ваше расписание и включим тариф вручную. Напишите нам:{" "}
+            <SupportLinks contacts={support} />.
+          </p>
+        </Card>
+      ) : null}
+
+      {DEDICATED_PLAN_PUBLIC ? (
       <Card className="mt-4 flex flex-wrap items-center justify-between gap-3 px-6 py-5">
         <div>
           <h2 className="font-bold text-foreground">Выделенный</h2>
@@ -280,6 +293,7 @@ export function BillingPage() {
           )}
         </Button>
       </Card>
+      ) : null}
 
       <p className="mt-6 text-sm text-muted-foreground [text-wrap:pretty]">
         Ученико-час — час, который один ученик провёл на уроке. Если часы тарифа закончились, уроки не прерываются: мы

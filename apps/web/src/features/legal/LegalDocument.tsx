@@ -12,13 +12,15 @@ import { BrandMark } from "@/shared/ui/brand-mark";
 const ORIGIN = "https://matis-edu.ru";
 
 /**
- * Путь внутри приложения для ссылки на наш сайт. Главная страница и её якоря
- * (`/#pricing`) — это лендинг, он не часть SPA: такие ссылки открываются
+ * Путь внутри приложения для ссылки на наш сайт. Страницы лендинга (`/`,
+ * `/pricing`, `/contacts` и их якоря) не часть SPA: такие ссылки открываются
  * обычным переходом, а не через роутер.
  */
+const LANDING_PAGES = new Set(["/", "/pricing", "/contacts"]);
+
 function internalPath(url: string): string | null {
   const path = url.startsWith(ORIGIN + "/") ? url.slice(ORIGIN.length) : url.startsWith("/") ? url : null;
-  if (path === null || path === "/" || path.startsWith("/#")) return null;
+  if (path === null || LANDING_PAGES.has(path.split(/[?#]/)[0] || "/")) return null;
   return path;
 }
 
