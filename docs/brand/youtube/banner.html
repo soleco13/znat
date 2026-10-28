@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<style>
+@font-face{font-family:M;src:url(manrope-latin-wght-normal.woff2) format("woff2");font-weight:200 800;unicode-range:U+0000-00FF,U+2013-2014,U+2022}
+@font-face{font-family:M;src:url(manrope-cyrillic-wght-normal.woff2) format("woff2");font-weight:200 800;unicode-range:U+0400-04FF}
+html,body{margin:0}
+body{width:2560px;height:1440px;overflow:hidden;background:#1d4ed8;font-family:M,sans-serif;position:relative;color:#fff}
+.deco{position:absolute}
+.safe{position:absolute;left:507px;top:508px;width:1546px;height:423px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.brand{display:flex;align-items:center;gap:22px;font-weight:800;font-size:66px;letter-spacing:-2px;line-height:1}
+.brand svg{width:70px;height:70px}
+h1{margin:22px 0 0;font-weight:800;font-size:88px;letter-spacing:-3px;line-height:1.05;white-space:nowrap}
+p{margin:18px 0 0;font-weight:500;font-size:37px;letter-spacing:-.5px;color:rgba(255,255,255,.85);white-space:nowrap}
+.url{margin-top:24px;font-weight:700;font-size:33px;letter-spacing:-.3px;padding:10px 26px;border-radius:999px;background:rgba(255,255,255,.14);color:#fff}
+.guide{position:absolute;outline:3px dashed #f0f;pointer-events:none}
+</style></head><body>
+<svg class="deco" style="left:-260px;top:250px" width="940" height="940" viewBox="0 0 325 325" aria-hidden="true"><defs><mask id="a" maskUnits="userSpaceOnUse" x="0" y="0" width="325" height="325"><rect width="325" height="325" fill="#fff"/><circle cx="162.5" cy="162.5" r="72" fill="#000"/><circle cx="162.5" cy="14" r="44" fill="#000"/></mask></defs><circle cx="162.5" cy="162.5" r="162.5" fill="#fff" fill-opacity=".07" mask="url(#a)"/></svg>
+<svg class="deco" style="left:1990px;top:120px;transform:rotate(180deg)" width="1180" height="1180" viewBox="0 0 325 325" aria-hidden="true"><defs><mask id="b" maskUnits="userSpaceOnUse" x="0" y="0" width="325" height="325"><rect width="325" height="325" fill="#fff"/><circle cx="162.5" cy="162.5" r="72" fill="#000"/><circle cx="162.5" cy="14" r="44" fill="#000"/></mask></defs><circle cx="162.5" cy="162.5" r="162.5" fill="#fff" fill-opacity=".07" mask="url(#b)"/></svg>
+<div class="safe">
+  <div class="brand"><svg viewBox="0 0 325 325" aria-hidden="true"><defs><mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="325" height="325"><rect width="325" height="325" fill="#fff"/><circle cx="162.5" cy="162.5" r="72" fill="#000"/><circle cx="162.5" cy="14" r="44" fill="#000"/></mask></defs><circle cx="162.5" cy="162.5" r="162.5" fill="#fff" mask="url(#c)"/></svg>Матис</div>
+  <h1>Онлайн-урок в&nbsp;одной вкладке</h1>
+  <p>Видеосвязь, доска и&nbsp;задания с&nbsp;автопроверкой — для репетиторов и&nbsp;школ</p>
+  <div class="url">matis-edu.ru</div>
+</div>
+<div id="g"></div>
+<script>if(location.hash==="#guides"){for(const[l,t,w,h]of[[507,508,1546,423],[0,508,2560,423]]){const d=document.createElement("div");d.className="guide";Object.assign(d.style,{left:l+"px",top:t+"px",width:w+"px",height:h+"px"});document.body.appendChild(d)}}</script>
+</body></html>
