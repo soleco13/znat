@@ -57,7 +57,7 @@ describe("billing", () => {
     plategaMock.createTransaction.mockResolvedValue({ transactionId: "tx-1", url: "https://pay.platega.io/?id=tx-1" });
     const r = await checkout(user, "a@b.ru", { plan: "tutor", period: "year" });
     expect(repoMock.insertPayment).toHaveBeenCalledWith(expect.objectContaining({ amountRub: 7900, plan: "tutor", period: "year" }));
-    expect(plategaMock.createTransaction).toHaveBeenCalledWith(expect.objectContaining({ amountRub: 7900, orderId: "pay-1" }));
+    expect(plategaMock.createTransaction).toHaveBeenCalledWith(expect.objectContaining({ amountRub: 7900, orderId: "pay-1", userEmail: "a@b.ru" }));
     expect(repoMock.setProviderTxId).toHaveBeenCalledWith("pay-1", "tx-1");
     expect(r.url).toContain("pay.platega.io");
   });
@@ -67,10 +67,19 @@ describe("billing", () => {
     plategaMock.plategaConfigured.mockReturnValue(true);
     for (const plan of ["mini", "school", "pro", "network"] as const) {
       await expect(checkout(user, "a@b.ru", { plan, period: "month" })).rejects.toMatchObject({ code: "plan_unavailable" });
-      await expect(subscribe(user, { plan, period: "year", autopayConsent: true })).rejects.toMatchObject({ code: "plan_unavailable" });
+      await expect(subscribe(user, "a@b.ru", { plan, period: "year", autopayConsent: true })).rejects.toMatchObject({ code: "plan_unavailable" });
     }
     expect(repoMock.insertPayment).not.toHaveBeenCalled();
     expect(plategaMock.createTransaction).not.toHaveBeenCalled();
+  });
+
+  it("частичный возврат и спор тариф не трогают — разбираются вручную", async () => {
+    repoMock.findPaymentByProviderTxId.mockResolvedValue({ ...payment, status: "confirmed" });
+    for (const status of ["PARTIALLY_REFUNDED", "DISPUTED"] as const) {
+      await handleCallback({ id: "tx-1", amount: 990, currency: "RUB", status }, true);
+    }
+    expect(repoMock.setPaymentStatus).not.toHaveBeenCalled();
+    expect(repoMock.confirmPayment).not.toHaveBeenCalled();
   });
 
   it("CONFIRMED продлевает тариф только после перепроверки статуса", async () => {
@@ -108,7 +117,7 @@ describe("billing", () => {
     repoMock.currentSubscription.mockResolvedValue(null);
     repoMock.insertSubscription.mockResolvedValue({ id: "s1" });
     plategaMock.createSubscription.mockResolvedValue({ subscriptionId: "ps-1", url: "https://pay.platega.io/subscription/ps-1" });
-    const r = await subscribe(user, { plan: "tutor", period: "month", autopayConsent: true });
+    const r = await subscribe(user, "a@b.ru", { plan: "tutor", period: "month", autopayConsent: true });
     expect(plategaMock.createSubscription).toHaveBeenCalledWith(expect.objectContaining({ amountRub: 790, period: "month" }));
     expect(repoMock.setSubscriptionProviderId).toHaveBeenCalledWith("s1", "ps-1");
     expect(r.url).toContain("subscription");
@@ -116,7 +125,7 @@ describe("billing", () => {
 
   it("вторая подписка при действующей — отказ", async () => {
     repoMock.currentSubscription.mockResolvedValue({ id: "s1", status: "active", createdAt: new Date() });
-    await expect(subscribe(user, { plan: "tutor", period: "month", autopayConsent: true })).rejects.toMatchObject({ code: "subscription_exists" });
+    await expect(subscribe(user, "a@b.ru", { plan: "tutor", period: "month", autopayConsent: true })).rejects.toMatchObject({ code: "subscription_exists" });
   });
 
   it("списание по подписке продлевает тариф, статус подписки — из API Platega", async () => {

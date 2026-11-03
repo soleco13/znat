@@ -28,19 +28,35 @@ export default async function billingRoutes(app: FastifyInstance) {
   // Callback без входа. Ключи X-MerchantId/X-Secret: если пришли — должны
   // совпасть; без них принимаем только смену статуса подписки (её Platega
   // может прислать без ключей, а статус мы всё равно берём из API Platega).
-  app.post("/billing/platega/callback", async (request, reply) => {
-    const merchant = request.headers["x-merchantid"];
-    const secret = request.headers["x-secret"];
-    const sentKeys = merchant !== undefined || secret !== undefined;
-    const authenticated = isAuthenticCallback(merchant, secret);
-    if (sentKeys && !authenticated) throw new AppError(401, "unauthorized", "Неверная подпись callback");
-    const raw = (request.body ?? {}) as Record<string, unknown>;
-    // Platega присылает поля то как `id`, то как `Id`.
-    const body = plategaCallbackSchema.parse(
-      Object.fromEntries(Object.entries(raw).map(([k, v]) => [k.charAt(0).toLowerCase() + k.slice(1), v])),
-    );
-    await service.handleCallback(body, authenticated);
-    return reply.send({ ok: true });
+  //
+  // При сохранении адреса в кабинете Platega шлёт пустой POST и ждёт 200,
+  // поэтому здесь свой парсер JSON, пропускающий пустое тело, и ответ 200 на
+  // запрос без транзакции — в нём нечего обрабатывать.
+  await app.register(async (cb) => {
+    cb.addContentTypeParser("application/json", { parseAs: "string" }, (_req, text, done) => {
+      if (typeof text !== "string" || text.trim() === "") return done(null, {});
+      try {
+        done(null, JSON.parse(text));
+      } catch {
+        done(new AppError(400, "invalid_json", "Тело запроса — не JSON"), undefined);
+      }
+    });
+
+    cb.post("/billing/platega/callback", async (request, reply) => {
+      const merchant = request.headers["x-merchantid"];
+      const secret = request.headers["x-secret"];
+      const sentKeys = merchant !== undefined || secret !== undefined;
+      const authenticated = isAuthenticCallback(merchant, secret);
+      if (sentKeys && !authenticated) throw new AppError(401, "unauthorized", "Неверная подпись callback");
+      const raw = (request.body ?? {}) as Record<string, unknown>;
+      if (raw.id === undefined && raw.Id === undefined) return reply.send({ ok: true });
+      // Platega присылает поля то как `id`, то как `Id`.
+      const body = plategaCallbackSchema.parse(
+        Object.fromEntries(Object.entries(raw).map(([k, v]) => [k.charAt(0).toLowerCase() + k.slice(1), v])),
+      );
+      await service.handleCallback(body, authenticated);
+      return reply.send({ ok: true });
+    });
   });
 
   // Тариф и оплата — админ школы или репетитор в своём личном пространстве;
@@ -69,7 +85,9 @@ export default async function billingRoutes(app: FastifyInstance) {
 
     staff.post("/billing/subscribe", async (request, reply) => {
       const body = subscribeRequestSchema.parse(request.body);
-      return reply.send(checkoutResponseSchema.parse(await service.subscribe(request.user, body)));
+      const me = await usersService.getUserForAuth(request.user.schoolId, request.user.sub);
+      if (!me) throw new AppError(401, "unauthorized", "Войдите заново");
+      return reply.send(checkoutResponseSchema.parse(await service.subscribe(request.user, me.email, body)));
     });
 
     staff.post("/billing/subscription/cancel", async (request, reply) => {

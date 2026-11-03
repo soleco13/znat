@@ -28,7 +28,8 @@ export async function createTransaction(input: {
   failedUrl: string;
   orderId: string;
   userId: string;
-  userName: string;
+  /** Почта покупателя: Platega требует `metadata.user_email` в каждом платеже. */
+  userEmail: string;
 }): Promise<{ transactionId: string; url: string }> {
   const res = await fetch(`${base()}/v2/transaction/process`, {
     method: "POST",
@@ -41,7 +42,7 @@ export async function createTransaction(input: {
       failedUrl: input.failedUrl,
       payload: input.orderId,
       orderId: input.orderId,
-      metadata: { userId: input.userId, userName: input.userName },
+      metadata: { userId: input.userId, user_email: input.userEmail },
     }),
   });
   if (!res.ok) {
@@ -63,6 +64,7 @@ export async function createSubscription(input: {
   amountRub: number;
   period: "month" | "year";
   description: string;
+  userEmail: string;
 }): Promise<{ subscriptionId: string; url: string }> {
   const res = await fetch(`${base()}/transaction/process`, {
     method: "POST",
@@ -77,6 +79,7 @@ export async function createSubscription(input: {
         intervalCount: 1,
       },
       description: input.description,
+      metadata: { user_email: input.userEmail },
     }),
   });
   const data = res.ok ? ((await res.json()) as { transactionId?: string; redirect?: string }) : {};

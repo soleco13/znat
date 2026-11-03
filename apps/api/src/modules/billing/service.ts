@@ -231,7 +231,7 @@ export async function checkout(user: AccessTokenPayload, email: string, req: Che
     failedUrl: `${origin}/billing?payment=${payment.id}&failed=1`,
     orderId: payment.id,
     userId: user.sub,
-    userName: email,
+    userEmail: email,
   });
   await repo.setProviderTxId(payment.id, tx.transactionId);
   logEvent("payment_created", { paymentId: payment.id, schoolId: user.schoolId, plan: req.plan, period: req.period, amountRub });
@@ -245,7 +245,7 @@ const PENDING_SUB_TTL_MS = 35 * 60 * 1000;
  * Подписка с автосписанием через СБП. Одна действующая подписка на школу;
  * незавершённая привязка старше 30 минут считается неудавшейся.
  */
-export async function subscribe(user: AccessTokenPayload, req: SubscribeRequest): Promise<{ url: string }> {
+export async function subscribe(user: AccessTokenPayload, email: string, req: SubscribeRequest): Promise<{ url: string }> {
   assertPurchasable(req.plan, req.period);
   if (!platega.plategaConfigured() && !testMode()) {
     throw new AppError(503, "payments_unavailable", "Оплата пока недоступна");
@@ -271,6 +271,7 @@ export async function subscribe(user: AccessTokenPayload, req: SubscribeRequest)
     amountRub,
     period: req.period,
     description: `Матис, тариф «${plan.name}», ${amountRub} ₽ ${req.period === "year" ? "раз в год" : "раз в месяц"}`,
+    userEmail: email,
   });
   await repo.setSubscriptionProviderId(sub.id, created.subscriptionId);
   logEvent("payment_created", { subscriptionId: sub.id, schoolId: user.schoolId, plan: req.plan, period: req.period, amountRub, recurring: true });
@@ -372,6 +373,9 @@ async function handlePaymentCallback(body: PlategaCallback): Promise<void> {
     await repo.setPaymentStatus(payment.id, "canceled");
   } else if (body.status === "CHARGEBACKED") {
     await repo.setPaymentStatus(payment.id, "chargebacked");
+  } else if (body.status === "PARTIALLY_REFUNDED" || body.status === "DISPUTED") {
+    // Частичный возврат и спор решаются вручную: тариф не трогаем, только отмечаем в журнале.
+    logEvent("payment_callback", { paymentId: payment.id, status: body.status, manual: true }, "warn");
   }
 }
 

@@ -272,6 +272,8 @@ export const plategaCallbackSchema = z.object({
     "CONFIRMED",
     "CANCELED",
     "CHARGEBACKED",
+    "PARTIALLY_REFUNDED",
+    "DISPUTED",
     "SUBSCRIPTION_ACTIVATED",
     "SUBSCRIPTION_PAST_DUE",
     "SUBSCRIPTION_CANCELLED",
