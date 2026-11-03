@@ -353,19 +353,31 @@ async function handleSubscriptionCharge(body: PlategaCallback): Promise<void> {
   }
 }
 
+/**
+ * Оплачено столько, сколько стоит тариф: сумма транзакции равна цене
+ * (комиссия на нас) или цене плюс комиссия (комиссия на клиенте).
+ */
+export function paidInFull(tx: { amount: number; commission: number; currency: string }, priceRub: number): boolean {
+  if (tx.currency !== "RUB") return false;
+  const same = (x: number) => Math.abs(x - priceRub) < 0.01;
+  return same(tx.amount) || same(tx.amount - tx.commission);
+}
+
 async function handlePaymentCallback(body: PlategaCallback): Promise<void> {
   const payment = await repo.findPaymentByProviderTxId(body.id);
   logEvent("payment_callback", { txId: body.id, status: body.status, found: Boolean(payment) });
   if (!payment) return;
-  if (Math.round(body.amount) !== payment.amountRub || body.currency !== "RUB") {
-    logEvent("payment_callback", { paymentId: payment.id, mismatch: true, amount: body.amount, currency: body.currency }, "warn");
-    return;
-  }
   if (body.status === "CONFIRMED") {
-    const actual = await platega.getTransactionStatus(body.id);
-    if (actual !== "CONFIRMED") {
-      logEvent("payment_callback", { paymentId: payment.id, recheck: actual }, "warn");
+    // Сумму сверяем по транзакции из API Platega: в callback она с комиссией,
+    // если комиссия в кабинете переложена на клиента (790 ₽ → 857,15 ₽).
+    const actual = await platega.getTransaction(body.id);
+    if (actual?.status !== "CONFIRMED") {
+      logEvent("payment_callback", { paymentId: payment.id, recheck: actual?.status ?? null }, "warn");
       throw new AppError(409, "payment_not_confirmed", "Статус платежа не подтверждён");
+    }
+    if (!paidInFull(actual, payment.amountRub)) {
+      logEvent("payment_callback", { paymentId: payment.id, mismatch: true, amount: actual.amount, commission: actual.commission, currency: actual.currency }, "warn");
+      return;
     }
     await repo.confirmPayment(payment.id, payment.period === "year" ? "1 year" : "1 month");
     await afterPaid(payment.schoolId);

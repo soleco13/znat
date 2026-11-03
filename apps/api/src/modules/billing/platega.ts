@@ -125,6 +125,32 @@ export async function getTransactionStatus(transactionId: string): Promise<strin
   return data.status ?? null;
 }
 
+/**
+ * Транзакция у Platega для сверки оплаты. `amount` — сколько заплатил клиент:
+ * если комиссия в кабинете переложена на клиента, она уже внутри суммы.
+ */
+export async function getTransaction(
+  transactionId: string,
+): Promise<{ status: string; amount: number; commission: number; currency: string } | null> {
+  const res = await fetch(`${base()}/transaction/${encodeURIComponent(transactionId)}`, {
+    headers: headers(),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as {
+    status?: string;
+    comission?: number;
+    paymentDetails?: { amount?: number; currency?: string };
+  };
+  if (!data.status || typeof data.paymentDetails?.amount !== "number") return null;
+  return {
+    status: data.status,
+    amount: data.paymentDetails.amount,
+    commission: data.comission ?? 0,
+    currency: data.paymentDetails.currency ?? "",
+  };
+}
+
 const same = (a: string, b: string) => {
   const x = Buffer.from(a);
   const y = Buffer.from(b);

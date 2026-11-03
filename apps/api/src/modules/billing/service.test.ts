@@ -20,6 +20,7 @@ const { repoMock, plategaMock } = vi.hoisted(() => ({
     plategaConfigured: vi.fn(() => true),
     createTransaction: vi.fn(),
     getTransactionStatus: vi.fn(),
+    getTransaction: vi.fn(),
     createSubscription: vi.fn(),
     getSubscription: vi.fn(),
     cancelSubscription: vi.fn(),
@@ -84,27 +85,41 @@ describe("billing", () => {
 
   it("CONFIRMED продлевает тариф только после перепроверки статуса", async () => {
     repoMock.findPaymentByProviderTxId.mockResolvedValue(payment);
-    plategaMock.getTransactionStatus.mockResolvedValue("CONFIRMED");
+    plategaMock.getTransaction.mockResolvedValue({ status: "CONFIRMED", amount: 990, commission: 84.15, currency: "RUB" });
     await handleCallback({ id: "tx-1", amount: 990, currency: "RUB", status: "CONFIRMED" }, true);
     expect(repoMock.confirmPayment).toHaveBeenCalledWith("p1", "1 month");
   });
 
   it("CONFIRMED без подтверждения у Platega — ничего не продлеваем", async () => {
     repoMock.findPaymentByProviderTxId.mockResolvedValue(payment);
-    plategaMock.getTransactionStatus.mockResolvedValue("PENDING");
+    plategaMock.getTransaction.mockResolvedValue({ status: "PENDING", amount: 990, commission: 0, currency: "RUB" });
     await expect(handleCallback({ id: "tx-1", amount: 990, currency: "RUB", status: "CONFIRMED" }, true)).rejects.toBeTruthy();
     expect(repoMock.confirmPayment).not.toHaveBeenCalled();
   });
 
+  it("комиссия на клиенте: 790 ₽ + 67,15 ₽ — тариф продлевается", async () => {
+    repoMock.findPaymentByProviderTxId.mockResolvedValue({ ...payment, amountRub: 790 });
+    plategaMock.getTransaction.mockResolvedValue({ status: "CONFIRMED", amount: 857.15, commission: 67.15, currency: "RUB" });
+    await handleCallback({ id: "tx-1", amount: 857.15, currency: "RUB", status: "CONFIRMED" }, true);
+    expect(repoMock.confirmPayment).toHaveBeenCalledWith("p1", "1 month");
+  });
+
   it("сумма не совпадает — платёж не подтверждается", async () => {
     repoMock.findPaymentByProviderTxId.mockResolvedValue(payment);
-    await handleCallback({ id: "tx-1", amount: 1, currency: "RUB", status: "CONFIRMED" }, true);
+    for (const tx of [
+      { status: "CONFIRMED", amount: 1, commission: 0, currency: "RUB" },
+      { status: "CONFIRMED", amount: 990, commission: 0, currency: "USD" },
+      { status: "CONFIRMED", amount: 900, commission: 10, currency: "RUB" },
+    ]) {
+      plategaMock.getTransaction.mockResolvedValue(tx);
+      await handleCallback({ id: "tx-1", amount: tx.amount, currency: "RUB", status: "CONFIRMED" }, true);
+    }
     expect(repoMock.confirmPayment).not.toHaveBeenCalled();
   });
 
   it("CANCELED помечает платёж отменённым", async () => {
     repoMock.findPaymentByProviderTxId.mockResolvedValue(payment);
-    await handleCallback({ id: "tx-1", amount: 990, currency: "RUB", status: "CANCELED" }, true);
+    await handleCallback({ id: "tx-1", amount: 1074.15, currency: "RUB", status: "CANCELED" }, true);
     expect(repoMock.setPaymentStatus).toHaveBeenCalledWith("p1", "canceled");
   });
 
