@@ -52,6 +52,8 @@ export const CLIENT_EVENT_NAMES = [
   "pdf_load_failed",
   "media_device_failed",
   "client_error",
+  // Вход в урок со старой сборкой приложения (`app-freshness.ts`): `reload` — страница перезагружена.
+  "app_stale",
 ] as const;
 export type ClientEventName = (typeof CLIENT_EVENT_NAMES)[number];
 

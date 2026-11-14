@@ -1,5 +1,6 @@
 import type { VideoCodec } from "livekit-client";
 
+import { appBuild } from "@/shared/app-freshness";
 import { track } from "@/shared/telemetry";
 
 /**
@@ -102,6 +103,8 @@ function environmentInfo(): Record<string, string | number | boolean | null> {
   const c = nav.connection;
   return {
     ua: navigator.userAgent.slice(0, 200),
+    // Сборка приложения: по журналу видно, кто вошёл со старой.
+    build: appBuild(),
     browser: brands.length ? brands.map((b) => `${b.brand} ${b.version}`).join(", ").slice(0, 100) : null,
     platform: nav.userAgentData?.platform ?? null,
     mobile: nav.userAgentData?.mobile ?? null,

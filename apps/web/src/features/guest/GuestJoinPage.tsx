@@ -15,6 +15,7 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { warmChunk } from "@/shared/chunk-warmup";
 import { isReloadOf, shouldRejoinViaLink, writeJoinDefaults, readJoinDefaults, writeRejoinState } from "@/features/room/rejoin-state";
+import { useFreshApp } from "@/shared/app-freshness";
 import { DeviceCheckScreen, type DeviceCheckResult } from "@/features/room/DeviceCheckScreen";
 import { enterGuestLesson, fetchGuestLessonInfo, fetchKnockStatus, knockGuestLesson, restoreGuestSession } from "./guest-api.js";
 import { useGuestSessionStore } from "./guest-session-store.js";
@@ -86,6 +87,8 @@ export function ShortJoinPage() {
  */
 export function GuestJoinPage() {
   useLockPageZoom();
+  // Экран входа — до имени и проверки устройств: устаревшую страницу можно обновить молча.
+  useFreshApp();
   const { token = "" } = useParams<{ token: string }>();
   // Ссылка, по которой вошли (`/<код>` или `/j/<token>`): комната покажет её
   // в адресной строке вместо `/lessons/<uuid>/room`.

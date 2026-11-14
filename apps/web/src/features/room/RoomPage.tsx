@@ -153,6 +153,7 @@ import {
   writeJoinDefaults,
   writeRejoinState,
 } from "./rejoin-state.js";
+import { useFreshApp } from "@/shared/app-freshness";
 import { ParticipantStatsResponder } from "./participant-stats.js";
 import { MediaTelemetry, reportLiveKitConnectionFailed } from "./MediaTelemetry.js";
 import { MediaDeviceErrorNotice } from "./media-device-errors.js";
@@ -447,6 +448,9 @@ export function RoomPage() {
       : null);
   // Прошлый выбор микрофона/камеры на экране проверки — на этом устройстве.
   const [joinDefaults] = useState(readJoinDefaults);
+  // Экран проверки устройств ещё впереди — можно молча обновить устаревшую
+  // страницу. После F5 и после проверки на экране входа гостя — уже нельзя.
+  useFreshApp(initialJoin === null);
   const [deviceCheckDone, setDeviceCheckDone] = useState(initialJoin !== null);
   const [micDeviceId, setMicDeviceId] = useState<string | null>(initialJoin?.micId ?? null);
   const [camDeviceId, setCamDeviceId] = useState<string | null>(initialJoin?.camId ?? null);
