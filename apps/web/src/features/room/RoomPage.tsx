@@ -726,6 +726,11 @@ export function RoomPage() {
   const [longReconnect, setLongReconnect] = useState(false);
   // Повторный вход в медиа (`MediaRecovery`): наш слот занял дубликат вкладки.
   const [mediaResumeSignal, setMediaResumeSignal] = useState(0);
+  // Ученик открыл урок во второй вкладке этого же браузера: личность у вкладок
+  // одна (слоты вкладок есть только у персонала), и LiveKit отключил медиа
+  // здесь. Автоматический вход обратно выбивал бы вторую вкладку, та — эту, и
+  // так по кругу (урок 2026-11-14: 80 с, десятки переподключений в секунду-две).
+  const [mediaTakenOver, setMediaTakenOver] = useState(false);
   useEffect(() => {
     if (status !== "reconnecting") {
       setLongReconnect(false);
@@ -2381,6 +2386,30 @@ export function RoomPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {mediaTakenOver ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-6">
+          <div
+            role="alertdialog"
+            aria-live="assertive"
+            className="flex w-full max-w-[400px] flex-col items-center gap-3 rounded-xl border border-border bg-card p-6 text-center shadow-lg"
+          >
+            <h2 className="text-lg font-bold tracking-tight">Урок открыт в другом окне</h2>
+            <p className="text-sm text-text-2 [text-wrap:pretty]">
+              Вы вошли в этот урок с другой вкладки, поэтому здесь звук и видео выключены.
+            </p>
+            <Button
+              className="h-9 px-3.5 text-sm"
+              onClick={() => {
+                setMediaTakenOver(false);
+                setMediaResumeSignal((n) => n + 1);
+              }}
+            >
+              Продолжить здесь
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
     </div>
   );
 
@@ -2558,6 +2587,10 @@ export function RoomPage() {
               return screen !== null;
             }}
             onTakenOver={() => {
+              if (isGuest) {
+                setMediaTakenOver(true);
+                return;
+              }
               // Наш слот занял дубликат этой вкладки — входим своим слотом.
               renewTabId();
               setMediaResumeSignal((n) => n + 1);
