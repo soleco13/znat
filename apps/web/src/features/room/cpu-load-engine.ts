@@ -388,6 +388,23 @@ async function micCaptured(mic: LocalAudioTrack): Promise<{ at: number; seconds:
   return found;
 }
 
+/**
+ * Доля звука, отданная микрофоном между двумя замерами (1 — без потерь).
+ * null — замер непригоден: интервал короче секунды или счётчик источника
+ * пошёл назад. Счётчик обнуляется, когда у той же дорожки меняется источник
+ * (перезапуск микрофона при смене шумоподавления, новое соединение после
+ * полного переподключения): разность выходила отрицательной (на стенде
+ * −0,49), и автомат принимал её за провал звука и зря снижал качество камеры.
+ */
+export function micCaptureShare(
+  prev: { at: number; seconds: number },
+  cur: { at: number; seconds: number },
+): number | null {
+  const wallS = (cur.at - prev.at) / 1000;
+  if (!(wallS >= 1) || cur.seconds < prev.seconds) return null;
+  return Math.min(1, (cur.seconds - prev.seconds) / wallS);
+}
+
 interface PressureRecordLike {
   state: PressureLevel;
 }
@@ -500,10 +517,7 @@ export function startCpuLoadAdapter(
 
       let audioCapture: number | null = null;
       const cur = mic ? await micCaptured(mic) : null;
-      if (mic && cur && prevMic && prevMic.track === mic && cur.at > prevMic.at) {
-        const wallS = (cur.at - prevMic.at) / 1000;
-        if (wallS >= 1) audioCapture = Math.min(1, (cur.seconds - prevMic.seconds) / wallS);
-      }
+      if (mic && cur && prevMic && prevMic.track === mic) audioCapture = micCaptureShare(prevMic, cur);
       prevMic = mic && cur ? { track: mic, ...cur } : null;
 
       const [cameraCpu, screenCpu] = await Promise.all([videoCpuLimited(camera, CAMERA_PROFILES[governor.level]?.fps), videoCpuLimited(screen)]);
