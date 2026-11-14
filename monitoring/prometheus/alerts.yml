@@ -34,6 +34,27 @@ groups:
         annotations:
           summary: "postgres-exporter не может достучаться до PostgreSQL"
 
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "redis-exporter не может достучаться до Redis — присутствие в уроках и вход не работают"
+
+      # Ошибки сервера у API: упала база, Redis или сам код. Порог по доле и
+      # по числу, чтобы один сбой ночного опроса не будил.
+      - alert: ApiServerErrors
+        expr: |
+          sum(rate(http_request_duration_seconds_count{status_code=~"5.."}[5m]))
+            / sum(rate(http_request_duration_seconds_count[5m])) > 0.05
+          and sum(increase(http_request_duration_seconds_count{status_code=~"5.."}[5m])) > 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Больше 5 % ответов API — ошибки сервера (5xx) дольше 5 минут"
+
       - alert: PlatformTrafficHigh
         expr: sum(lesson_traffic_mbit) > 600
         for: 2m
@@ -103,3 +124,37 @@ groups:
           severity: warning
         annotations:
           summary: "p90 задержки пересылки в SFU выше 50 мс 5 минут — SFU упирается в CPU"
+
+      # LiveKit закреплён за 4 потоками (cpuset 1,2,7,8). Три занятых потока
+      # 5 минут — запаса на всплеск нет: дальше растёт задержка пересылки.
+      - alert: LiveKitCpuHigh
+        expr: rate(process_cpu_seconds_total{job="livekit"}[5m]) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LiveKit занимает больше 3 из 4 своих потоков процессора 5 минут"
+
+      # Перезапуск медиасервера обрывает все уроки: о нём надо знать сразу,
+      # даже если он поднялся сам за секунды и LiveKitDown не успел сработать.
+      - alert: LiveKitRestarted
+        expr: changes(process_start_time_seconds{job="livekit"}[10m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "LiveKit перезапустился — идущие уроки были оборваны"
+
+      # Потери на входе в сервер (от участников) и на выходе (к участникам).
+      # Замер с потерями выше 5 % — уже заметные замирания; за 4 недели прода
+      # таких было около 1 %, порог 20 % — массовая проблема (канал сервера
+      # или провайдер), а не один ученик на плохом Wi-Fi.
+      - alert: LiveKitPacketLossHigh
+        expr: |
+          1 - sum(rate(livekit_packet_loss_percent_bucket{le="5"}[10m]))
+            / sum(rate(livekit_packet_loss_percent_count[10m])) > 0.2
+          and sum(livekit_participant_total) >= 4
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Больше 20 % замеров потерь пакетов выше 5 % дольше 10 минут — у многих участников сыпется связь"

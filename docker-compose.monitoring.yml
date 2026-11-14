@@ -31,6 +31,8 @@ services:
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.16.0
     restart: unless-stopped
+    # Ядра ОС, как у prometheus: не на ядрах LiveKit и app.
+    cpuset: "0,6"
     environment:
       DATA_SOURCE_NAME: "postgresql://school:school@postgres:5432/school_dev?sslmode=disable"
     depends_on:
@@ -39,6 +41,8 @@ services:
   redis-exporter:
     image: oliver006/redis_exporter:v1.66.0
     restart: unless-stopped
+    # Ядра ОС, как у prometheus: не на ядрах LiveKit и app.
+    cpuset: "0,6"
     environment:
       REDIS_ADDR: "redis://redis:6379"
       REDIS_PASSWORD: "${REDIS_PASSWORD}"
@@ -48,6 +52,8 @@ services:
   alertmanager:
     image: prom/alertmanager:v0.28.0
     restart: unless-stopped
+    # Ядра ОС, как у prometheus: не на ядрах LiveKit и app.
+    cpuset: "0,6"
     volumes:
       - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     ports:
