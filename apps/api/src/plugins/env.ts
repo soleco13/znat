@@ -45,6 +45,13 @@ const envSchema = z.object({
    * пересоздании — без файла на томе разбирать вчерашний урок нечем.
    */
   LOG_FILE: z.string().min(1).optional(),
+  /**
+   * Второй файл: всё, кроме строк `http_request` (их 99,9 % объёма, в основном
+   * опросы сервисов). События урока и телеметрия браузера за сутки — сотни КБ,
+   * поэтому хранятся 90 дней, а не 7 (deploy/logrotate-znat): сравнить качество
+   * связи «до и после изменения» по недельному журналу было нельзя.
+   */
+  LOG_EVENTS_FILE: z.string().min(1).optional(),
   /** Запрос к Postgres дольше этого (мс) логируется как db_query_slow с requestId. */
   DB_SLOW_QUERY_MS: z.coerce.number().int().min(1).default(500),
   RATE_LIMIT_ANONYMOUS_PER_MINUTE: z.coerce.number().int().min(1).default(100),

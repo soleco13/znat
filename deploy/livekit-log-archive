@@ -1,0 +1,18 @@
+#!/bin/sh
+# /etc/cron.daily/znat-livekit-log-archive — суточный архив журнала LiveKit.
+# Журнал контейнера (json-file, 20 МБ × 3) пропадает при пересоздании
+# контейнера и вытесняется за несколько дней плотных уроков, а в нём —
+# оценки связи, перегрузки канала и причины отключений каждого участника.
+# Архив за прошедшие сутки (UTC), 90 дней. Установка:
+#   install -m 755 deploy/livekit-log-archive /etc/cron.daily/znat-livekit-log-archive
+set -eu
+DIR=/var/log/znat/livekit
+CONTAINER="${LIVEKIT_CONTAINER:-znat-livekit-1}"
+DAY=$(date -u -d yesterday +%F)
+mkdir -p "$DIR"
+OUT="$DIR/livekit-$DAY.log.gz"
+if [ ! -e "$OUT" ] && docker inspect "$CONTAINER" >/dev/null 2>&1; then
+  docker logs --since "${DAY}T00:00:00Z" --until "$(date -u +%F)T00:00:00Z" "$CONTAINER" 2>&1 | gzip > "$OUT.tmp"
+  mv "$OUT.tmp" "$OUT"
+fi
+find "$DIR" -name 'livekit-*.log.gz' -mtime +90 -delete

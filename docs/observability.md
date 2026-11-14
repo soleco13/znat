@@ -8,8 +8,9 @@
 | Что | Где | Сколько хранится |
 |---|---|---|
 | API (JSON, одна строка = событие) | `/var/log/znat/api.log` на хосте (+ `docker compose logs app`) | 7 дней / до 200 МБ на файл (`/etc/logrotate.d/znat`) |
-| Медиасервер | `docker compose logs livekit` | пока жив контейнер (json-log) |
-| Браузер | приходит в лог API событием `client_event` | как лог API |
+| События урока и телеметрия браузера (те же строки без `http_request`) | `/var/log/znat/events.log`, архивы `events.log-ДАТА-….gz` | 90 дней |
+| Медиасервер | `docker compose logs livekit`; суточные архивы `/var/log/znat/livekit/livekit-ДАТА.log.gz` (`deploy/livekit-log-archive`) | контейнер: 20 МБ × 3 и до пересоздания; архивы: 90 дней |
+| Браузер | приходит в лог API событием `client_event` | 90 дней в `events.log` |
 
 `docker compose logs app` теряется при каждом пересоздании контейнера —
 разбирать по файлу.

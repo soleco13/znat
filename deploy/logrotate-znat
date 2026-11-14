@@ -1,11 +1,30 @@
-# /etc/logrotate.d/znat — ротация JSON-логов API (LOG_FILE, docker-compose.prod.yml).
-# Файл открыт приложением на дозапись — copytruncate, без перезапуска.
+# /etc/logrotate.d/znat — ротация JSON-логов API (docker-compose.prod.yml).
+# Файлы открыты приложением на дозапись — copytruncate, без перезапуска.
 # maxsize действует при каждом прогоне: прогон раз в час — deploy/logrotate-znat-hourly.
 # Сверху приложение само ограничивает запись в файл (plugins/log-file-sink.ts).
-/var/log/znat/*.log {
+
+# Все строки, включая http_request (LOG_FILE): десятки МБ в сутки, 7 дней.
+/var/log/znat/api.log {
     daily
     maxsize 200M
     rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    su root root
+}
+
+# События урока и телеметрия браузера без http_request (LOG_EVENTS_FILE):
+# сотни КБ в сутки, 90 дней — чтобы сравнивать качество связи до и после
+# изменений. dateext: имя архива = дата, файл за нужный день находится сразу.
+/var/log/znat/events.log {
+    daily
+    maxsize 200M
+    rotate 90
+    dateext
+    dateformat -%Y%m%d-%s
     compress
     delaycompress
     missingok

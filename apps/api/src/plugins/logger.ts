@@ -99,14 +99,22 @@ const SERVICE_VERSION = process.env.APP_VERSION ?? "dev";
  * разбирать урок часто приходится на следующий день. Ротация — logrotate
  * хоста (copytruncate), файл открыт на дозапись.
  */
+/** Строка запроса HTTP: в файл событий (LOG_EVENTS_FILE) не идёт. Поле `event` pino пишет до полей клиента. */
+export function isHttpRequestLine(chunk: string): boolean {
+  return chunk.includes('"event":"http_request"');
+}
+
 function logStream(): { write(chunk: string): void } | undefined {
-  if (!env.LOG_FILE) return undefined;
+  if (!env.LOG_FILE && !env.LOG_EVENTS_FILE) return undefined;
   // Потолки на файл (бюджет байт, место на диске, переоткрытие) — log-file-sink.ts.
-  const file = createLogFileSink(env.LOG_FILE);
+  // У файла событий бюджет свой: поток запросов не вытесняет события урока.
+  const file = env.LOG_FILE ? createLogFileSink(env.LOG_FILE) : null;
+  const events = env.LOG_EVENTS_FILE ? createLogFileSink(env.LOG_EVENTS_FILE) : null;
   return {
     write(chunk: string) {
       process.stdout.write(chunk);
-      file.write(chunk);
+      file?.write(chunk);
+      if (events && !isHttpRequestLine(chunk)) events.write(chunk);
     },
   };
 }

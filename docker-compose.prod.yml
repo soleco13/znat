@@ -64,6 +64,8 @@ services:
     # (copytruncate). Пример конфига — deploy/logrotate-znat.
     environment:
       LOG_FILE: /var/log/znat/api.log
+      # Всё, кроме http_request: события урока и телеметрия браузера, 90 дней.
+      LOG_EVENTS_FILE: /var/log/znat/events.log
     volumes:
       - /var/log/znat:/var/log/znat
     # Свой json-лог Docker без ограничения рос бы до заполнения диска.

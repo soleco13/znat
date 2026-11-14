@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import Fastify from "fastify";
 import errorsPlugin from "./errors.js";
 import requestContextPlugin from "./request-context.js";
-import { genRequestId, logger, loggerOptions, setLogContext, setRootLogger } from "./logger.js";
+import { genRequestId, isHttpRequestLine, logger, loggerOptions, setLogContext, setRootLogger } from "./logger.js";
 
 function buildApp() {
   const lines: Record<string, unknown>[] = [];
@@ -74,5 +74,16 @@ describe("логгер", () => {
     await app.inject({ url: "/j/secretjointoken" });
     const access = lines.find((l) => l.event === "http_request")!;
     expect(access.url).toBe("/j/[redacted]");
+  });
+});
+
+describe("файл событий (LOG_EVENTS_FILE)", () => {
+  it("строки http_request в него не идут, события урока и браузера — идут", () => {
+    const line = (fields: Record<string, unknown>) => `${JSON.stringify({ level: "info", time: "t", ...fields })}\n`;
+    expect(isHttpRequestLine(line({ event: "http_request", url: "/api/v1/health" }))).toBe(true);
+    expect(isHttpRequestLine(line({ event: "client_event", clientEvent: "media_quality" }))).toBe(false);
+    expect(isHttpRequestLine(line({ event: "livekit_participant_left" }))).toBe(false);
+    // Текст из браузера не может выдать событие за запрос: кавычки в JSON экранируются.
+    expect(isHttpRequestLine(line({ event: "client_event", note: '"event":"http_request"' }))).toBe(false);
   });
 });
