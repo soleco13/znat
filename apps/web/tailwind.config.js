@@ -13,6 +13,7 @@ export default {
       fontFamily: {
         sans: "var(--font)",
         mono: "var(--font-mono)",
+        display: '"Manrope Variable", var(--font)',
       },
       fontWeight: {
         // Фирменные mid-weights дизайн-системы.

@@ -23,7 +23,6 @@ import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/shared/ui/dialog";
 import { ErrorState } from "@/shared/ui/error-state";
-import { PageHeader } from "@/shared/ui/page-header";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { cancelSubscription, getBillingState, startCheckout, startSubscription } from "./billing-api.js";
 
@@ -131,11 +130,11 @@ export function BillingPage() {
   const paidUntil = s?.paidUntil ? new Date(s.paidUntil) : null;
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <PageHeader title="Тариф" />
+    <div className="mx-auto w-full max-w-[880px] pb-16 sm:pt-6">
+      <h1 className="font-display text-[30px] font-extrabold leading-[1.1] tracking-[-0.035em] text-foreground">Тариф</h1>
 
       {s?.testMode ? (
-        <p className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+        <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
           <Clock className="size-4" aria-hidden />
           Тестовый режим: оплата проходит на тестовой форме, деньги не списываются.
         </p>
@@ -152,7 +151,7 @@ export function BillingPage() {
       ) : null}
 
       {unavailable ? (
-        <Alert className="mb-4" role="status">
+        <Alert className="mt-4" role="status">
           <Clock aria-hidden />
           <AlertTitle>Оплата пока недоступна</AlertTitle>
           <AlertDescription>
@@ -161,7 +160,7 @@ export function BillingPage() {
         </Alert>
       ) : null}
       {error ? (
-        <Alert variant="destructive" className="mb-4" role="alert">
+        <Alert variant="destructive" className="mt-4" role="alert">
           <CircleAlert aria-hidden />
           <AlertTitle>Не получилось</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
@@ -178,17 +177,13 @@ export function BillingPage() {
           onCancelAutopay={() => setConfirmCancel(true)}
         />
       ) : (
-        <Skeleton className="h-[320px] w-full rounded-[28px]" />
+        <Skeleton className="mt-7 h-[360px] w-full rounded-[28px]" />
       )}
 
       {s ? <PaymentHistory items={s.payments} /> : null}
 
-      <p className="mt-8 text-sm text-muted-foreground [text-wrap:pretty]">
-        Вопросы по оплате и возврат — <SupportLinks contacts={support} />. Условия — в{" "}
-        <Link to="/terms" className="font-medium text-primary hover:underline">
-          пользовательском соглашении
-        </Link>
-        .
+      <p className="mt-6 text-[13px] text-text-3">
+        Чеки приходят на почту. Вопросы по оплате — <SupportLinks contacts={support} />
       </p>
 
       <AutopayDialog open={autopayOpen} busy={busy === "autopay"} onOpenChange={setAutopayOpen} onSubscribe={(p) => void subscribe(p)} />
@@ -213,7 +208,11 @@ export function BillingPage() {
   );
 }
 
-/** Главная плашка: тариф, срок, продление, автопродление. Справа — объёмный знак «Матис». */
+/**
+ * Главная плашка (макет владельца «Тариф», 2026-11-24): что за тариф, до
+ * какого числа, одна кнопка продления и автопродление строкой. Справа —
+ * объёмный знак «Матис» с лендинга.
+ */
 function PlanCard({
   state: s,
   paidUntil,
@@ -232,123 +231,70 @@ function PlanCard({
   const plan = BILLING_PLANS.find((p) => p.id === s.plan);
   const active = Boolean(plan && paidUntil && paidUntil.getTime() > Date.now());
   const expired = Boolean(plan && paidUntil && !active);
-  const l = s.limits;
-  const rec = l.recordingHoursPerMonth;
+  const sub = s.subscription;
+  const price = `${rub.format(amountFor(OFFER.monthlyRub, "month"))} ₽`;
 
-  const status = active
-    ? { label: "Активен", dot: "bg-emerald-400" }
-    : expired
-      ? { label: "Закончился", dot: "bg-amber-400" }
-      : { label: "Бесплатный тариф", dot: "bg-white/60" };
   const title = plan && (active || expired) ? plan.name : "Старт";
-  const term = active ? `Оплачен до ${dateFmt(paidUntil!)}` : expired ? `Закончился ${dateFmt(paidUntil!)}` : "Бесплатно, без срока";
-  const facts = [
-    l.studentsPerLesson === null ? "Ученики без ограничения" : `До ${l.studentsPerLesson} учеников в уроке`,
-    rec === 0 ? "Без записи уроков" : rec === null ? "Запись без ограничения" : `Запись: ${hours(s.usage.recordingHoursThisMonth)} из ${rec} ч в этом месяце`,
-  ];
-  const month = amountFor(OFFER.monthlyRub, "month");
-  const year = amountFor(OFFER.monthlyRub, "year");
+  const term = active ? `Активен до ${dateFmt(paidUntil!)}` : expired ? `Закончился ${dateFmt(paidUntil!)}` : "Бесплатно, без срока";
+  const note =
+    sub?.status === "active"
+      ? `Продлится автоматически — ${rub.format(sub.amountRub)} ₽ через СБП`
+      : sub?.status === "pending"
+        ? "Автопродление ждёт подтверждения в приложении банка"
+        : sub?.status === "past_due"
+          ? "Последнее автосписание не прошло"
+          : active
+            ? "Автопродление выключено"
+            : expired
+              ? `Продлите, чтобы снова принимать до ${OFFER.limits.studentsPerLesson} учеников`
+              : `До ${s.limits.studentsPerLesson ?? "—"} учеников в уроке. В «${OFFER.name}» — до ${OFFER.limits.studentsPerLesson}, запись и библиотека`;
+
+  const secondary =
+    sub?.status === "active" || sub?.status === "pending"
+      ? { label: sub.status === "active" ? "Отключить автопродление" : "Отменить автопродление", onClick: onCancelAutopay }
+      : s.paymentsEnabled && (active || expired)
+        ? { label: "Включить автопродление", onClick: onAutopay }
+        : null;
 
   return (
     <section
       aria-labelledby="plan-title"
-      // Свечение — фон самой плашки, а не отдельный слой поверх: текст лежит на сплошном тёмном фоне.
-      style={{
-        backgroundImage:
-          "radial-gradient(55% 75% at 88% 35%, rgba(59,108,246,0.55), transparent 70%), radial-gradient(45% 60% at 100% 100%, rgba(124,58,237,0.38), transparent 72%), radial-gradient(40% 55% at 0% 0%, rgba(29,78,216,0.22), transparent 70%)",
-      }}
-      className="relative overflow-hidden rounded-[28px] bg-[#070b1f] p-6 text-white sm:p-8 md:px-12 md:py-12"
+      className="relative mt-7 grid min-h-[360px] items-center overflow-hidden rounded-[28px] px-7 pb-10 pt-6 text-white shadow-[0_30px_60px_-24px_rgba(11,18,38,0.45)] sm:px-[52px] sm:py-12 md:grid-cols-[minmax(0,1fr)_300px]"
+      style={{ background: "radial-gradient(120% 120% at 85% 40%, #1b3a9a 0%, #0f1d4d 38%, #0b1226 72%)" }}
     >
-      <div className="grid items-center gap-y-2 md:grid-cols-[minmax(0,1fr)_minmax(0,300px)] md:gap-x-8">
-        <MarkScene className="order-first mx-auto -mb-1 w-[112px] md:order-last md:-my-6 md:mx-0 md:w-full md:max-w-[300px] md:justify-self-end" />
+      <div className="relative order-last flex flex-col md:order-first">
+        <span className="text-[13px] font-medium text-white/60">Ваш тариф</span>
+        <h2 id="plan-title" className="mt-2.5 font-display text-[44px] font-extrabold leading-none tracking-[-0.045em] sm:text-[52px]">
+          {title}
+        </h2>
+        <p className="mt-[22px] text-[17px] font-medium tracking-[-0.01em]">{term}</p>
+        <p className="mt-1 text-sm text-white/60 [text-wrap:pretty]">{note}</p>
 
-        <div className="min-w-0">
-          <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[13px] font-medium text-white/85 ring-1 ring-inset ring-white/15">
-            <span className={cn("size-2 rounded-full", status.dot)} aria-hidden />
-            {status.label}
-          </p>
-          <h2 id="plan-title" className="mt-4 text-[40px] font-black leading-none tracking-[-0.035em] sm:text-[52px]">
-            {title}
-          </h2>
-          <p className="mt-3 text-lg font-semibold text-white/90 sm:text-xl">{term}</p>
-          <p className="mt-2 text-sm text-white/60">{facts.join(" · ")}</p>
-
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
-            <Button
-              size="lg"
-              className="h-12 w-full rounded-xl bg-[#3b6cf6] px-6 text-[15px] text-white shadow-none hover:bg-[#2f5ce6] sm:w-auto"
-              loading={busy === "month"}
-              disabled={busy !== null}
-              onClick={() => onPay("month")}
-            >
-              {active || expired ? `Продлить на месяц — ${rub.format(month)} ₽` : `Подключить за ${rub.format(month)} ₽ в месяц`}
-            </Button>
-            <button
-              type="button"
-              disabled={busy !== null}
-              onClick={() => onPay("year")}
-              className="group min-h-11 text-left text-sm disabled:opacity-50"
-            >
-              <span className="block font-semibold text-white/85 underline-offset-4 group-hover:text-white group-hover:underline">
-                {busy === "year" ? "Открываем оплату…" : `За год — ${rub.format(year)}\u00a0₽, выгоднее на\u00a017%`}
-              </span>
+        <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-3.5">
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={() => onPay("month")}
+            className="h-12 rounded-full bg-white px-[26px] text-[15px] font-semibold text-[#0b1226] transition-transform duration-200 hover:-translate-y-px disabled:opacity-60"
+          >
+            {busy === "month" ? "Открываем оплату…" : active || expired ? `Продлить · ${price}` : `Подключить «${OFFER.name}» · ${price}`}
+          </button>
+          {secondary ? (
+            <button type="button" onClick={secondary.onClick} className="h-12 text-sm font-medium text-white/60 transition-colors hover:text-white">
+              {secondary.label}
             </button>
-          </div>
-          {!active && !expired ? (
-            <p className="mt-3 text-sm text-white/60">
-              «{OFFER.name}»: до {OFFER.limits.studentsPerLesson} учеников, запись уроков, библиотека Матиса.
-            </p>
           ) : null}
-
-          <AutopayLine sub={s.subscription} canEnable={s.paymentsEnabled} onEnable={onAutopay} onCancel={onCancelAutopay} />
         </div>
+      </div>
+
+      {/* Свечение за знаком и тень на «полу» — как в макете; сам знак — 3D с лендинга. */}
+      <div aria-hidden className="relative mx-auto flex size-[200px] items-center justify-center md:size-[300px]">
+        <div className="absolute inset-[12%] rounded-full bg-[radial-gradient(circle,rgba(96,165,250,0.55)_0%,transparent_68%)] blur-2xl" />
+        <div className="absolute inset-x-[26%] bottom-[6%] h-[18px] rounded-full bg-[radial-gradient(rgba(0,0,0,0.55)_0%,transparent_70%)] blur-md" />
+        <MarkScene className="relative w-[88%]" />
       </div>
     </section>
   );
-}
-
-function AutopayLine({
-  sub,
-  canEnable,
-  onEnable,
-  onCancel,
-}: {
-  sub: BillingState["subscription"];
-  canEnable: boolean;
-  onEnable: () => void;
-  onCancel: () => void;
-}) {
-  const link = "inline-flex min-h-11 items-center font-medium text-white underline-offset-4 hover:underline";
-  let content: ReactNode;
-  if (sub?.status === "active") {
-    content = (
-      <>
-        {sub.nextChargeAt ? `Автосписание ${dateFmt(new Date(sub.nextChargeAt))}` : "Автопродление включено"} ·{" "}
-        <button type="button" className={link} onClick={onCancel}>
-          Отключить
-        </button>
-      </>
-    );
-  } else if (sub?.status === "pending") {
-    content = (
-      <>
-        Автопродление: ждём подтверждения в приложении банка ·{" "}
-        <button type="button" className={link} onClick={onCancel}>
-          Отменить
-        </button>
-      </>
-    );
-  } else if (canEnable) {
-    content = (
-      <>
-        {sub?.status === "past_due" ? "Последнее автосписание не прошло · " : "Автопродление выключено · "}
-        <button type="button" className={link} onClick={onEnable}>
-          Включить через СБП
-        </button>
-      </>
-    );
-  } else return null;
-  return <p className="mt-6 border-t border-white/10 pt-2 text-sm text-white/65">{content}</p>;
 }
 
 /** Включение автопродления: период и отдельное явное согласие на автосписания. */
@@ -413,50 +359,38 @@ function AutopayDialog({
   );
 }
 
-const hoursIntl = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 });
-const hours = (h: number) => hoursIntl.format(h);
-
-const STATUS: Record<BillingState["payments"][number]["status"], { label: string; className: string }> = {
-  confirmed: { label: "Оплачено", className: "bg-emerald-50 text-emerald-700" },
-  pending: { label: "Обрабатывается", className: "bg-amber-50 text-amber-700" },
-  chargebacked: { label: "Возврат", className: "bg-red-50 text-red-700" },
-};
-const SOURCE_LABEL: Record<BillingState["payments"][number]["source"], string> = {
-  once: "разовая оплата",
-  autopay: "автопродление",
-  manual: "подключено командой Матиса",
+const STATUS_NOTE: Partial<Record<BillingState["payments"][number]["status"], string>> = {
+  pending: "обрабатывается",
+  chargebacked: "возврат",
 };
 
-/** История платежей: дата, тариф и срок, сумма, статус. Брошенные попытки оплаты сервер не отдаёт. */
+/** История платежей: дата, тариф и срок, сумма. Брошенные попытки оплаты сервер не отдаёт. */
 function PaymentHistory({ items }: { items: BillingState["payments"] }) {
   return (
-    <section aria-labelledby="payments-title" className="mt-12">
-      <h2 id="payments-title" className="mb-4 text-xl font-bold tracking-[-.02em] text-foreground">
+    <section aria-labelledby="payments-title" className="mt-[72px]">
+      <h2 id="payments-title" className="mb-2.5 font-display text-[19px] font-extrabold tracking-[-0.025em] text-foreground">
         История платежей
       </h2>
       {items.length === 0 ? (
-        <p className="rounded-[20px] border border-border bg-card px-6 py-8 text-center text-sm text-muted-foreground">Платежей пока нет.</p>
+        <p className="border-b border-border py-5 text-[15px] text-muted-foreground">Платежей пока нет.</p>
       ) : (
-        <ul className="divide-y divide-border overflow-hidden rounded-[20px] border border-border bg-card">
+        <ul>
           {items.map((p) => {
             const plan = BILLING_PLANS.find((x) => x.id === p.plan);
-            const st = STATUS[p.status];
+            const extra = p.source === "manual" ? "подключено командой Матиса" : STATUS_NOTE[p.status];
             return (
-              <li key={p.id} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-6 py-4">
-                <div className="min-w-0">
-                  <p className="text-[15px] font-semibold text-foreground">
-                    «{plan?.name ?? p.plan}» на {p.period === "year" ? "год" : "месяц"}
-                  </p>
-                  <p className="mt-0.5 text-sm text-muted-foreground">
-                    {dateFmt(new Date(p.date))} · {SOURCE_LABEL[p.source]}
-                  </p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-[15px] font-semibold tabular-nums text-foreground">
-                    {p.source === "manual" ? "—" : `${rub.format(p.amountRub)} ₽`}
-                  </span>
-                  <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", st.className)}>{st.label}</span>
-                </div>
+              <li
+                key={p.id}
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-1 border-b border-border py-5 sm:grid-cols-[150px_minmax(0,1fr)_auto]"
+              >
+                <span className="col-start-1 row-start-2 text-sm tabular-nums text-muted-foreground sm:row-start-1">{dateFmt(new Date(p.date))}</span>
+                <span className="col-start-1 row-start-1 min-w-0 text-[15px] font-medium text-foreground sm:col-start-2">
+                  {plan?.name ?? p.plan}, {p.period === "year" ? "год" : "месяц"}
+                  {extra ? <span className="font-normal text-muted-foreground"> · {extra}</span> : null}
+                </span>
+                <span className="col-start-2 row-span-2 row-start-1 whitespace-nowrap text-right text-[15px] font-semibold tabular-nums text-foreground sm:col-start-3 sm:row-span-1">
+                  {p.source === "manual" ? "—" : `${rub.format(p.amountRub)} ₽`}
+                </span>
               </li>
             );
           })}
@@ -481,7 +415,7 @@ function ReturnBanner({
 }) {
   if (failed) {
     return (
-      <Alert variant="destructive" className="mb-4" role="alert">
+      <Alert variant="destructive" className="mt-4" role="alert">
         <CircleAlert aria-hidden />
         <AlertTitle>Оплата не прошла</AlertTitle>
         <AlertDescription>
@@ -495,7 +429,7 @@ function ReturnBanner({
   }
   if (confirmed) {
     return (
-      <Alert className="mb-4" role="status">
+      <Alert className="mt-4" role="status">
         <CircleCheck aria-hidden />
         <AlertTitle>Оплата прошла, тариф включён</AlertTitle>
         <AlertDescription>Письмо с подтверждением и чек придут на почту.</AlertDescription>
@@ -503,7 +437,7 @@ function ReturnBanner({
     );
   }
   return (
-    <Alert className="mb-4" role="status">
+    <Alert className="mt-4" role="status">
       <Clock aria-hidden />
       <AlertTitle>{waiting ? "Проверяем оплату…" : "Платёж обрабатывается"}</AlertTitle>
       <AlertDescription>Обычно это занимает до минуты. Если тариф не включится, напишите в поддержку: {support}.</AlertDescription>
