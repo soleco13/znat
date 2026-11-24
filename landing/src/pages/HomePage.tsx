@@ -30,7 +30,7 @@ function Hero() {
             <span className="whitespace-nowrap">Онлайн-урок</span> в&nbsp;одной вкладке
           </h1>
           <p className="mt-5 max-w-[34em] text-body text-text-2 sm:mt-6 sm:text-lead">
-            Видеосвязь, доска, слайды и задания с автопроверкой для репетиторов и онлайн-школ. Ученик открывает
+            Видеосвязь, доска и слайды для репетиторов и онлайн-школ. Ученик открывает
             ссылку и сразу попадает на урок, без регистрации и установки.
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
