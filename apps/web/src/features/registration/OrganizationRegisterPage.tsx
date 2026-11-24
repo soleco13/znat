@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
-import { slugify, validateInn, validateOgrn } from "@school/shared";
+import { ORGANIZATION_SIGNUP_OPEN, slugify, validateInn, validateOgrn } from "@school/shared";
 
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/shared/api-client";
@@ -20,11 +20,32 @@ import {
   stagger,
 } from "../auth/AuthLayout.js";
 import { registerOrganization } from "./registration-api.js";
+import { OrganizationSignupClosed } from "./RegisterChoicePage.js";
 
 const STEP_LABELS = ["Организация", "Вы"];
 
 /** Э14.1 — self-signup ООО: создаёт новое именованное пространство (§ план-ТЗ Э14). Две страницы формы: организация → вы. */
 export function OrganizationRegisterPage() {
+  return ORGANIZATION_SIGNUP_OPEN ? <OrganizationRegisterForm /> : <OrganizationSignupClosedPage />;
+}
+
+/** Регистрация ООО закрыта: плашка «в разработке» и путь к регистрации репетитора. */
+function OrganizationSignupClosedPage() {
+  return (
+    <AuthLayout aside={<StepsAside current={0} />}>
+      <AuthHeading title="Пространство школы" />
+      <OrganizationSignupClosed className="auth-rise" style={stagger(220)} />
+      <p className="auth-rise mt-7 text-[14.5px] text-muted-foreground" style={stagger(360)}>
+        Вы преподаёте сами?{" "}
+        <Link to="/register/individual" className="font-semibold text-primary underline-offset-4 hover:underline">
+          Регистрация репетитора
+        </Link>
+      </p>
+    </AuthLayout>
+  );
+}
+
+function OrganizationRegisterForm() {
   const [step, setStep] = useState<0 | 1>(0);
   const [orgName, setOrgName] = useState("");
   const [inn, setInn] = useState("");

@@ -1,5 +1,6 @@
 import { randomBytes, createHash } from "node:crypto";
 import {
+  ORGANIZATION_SIGNUP_OPEN,
   slugify,
   type IndividualRegisterRequest,
   type OrganizationRegisterRequest,
@@ -172,6 +173,10 @@ export async function registerIndividual(input: IndividualRegisterRequest): Prom
 }
 
 export async function registerOrganization(input: OrganizationRegisterRequest): Promise<RegisterResponse> {
+  // Регистрация организаций закрыта (решение владельца 2026-11-24): тарифов для школ нет на сайте.
+  if (!ORGANIZATION_SIGNUP_OPEN) {
+    throw new AppError(403, "organization_signup_closed", "Регистрация организаций пока в разработке");
+  }
   const slug = await generateUniqueSlug(input.orgName);
   return registerAndSendVerification({
     schoolName: input.orgName,

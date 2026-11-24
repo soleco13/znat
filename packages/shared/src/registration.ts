@@ -17,6 +17,14 @@ export const individualRegisterRequestSchema = z.object({
 });
 export type IndividualRegisterRequest = z.infer<typeof individualRegisterRequestSchema>;
 
+/**
+ * Регистрация организаций (ООО) закрыта (решение владельца 2026-11-24):
+ * тарифы для школ не опубликованы, оплатить их онлайн нельзя. Форма
+ * показывает «в разработке», сервер отвечает отказом. Уже созданные школы и
+ * вход в них по приглашениям работают как раньше. Открыть — `true` здесь.
+ */
+export const ORGANIZATION_SIGNUP_OPEN = false;
+
 /** Э14.1 — регистрация ООО: создаёт новое именованное пространство. ИНН/ОГРН — формат+контрольная сумма, без сверки с ЕГРЮЛ. */
 export const organizationRegisterRequestSchema = z.object({
   fullName: z.string().min(1).max(200),

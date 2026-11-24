@@ -226,31 +226,19 @@ describe("registerIndividual с inviteCode (Э14.2 — присоединени�
 });
 
 describe("registerOrganization", () => {
-  it("создаёт пространство (kind: organization) с ИНН/ОГРН", async () => {
-    repoMock.registerSchoolWithAdmin.mockResolvedValue({
-      school: { id: SCHOOL_ID, kind: "organization" },
-      user: userRow({ email: "org@example.com" }),
-    });
-
-    const result = await registerOrganization({
-      fullName: "Иван Петров",
-      email: "org@example.com",
-      password: "password123",
-      orgName: "Школа 10",
-      inn: "7707083893",
-      ogrn: "1027700132195",
-      personalDataConsent: true,
-    });
-
-    expect(result.status).toBe("pending_verification");
-    expect(repoMock.registerSchoolWithAdmin).toHaveBeenCalledWith(
-      expect.objectContaining({
-        kind: "organization",
-        schoolName: "Школа 10",
+  it("закрыта, пока тарифы для школ не опубликованы (2026-11-24)", async () => {
+    await expect(
+      registerOrganization({
+        fullName: "Иван Петров",
+        email: "org@example.com",
+        password: "password123",
+        orgName: "Школа 10",
         inn: "7707083893",
         ogrn: "1027700132195",
+        personalDataConsent: true,
       }),
-    );
+    ).rejects.toMatchObject({ statusCode: 403, code: "organization_signup_closed" });
+    expect(repoMock.registerSchoolWithAdmin).not.toHaveBeenCalled();
   });
 });
 
