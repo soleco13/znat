@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { Check, CircleAlert, CircleCheck, Clock } from "lucide-react";
 import { BILLING_PLANS, DEDICATED_PLAN_FROM_RUB, DEDICATED_PLAN_PUBLIC, PUBLIC_BILLING_PLANS, YEAR_MONTHS_CHARGED, supportContactsFor, type BillingPeriod, type BillingPlanId, type BillingState } from "@school/shared";
 
@@ -108,6 +108,8 @@ export function BillingPage() {
     }
   };
 
+  // «Тариф» — только у репетитора в личном кабинете; в школе раздела нет (сервер отвечает 403).
+  if (state.errorStatus === 403) return <Navigate to="/lessons" replace />;
   if (state.error) return <ErrorState description={state.error} onRetry={state.reload} />;
 
   const s = state.data;
@@ -296,10 +298,6 @@ export function BillingPage() {
       ) : null}
 
       <p className="mt-6 text-sm text-muted-foreground [text-wrap:pretty]">
-        Ученико-час — час, который один ученик провёл на уроке. Если часы тарифа закончились, уроки не прерываются: мы
-        напишем и предложим тариф побольше или 1 000 ученико-часов за 3 490 ₽.
-      </p>
-      <p className="mt-3 text-sm text-muted-foreground [text-wrap:pretty]">
         После оплаты тариф включается сразу, чек приходит на почту. При отключении автопродления оплаченный срок
         сохраняется. Деньги за неиспользованные дни можно вернуть по
         заявлению в поддержку: <SupportLinks contacts={support} />.
@@ -309,6 +307,7 @@ export function BillingPage() {
         </Link>
         .
       </p>
+      {s ? <PaymentHistory items={s.payments} /> : null}
       <AlertDialog open={confirmCancel} onOpenChange={(v) => !v && setConfirmCancel(false)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -475,5 +474,56 @@ function ReturnBanner({
         Обычно это занимает до минуты. Если тариф не включится, напишите в поддержку: {support}.
       </AlertDescription>
     </Alert>
+  );
+}
+
+const STATUS_LABEL: Record<BillingState["payments"][number]["status"], string> = {
+  confirmed: "Оплачено",
+  pending: "Обрабатывается",
+  chargebacked: "Возврат",
+};
+const SOURCE_LABEL: Record<BillingState["payments"][number]["source"], string> = {
+  once: "разовая оплата",
+  autopay: "автопродление",
+  manual: "подключено командой Матиса",
+};
+
+/** История платежей: дата, тариф и срок, сумма, статус. Брошенные попытки оплаты сервер не отдаёт. */
+function PaymentHistory({ items }: { items: BillingState["payments"] }) {
+  return (
+    <section aria-labelledby="payments-title" className="mt-12">
+      <h2 id="payments-title" className="mb-3 text-lg font-bold tracking-[-.01em] text-foreground">
+        История платежей
+      </h2>
+      {items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Платежей пока нет.</p>
+      ) : (
+        <Card className="divide-y divide-border px-5 py-1">
+          {items.map((p) => {
+            const plan = BILLING_PLANS.find((x) => x.id === p.plan);
+            return (
+              <div key={p.id} className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 py-4">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground">
+                    «{plan?.name ?? p.plan}» на {p.period === "year" ? "год" : "месяц"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {dateFmt.format(new Date(p.date))} · {SOURCE_LABEL[p.source]}
+                  </p>
+                </div>
+                <div className="flex items-baseline gap-4 text-sm">
+                  <span className="font-semibold tabular-nums text-foreground">
+                    {p.source === "manual" ? "—" : `${rub.format(p.amountRub)} ₽`}
+                  </span>
+                  <span className={cn("w-[7.5rem] text-right", p.status === "confirmed" ? "text-muted-foreground" : "text-warning")}>
+                    {STATUS_LABEL[p.status]}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </Card>
+      )}
+    </section>
   );
 }

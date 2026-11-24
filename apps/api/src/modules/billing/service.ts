@@ -20,7 +20,9 @@ import { randomUUID } from "node:crypto";
 import { env } from "../../plugins/env.js";
 import { AppError } from "../../plugins/errors.js";
 import { logEvent } from "../../plugins/logger.js";
+import * as mailService from "../mail/service.js";
 import * as membershipsService from "../memberships/service.js";
+import * as usersService from "../users/service.js";
 import * as platega from "./platega.js";
 import * as repo from "./repo.js";
 
@@ -155,7 +157,7 @@ export async function getState(
     membershipsService.activeUserIdsWithRole(user.schoolId, "methodist"),
     counts.recordedSec(),
   ]);
-  const last = await repo.lastPayment(user.schoolId);
+  const [last, history] = await Promise.all([repo.lastPayment(user.schoolId), repo.paymentHistory(user.schoolId)]);
   const plan = school?.billingPlan;
   const sub = await repo.currentSubscription(user.schoolId);
   return {
@@ -180,6 +182,21 @@ export async function getState(
     paymentsEnabled: platega.plategaConfigured() || testMode(),
     testMode: testMode(),
     support: supportContactsFor(school?.kind, env.SUPPORT_EMAIL),
+    payments: history.flatMap((p) => {
+      const plan = knownPlan(p.plan);
+      if (!plan || p.status === "canceled") return [];
+      return [
+        {
+          id: p.id,
+          date: (p.confirmedAt ?? p.createdAt).toISOString(),
+          plan,
+          period: p.period === "year" ? ("year" as const) : ("month" as const),
+          amountRub: p.amountRub,
+          status: p.status,
+          source: p.provider === "manual" ? ("manual" as const) : p.subscriptionId ? ("autopay" as const) : ("once" as const),
+        },
+      ];
+    }),
     lastPayment: last
       ? {
           id: last.id,
@@ -315,6 +332,47 @@ async function syncSubscription(providerSubId: string): Promise<void> {
  * к Platega. Ответ 200 на всё, что разобрано, чтобы Platega не повторяла
  * заведомо бесполезные запросы.
  */
+/**
+ * Письмо «тариф подключён» плательщику — после каждой прошедшей оплаты
+ * (разовой, списания по автопродлению, тестовой). Повторный callback сюда не
+ * доходит: подтверждается только платёж в `pending`. Сбой почты оплату не
+ * отменяет — только строка в журнале.
+ */
+async function notifyPaid(
+  payment: { id: string; schoolId: string; userId: string | null; plan: string; period: string; amountRub: number; subscriptionId?: string | null },
+  paidUntil: Date | null,
+  nextChargeAt: Date | null,
+): Promise<void> {
+  try {
+    const plan = BILLING_PLANS.find((p) => p.id === payment.plan);
+    if (!plan || !payment.userId) return;
+    const email = (await usersService.emailsByIds([payment.userId])).get(payment.userId);
+    if (!email) return;
+    const until = paidUntil ?? (await repo.getSchoolBilling(payment.schoolId))?.paidUntil ?? null;
+    if (!until) return;
+    await mailService.sendPlanActivatedEmail(email, {
+      planName: plan.name,
+      amountRub: payment.amountRub,
+      period: payment.period === "year" ? "year" : "month",
+      paidUntil: until,
+      nextChargeAt: await autopayNextCharge(payment, nextChargeAt),
+      features: plan.features.filter((f) => !/аудитория с постоянной ссылкой/.test(f)),
+      billingUrl: `${publicOrigin()}/billing`,
+      telegramUrl: supportContactsFor("individual").telegramUrl,
+    });
+    logEvent("payment_notified", { paymentId: payment.id });
+  } catch (err) {
+    logEvent("payment_notify_failed", { paymentId: payment.id, err: err instanceof Error ? err.message : String(err) }, "warn");
+  }
+}
+
+/** Автопродление включено — когда следующее списание (и для разовой оплаты поверх подписки); иначе null. */
+async function autopayNextCharge(payment: { schoolId: string; subscriptionId?: string | null }, nextChargeAt: Date | null): Promise<Date | null> {
+  if (payment.subscriptionId) return nextChargeAt;
+  const sub = await repo.currentSubscription(payment.schoolId);
+  return sub?.status === "active" ? sub.nextChargeAt : null;
+}
+
 export async function handleCallback(body: PlategaCallback, authenticated: boolean): Promise<void> {
   if (body.status.startsWith("SUBSCRIPTION_")) {
     logEvent("payment_callback", { subId: body.subscriptionId ?? body.id, status: body.status });
@@ -341,12 +399,11 @@ async function handleSubscriptionCharge(body: PlategaCallback): Promise<void> {
     }
     const actual = await platega.getTransactionStatus(body.id);
     if (actual !== "CONFIRMED") throw new AppError(409, "payment_not_confirmed", "Статус списания не подтверждён");
-    await repo.recordSubscriptionCharge({ subscription: sub, providerTxId: body.id });
+    const charged = await repo.recordSubscriptionCharge({ subscription: sub, providerTxId: body.id });
     await afterPaid(sub.schoolId);
-    await repo.updateSubscription(sub.id, {
-      status: "active",
-      nextChargeAt: body.nextChargeAt ? new Date(body.nextChargeAt) : null,
-    });
+    const nextChargeAt = body.nextChargeAt ? new Date(body.nextChargeAt) : null;
+    await repo.updateSubscription(sub.id, { status: "active", nextChargeAt });
+    if (charged) await notifyPaid(charged, null, nextChargeAt);
   } else if (body.status === "CANCELED") {
     // Списание не прошло: у Platega подписка переходит в PastDue без повторов.
     await repo.updateSubscription(sub.id, { status: "past_due", nextChargeAt: null });
@@ -379,8 +436,9 @@ async function handlePaymentCallback(body: PlategaCallback): Promise<void> {
       logEvent("payment_callback", { paymentId: payment.id, mismatch: true, amount: actual.amount, commission: actual.commission, currency: actual.currency }, "warn");
       return;
     }
-    await repo.confirmPayment(payment.id, payment.period === "year" ? "1 year" : "1 month");
+    const confirmed = await repo.confirmPayment(payment.id, payment.period === "year" ? "1 year" : "1 month");
     await afterPaid(payment.schoolId);
+    if (confirmed) await notifyPaid(confirmed.payment, confirmed.paidUntil, null);
   } else if (body.status === "CANCELED" && payment.status === "pending") {
     await repo.setPaymentStatus(payment.id, "canceled");
   } else if (body.status === "CHARGEBACKED") {
@@ -446,8 +504,9 @@ export async function testComplete(user: AccessTokenPayload, req: TestPaymentCom
   if (req.kind === "payment") {
     if (row.status !== "pending") return;
     if (req.result === "success") {
-      await repo.confirmPayment(row.id, row.period === "year" ? "1 year" : "1 month");
+      const confirmed = await repo.confirmPayment(row.id, row.period === "year" ? "1 year" : "1 month");
       await afterPaid(row.schoolId);
+      if (confirmed) await notifyPaid(confirmed.payment, confirmed.paidUntil, null);
     } else await repo.setPaymentStatus(row.id, "canceled");
     return;
   }
@@ -458,22 +517,25 @@ export async function testComplete(user: AccessTokenPayload, req: TestPaymentCom
   }
   const chargeId = `test-charge-${randomUUID()}`;
   const sub = row as Awaited<ReturnType<typeof repo.findSubscription>> & object;
-  await repo.recordSubscriptionCharge({ subscription: sub, providerTxId: chargeId });
+  const charged = await repo.recordSubscriptionCharge({ subscription: sub, providerTxId: chargeId });
   await afterPaid(sub.schoolId);
   await repo.markProvider(chargeId, "test");
   const next = new Date();
   if (sub.period === "year") next.setFullYear(next.getFullYear() + 1);
   else next.setMonth(next.getMonth() + 1);
   await repo.updateSubscription(sub.id, { status: "active", nextChargeAt: next });
+  if (charged) await notifyPaid(charged, null, next);
 }
 
 /**
- * Кто видит тариф и платит (схема владельца 2026-10-25): администратор школы
- * и репетитор в своём личном пространстве (учитель в пространстве
- * `individual`). Учителя и методисты школы о тарифе не знают.
+ * Кто видит тариф и платит (решение владельца 2026-11-24): только репетитор в
+ * своём личном пространстве (`individual`). В школе (`organization`) раздела
+ * «Тариф» нет ни у кого — тарифы для школ не опубликованы и включаются
+ * вручную командой Матиса. Служебное пространство «Матис» (`platform`) —
+ * супер-админу, как и все прочие разделы.
  */
 export async function assertBillingAccess(user: AccessTokenPayload): Promise<void> {
-  if (user.role === "admin") return;
-  if (user.role === "teacher" && (await repo.getSchoolKind(user.schoolId)) === "individual") return;
-  throw new AppError(403, "forbidden", "Тариф и оплата доступны только администратору школы");
+  const kind = await repo.getSchoolKind(user.schoolId);
+  if (kind === "individual" || (kind === "platform" && user.role === "admin")) return;
+  throw new AppError(403, "forbidden", "Тариф доступен только в личном кабинете репетитора");
 }

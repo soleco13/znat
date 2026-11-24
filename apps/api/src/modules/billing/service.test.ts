@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { repoMock, plategaMock } = vi.hoisted(() => ({
+const { repoMock, plategaMock, mailMock, usersMock } = vi.hoisted(() => ({
+  mailMock: { sendPlanActivatedEmail: vi.fn() },
+  usersMock: { emailsByIds: vi.fn(async (ids: string[]) => new Map(ids.map((id) => [id, "tutor@example.com"]))) },
   repoMock: {
+    getSchoolKind: vi.fn(),
+    paymentHistory: vi.fn(),
     getSchoolBilling: vi.fn(),
     lastPayment: vi.fn(),
     insertPayment: vi.fn(),
@@ -28,8 +32,10 @@ const { repoMock, plategaMock } = vi.hoisted(() => ({
 }));
 vi.mock("./repo.js", () => repoMock);
 vi.mock("./platega.js", () => plategaMock);
+vi.mock("../mail/service.js", () => mailMock);
+vi.mock("../users/service.js", () => usersMock);
 
-const { priceRub, checkout, handleCallback, subscribe, cancelAutopay } = await import("./service.js");
+const { priceRub, checkout, handleCallback, subscribe, cancelAutopay, assertBillingAccess } = await import("./service.js");
 
 const user = { sub: "11111111-1111-4111-8111-111111111111", schoolId: "22222222-2222-4222-8222-222222222222", role: "admin" as const };
 const payment = { id: "p1", schoolId: user.schoolId, plan: "tutor", period: "month", amountRub: 990, status: "pending" };
@@ -160,5 +166,38 @@ describe("billing", () => {
     await cancelAutopay(user);
     expect(plategaMock.cancelSubscription).toHaveBeenCalledWith("ps-1");
     expect(repoMock.updateSubscription).toHaveBeenCalledWith("s1", { status: "cancelled", nextChargeAt: null });
+  });
+});
+
+describe("тариф только у репетитора и письмо после оплаты (2026-11-24)", () => {
+  it("«Тариф» открыт репетитору в личном пространстве и закрыт в школе", async () => {
+    repoMock.getSchoolKind.mockResolvedValue("individual");
+    await expect(assertBillingAccess({ ...user, role: "teacher" })).resolves.toBeUndefined();
+    repoMock.getSchoolKind.mockResolvedValue("organization");
+    await expect(assertBillingAccess({ ...user, role: "admin" })).rejects.toMatchObject({ statusCode: 403 });
+    await expect(assertBillingAccess({ ...user, role: "teacher" })).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it("после подтверждённой оплаты плательщику уходит письмо с тарифом и сроком", async () => {
+    const until = new Date("2026-12-24T10:00:00Z");
+    repoMock.findPaymentByProviderTxId.mockResolvedValue({ ...payment, amountRub: 790, userId: "u1", subscriptionId: null });
+    plategaMock.getTransaction.mockResolvedValue({ status: "CONFIRMED", amount: 790, commission: 0, currency: "RUB" });
+    repoMock.confirmPayment.mockResolvedValue({ payment: { ...payment, amountRub: 790, userId: "u1", subscriptionId: null }, paidUntil: until });
+    repoMock.getSchoolBilling.mockResolvedValue({ billingPlan: "tutor", paidUntil: until, kind: "individual" });
+    repoMock.currentSubscription.mockResolvedValue(null);
+    await handleCallback({ id: "tx-9", status: "CONFIRMED", amount: 790, currency: "RUB" } as never, true);
+    expect(mailMock.sendPlanActivatedEmail).toHaveBeenCalledWith(
+      "tutor@example.com",
+      expect.objectContaining({ planName: "Репетитор", amountRub: 790, paidUntil: until, nextChargeAt: null }),
+    );
+  });
+
+  it("повторный callback по уже подтверждённому платежу письмо не дублирует", async () => {
+    repoMock.findPaymentByProviderTxId.mockResolvedValue({ ...payment, userId: "u1" });
+    plategaMock.getTransaction.mockResolvedValue({ status: "CONFIRMED", amount: 990, commission: 0, currency: "RUB" });
+    repoMock.confirmPayment.mockResolvedValue(null);
+    repoMock.getSchoolBilling.mockResolvedValue(null);
+    await handleCallback({ id: "tx-9", status: "CONFIRMED", amount: 990, currency: "RUB" } as never, true);
+    expect(mailMock.sendPlanActivatedEmail).not.toHaveBeenCalled();
   });
 });

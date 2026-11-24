@@ -82,3 +82,51 @@ export async function sendInviteEmail(
   );
   await sendMail({ to, subject, html, text });
 }
+
+/** «24 января 2027» — без «г.», чтобы точка в конце предложения не удваивалась. */
+const longDate = (d: Date) =>
+  d.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Moscow" }).replace(/\s*г\.$/, "");
+
+/**
+ * Письмо после оплаты тарифа (решение владельца 2026-11-24): какой тариф
+ * подключён, до какого числа, что в него входит и где проверить — кнопка
+ * ведёт на страницу «Тариф» в личном кабинете.
+ */
+export async function sendPlanActivatedEmail(
+  to: string,
+  input: {
+    planName: string;
+    amountRub: number;
+    period: "month" | "year";
+    paidUntil: Date;
+    /** Автопродление: дата следующего списания; null — разовая оплата. */
+    nextChargeAt: Date | null;
+    features: string[];
+    billingUrl: string;
+    telegramUrl: string;
+  },
+) {
+  const subject = `Тариф «${input.planName}» подключён`;
+  const amount = new Intl.NumberFormat("ru-RU").format(input.amountRub);
+  const term = input.period === "year" ? "год" : "месяц";
+  const until = longDate(input.paidUntil);
+  const paragraphs = [
+    `Оплата ${amount}\u00a0₽ за ${term} получена. Тариф «${input.planName}» действует до ${until}.`,
+    input.nextChargeAt
+      ? `Автопродление включено: следующее списание — ${longDate(input.nextChargeAt)}. Отключить его можно на странице «Тариф» в личном кабинете.`
+      : "Чтобы тариф не закончился, продлите его на странице «Тариф» до этой даты — или включите там автопродление.",
+    `Что входит в тариф: ${input.features.map((f) => f.charAt(0).toLowerCase() + f.slice(1)).join("; ")}.`,
+  ];
+  const { html, text } = renderEmail(
+    {
+      subject,
+      preheader: `Действует до ${until}.`,
+      heading: subject,
+      paragraphs,
+      button: { label: "Проверить тариф в кабинете", url: input.billingUrl },
+      note: `Чек об оплате придёт отдельным письмом. Вопросы по оплате — в Telegram: ${input.telegramUrl}`,
+    },
+    env.PUBLIC_ORIGIN,
+  );
+  await sendMail({ to, subject, html, text });
+}

@@ -14,6 +14,7 @@ import {
   SquarePen,
   Ticket, CreditCard, ShieldCheck, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useBillingAccess } from "./billing-access.js";
 import { usePlatformAccess } from "./platform-access.js";
 import { SpaceSwitcher } from "./SpaceSwitcher.js";
 import { SupportDialog } from "./SupportContacts.js";
@@ -43,10 +44,12 @@ const PLATFORM_ITEM: NavItem = { to: "/platform", label: "Платформа", i
 /** Пункты меню роли; «Платформа» — только супер-админу (решает сервер). */
 function useNavItems(role: Role | null): NavItem[] {
   const platform = usePlatformAccess(role === "admin");
+  // «Тариф» — только там, где он есть (личный кабинет, «Матис»); в школе — нет.
+  const billing = useBillingAccess(role === "admin");
   // Э15.1: роли — набором (учитель и методист совмещаются).
   const roles = useAuthStore((s) => s.user?.roles);
   const set = roles?.length ? roles : role ? [role] : [];
-  const items = NAV.filter((n) => n.roles.some((r) => set.includes(r)));
+  const items = NAV.filter((n) => n.roles.some((r) => set.includes(r)) && (n.to !== "/billing" || billing));
   return platform ? [...items, PLATFORM_ITEM] : items;
 }
 

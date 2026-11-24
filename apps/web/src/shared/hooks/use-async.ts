@@ -5,6 +5,8 @@ import { ApiError } from "@/shared/api-client";
 export interface AsyncState<T> {
   data: T | null;
   error: string | null;
+  /** HTTP-статус ошибки API (403 — нет доступа и т.п.); null — ошибки нет или она не от API. */
+  errorStatus: number | null;
   /** Первичная загрузка — данных ещё нет. */
   loading: boolean;
   /** Фоновое обновление — данные уже показаны. */
@@ -20,6 +22,7 @@ export interface AsyncState<T> {
 export function useAsync<T>(fn: () => Promise<T>, deps: readonly unknown[] = []): AsyncState<T> {
   const [data, setDataState] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [nonce, setNonce] = useState(0);
@@ -32,6 +35,7 @@ export function useAsync<T>(fn: () => Promise<T>, deps: readonly unknown[] = [])
     if (hasData) setRefreshing(true);
     else setLoading(true);
     setError(null);
+    setErrorStatus(null);
 
     fnRef
       .current()
@@ -41,6 +45,7 @@ export function useAsync<T>(fn: () => Promise<T>, deps: readonly unknown[] = [])
       })
       .catch((err: unknown) => {
         if (cancelled) return;
+        setErrorStatus(err instanceof ApiError ? err.status : null);
         setError(
           err instanceof ApiError
             ? err.message
@@ -68,5 +73,5 @@ export function useAsync<T>(fn: () => Promise<T>, deps: readonly unknown[] = [])
     [],
   );
 
-  return { data, error, loading, refreshing, reload, setData };
+  return { data, error, errorStatus, loading, refreshing, reload, setData };
 }

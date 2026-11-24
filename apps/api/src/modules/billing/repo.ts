@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, or, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { payments, schools, subscriptions } from "../../db/schema.js";
 
@@ -19,6 +19,37 @@ export async function lastPayment(schoolId: string) {
     .orderBy(desc(payments.createdAt))
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * История для страницы «Тариф»: прошедшие оплаты и возвраты, а из ожидающих —
+ * только начатые за последний час (брошенная платёжная форма — не платёж).
+ */
+export async function paymentHistory(schoolId: string, limit = 50) {
+  return db
+    .select({
+      id: payments.id,
+      plan: payments.plan,
+      period: payments.period,
+      amountRub: payments.amountRub,
+      status: payments.status,
+      provider: payments.provider,
+      subscriptionId: payments.subscriptionId,
+      createdAt: payments.createdAt,
+      confirmedAt: payments.confirmedAt,
+    })
+    .from(payments)
+    .where(
+      and(
+        eq(payments.schoolId, schoolId),
+        or(
+          inArray(payments.status, ["confirmed", "chargebacked"]),
+          and(eq(payments.status, "pending"), gt(payments.createdAt, sql`now() - interval '1 hour'`)),
+        ),
+      ),
+    )
+    .orderBy(desc(sql`coalesce(${payments.confirmedAt}, ${payments.createdAt})`))
+    .limit(limit);
 }
 
 export async function insertPayment(input: {

@@ -19,7 +19,7 @@ export function PricingPage() {
         <div className="container-l">
           <h1 className="text-h2 text-foreground">Тарифы</h1>
           <p className="mt-5 max-w-[52ch] text-body text-text-2 sm:text-lead">
-            Цена зависит от того, сколько часов ученики проводят на уроках. Ученики не платят и не заводят аккаунт.
+            Платит только преподаватель. Ученики входят на урок по ссылке, без оплаты и без регистрации.
           </p>
           <div className="mt-10">
             <Period yearly={yearly} onChange={setYearly} />
@@ -120,9 +120,6 @@ function PlanColumn({ plan: p, yearly }: { plan: Plan; yearly: boolean }) {
 
       <ul className="mt-6 space-y-2.5 text-small text-foreground">
         <li>
-          <span className="font-semibold tabular-nums">{num(p.hours)}</span> ученико-часов в месяц
-        </li>
-        <li>
           До <span className="font-semibold tabular-nums">{p.studentsPerLesson}</span> учеников в уроке
         </li>
         <li className={cn(p.recordingHours === 0 && "text-text-3")}>{recordingOf(p)}</li>
@@ -173,7 +170,6 @@ function Dedicated() {
 
 const ROWS: { label: string; value: (p: Plan) => string }[] = [
   { label: "Цена в месяц", value: (p) => (p.monthly === 0 ? "0 ₽" : rub(p.monthly)) },
-  { label: "Ученико-часов в месяц", value: (p) => num(p.hours) },
   { label: "Учеников в уроке", value: (p) => `до ${p.studentsPerLesson}` },
   { label: "Учителей", value: (p) => (p.teachers === null ? "без ограничений" : String(p.teachers)) },
   { label: "Аудиторий", value: (p) => (p.rooms === null ? "без ограничений" : String(p.rooms)) },
@@ -241,14 +237,6 @@ function Compare() {
 }
 
 const NOTES = [
-  {
-    q: "Что такое ученико-час",
-    a: "Час, который один ученик провёл на уроке. Урок на 45 минут с четырьмя учениками — это 3 ученико-часа. Время учителя не считается.",
-  },
-  {
-    q: "Что будет, если часы закончились",
-    a: "Урок не прервётся. Мы напишем и предложим перейти на тариф побольше.",
-  },
   {
     q: "Как оплатить",
     a: "В кабинете, в разделе «Тариф»: разовой оплатой на месяц или год либо подпиской с автосписанием через СБП. Сначала нужно зарегистрироваться или войти.",

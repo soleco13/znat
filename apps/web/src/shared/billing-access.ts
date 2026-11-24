@@ -4,21 +4,24 @@ import { apiFetch } from "./api-client.js";
 import { useAuthStore } from "./auth-store.js";
 
 /**
- * Видит ли учитель раздел «Тариф»: да — репетитор в своём личном
- * пространстве, нет — учитель внутри школы. Решает сервер (`/billing/access`),
- * ответ кешируется на пользователя.
+ * Есть ли раздел «Тариф»: да — репетитор в своём личном пространстве (и
+ * супер-админ в «Матисе»), нет — любой участник школы, включая
+ * администратора (решение владельца 2026-11-24). Решает сервер
+ * (`/billing/access`), ответ кешируется на пользователя и пространство.
  */
-let cached: { userId: string; ok: Promise<boolean> } | null = null;
+let cached: { key: string; ok: Promise<boolean> } | null = null;
 
 export function useBillingAccess(enabled: boolean): boolean {
   const userId = useAuthStore((s) => s.user?.id ?? null);
+  const schoolId = useAuthStore((s) => s.user?.schoolId ?? null);
   const [ok, setOk] = useState(false);
   useEffect(() => {
     setOk(false);
     if (!enabled || !userId) return;
-    if (cached?.userId !== userId) {
+    const key = `${userId}:${schoolId}`;
+    if (cached?.key !== key) {
       cached = {
-        userId,
+        key,
         ok: apiFetch<{ ok: boolean }>("/billing/access").then(
           (r) => r.ok,
           () => false,
@@ -30,6 +33,6 @@ export function useBillingAccess(enabled: boolean): boolean {
     return () => {
       alive = false;
     };
-  }, [enabled, userId]);
+  }, [enabled, userId, schoolId]);
   return enabled && ok;
 }

@@ -4,9 +4,8 @@
  * `YEAR_MONTHS_CHARGED`): лендинг собирается отдельно и общий пакет не
  * подключает. Меняете цены или лимиты там — поменяйте и здесь.
  *
- * Ученико-часы — объём тарифа из сетки владельца (2026-10-25). Сервер их пока
- * не считает и урок по ним не прерывает, поэтому на сайте это «объём», а не
- * жёсткий лимит.
+ * Ученико-часы сняты с сайта (решение владельца 2026-11-24): сервер их не
+ * считает, обещать объём, которого клиент не видит, нельзя.
  */
 export type PlanId = "start" | "tutor" | "mini" | "school" | "pro" | "network";
 
@@ -17,7 +16,6 @@ export type Plan = {
   forWhom: string;
   /** Рублей в месяц при помесячной оплате; 0 — бесплатно. */
   monthly: number;
-  hours: number;
   studentsPerLesson: number;
   /** `null` — без ограничения. */
   teachers: number | null;
@@ -40,7 +38,6 @@ export const PLANS: Plan[] = [
     name: "Старт",
     forWhom: "Попробовать на паре учеников",
     monthly: 0,
-    hours: 10,
     studentsPerLesson: 3,
     teachers: 1,
     rooms: 1,
@@ -55,7 +52,6 @@ export const PLANS: Plan[] = [
     name: "Репетитор",
     forWhom: "Один преподаватель: занятия один на один и мини-группы",
     monthly: 790,
-    hours: 300,
     studentsPerLesson: 8,
     teachers: 1,
     rooms: 1,
@@ -71,7 +67,6 @@ export const PLANS: Plan[] = [
     name: "Мини-школа",
     forWhom: "Несколько преподавателей и группы",
     monthly: 2990,
-    hours: 1500,
     studentsPerLesson: 15,
     teachers: null,
     rooms: null,
@@ -87,7 +82,6 @@ export const PLANS: Plan[] = [
     name: "Школа",
     forWhom: "Онлайн-школа или учебный центр",
     monthly: 8990,
-    hours: 5000,
     studentsPerLesson: 30,
     teachers: null,
     rooms: null,
@@ -103,7 +97,6 @@ export const PLANS: Plan[] = [
     name: "Школа Про",
     forWhom: "Большая школа",
     monthly: 17900,
-    hours: 12000,
     studentsPerLesson: 50,
     teachers: null,
     rooms: null,
@@ -119,7 +112,6 @@ export const PLANS: Plan[] = [
     name: "Сеть",
     forWhom: "Крупная школа или несколько филиалов",
     monthly: 59900,
-    hours: 40000,
     studentsPerLesson: 100,
     teachers: null,
     rooms: null,
