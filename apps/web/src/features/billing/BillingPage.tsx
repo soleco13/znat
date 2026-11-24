@@ -1,19 +1,14 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
-import { Check, CircleAlert, CircleCheck, Clock } from "lucide-react";
-import { BILLING_PLANS, DEDICATED_PLAN_FROM_RUB, DEDICATED_PLAN_PUBLIC, PUBLIC_BILLING_PLANS, YEAR_MONTHS_CHARGED, supportContactsFor, type BillingPeriod, type BillingPlanId, type BillingState } from "@school/shared";
+import { CircleAlert, CircleCheck, Clock } from "lucide-react";
+import { BILLING_PLANS, PUBLIC_BILLING_PLANS, YEAR_MONTHS_CHARGED, supportContactsFor, type BillingPeriod, type BillingState } from "@school/shared";
 
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/shared/api-client";
 import { useAsync } from "@/shared/hooks/use-async";
-import { useAuthStore } from "@/shared/auth-store";
+import { MarkScene } from "@/shared/mark3d/MarkScene";
 import { SupportLinks } from "@/shared/SupportContacts";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/ui/alert";
-import { Button } from "@/shared/ui/button";
-import { Card } from "@/shared/ui/card";
-import { ErrorState } from "@/shared/ui/error-state";
-import { PageHeader } from "@/shared/ui/page-header";
-import { Skeleton } from "@/shared/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,24 +19,32 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/ui/alert-dialog";
+import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/shared/ui/dialog";
+import { ErrorState } from "@/shared/ui/error-state";
+import { PageHeader } from "@/shared/ui/page-header";
+import { Skeleton } from "@/shared/ui/skeleton";
 import { cancelSubscription, getBillingState, startCheckout, startSubscription } from "./billing-api.js";
 
 /**
- * Тариф и оплата (Platega, 2026-10-25). Два способа: разовая оплата и
- * автопродление через СБП (отдельное согласие на автосписания, отключение
- * здесь же, в один шаг). Путь покупки: тариф → цена →
- * «Оплатить» → платёжная форма Platega → возврат сюда (`?payment=<id>`),
- * пока callback не подтвердит платёж, страница опрашивает статус. Пока
- * ключей Platega нет, кнопка кликается и показывает заглушку (требование
- * платёжной системы к пути покупки).
+ * «Тариф» репетитора (решение владельца 2026-11-24): одна плашка — какой тариф
+ * и до какого числа, кнопка продления и автопродление; ниже — история
+ * платежей. Плашка — в духе сайтов платёжных сервисов (тёмная, со свечением
+ * и объёмным знаком «Матис» с лендинга).
+ *
+ * Путь оплаты прежний: «Продлить» → платёжная форма Platega → возврат сюда
+ * (`?payment=<id>`), страница опрашивает статус, пока callback не подтвердит.
+ * Автопродление — только с отдельным явным согласием (галочка в окне).
  */
 const rub = new Intl.NumberFormat("ru-RU");
 const dateIntl = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric" });
-/** «25 ноября 2026 г.» без переноса «г.» на отдельную строку. */
-const dateFmt = { format: (d: Date) => dateIntl.format(d).replace(/ г\.$/, "\u00a0г.") };
-
+/** «24 марта 2027» — без «г.». */
+const dateFmt = (d: Date) => dateIntl.format(d).replace(/\s*г\.$/, "");
 const amountFor = (monthly: number, period: BillingPeriod) => (period === "year" ? monthly * YEAR_MONTHS_CHARGED : monthly);
+
+/** Тариф, который продаётся репетитору онлайн. */
+const OFFER = PUBLIC_BILLING_PLANS[0]!;
 
 export function BillingPage() {
   const [params, setParams] = useSearchParams();
@@ -49,13 +52,8 @@ export function BillingPage() {
   const returnedPayment = params.get("payment");
   const returnedFailed = params.get("failed") === "1";
   const state = useAsync(getBillingState, []);
-  // Репетитор (учитель личного пространства) — один, без участников: строки про учителей и методистов ему не нужны.
-  const isTutor = useAuthStore((st) => st.user?.role) === "teacher";
-  // С лендинга приходят `?plan=…&period=…` — сохраняем выбранный период.
-  const [period, setPeriod] = useState<BillingPeriod>(() => (params.get("period") === "year" ? "year" : "month"));
-  const [busy, setBusy] = useState<BillingPlanId | null>(null);
-  const [mode, setMode] = useState<"once" | "autopay">("once");
-  const [consent, setConsent] = useState(false);
+  const [busy, setBusy] = useState<BillingPeriod | "autopay" | null>(null);
+  const [autopayOpen, setAutopayOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
@@ -76,23 +74,39 @@ export function BillingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [waiting]);
 
-  const pay = async (plan: BillingPlanId) => {
+  const go = (url: string) => {
+    // Тестовая форма — своя страница: переходим без перезагрузки.
+    const u = new URL(url, window.location.origin);
+    if (u.pathname === "/billing/test-pay") navigate(u.pathname + u.search);
+    else window.location.assign(url);
+  };
+
+  const fail = (e: unknown, fallback: string) => {
+    if (e instanceof ApiError && e.code === "payments_unavailable") setUnavailable(true);
+    else setError(e instanceof Error ? e.message : fallback);
+    setBusy(null);
+  };
+
+  const pay = async (period: BillingPeriod) => {
     setError(null);
     setUnavailable(false);
-    setBusy(plan);
+    setBusy(period);
     try {
-      const { url } =
-        mode === "autopay"
-          ? await startSubscription({ plan, period, autopayConsent: true })
-          : await startCheckout({ plan, period });
-      // Тестовая форма — своя страница: переходим без перезагрузки и без привязки к домену из настроек.
-      const u = new URL(url, window.location.origin);
-      if (u.pathname === "/billing/test-pay") navigate(u.pathname + u.search);
-      else window.location.assign(url);
+      go((await startCheckout({ plan: OFFER.id, period })).url);
     } catch (e) {
-      if (e instanceof ApiError && e.code === "payments_unavailable") setUnavailable(true);
-      else setError(e instanceof Error ? e.message : "Не удалось начать оплату");
-      setBusy(null);
+      fail(e, "Не удалось начать оплату");
+    }
+  };
+
+  const subscribe = async (period: BillingPeriod) => {
+    setError(null);
+    setUnavailable(false);
+    setBusy("autopay");
+    try {
+      go((await startSubscription({ plan: OFFER.id, period, autopayConsent: true })).url);
+    } catch (e) {
+      setAutopayOpen(false);
+      fail(e, "Не удалось включить автопродление");
     }
   };
 
@@ -113,25 +127,18 @@ export function BillingPage() {
   if (state.error) return <ErrorState description={state.error} onRetry={state.reload} />;
 
   const s = state.data;
-  // Пока состояние не пришло — только Telegram: почту репетиторам не показываем (решение владельца 2026-10-26).
   const support = s?.support ?? supportContactsFor("individual");
   const paidUntil = s?.paidUntil ? new Date(s.paidUntil) : null;
-  const active = paidUntil && paidUntil.getTime() > Date.now();
-  const currentPlan = BILLING_PLANS.find((p) => p.id === s?.plan);
-  const sub = s?.subscription ?? null;
-  const subPlan = BILLING_PLANS.find((p) => p.id === sub?.plan);
-  const autopayOn = sub?.status === "active";
 
   return (
     <div className="mx-auto max-w-5xl">
-      <PageHeader title="Тариф и оплата" subtitle="Разовая оплата на месяц или год, или автопродление через СБП." />
+      <PageHeader title="Тариф" />
 
       {s?.testMode ? (
-        <Alert className="mb-6" role="status">
-          <Clock aria-hidden />
-          <AlertTitle>Тестовый режим оплаты</AlertTitle>
-          <AlertDescription>Платёжная система ещё не подключена: оплата проходит на тестовой форме, деньги не списываются.</AlertDescription>
-        </Alert>
+        <p className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+          <Clock className="size-4" aria-hidden />
+          Тестовый режим: оплата проходит на тестовой форме, деньги не списываются.
+        </p>
       ) : null}
 
       {returnedPayment ? (
@@ -144,177 +151,54 @@ export function BillingPage() {
         />
       ) : null}
 
-      {state.loading ? (
-        <Skeleton className="mb-6 h-16 w-full rounded-lg" />
-      ) : (
-        <Card className="mb-6 flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-          <div>
-            <p className="text-sm text-muted-foreground">Текущий тариф</p>
-            <p className="font-semibold text-foreground">
-              {active && currentPlan
-                ? `«${currentPlan.name}», оплачено до ${dateFmt.format(paidUntil)}`
-                : paidUntil && currentPlan
-                  ? `«${currentPlan.name}», оплата закончилась ${dateFmt.format(paidUntil)}`
-                  : "Бесплатный минимум — тариф не оплачен"}
-            </p>
-          </div>
-          <PeriodSwitch value={period} onChange={setPeriod} />
-        </Card>
-      )}
-
-      {s ? <LimitsCard state={s} tutor={isTutor} /> : null}
-
-      {sub && subPlan ? (
-        <Card className="mb-6 flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-          <div>
-            <p className="text-sm text-muted-foreground">Автопродление через СБП</p>
-            <p className="font-semibold text-foreground">
-              {sub.status === "active"
-                ? `Включено: ${rub.format(sub.amountRub)} ₽ ${sub.period === "year" ? "раз в год" : "раз в месяц"}${sub.nextChargeAt ? `, следующее списание ${dateFmt.format(new Date(sub.nextChargeAt))}` : ""}`
-                : sub.status === "pending"
-                  ? "Ждём подтверждения привязки в приложении банка"
-                  : "Последнее списание не прошло, автопродление остановлено"}
-            </p>
-          </div>
-          {sub.status !== "past_due" ? (
-            <Button variant="secondary" onClick={() => setConfirmCancel(true)}>
-              Отключить автопродление
-            </Button>
-          ) : null}
-        </Card>
-      ) : null}
-
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <ModeSwitch value={mode} onChange={setMode} />
-        {mode === "autopay" ? (
-          <span className="text-sm text-muted-foreground">Только через СБП. Списание в начале каждого периода.</span>
-        ) : null}
-      </div>
-      {mode === "autopay" && !autopayOn ? (
-        <label className="mb-6 flex items-start gap-2.5 text-sm text-foreground">
-          <Checkbox checked={consent} onCheckedChange={(v) => setConsent(v === true)} className="mt-0.5" />
-          <span>
-            Согласен на автоматическое списание стоимости выбранного тарифа {period === "year" ? "раз в год" : "раз в месяц"}{" "}
-            через СБП до отмены. Отключить автопродление можно в любой момент на этой странице или по ссылке из письма о
-            списании.
-          </span>
-        </label>
-      ) : null}
-
       {unavailable ? (
-        <Alert className="mb-6" role="status">
+        <Alert className="mb-4" role="status">
           <Clock aria-hidden />
           <AlertTitle>Оплата пока недоступна</AlertTitle>
           <AlertDescription>
-            Мы подключаем платёжную систему. Напишите нам: <SupportLinks contacts={support} />, и мы включим тариф
-            вручную.
+            Напишите нам: <SupportLinks contacts={support} />, и мы включим тариф вручную.
           </AlertDescription>
         </Alert>
       ) : null}
       {error ? (
-        <Alert variant="destructive" className="mb-6" role="alert">
+        <Alert variant="destructive" className="mb-4" role="alert">
           <CircleAlert aria-hidden />
-          <AlertTitle>Не удалось начать оплату</AlertTitle>
+          <AlertTitle>Не получилось</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {/* Временно только открытые тарифы: школьные скрыты из-за лимита Platega 19 000 ₽ на платёж (2026-10-28). */}
-        {PUBLIC_BILLING_PLANS.map((p) => {
-          const amount = amountFor(p.monthlyRub, period);
-          const isCurrent = active && s?.plan === p.id;
-          return (
-            <Card key={p.id} className={cn("flex flex-col p-6", isCurrent && "border-primary")}>
-              <div className="flex items-baseline justify-between gap-3">
-                <h2 className="text-xl font-bold tracking-[-.02em] text-foreground">{p.name}</h2>
-                {isCurrent ? <span className="text-xs font-medium text-primary">Ваш тариф</span> : null}
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">{p.tagline}</p>
-              <p className="mt-5 flex items-baseline gap-1.5">
-                <span className="text-[34px] font-black leading-none tracking-[-.03em] text-foreground tabular-nums">
-                  {rub.format(amount)} ₽
-                </span>
-                <span className="text-sm text-muted-foreground">{period === "year" ? "за 12 месяцев" : "в месяц"}</span>
-              </p>
-              <p className="mt-1 h-5 text-xs text-muted-foreground">
-                {period === "year" ? `${rub.format(Math.round(amount / 12))} ₽ в месяц, 2 месяца в подарок` : ""}
-              </p>
-              <ul className="mt-5 flex-1 space-y-2.5">
-                {p.features.map((f) => (
-                  <li key={f} className="flex gap-2.5 text-sm text-foreground">
-                    <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Button
-                className="mt-6 w-full"
-                size="lg"
-                loading={busy === p.id}
-                disabled={busy !== null || (mode === "autopay" && (!consent || autopayOn))}
-                onClick={() => void pay(p.id)}
-              >
-                {mode === "autopay"
-                  ? autopayOn
-                    ? "Автопродление уже включено"
-                    : `Подписаться: ${rub.format(amount)} ₽ ${period === "year" ? "в год" : "в месяц"}`
-                  : `${isCurrent ? "Продлить" : "Оплатить"} ${rub.format(amount)} ₽`}
-              </Button>
-            </Card>
-          );
-        })}
-      </div>
+      {s ? (
+        <PlanCard
+          state={s}
+          paidUntil={paidUntil}
+          busy={busy}
+          onPay={(p) => void pay(p)}
+          onAutopay={() => setAutopayOpen(true)}
+          onCancelAutopay={() => setConfirmCancel(true)}
+        />
+      ) : (
+        <Skeleton className="h-[320px] w-full rounded-[28px]" />
+      )}
 
-      {/* Школа или организация: тарифы для школ пока подключаем вручную, без онлайн-оплаты. */}
-      {support.email ? (
-        <Card className="mt-4 px-6 py-5">
-          <h2 className="font-bold text-foreground">Тарифы для школ</h2>
-          <p className="mt-1 text-sm text-muted-foreground [text-wrap:pretty]">
-            Подключаем по запросу: подберём объём под ваше расписание и включим тариф вручную. Напишите нам:{" "}
-            <SupportLinks contacts={support} />.
-          </p>
-        </Card>
-      ) : null}
+      {s ? <PaymentHistory items={s.payments} /> : null}
 
-      {DEDICATED_PLAN_PUBLIC ? (
-      <Card className="mt-4 flex flex-wrap items-center justify-between gap-3 px-6 py-5">
-        <div>
-          <h2 className="font-bold text-foreground">Выделенный</h2>
-          <p className="text-sm text-muted-foreground">
-            Свои серверы для вашей школы, домен и связка с CRM. От {rub.format(DEDICATED_PLAN_FROM_RUB)} ₽ в месяц, по договору.
-          </p>
-        </div>
-        <Button variant="secondary" asChild>
-          {support.email ? (
-            <a href={`mailto:${support.email}?subject=${encodeURIComponent("Тариф «Выделенный»")}`}>Обсудить внедрение</a>
-          ) : (
-            <a href={support.telegramUrl} target="_blank" rel="noreferrer">
-              Написать в Telegram
-            </a>
-          )}
-        </Button>
-      </Card>
-      ) : null}
-
-      <p className="mt-6 text-sm text-muted-foreground [text-wrap:pretty]">
-        После оплаты тариф включается сразу, чек приходит на почту. При отключении автопродления оплаченный срок
-        сохраняется. Деньги за неиспользованные дни можно вернуть по
-        заявлению в поддержку: <SupportLinks contacts={support} />.
-        Условия — в{" "}
+      <p className="mt-8 text-sm text-muted-foreground [text-wrap:pretty]">
+        Вопросы по оплате и возврат — <SupportLinks contacts={support} />. Условия — в{" "}
         <Link to="/terms" className="font-medium text-primary hover:underline">
           пользовательском соглашении
         </Link>
         .
       </p>
-      {s ? <PaymentHistory items={s.payments} /> : null}
+
+      <AutopayDialog open={autopayOpen} busy={busy === "autopay"} onOpenChange={setAutopayOpen} onSubscribe={(p) => void subscribe(p)} />
+
       <AlertDialog open={confirmCancel} onOpenChange={(v) => !v && setConfirmCancel(false)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Отключить автопродление?</AlertDialogTitle>
             <AlertDialogDescription>
-              Новых списаний не будет. Тариф работает до конца оплаченного срока
-              {paidUntil ? `, до ${dateFmt.format(paidUntil)}` : ""}.
+              Новых списаний не будет. Тариф работает до конца оплаченного срока{paidUntil ? `, до ${dateFmt(paidUntil)}` : ""}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -329,104 +213,256 @@ export function BillingPage() {
   );
 }
 
-/** Э15.6: что даёт тариф сейчас (или бесплатный минимум) и сколько занято. */
-function LimitsCard({ state, tutor }: { state: BillingState; tutor: boolean }) {
-  const { limits: l, usage: u } = state;
+/** Главная плашка: тариф, срок, продление, автопродление. Справа — объёмный знак «Матис». */
+function PlanCard({
+  state: s,
+  paidUntil,
+  busy,
+  onPay,
+  onAutopay,
+  onCancelAutopay,
+}: {
+  state: BillingState;
+  paidUntil: Date | null;
+  busy: BillingPeriod | "autopay" | null;
+  onPay: (period: BillingPeriod) => void;
+  onAutopay: () => void;
+  onCancelAutopay: () => void;
+}) {
+  const plan = BILLING_PLANS.find((p) => p.id === s.plan);
+  const active = Boolean(plan && paidUntil && paidUntil.getTime() > Date.now());
+  const expired = Boolean(plan && paidUntil && !active);
+  const l = s.limits;
   const rec = l.recordingHoursPerMonth;
-  // Оранжевым — только то, что упёрлось в лимит и мешает работать.
-  const rows: { label: string; value: string; over?: boolean }[] = [
-    {
-      label: "Аудитории",
-      value:
-        l.rooms === null
-          ? `${u.rooms}, без ограничения`
-          : u.rooms > l.rooms
-            ? `${u.rooms} из ${l.rooms}: для уроков открыты первые ${l.rooms}`
-            : `${u.rooms} из ${l.rooms}`,
-      over: l.rooms !== null && u.rooms > l.rooms,
-    },
-    ...(tutor
-      ? []
-      : [
-          {
-            label: "Учителя",
-            value: l.teachers === null ? `${u.teachers}, без ограничения` : `${u.teachers} из ${l.teachers}`,
-            over: l.teachers !== null && u.teachers > l.teachers,
-          },
-          {
-            label: "Методисты",
-            value: l.methodists === null ? `${u.methodists}, без ограничения` : l.methodists === 0 ? "нет в тарифе" : `${u.methodists} из ${l.methodists}`,
-          },
-        ]),
-    { label: "Учеников в уроке", value: l.studentsPerLesson === null ? "без ограничения" : `до ${l.studentsPerLesson}` },
-    {
-      label: "Запись уроков",
-      value: rec === null ? "без ограничения" : rec === 0 ? "нет в тарифе" : `${hoursFmt.format(u.recordingHoursThisMonth)} из ${rec} ч в этом месяце`,
-      over: rec !== null && rec > 0 && u.recordingHoursThisMonth >= rec,
-    },
-    ...(rec === 0 || l.recordingRetentionDays === null
-      ? []
-      : [{ label: "Хранение записей", value: `${l.recordingRetentionDays} дней` }]),
-    { label: "Библиотека Матиса", value: l.matisLibrary ? "есть" : "нет в тарифе" },
+
+  const status = active
+    ? { label: "Активен", dot: "bg-emerald-400" }
+    : expired
+      ? { label: "Закончился", dot: "bg-amber-400" }
+      : { label: "Бесплатный тариф", dot: "bg-white/60" };
+  const title = plan && (active || expired) ? plan.name : "Старт";
+  const term = active ? `Оплачен до ${dateFmt(paidUntil!)}` : expired ? `Закончился ${dateFmt(paidUntil!)}` : "Бесплатно, без срока";
+  const facts = [
+    l.studentsPerLesson === null ? "Ученики без ограничения" : `До ${l.studentsPerLesson} учеников в уроке`,
+    rec === 0 ? "Без записи уроков" : rec === null ? "Запись без ограничения" : `Запись: ${hours(s.usage.recordingHoursThisMonth)} из ${rec} ч в этом месяце`,
   ];
+  const month = amountFor(OFFER.monthlyRub, "month");
+  const year = amountFor(OFFER.monthlyRub, "year");
+
   return (
-    <Card className="mb-6 px-5 py-4">
-      <h2 className="mb-3 text-sm text-muted-foreground">Что доступно сейчас</h2>
-      <dl className="grid gap-x-8 gap-y-2.5 sm:grid-cols-2 lg:grid-cols-3">
-        {rows.map((r) => (
-          <div key={r.label} className="flex items-baseline justify-between gap-3 border-b border-border pb-2 sm:block sm:border-0 sm:pb-0">
-            <dt className="text-sm text-muted-foreground">{r.label}</dt>
-            <dd className={cn("text-sm font-semibold tabular-nums text-foreground", r.over && "text-warning")}>{r.value}</dd>
-          </div>
-        ))}
-      </dl>
-    </Card>
-  );
-}
-
-const hoursFmt = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 });
-
-function ModeSwitch({ value, onChange }: { value: "once" | "autopay"; onChange: (v: "once" | "autopay") => void }) {
-  const opt = (v: "once" | "autopay", label: string) => (
-    <button
-      type="button"
-      aria-pressed={value === v}
-      onClick={() => onChange(v)}
-      className={cn(
-        "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-        value === v ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground",
-      )}
+    <section
+      aria-labelledby="plan-title"
+      // Свечение — фон самой плашки, а не отдельный слой поверх: текст лежит на сплошном тёмном фоне.
+      style={{
+        backgroundImage:
+          "radial-gradient(55% 75% at 88% 35%, rgba(59,108,246,0.55), transparent 70%), radial-gradient(45% 60% at 100% 100%, rgba(124,58,237,0.38), transparent 72%), radial-gradient(40% 55% at 0% 0%, rgba(29,78,216,0.22), transparent 70%)",
+      }}
+      className="relative overflow-hidden rounded-[28px] bg-[#070b1f] p-6 text-white sm:p-8 md:px-12 md:py-12"
     >
-      {label}
-    </button>
-  );
-  return (
-    <div role="group" aria-label="Способ оплаты" className="inline-flex rounded-lg bg-muted p-1">
-      {opt("once", "Разовая оплата")}
-      {opt("autopay", "Автопродление")}
-    </div>
+      <div className="grid items-center gap-y-2 md:grid-cols-[minmax(0,1fr)_minmax(0,300px)] md:gap-x-8">
+        <MarkScene className="order-first mx-auto -mb-1 w-[112px] md:order-last md:-my-6 md:mx-0 md:w-full md:max-w-[300px] md:justify-self-end" />
+
+        <div className="min-w-0">
+          <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[13px] font-medium text-white/85 ring-1 ring-inset ring-white/15">
+            <span className={cn("size-2 rounded-full", status.dot)} aria-hidden />
+            {status.label}
+          </p>
+          <h2 id="plan-title" className="mt-4 text-[40px] font-black leading-none tracking-[-0.035em] sm:text-[52px]">
+            {title}
+          </h2>
+          <p className="mt-3 text-lg font-semibold text-white/90 sm:text-xl">{term}</p>
+          <p className="mt-2 text-sm text-white/60">{facts.join(" · ")}</p>
+
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
+            <Button
+              size="lg"
+              className="h-12 w-full rounded-xl bg-[#3b6cf6] px-6 text-[15px] text-white shadow-none hover:bg-[#2f5ce6] sm:w-auto"
+              loading={busy === "month"}
+              disabled={busy !== null}
+              onClick={() => onPay("month")}
+            >
+              {active || expired ? `Продлить на месяц — ${rub.format(month)} ₽` : `Подключить за ${rub.format(month)} ₽ в месяц`}
+            </Button>
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={() => onPay("year")}
+              className="group min-h-11 text-left text-sm disabled:opacity-50"
+            >
+              <span className="block font-semibold text-white/85 underline-offset-4 group-hover:text-white group-hover:underline">
+                {busy === "year" ? "Открываем оплату…" : `За год — ${rub.format(year)}\u00a0₽, выгоднее на\u00a017%`}
+              </span>
+            </button>
+          </div>
+          {!active && !expired ? (
+            <p className="mt-3 text-sm text-white/60">
+              «{OFFER.name}»: до {OFFER.limits.studentsPerLesson} учеников, запись уроков, библиотека Матиса.
+            </p>
+          ) : null}
+
+          <AutopayLine sub={s.subscription} canEnable={s.paymentsEnabled} onEnable={onAutopay} onCancel={onCancelAutopay} />
+        </div>
+      </div>
+    </section>
   );
 }
 
-function PeriodSwitch({ value, onChange }: { value: BillingPeriod; onChange: (v: BillingPeriod) => void }) {
+function AutopayLine({
+  sub,
+  canEnable,
+  onEnable,
+  onCancel,
+}: {
+  sub: BillingState["subscription"];
+  canEnable: boolean;
+  onEnable: () => void;
+  onCancel: () => void;
+}) {
+  const link = "inline-flex min-h-11 items-center font-medium text-white underline-offset-4 hover:underline";
+  let content: ReactNode;
+  if (sub?.status === "active") {
+    content = (
+      <>
+        {sub.nextChargeAt ? `Автосписание ${dateFmt(new Date(sub.nextChargeAt))}` : "Автопродление включено"} ·{" "}
+        <button type="button" className={link} onClick={onCancel}>
+          Отключить
+        </button>
+      </>
+    );
+  } else if (sub?.status === "pending") {
+    content = (
+      <>
+        Автопродление: ждём подтверждения в приложении банка ·{" "}
+        <button type="button" className={link} onClick={onCancel}>
+          Отменить
+        </button>
+      </>
+    );
+  } else if (canEnable) {
+    content = (
+      <>
+        {sub?.status === "past_due" ? "Последнее автосписание не прошло · " : "Автопродление выключено · "}
+        <button type="button" className={link} onClick={onEnable}>
+          Включить через СБП
+        </button>
+      </>
+    );
+  } else return null;
+  return <p className="mt-6 border-t border-white/10 pt-2 text-sm text-white/65">{content}</p>;
+}
+
+/** Включение автопродления: период и отдельное явное согласие на автосписания. */
+function AutopayDialog({
+  open,
+  busy,
+  onOpenChange,
+  onSubscribe,
+}: {
+  open: boolean;
+  busy: boolean;
+  onOpenChange: (v: boolean) => void;
+  onSubscribe: (period: BillingPeriod) => void;
+}) {
+  const [period, setPeriod] = useState<BillingPeriod>("month");
+  const [consent, setConsent] = useState(false);
+  useEffect(() => {
+    if (open) setConsent(false);
+  }, [open]);
+  const amount = amountFor(OFFER.monthlyRub, period);
   const opt = (v: BillingPeriod, label: string) => (
     <button
       type="button"
-      aria-pressed={value === v}
-      onClick={() => onChange(v)}
+      aria-pressed={period === v}
+      onClick={() => setPeriod(v)}
       className={cn(
-        "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-        value === v ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground",
+        "flex-1 rounded-lg border px-4 py-3 text-left text-sm transition-colors",
+        period === v ? "border-primary bg-primary-light font-semibold text-foreground" : "border-border text-muted-foreground hover:text-foreground",
       )}
     >
       {label}
     </button>
   );
   return (
-    <div role="group" aria-label="Период оплаты" className="inline-flex rounded-lg bg-muted p-1">
-      {opt("month", "Месяц")}
-      {opt("year", "Год −17%")}
-    </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Автопродление через СБП</DialogTitle>
+          <DialogDescription>Тариф «{OFFER.name}» будет продлеваться сам, списание — в начале каждого периода.</DialogDescription>
+        </DialogHeader>
+        <div className="flex gap-2" role="group" aria-label="Период">
+          {opt("month", `Каждый месяц — ${rub.format(amountFor(OFFER.monthlyRub, "month"))} ₽`)}
+          {opt("year", `Каждый год — ${rub.format(amountFor(OFFER.monthlyRub, "year"))} ₽`)}
+        </div>
+        <label className="flex items-start gap-2.5 text-sm text-foreground">
+          <Checkbox checked={consent} onCheckedChange={(v) => setConsent(v === true)} className="mt-0.5" />
+          <span>
+            Согласен на автоматическое списание {rub.format(amount)} ₽ {period === "year" ? "раз в год" : "раз в месяц"} через СБП до отмены.
+            Отключить можно в любой момент на этой странице.
+          </span>
+        </label>
+        <DialogFooter>
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>
+            Отмена
+          </Button>
+          <Button loading={busy} disabled={!consent || busy} onClick={() => onSubscribe(period)}>
+            Подписаться — {rub.format(amount)} ₽
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const hoursIntl = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 });
+const hours = (h: number) => hoursIntl.format(h);
+
+const STATUS: Record<BillingState["payments"][number]["status"], { label: string; className: string }> = {
+  confirmed: { label: "Оплачено", className: "bg-emerald-50 text-emerald-700" },
+  pending: { label: "Обрабатывается", className: "bg-amber-50 text-amber-700" },
+  chargebacked: { label: "Возврат", className: "bg-red-50 text-red-700" },
+};
+const SOURCE_LABEL: Record<BillingState["payments"][number]["source"], string> = {
+  once: "разовая оплата",
+  autopay: "автопродление",
+  manual: "подключено командой Матиса",
+};
+
+/** История платежей: дата, тариф и срок, сумма, статус. Брошенные попытки оплаты сервер не отдаёт. */
+function PaymentHistory({ items }: { items: BillingState["payments"] }) {
+  return (
+    <section aria-labelledby="payments-title" className="mt-12">
+      <h2 id="payments-title" className="mb-4 text-xl font-bold tracking-[-.02em] text-foreground">
+        История платежей
+      </h2>
+      {items.length === 0 ? (
+        <p className="rounded-[20px] border border-border bg-card px-6 py-8 text-center text-sm text-muted-foreground">Платежей пока нет.</p>
+      ) : (
+        <ul className="divide-y divide-border overflow-hidden rounded-[20px] border border-border bg-card">
+          {items.map((p) => {
+            const plan = BILLING_PLANS.find((x) => x.id === p.plan);
+            const st = STATUS[p.status];
+            return (
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-6 py-4">
+                <div className="min-w-0">
+                  <p className="text-[15px] font-semibold text-foreground">
+                    «{plan?.name ?? p.plan}» на {p.period === "year" ? "год" : "месяц"}
+                  </p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
+                    {dateFmt(new Date(p.date))} · {SOURCE_LABEL[p.source]}
+                  </p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-[15px] font-semibold tabular-nums text-foreground">
+                    {p.source === "manual" ? "—" : `${rub.format(p.amountRub)} ₽`}
+                  </span>
+                  <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", st.className)}>{st.label}</span>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -445,7 +481,7 @@ function ReturnBanner({
 }) {
   if (failed) {
     return (
-      <Alert variant="destructive" className="mb-6" role="alert">
+      <Alert variant="destructive" className="mb-4" role="alert">
         <CircleAlert aria-hidden />
         <AlertTitle>Оплата не прошла</AlertTitle>
         <AlertDescription>
@@ -459,71 +495,18 @@ function ReturnBanner({
   }
   if (confirmed) {
     return (
-      <Alert className="mb-6" role="status">
+      <Alert className="mb-4" role="status">
         <CircleCheck aria-hidden />
         <AlertTitle>Оплата прошла, тариф включён</AlertTitle>
-        <AlertDescription>Чек придёт на почту.</AlertDescription>
+        <AlertDescription>Письмо с подтверждением и чек придут на почту.</AlertDescription>
       </Alert>
     );
   }
   return (
-    <Alert className="mb-6" role="status">
+    <Alert className="mb-4" role="status">
       <Clock aria-hidden />
       <AlertTitle>{waiting ? "Проверяем оплату…" : "Платёж обрабатывается"}</AlertTitle>
-      <AlertDescription>
-        Обычно это занимает до минуты. Если тариф не включится, напишите в поддержку: {support}.
-      </AlertDescription>
+      <AlertDescription>Обычно это занимает до минуты. Если тариф не включится, напишите в поддержку: {support}.</AlertDescription>
     </Alert>
-  );
-}
-
-const STATUS_LABEL: Record<BillingState["payments"][number]["status"], string> = {
-  confirmed: "Оплачено",
-  pending: "Обрабатывается",
-  chargebacked: "Возврат",
-};
-const SOURCE_LABEL: Record<BillingState["payments"][number]["source"], string> = {
-  once: "разовая оплата",
-  autopay: "автопродление",
-  manual: "подключено командой Матиса",
-};
-
-/** История платежей: дата, тариф и срок, сумма, статус. Брошенные попытки оплаты сервер не отдаёт. */
-function PaymentHistory({ items }: { items: BillingState["payments"] }) {
-  return (
-    <section aria-labelledby="payments-title" className="mt-12">
-      <h2 id="payments-title" className="mb-3 text-lg font-bold tracking-[-.01em] text-foreground">
-        История платежей
-      </h2>
-      {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Платежей пока нет.</p>
-      ) : (
-        <Card className="divide-y divide-border px-5 py-1">
-          {items.map((p) => {
-            const plan = BILLING_PLANS.find((x) => x.id === p.plan);
-            return (
-              <div key={p.id} className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 py-4">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground">
-                    «{plan?.name ?? p.plan}» на {p.period === "year" ? "год" : "месяц"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {dateFmt.format(new Date(p.date))} · {SOURCE_LABEL[p.source]}
-                  </p>
-                </div>
-                <div className="flex items-baseline gap-4 text-sm">
-                  <span className="font-semibold tabular-nums text-foreground">
-                    {p.source === "manual" ? "—" : `${rub.format(p.amountRub)} ₽`}
-                  </span>
-                  <span className={cn("w-[7.5rem] text-right", p.status === "confirmed" ? "text-muted-foreground" : "text-warning")}>
-                    {STATUS_LABEL[p.status]}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </Card>
-      )}
-    </section>
   );
 }

@@ -11,18 +11,23 @@ await p.goto(`${ORIGIN}/login`); await sleep(2500);
 await p.click("document.querySelector('input[type=email]')"); await p.type(process.env.EMAIL);
 await p.click("document.querySelector('input[type=password]')"); await p.type(process.env.PW);
 await p.click("document.querySelector('button[type=submit]')"); await sleep(3500);
+const SEL = process.env.SEL || 'section[aria-labelledby="payments-title"]';
+const TITLE = process.env.TITLE_ID || "#payments-title";
 const ids = [];
 for (const [w, mobile] of [[1440, false], [1728, false], [390, true]]) {
   await p.send("Emulation.setDeviceMetricsOverride", { width: w, height: 900, deviceScaleFactor: 1, mobile });
   await p.goto(`${ORIGIN}/billing`); await sleep(3500);
-  await p.eval(`document.querySelector('section[aria-labelledby="payments-title"]').scrollIntoView()`); await sleep(500);
+  await p.eval(`document.querySelector(${JSON.stringify(SEL)}).scrollIntoView()`); await sleep(500);
   const state = await p.eval(CAP, 30000);
-  const root = state.elements.find((e) => e.id === "#payments-title")?.parentId;
+  const titleEl = state.elements.find((e) => e.id === TITLE);
+  // Заголовок плашки вложен глубже — поднимаемся до section.
+  let root = titleEl?.parentId;
+  while (root && !state.elements.find((e) => e.id === root)?.id.startsWith("section")) root = state.elements.find((e) => e.id === root)?.parentId;
   const keep = new Set([root]);
   for (const e of state.elements) if (keep.has(e.parentId)) keep.add(e.id);
   state.elements = state.elements.filter((e) => keep.has(e.id));
-  state.scope = 'section[aria-labelledby="payments-title"]';
-  state.name = `viewport-${w} payments`;
+  state.scope = SEL;
+  state.name = `viewport-${w} ${SEL}`.slice(0, 100);
   const r = await fetch(process.env.UPLOAD, { method: "POST", headers: { "Content-Type": "text/plain;charset=UTF-8" }, body: JSON.stringify(state) }).then((x) => x.json()).catch((e) => ({ err: String(e) }));
   console.log(w, state.elements.length, JSON.stringify(r));
   if (r.captureId) ids.push(r.captureId);
