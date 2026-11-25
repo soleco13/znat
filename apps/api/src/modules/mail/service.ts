@@ -124,7 +124,7 @@ export async function sendPlanActivatedEmail(
       heading: subject,
       paragraphs,
       button: { label: "Проверить тариф в кабинете", url: input.billingUrl },
-      note: `Чек об оплате придёт отдельным письмом. Вопросы по оплате — в Telegram: ${input.telegramUrl}`,
+      note: `Вопросы по оплате — в Telegram: ${input.telegramUrl}`,
     },
     env.PUBLIC_ORIGIN,
   );

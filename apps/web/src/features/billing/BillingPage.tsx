@@ -183,7 +183,7 @@ export function BillingPage() {
       {s ? <PaymentHistory items={s.payments} /> : null}
 
       <p className="mt-6 text-[13px] text-text-3">
-        Чеки приходят на почту. Вопросы по оплате — <SupportLinks contacts={support} />
+        Вопросы по оплате — <SupportLinks contacts={support} />
       </p>
 
       <AutopayDialog open={autopayOpen} busy={busy === "autopay"} onOpenChange={setAutopayOpen} onSubscribe={(p) => void subscribe(p)} />
@@ -432,7 +432,7 @@ function ReturnBanner({
       <Alert className="mt-4" role="status">
         <CircleCheck aria-hidden />
         <AlertTitle>Оплата прошла, тариф включён</AlertTitle>
-        <AlertDescription>Письмо с подтверждением и чек придут на почту.</AlertDescription>
+        <AlertDescription>Письмо с подтверждением придёт на почту.</AlertDescription>
       </Alert>
     );
   }
