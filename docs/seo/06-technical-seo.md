@@ -27,12 +27,15 @@ robots.txt — не защита: приватные данные закрыты
 cd landing
 OUT=$(mktemp -d)
 npx tsc --noEmit
-VITE_SITE_URL=https://matis-edu.ru npx vite build --outDir "$OUT" --emptyOutDir
+VITE_SITE_URL=https://matis-edu.ru VITE_UMAMI_WEBSITE_ID=23981f7b-f29a-4082-80ee-980c63373edf \
+  npx vite build --outDir "$OUT" --emptyOutDir
 npx vite build --ssr
 node scripts/prerender.mjs "$OUT"
 ```
 
 Проверить `"$OUT"/index.html` (есть H1 и текст), затем `rsync -a "$OUT"/ dist/` и `rsync -a --delete "$OUT"/ dist/`.
+
+Без `VITE_UMAMI_WEBSITE_ID` сайт соберётся без счётчика посещений (Umami, панель — stats.matis-edu.ru; ID сайта не секрет, он виден в HTML).
 
 Важно: старая команда выкатки (`npx vite build` без шагов `--ssr` и `prerender.mjs`) соберёт сайт **без** текста в HTML.
 
