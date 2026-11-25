@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 import { brotliCompressSync, constants as zlibConstants } from "node:zlib";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import { PLANS } from "./src/lib/plans";
+import { SUPPORT_EMAIL } from "./src/lib/contacts";
 
 /**
  * Страницы сайта: адрес на домене → HTML-файл в сборке. Caddy отдаёт их
@@ -72,6 +74,53 @@ function devPages(): Plugin {
 }
 
 /**
+ * Разметка Schema.org (JSON-LD) — только то, что видно на самой странице:
+ * на главной — сайт и организация, на «Тарифах» — сервис с открытыми ценами
+ * (из src/lib/plans.ts, скрытые тарифы не попадают). Ни рейтингов, ни отзывов,
+ * ни адреса — их на сайте нет.
+ */
+function structuredData(site: string, path: string): object | null {
+  const org = {
+    "@type": "Organization",
+    "@id": `${site}/#org`,
+    name: "Матис",
+    alternateName: ["Matís", "Matis"],
+    url: `${site}/`,
+    logo: `${site}${BASE}og.png`,
+    email: SUPPORT_EMAIL,
+  };
+  if (path === "/") {
+    return {
+      "@context": "https://schema.org",
+      "@graph": [
+        org,
+        { "@type": "WebSite", "@id": `${site}/#site`, url: `${site}/`, name: "Матис", inLanguage: "ru", publisher: { "@id": `${site}/#org` } },
+      ],
+    };
+  }
+  if (path === "/pricing") {
+    return {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      name: "Матис",
+      url: `${site}/`,
+      applicationCategory: "EducationalApplication",
+      operatingSystem: "Web",
+      description: "Платформа для онлайн-уроков: видеосвязь, доска и слайды в одном окне. Ученик входит на урок по ссылке.",
+      publisher: org,
+      offers: PLANS.filter((p) => !p.hidden).map((p) => ({
+        "@type": "Offer",
+        name: p.name,
+        price: p.monthly,
+        priceCurrency: "RUB",
+        url: `${site}/pricing`,
+      })),
+    };
+  }
+  return null;
+}
+
+/**
  * Адрес сайта — из окружения (`VITE_SITE_URL`, по умолчанию `.env.production`):
  * canonical и og:url в каждой странице, robots.txt и sitemap.xml в сборке.
  * Без адреса эти теги и файлы не появляются — неверный canonical хуже никакого.
@@ -88,9 +137,11 @@ function seo(siteUrl: string | undefined): Plugin {
         const page = PAGES.find((p) => p.file === rel);
         if (!page) return html;
         const url = site + (page.path === "/" ? "/" : page.path);
+        const ld = structuredData(site, page.path);
+        const ldTag = ld ? `    <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>\n` : "";
         return html.replace(
           "</head>",
-          `    <link rel="canonical" href="${url}" />\n    <meta property="og:url" content="${url}" />\n    <meta property="og:image" content="${site}${BASE}og.png" />\n  </head>`,
+          `    <link rel="canonical" href="${url}" />\n    <meta property="og:url" content="${url}" />\n    <meta property="og:image" content="${site}${BASE}og.png" />\n    <meta name="twitter:card" content="summary" />\n${ldTag}  </head>`,
         );
       },
     },
@@ -99,7 +150,11 @@ function seo(siteUrl: string | undefined): Plugin {
       this.emitFile({
         type: "asset",
         fileName: "robots.txt",
-        source: `User-agent: *\nAllow: /\n\nSitemap: ${site}/sitemap.xml\n`,
+        // Приложение (кабинет, уроки по ссылке) закрыто от индекса метатегом
+        // noindex в apps/web/index.html, а не здесь: запрет обхода спрятал бы
+        // от робота сам noindex. Здесь — только API и метки рекламы (Clean-param
+        // понимает Яндекс: адреса с utm не считаются отдельными страницами).
+        source: `User-agent: *\nAllow: /\nDisallow: /api/\nClean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term&yclid&gclid&ysclid\n\nSitemap: ${site}/sitemap.xml\n`,
       });
       const urls = PAGES.map((p) => `  <url><loc>${site}${p.path === "/" ? "/" : p.path}</loc></url>`).join("\n");
       this.emitFile({
@@ -111,10 +166,10 @@ function seo(siteUrl: string | undefined): Plugin {
   };
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, isSsrBuild }) => {
   const env = loadEnv(mode, process.cwd(), "VITE_");
   return {
-    plugins: [react(), devPages(), seo(env.VITE_SITE_URL), brotliAssets()],
+    plugins: isSsrBuild ? [react()] : [react(), devPages(), seo(env.VITE_SITE_URL), brotliAssets()],
     resolve: {
       alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
     },
@@ -122,7 +177,11 @@ export default defineConfig(({ mode }) => {
     // приложения уже заняты `/assets/*` под свой бандл. Свой префикс — чтобы
     // ассеты лендинга не перекрывались с ассетами приложения.
     base: BASE,
-    build: {
+    // Вторая сборка (`vite build --ssr`) — только модуль предрендера для
+    // scripts/prerender.mjs, в свою папку и без страниц-входов.
+    build: isSsrBuild
+      ? { outDir: "dist-ssr", sourcemap: false, rollupOptions: { input: "src/entries/prerender.tsx" } }
+      : {
       outDir: "dist",
       sourcemap: false,
       rollupOptions: {
@@ -131,5 +190,7 @@ export default defineConfig(({ mode }) => {
         ),
       },
     },
+    // Пакеты в SSR-сборку целиком: Node не грузит их CSS (шрифт Manrope).
+    ssr: { noExternal: true },
   };
 });

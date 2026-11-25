@@ -69,3 +69,11 @@ Caddy отдаёт `/`, `/pricing`, `/contacts`, `/robots.txt`, `/sitemap.xml` �
 `/landing/*` из этой папки, остальное — приложению (Caddyfile, Caddyfile.prod).
 Адрес сайта для canonical, og:url и sitemap — `VITE_SITE_URL`
 (`.env.production`); без него эти теги и файлы не создаются.
+
+## Предрендер и выкатка
+
+Сборка кладёт в HTML готовую разметку страниц (`src/entries/prerender.tsx`,
+`scripts/prerender.mjs`): поисковые роботы и превью видят текст без JS. В
+браузере React «оживляет» её через `hydrateRoot` — поэтому всё, что зависит от
+`window`, только в `useEffect`. Порядок сборки во временную папку и выкатки —
+`docs/seo/06-technical-seo.md`. Собирать прямо в `dist/` нельзя: её раздаёт Caddy.
