@@ -153,6 +153,14 @@
 			disable_canonical_uris
 		}
 	}
+	# Счётчик Umami (docker-compose.prod.yml → umami) на своём домене: скрипт и
+	# приём событий, больше ничего — панель только на STATS_DOMAIN (ниже).
+	# Свой домен — счётчик не режут блокировщики чужих доменов и не нужен CSP.
+	@umami_public path /u/script.js /u/api/send
+	handle @umami_public {
+		uri strip_prefix /u
+		reverse_proxy umami:3000
+	}
 	# robots.txt и sitemap.xml кладёт сборка лендинга (по VITE_SITE_URL).
 	@landing_seo path /robots.txt /sitemap.xml
 	handle @landing_seo {

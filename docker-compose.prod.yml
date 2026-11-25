@@ -143,6 +143,31 @@ services:
       - ./deploy/nginx-sni/nginx.conf.template:/etc/nginx/templates/nginx.conf.template:ro
     logging: *rotated-logs
 
+  # Статистика посещений сайта — Umami (решение владельца 2026-11-25), свой
+  # сервер вместо чужих счётчиков: без cookie, IP не хранится. Счётчик стоит
+  # только на страницах сайта (landing/), не в кабинете и не в уроках.
+  # Наружу: /u/script.js и /u/api/send на основном домене, панель — на
+  # STATS_DOMAIN (Caddyfile.prod). База — отдельная `umami` в нашем Postgres
+  # со своим пользователем (пароль и секрет — в .env, не в git).
+  # Ядра записи/конвертера с квотой 0.3 и лимитом памяти: не мешает урокам.
+  umami:
+    image: ghcr.io/umami-software/umami:3.4.1
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD:?set UMAMI_DB_PASSWORD in .env}@postgres:5432/umami
+      APP_SECRET: ${UMAMI_APP_SECRET:?set UMAMI_APP_SECRET in .env}
+      DISABLE_TELEMETRY: "1"
+      DISABLE_UPDATES: "1"
+      # IP посетителя — из заголовка Caddy (страна и город; сам IP не сохраняется).
+      CLIENT_IP_HEADER: X-Forwarded-For
+    cpuset: "4,5,10,11"
+    cpu_quota: 30000
+    mem_limit: 512m
+    logging: *rotated-logs
+
 # Мониторинг (docker-compose.monitoring.yml) по §10.3 на 8-ядерном шаблоне
 # жил на последнем ядре с небольшой квотой. Здесь отдельно не пиннингуется —
 # экспортёры почти не едят CPU; если поднимать — на CPU 4,5,10,11 (не на

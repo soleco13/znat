@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
@@ -187,7 +187,32 @@ const SECTIONS: { id: string; title: string; body: ReactNode }[] = [
   },
 ];
 
+/** Счётчик Umami (vite.config.ts → seo): на стенде и локально его нет. */
+declare global {
+  interface Window {
+    umami?: { track: (event: string) => void };
+  }
+}
+
+/** Событие «Статья дочитана» — один раз, когда виден конец текста. */
+function useReadToEnd() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      window.umami?.track("Статья дочитана");
+      io.disconnect();
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return ref;
+}
+
 export function GuidePage() {
+  const end = useReadToEnd();
   return (
     <Layout page="guide">
       <article className="pb-20 pt-12 sm:pb-28 sm:pt-20">
@@ -226,6 +251,7 @@ export function GuidePage() {
                   {s.body}
                 </section>
               ))}
+              <div ref={end} aria-hidden />
             </div>
           </div>
         </div>
@@ -241,7 +267,7 @@ export function GuidePage() {
               Бесплатный тариф без срока: до трёх учеников в уроке, доска и слайды рядом с видео.
             </p>
           </div>
-          <a href={APP.register} className={cn(buttonVariants({ size: "cta" }), "shrink-0 self-start lg:self-auto")}>
+          <a data-umami-event="Начать бесплатно" data-umami-event-place="статья, конец" href={APP.register} className={cn(buttonVariants({ size: "cta" }), "shrink-0 self-start lg:self-auto")}>
             Начать бесплатно
           </a>
         </div>

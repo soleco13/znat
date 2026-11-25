@@ -93,7 +93,7 @@ export function ContactsPage() {
               <a href={DEMO_MAILTO} className={buttonVariants({ size: "cta" })}>
                 Написать письмо
               </a>
-              <a
+              <a data-umami-event="Telegram" data-umami-event-place="контакты"
                 href={SUPPORT_TELEGRAM_URL}
                 target="_blank"
                 rel="noreferrer"

@@ -128,11 +128,11 @@ function PlanColumn({ plan: p, yearly }: { plan: Plan; yearly: boolean }) {
 
       <div className="mt-auto pt-8">
         {free ? (
-          <a href={APP.register} className={cn(buttonVariants({ variant: "secondary" }), "w-full")}>
+          <a data-umami-event="Начать бесплатно" data-umami-event-place="тарифы" href={APP.register} className={cn(buttonVariants({ variant: "secondary" }), "w-full")}>
             Начать бесплатно
           </a>
         ) : (
-          <a
+          <a data-umami-event="Подключить тариф" data-umami-event-place="тарифы" data-umami-event-plan={p.id}
             href={billingHref(p.id, yearly)}
             aria-label={`Подключить тариф «${p.name}»`}
             className={cn(buttonVariants(), "w-full")}
@@ -159,7 +159,7 @@ function Dedicated() {
               ваше расписание, свой домен и оформление. Условия — по договору.
             </p>
           </div>
-          <a href={DEMO_HREF} className={cn(buttonVariants({ variant: "secondary" }), "justify-self-start")}>
+          <a data-umami-event="Демонстрация" data-umami-event-place="тарифы" href={DEMO_HREF} className={cn(buttonVariants({ variant: "secondary" }), "justify-self-start")}>
             Обсудить условия
           </a>
         </div>
@@ -262,7 +262,7 @@ function Notes() {
                 {n.a ?? (
                   <>
                     Напишите в Telegram{" "}
-                    <a href={SUPPORT_TELEGRAM_URL} target="_blank" rel="noreferrer" className="font-semibold text-foreground underline decoration-border decoration-2 underline-offset-4 hover:decoration-primary">
+                    <a data-umami-event="Telegram" data-umami-event-place="тарифы" href={SUPPORT_TELEGRAM_URL} target="_blank" rel="noreferrer" className="font-semibold text-foreground underline decoration-border decoration-2 underline-offset-4 hover:decoration-primary">
                       {SUPPORT_TELEGRAM}
                     </a>
                     . Школам и организациям — также на почту, все способы{" "}

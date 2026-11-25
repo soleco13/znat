@@ -41,7 +41,7 @@ function Hero() {
             без регистрации, установки и второго сервиса.
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
-            <a href={APP.register} className={cn(buttonVariants({ size: "cta" }), "group")}>
+            <a data-umami-event="Начать бесплатно" data-umami-event-place="доска, первый экран" href={APP.register} className={cn(buttonVariants({ size: "cta" }), "group")}>
               Начать бесплатно
               <ArrowRight className="transition-transform duration-150 group-hover:translate-x-0.5" aria-hidden />
             </a>
@@ -252,7 +252,7 @@ function Closing() {
             Регистрация — пара минут. Затем отправьте ученику постоянную ссылку на урок.
           </p>
         </div>
-        <a href={APP.register} className={cn(buttonVariants({ size: "cta" }), "shrink-0 self-start lg:self-auto")}>
+        <a data-umami-event="Начать бесплатно" data-umami-event-place="доска, конец" href={APP.register} className={cn(buttonVariants({ size: "cta" }), "shrink-0 self-start lg:self-auto")}>
           Начать бесплатно
         </a>
       </div>

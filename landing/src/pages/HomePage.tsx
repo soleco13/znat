@@ -34,11 +34,11 @@ function Hero() {
             Ученик открывает ссылку и сразу попадает на урок, без регистрации и установки.
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
-            <a href={APP.register} className={cn(buttonVariants({ size: "cta" }), "group")}>
+            <a data-umami-event="Начать бесплатно" data-umami-event-place="главная, первый экран" href={APP.register} className={cn(buttonVariants({ size: "cta" }), "group")}>
               Начать бесплатно
               <ArrowRight className="transition-transform duration-150 group-hover:translate-x-0.5" aria-hidden />
             </a>
-            <a href={DEMO_HREF} className={cn(buttonVariants({ variant: "quiet", size: "cta" }), "self-start px-0 sm:self-auto")}>
+            <a data-umami-event="Демонстрация" data-umami-event-place="главная, первый экран" href={DEMO_HREF} className={cn(buttonVariants({ variant: "quiet", size: "cta" }), "self-start px-0 sm:self-auto")}>
               Демонстрация для школы
             </a>
           </div>
@@ -214,10 +214,10 @@ function Closing() {
           </p>
         </div>
         <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
-          <a href={APP.register} className={buttonVariants({ size: "cta" })}>
+          <a data-umami-event="Начать бесплатно" data-umami-event-place="главная, конец" href={APP.register} className={buttonVariants({ size: "cta" })}>
             Начать бесплатно
           </a>
-          <a href={DEMO_HREF} className={cn(buttonVariants({ variant: "quiet", size: "cta" }), "self-start px-0 sm:self-auto")}>
+          <a data-umami-event="Демонстрация" data-umami-event-place="главная, конец" href={DEMO_HREF} className={cn(buttonVariants({ variant: "quiet", size: "cta" }), "self-start px-0 sm:self-auto")}>
             Запросить демонстрацию
           </a>
         </div>

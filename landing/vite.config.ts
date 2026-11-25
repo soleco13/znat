@@ -143,8 +143,15 @@ function structuredData(site: string, path: string): object | null {
  * canonical и og:url в каждой странице, robots.txt и sitemap.xml в сборке.
  * Без адреса эти теги и файлы не появляются — неверный canonical хуже никакого.
  */
-function seo(siteUrl: string | undefined): Plugin {
+function seo(siteUrl: string | undefined, umamiWebsiteId: string | undefined): Plugin {
   const site = siteUrl?.replace(/\/$/, "");
+  // Счётчик Umami (свой сервер, docker-compose.prod.yml → umami; /u/* в
+  // Caddyfile.prod). Без cookie; data-domains — только на боевом домене, со
+  // стенда и локально события не уходят. Клики — атрибуты data-umami-event.
+  const umami =
+    site && umamiWebsiteId
+      ? `    <script defer src="/u/script.js" data-website-id="${umamiWebsiteId}" data-host-url="${site}/u" data-domains="${new URL(site).hostname}"></script>\n`
+      : "";
   return {
     name: "seo",
     transformIndexHtml: {
@@ -159,7 +166,7 @@ function seo(siteUrl: string | undefined): Plugin {
         const ldTag = ld ? `    <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>\n` : "";
         return html.replace(
           "</head>",
-          `    <link rel="canonical" href="${url}" />\n    <meta property="og:url" content="${url}" />\n    <meta property="og:image" content="${site}${BASE}og.png" />\n    <meta name="twitter:card" content="summary" />\n${ldTag}  </head>`,
+          `    <link rel="canonical" href="${url}" />\n    <meta property="og:url" content="${url}" />\n    <meta property="og:image" content="${site}${BASE}og.png" />\n    <meta name="twitter:card" content="summary" />\n${ldTag}${umami}  </head>`,
         );
       },
     },
@@ -187,7 +194,7 @@ function seo(siteUrl: string | undefined): Plugin {
 export default defineConfig(({ mode, isSsrBuild }) => {
   const env = loadEnv(mode, process.cwd(), "VITE_");
   return {
-    plugins: isSsrBuild ? [react()] : [react(), devPages(), seo(env.VITE_SITE_URL), brotliAssets()],
+    plugins: isSsrBuild ? [react()] : [react(), devPages(), seo(env.VITE_SITE_URL, env.VITE_UMAMI_WEBSITE_ID), brotliAssets()],
     resolve: {
       alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
     },

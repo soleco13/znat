@@ -87,10 +87,10 @@ function Header({ page }: { page: PageId }) {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
-          <a href={APP.login} className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex")}>
+          <a data-umami-event="Войти" data-umami-event-place="шапка" href={APP.login} className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex")}>
             Войти
           </a>
-          <a href={APP.register} className={buttonVariants()}>
+          <a data-umami-event="Начать бесплатно" data-umami-event-place="шапка" href={APP.register} className={buttonVariants()}>
             <span>
               Начать<span className="hidden sm:inline"> бесплатно</span>
             </span>
@@ -128,7 +128,7 @@ function Header({ page }: { page: PageId }) {
               </li>
             ))}
             <li>
-              <a href={APP.login} className="flex min-h-12 items-center text-body font-semibold text-text-2">
+              <a data-umami-event="Войти" data-umami-event-place="меню" href={APP.login} className="flex min-h-12 items-center text-body font-semibold text-text-2">
                 Войти
               </a>
             </li>
@@ -185,7 +185,7 @@ function Footer() {
           <h2 className="text-caption font-semibold text-text-3">Связь</h2>
           <ul className="mt-3 space-y-2">
             <li>
-              <a href={SUPPORT_TELEGRAM_URL} target="_blank" rel="noreferrer" className="-my-1 inline-block py-1.5 text-small text-text-2 transition-colors duration-150 hover:text-foreground">
+              <a data-umami-event="Telegram" data-umami-event-place="подвал" href={SUPPORT_TELEGRAM_URL} target="_blank" rel="noreferrer" className="-my-1 inline-block py-1.5 text-small text-text-2 transition-colors duration-150 hover:text-foreground">
                 Telegram {SUPPORT_TELEGRAM}
               </a>
             </li>
