@@ -183,6 +183,21 @@ www.{$CADDY_DOMAIN} {
 	redir https://{$CADDY_DOMAIN}{uri} permanent
 }
 
+# Панель статистики Umami (docker-compose.prod.yml → umami). Вход — по
+# паролю Umami; поисковикам — noindex. A-запись stats.* добавлена 2026-11-25.
+stats.{$CADDY_DOMAIN} {
+	# Без security_headers: его CSP (только свои скрипты, без inline) сломал
+	# бы Next.js-панель Umami. Базовые заголовки — здесь.
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Robots-Tag "noindex, nofollow"
+		-Server
+	}
+	reverse_proxy umami:3000
+}
+
 # Имя TURN: сайт нужен только ради сертификата Let's Encrypt для TURNS
 # (coturn :5349). Сам coturn его не получает — Caddy хранит ключ 0600 root,
 # а coturn работает под nobody: копию в turn-certs/ кладёт и coturn
