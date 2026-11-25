@@ -4,7 +4,7 @@
 
 | Класс | Адреса | Индекс | Механизм |
 |---|---|---|---|
-| Публичные индексируемые | `/`, `/pricing`, `/contacts` | да | в sitemap.xml, canonical на себя, HTML с текстом (предрендер) |
+| Публичные индексируемые | `/`, `/doska`, `/pricing`, `/contacts`, `/blog/kak-provodit-onlajn-uroki` | да | в sitemap.xml, canonical на себя, HTML с текстом (предрендер) |
 | Публичные, не для поиска | `/login`, `/register`, `/terms`, `/privacy`, `/consent`, `/requisites`, `/forgot-password` | нет | `noindex` в `apps/web/index.html` |
 | Приватные | кабинет (`/lessons`, `/billing`, …), уроки `/<код>` | нет | `noindex` + вход по токену; robots.txt их **не** запрещает, иначе робот не увидит `noindex` |
 | Технические | `/api/*` | нет | `Disallow: /api/` в robots.txt |
@@ -58,3 +58,10 @@ Sitemap: https://matis-edu.ru/sitemap.xml
 ## Адреса и редиректы (Caddyfile, проверено 25.11)
 
 `http → https` 308, `www → без www` 301, `/pricing/ → /pricing` и `/contacts/ → /contacts` 301. Цепочек и циклов нет.
+
+## Как добавить страницу сайта
+
+1. `landing/<путь>/index.html` (title, description, og), `src/entries/<имя>.tsx`, страница в `src/pages/`.
+2. `PAGES` в `landing/vite.config.ts` (sitemap и canonical берутся оттуда) и `src/entries/prerender.tsx`.
+3. Шапка — `PAGES` в `src/lib/site.ts`, статья — `ARTICLES` (подвал).
+4. Caddyfile и Caddyfile.prod: `@app_pages`, `@landing_page`, `@landing_pages`, `redir …/ …`. Выкатка — `caddy validate`, затем `caddy reload` только без живых уроков.

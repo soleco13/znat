@@ -159,6 +159,23 @@
     .container-l { padding-inline: 32px; }
   }
 
+  /* Текст статьи (/blog/…): ровный ритм, без карточек и цветных плашек. */
+  .guide-prose { color: var(--c-text-2); font-size: 17px; line-height: 1.7; }
+  .guide-prose > section + section { margin-top: 64px; }
+  .guide-prose h2 {
+    color: var(--c-text); font-size: 26px; line-height: 1.2; font-weight: 700;
+    letter-spacing: -0.025em; text-wrap: balance; margin-bottom: 20px;
+  }
+  .guide-prose p + p, .guide-prose p + ul, .guide-prose p + ol,
+  .guide-prose ul + p, .guide-prose ol + p { margin-top: 16px; }
+  .guide-prose ul, .guide-prose ol { padding-left: 1.25em; }
+  .guide-prose ul { list-style: disc; }
+  .guide-prose ol { list-style: decimal; }
+  .guide-prose li { padding-left: 4px; }
+  .guide-prose li + li { margin-top: 10px; }
+  .guide-prose li::marker { color: var(--c-text-3); }
+  .guide-prose strong { color: var(--c-text); font-weight: 650; }
+
   /* Интерфейс урока — шрифт и трекинг как в приложении, а не как у лендинга. */
   .lesson-ui {
     font-family: var(--font-app);

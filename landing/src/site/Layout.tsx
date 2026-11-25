@@ -4,10 +4,10 @@ import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
-import { APP, PAGES, type PageId } from "@/lib/site";
+import { APP, ARTICLES, PAGES, type PageId } from "@/lib/site";
 import { SUPPORT_EMAIL, SUPPORT_TELEGRAM, SUPPORT_TELEGRAM_URL } from "@/lib/contacts";
 
-/** Общая рамка трёх страниц: шапка, `<main>`, подвал. */
+/** Общая рамка страниц сайта: шапка, `<main>`, подвал. */
 export function Layout({ page, children }: { page: PageId; children: ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col bg-background">
@@ -142,7 +142,7 @@ function Header({ page }: { page: PageId }) {
 const FOOTER_LINKS = [
   {
     title: "Сайт",
-    links: PAGES.map((p) => ({ label: p.label, href: p.href })),
+    links: [...PAGES, ...ARTICLES].map((p) => ({ label: p.label, href: p.href })),
   },
   {
     title: "Документы",
@@ -162,7 +162,7 @@ function Footer() {
         <div>
           <Logo />
           <p className="mt-4 max-w-[32ch] text-small text-muted-foreground">
-            Платформа для онлайн-уроков репетиторов и школ.
+            Платформа для онлайн-уроков репетитора: видео, доска и слайды в одном окне.
           </p>
         </div>
 

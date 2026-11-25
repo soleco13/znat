@@ -10,11 +10,15 @@ import { renderToString } from "react-dom/server";
 import { HomePage } from "@/pages/HomePage";
 import { PricingPage } from "@/pages/PricingPage";
 import { ContactsPage } from "@/pages/ContactsPage";
+import { DoskaPage } from "@/pages/DoskaPage";
+import { GuidePage } from "@/pages/GuidePage";
 
 const pages: Record<string, () => ReactNode> = {
   "index.html": () => <HomePage />,
   "pricing/index.html": () => <PricingPage />,
   "contacts/index.html": () => <ContactsPage />,
+  "doska/index.html": () => <DoskaPage />,
+  "blog/kak-provodit-onlajn-uroki/index.html": () => <GuidePage />,
 };
 
 export function render(file: string): string {

@@ -30,8 +30,8 @@ function Hero() {
             <span className="whitespace-nowrap">Онлайн-урок</span> в&nbsp;одной вкладке
           </h1>
           <p className="mt-5 max-w-[34em] text-body text-text-2 sm:mt-6 sm:text-lead">
-            Видеосвязь, доска и слайды для репетиторов и онлайн-школ. Ученик открывает
-            ссылку и сразу попадает на урок, без регистрации и установки.
+            Платформа для онлайн-уроков репетитора: видеосвязь, доска и слайды в одном окне.
+            Ученик открывает ссылку и сразу попадает на урок, без регистрации и установки.
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
             <a href={APP.register} className={cn(buttonVariants({ size: "cta" }), "group")}>

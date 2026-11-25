@@ -6,16 +6,19 @@ import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { PLANS } from "./src/lib/plans";
 import { SUPPORT_EMAIL } from "./src/lib/contacts";
+import { GUIDE_PUBLISHED } from "./src/pages/guide-meta";
 
 /**
  * Страницы сайта: адрес на домене → HTML-файл в сборке. Caddy отдаёт их
- * напрямую из dist/ (корневой Caddyfile, `handle /pricing` и т.д.), поэтому
- * адреса здесь и там должны совпадать.
+ * напрямую из dist/ (корневой Caddyfile и Caddyfile.prod, `@landing_pages`,
+ * `@landing_page`, `@app_pages`), поэтому новый адрес добавлять и туда.
  */
 const PAGES = [
   { path: "/", file: "index.html" },
+  { path: "/doska", file: "doska/index.html" },
   { path: "/pricing", file: "pricing/index.html" },
   { path: "/contacts", file: "contacts/index.html" },
+  { path: "/blog/kak-provodit-onlajn-uroki", file: "blog/kak-provodit-onlajn-uroki/index.html" },
 ];
 
 const BASE = "/landing/";
@@ -75,7 +78,8 @@ function devPages(): Plugin {
 
 /**
  * Разметка Schema.org (JSON-LD) — только то, что видно на самой странице:
- * на главной — сайт и организация, на «Тарифах» — сервис с открытыми ценами
+ * на главной — сайт и организация, на «Тарифах» — сервис с открытыми ценами,
+ * у статьи — Article
  * (из src/lib/plans.ts, скрытые тарифы не попадают). Ни рейтингов, ни отзывов,
  * ни адреса — их на сайте нет.
  */
@@ -96,6 +100,20 @@ function structuredData(site: string, path: string): object | null {
         org,
         { "@type": "WebSite", "@id": `${site}/#site`, url: `${site}/`, name: "Матис", inLanguage: "ru", publisher: { "@id": `${site}/#org` } },
       ],
+    };
+  }
+  if (path === "/blog/kak-provodit-onlajn-uroki") {
+    return {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      headline: "Как проводить онлайн-уроки: руководство для репетитора",
+      inLanguage: "ru",
+      datePublished: GUIDE_PUBLISHED,
+      dateModified: GUIDE_PUBLISHED,
+      mainEntityOfPage: `${site}${path}`,
+      image: `${site}${BASE}og.png`,
+      author: { "@type": "Organization", name: "Матис", url: `${site}/` },
+      publisher: org,
     };
   }
   if (path === "/pricing") {
