@@ -19,6 +19,7 @@ import { warmChunk } from "./shared/chunk-warmup.js";
 // файлом 4,9 МБ, и на мобильной сети страница урока не открывалась. Вход
 // ученика по ссылке (`GuestJoinPage`) — в основном куске, он открывается первым.
 const LoginPage = lazyNamed(() => import("./features/auth/LoginPage.js"), "LoginPage");
+const AccountPage = lazyNamed(() => import("./features/account/AccountPage.js"), "AccountPage");
 const ChangePasswordPage = lazyNamed(() => import("./features/account/ChangePasswordPage.js"), "ChangePasswordPage");
 const ForgotPasswordPage = lazyNamed(() => import("./features/account/ForgotPasswordPage.js"), "ForgotPasswordPage");
 const ResetPasswordPage = lazyNamed(() => import("./features/account/ResetPasswordPage.js"), "ResetPasswordPage");
@@ -108,6 +109,7 @@ export function App() {
         <Route path="/consent/lesson" element={<LessonConsentPage />} />
         <Route path="/requisites" element={<RequisitesPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/account" element={<Shell><AccountPage /></Shell>} />
         <Route path="/account/password" element={<Shell><ChangePasswordPage /></Shell>} />
         {/* Э14.1/Э14.2 — публичная визитка пространства и приём приглашения, вне AppShell/RequireAuth. */}
         <Route path="/s/:slug" element={<SpacePage />} />

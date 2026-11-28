@@ -1,24 +1,13 @@
-import { useLayoutEffect, useState, type ReactNode } from "react";
-import { Link, NavLink, useMatch, useNavigate } from "react-router-dom";
-import { CalendarDays, ChevronsUpDown, KeyRound, LifeBuoy, Library, LogOut, PlayCircle, CreditCard, SquarePen } from "lucide-react";
+import { useLayoutEffect, type ReactNode } from "react";
+import { Link, NavLink, useMatch } from "react-router-dom";
+import { CalendarDays, Library, PlayCircle, CreditCard, SquarePen } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useBillingAccess } from "./billing-access.js";
-import { SpaceMenuItems, useSpaces } from "./SpaceSwitcher.js";
-import { SupportDialog } from "./SupportContacts.js";
 
 import { cn } from "@/lib/utils";
-import { apiFetch } from "@/shared/api-client";
 import { useAuthStore } from "@/shared/auth-store";
 import { UserAvatar } from "@/shared/ui/avatar";
 import { markRoleOf } from "@/shared/ui/role-mark";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/shared/ui/dropdown-menu";
 import { SimpleTooltip, TooltipProvider } from "@/shared/ui/tooltip";
 import { BrandMark } from "@/shared/ui/brand-mark";
 
@@ -55,54 +44,6 @@ const NAV: NavItem[] = [
   { to: "/materials", label: "Библиотека", icon: Library, end: true },
 ];
 
-function AccountMenu({
-  children,
-  onLogout,
-  side,
-}: {
-  children: ReactNode;
-  onLogout: () => void;
-  side: "bottom" | "right";
-}) {
-  const user = useAuthStore((s) => s.user);
-  const spaces = useSpaces();
-  const [supportOpen, setSupportOpen] = useState(false);
-  return (
-    <>
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
-      <DropdownMenuContent side={side} align="end" className="w-56">
-        {user ? (
-          <>
-            <DropdownMenuLabel className="flex flex-col font-normal">
-              <span className="truncate text-sm font-semibold text-foreground">{user.fullName}</span>
-              <span className="truncate text-xs text-muted-foreground">{user.email}</span>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-          </>
-        ) : null}
-        <SpaceMenuItems spaces={spaces} />
-        <DropdownMenuItem asChild>
-          <Link to="/account/password">
-            <KeyRound aria-hidden />
-            Сменить пароль
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => setSupportOpen(true)}>
-          <LifeBuoy aria-hidden />
-          Поддержка
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onLogout}>
-          <LogOut aria-hidden />
-          Выйти
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-    <SupportDialog open={supportOpen} onOpenChange={setSupportOpen} />
-    </>
-  );
-}
-
 /**
  * Пункт боковой панели. Активность — через `useMatch`, а не функцию
  * `className` у NavLink: подсказка (Radix Slot) склеивает className строкой.
@@ -133,8 +74,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
   const methodist = useAuthStore((s) => s.user?.roles?.includes("methodist") ?? false);
   const nav = [...NAV, ...(methodist ? [EDITOR_ITEM] : []), ...(billing ? [BILLING_ITEM] : [])];
   const user = useAuthStore((s) => s.user);
-  const clearAuth = useAuthStore((s) => s.clearAuth);
-  const navigate = useNavigate();
+  const accountActive = useMatch({ path: "/account", end: false }) !== null;
 
   useLayoutEffect(() => {
     const html = document.documentElement;
@@ -147,12 +87,6 @@ export function TeacherShell({ children }: { children: ReactNode }) {
       html.removeAttribute("data-teacher-zoom");
     };
   }, []);
-
-  async function logout() {
-    await apiFetch("/auth/logout", { method: "POST" }).catch(() => {});
-    clearAuth();
-    navigate("/login");
-  }
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -174,20 +108,23 @@ export function TeacherShell({ children }: { children: ReactNode }) {
           </nav>
           {user ? (
             <div className="shrink-0 border-t border-border p-3">
-              <AccountMenu onLogout={() => void logout()} side="right">
-                <button
-                  type="button"
-                  aria-label="Аккаунт"
-                  className="flex w-full items-center justify-center gap-2.5 rounded-md p-1.5 text-left transition-colors duration-150 ease-ds hover:bg-secondary lg:justify-start"
+              <SimpleTooltip content="Личный кабинет" side="right" className="lg:hidden">
+                <Link
+                  to="/account"
+                  aria-label={`Личный кабинет — ${user.fullName}`}
+                  aria-current={accountActive ? "page" : undefined}
+                  className={cn(
+                    "flex w-full items-center justify-center gap-2.5 rounded-md p-1.5 text-left transition-colors duration-150 ease-ds lg:justify-start",
+                    accountActive ? "bg-accent" : "hover:bg-secondary",
+                  )}
                 >
                   <UserAvatar colorKey={user.id} role={markRoleOf("staff", user.role)} size={36} />
                   <span className="hidden min-w-0 flex-1 flex-col leading-tight lg:flex">
                     <span className="truncate text-sm font-semibold text-foreground">{user.fullName}</span>
                     <span className="text-xs text-muted-foreground">Учитель</span>
                   </span>
-                  <ChevronsUpDown className="hidden size-4 shrink-0 text-muted-foreground lg:block" aria-hidden />
-                </button>
-              </AccountMenu>
+                </Link>
+              </SimpleTooltip>
             </div>
           ) : null}
         </aside>
@@ -200,11 +137,9 @@ export function TeacherShell({ children }: { children: ReactNode }) {
           </Link>
           <span className="flex-1" />
           {user ? (
-            <AccountMenu onLogout={() => void logout()} side="bottom">
-              <button type="button" className="rounded-full" aria-label="Аккаунт">
-                <UserAvatar colorKey={user.id} role={markRoleOf("staff", user.role)} size={34} />
-              </button>
-            </AccountMenu>
+            <Link to="/account" className="rounded-full" aria-label="Личный кабинет">
+              <UserAvatar colorKey={user.id} role={markRoleOf("staff", user.role)} size={34} />
+            </Link>
           ) : null}
         </header>
 

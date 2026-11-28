@@ -253,11 +253,17 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           {user ? (
             <div className="flex items-center gap-3">
-              <div className="hidden text-right leading-tight sm:block">
-                <div className="text-sm font-semibold text-foreground">{user.fullName}</div>
-                <div className="text-xs text-muted-foreground">{ROLE_LABEL[user.role]}</div>
-              </div>
-              <UserAvatar colorKey={user.id} role={markRoleOf("staff", user.role)} size={38} />
+              <Link
+                to="/account"
+                aria-label={`Личный кабинет — ${user.fullName}`}
+                className="flex items-center gap-3 rounded-md p-1 transition-colors hover:bg-secondary"
+              >
+                <span className="hidden text-right leading-tight sm:block">
+                  <span className="block text-sm font-semibold text-foreground">{user.fullName}</span>
+                  <span className="block text-xs text-muted-foreground">{ROLE_LABEL[user.role]}</span>
+                </span>
+                <UserAvatar colorKey={user.id} role={markRoleOf("staff", user.role)} size={38} />
+              </Link>
               <SimpleTooltip content="Поддержка">
                 <Button variant="ghost" size="icon" onClick={() => setSupportOpen(true)} aria-label="Поддержка">
                   <LifeBuoy />

@@ -23,7 +23,7 @@ import { notify } from "@/shared/ui/notify";
  */
 const ROLE: Record<Role, string> = { admin: "администратор", teacher: "учитель", methodist: "методист" };
 export const rolesLabel = (roles: Role[]) => roles.map((r) => ROLE[r]).join(" и ");
-const spaceLabel = (s: Space) => (s.kind === "individual" ? "Личный кабинет" : s.name);
+export const spaceLabel = (s: Space) => (s.kind === "individual" ? "Личный кабинет" : s.name);
 
 export function useSpaces(): Space[] {
   const key = useAuthStore((s) => (s.user ? `${s.user.id}:${s.user.schoolId}` : null));
@@ -56,7 +56,7 @@ export async function switchSpace(schoolId: string, to = "/"): Promise<void> {
   }
 }
 
-/** Пункты пространств — внутри меню аккаунта (кабинет учителя). */
+/** Пункты пространств — в меню переключателя в шапке. */
 export function SpaceMenuItems({ spaces }: { spaces: Space[] }) {
   if (spaces.length < 2) return null;
   return (
