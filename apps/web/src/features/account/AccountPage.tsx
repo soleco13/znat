@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties, type MouseEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, ArrowUpRight, Check, LogOut } from "lucide-react";
 import { BILLING_PLANS, type Role } from "@school/shared";
@@ -11,6 +11,7 @@ import { rolesLabel, spaceLabel, switchSpace, useSpaces } from "@/shared/SpaceSw
 import { useSupportContacts } from "@/shared/SupportContacts";
 import { RoleMark, markRoleOf, tintOf } from "@/shared/ui/role-mark";
 import { getBillingState } from "@/features/billing/billing-api";
+import "./account.css";
 
 const ROLE_LABEL: Record<Role, string> = {
   admin: "Администратор",
@@ -21,6 +22,32 @@ const ROLE_LABEL: Record<Role, string> = {
 const tile = "rounded-[28px] bg-card p-6 sm:p-8";
 const tileLabel = "text-sm font-semibold text-muted-foreground";
 const arrowDot = "flex size-11 shrink-0 items-center justify-center rounded-full";
+
+/** Анимация из макета: имя кейфрейма, длительность и задержка в секундах. */
+function anim(name: string, dur: number, delay = 0): CSSProperties {
+  return { animationName: name, animationDuration: `${dur}s`, animationDelay: `${delay}s` };
+}
+
+/** Наклон плитки с аватаром за курсором — только мышью, не на телефоне. */
+function useTilt() {
+  const [t, setT] = useState({ rx: 0, ry: 0, gx: 50, gy: 30, on: false });
+  const can = () => window.matchMedia("(hover: hover) and (pointer: fine) and (min-width: 640px)").matches;
+  return {
+    style: { transform: `rotateX(${t.rx.toFixed(2)}deg) rotateY(${t.ry.toFixed(2)}deg)` } satisfies CSSProperties,
+    glare: {
+      background: `radial-gradient(60% 50% at ${t.gx}% ${t.gy}%, rgba(255,255,255,.22), transparent 70%)`,
+      opacity: t.on ? 1 : 0,
+    } satisfies CSSProperties,
+    onMouseMove: (e: MouseEvent<HTMLElement>) => {
+      if (!can()) return;
+      const b = e.currentTarget.getBoundingClientRect();
+      const x = (e.clientX - b.left) / b.width;
+      const y = (e.clientY - b.top) / b.height;
+      setT({ ry: (x - 0.5) * 10, rx: (0.5 - y) * 8, gx: Math.round(x * 100), gy: Math.round(y * 100), on: true });
+    },
+    onMouseLeave: () => setT((p) => ({ ...p, rx: 0, ry: 0, on: false })),
+  };
+}
 
 /** Имя — первой строкой, остальное (фамилия, отчество) — второй, как в макете «ЛК». */
 function splitName(fullName: string): [string, string] {
@@ -63,6 +90,7 @@ export function AccountPage() {
   const spaces = useSpaces();
   const contacts = useSupportContacts();
   const [leaving, setLeaving] = useState(false);
+  const tilt = useTilt();
 
   useEffect(() => {
     document.title = "Личный кабинет — Матис";
@@ -80,7 +108,7 @@ export function AccountPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1100px] animate-fade-in">
+    <div className="pf-root mx-auto w-full max-w-[1100px]">
       <div
         className={cn(
           "grid gap-3 sm:gap-4",
@@ -94,23 +122,46 @@ export function AccountPage() {
       >
         {/* Аватар */}
         <div
-          className="flex aspect-[4/3] items-center justify-center rounded-[28px] [grid-area:p] sm:aspect-auto sm:min-h-[260px] lg:min-h-[440px]"
-          style={{ backgroundColor: tint.bg, color: tint.fg }}
+          onMouseMove={tilt.onMouseMove}
+          onMouseLeave={tilt.onMouseLeave}
+          className="pf-ease-in-out [grid-area:p] [perspective:1100px]"
+          style={anim("pf-curtain", 1)}
         >
-          <span aria-hidden>
-            <RoleMark role={markRoleOf("staff", user.role)} disc={150} />
-          </span>
+          <div
+            className="relative flex aspect-[4/3] h-full items-center justify-center overflow-hidden rounded-[28px] transition-transform duration-500 ease-[cubic-bezier(.2,.8,.2,1)] [transform-style:preserve-3d] sm:aspect-auto sm:min-h-[260px] lg:min-h-[440px]"
+            style={{ backgroundColor: tint.bg, color: tint.fg, ...tilt.style }}
+          >
+            <span aria-hidden className="pf-ease" style={anim("pf-zoom", 1.5)}>
+              <RoleMark role={markRoleOf("staff", user.role)} disc={150} />
+            </span>
+            <span aria-hidden className="pointer-events-none absolute inset-0 transition-opacity duration-300" style={tilt.glare} />
+          </div>
         </div>
 
         {/* Имя */}
-        <section className={cn(tile, "flex min-h-[200px] min-w-0 flex-col justify-between gap-8 [grid-area:n]")}>
+        <section
+          className={cn(tile, "pf-ease flex min-h-[200px] min-w-0 flex-col justify-between gap-8 [grid-area:n]")}
+          style={anim("pf-pop", 0.6, 0.1)}
+        >
           <span className={tileLabel}>{ROLE_LABEL[user.role]}</span>
           <div className="min-w-0">
             <h1 className="break-words font-display text-[40px] font-extrabold leading-[0.98] tracking-[-0.045em] text-foreground lg:text-[52px]">
-              {first}
-              {rest ? <span className="block text-muted-foreground/70">{rest}</span> : null}
+              <span className="block overflow-hidden pb-[0.06em]">
+                <span className="pf-ease block" style={anim("pf-line", 0.8, 0.35)}>
+                  {first}
+                </span>
+              </span>
+              {rest ? (
+                <span className="block overflow-hidden pb-[0.06em] text-muted-foreground/70">
+                  <span className="pf-ease block" style={anim("pf-line", 0.8, 0.47)}>
+                    {rest}
+                  </span>
+                </span>
+              ) : null}
             </h1>
-            <p className="mt-4 truncate text-[15px] text-muted-foreground">{user.email}</p>
+            <p className="pf-ease mt-4 truncate text-[15px] text-muted-foreground" style={anim("pf-fade", 0.5, 0.7)}>
+              {user.email}
+            </p>
           </div>
         </section>
 
@@ -118,15 +169,19 @@ export function AccountPage() {
         {billing ? (
           <Link
             to="/billing"
-            className="flex min-h-[140px] min-w-0 flex-col justify-between gap-6 rounded-[28px] bg-primary p-6 text-white transition-colors hover:bg-primary-hover sm:min-h-[200px] sm:p-8 [grid-area:t]"
+            className="pf-ease-in-out flex min-h-[140px] min-w-0 flex-col justify-between gap-6 rounded-[28px] bg-primary p-6 text-white transition-colors hover:bg-primary-hover sm:min-h-[200px] sm:p-8 [grid-area:t]"
+            style={anim("pf-bloom", 1, 0.2)}
           >
             <span className="flex items-center justify-between">
               <span className="text-sm font-semibold text-white/70">Тариф</span>
-              <span className={cn(arrowDot, "bg-white/15")}>
+              <span className={cn(arrowDot, "pf-ease bg-white/15")} style={anim("pf-twist", 0.7, 0.8)}>
                 <ArrowUpRight className="size-5" aria-hidden />
               </span>
             </span>
-            <span className="font-display text-[28px] font-extrabold leading-none tracking-[-0.04em] lg:text-[34px]">
+            <span
+              className="pf-ease font-display text-[28px] font-extrabold leading-none tracking-[-0.04em] lg:text-[34px]"
+              style={anim("pf-slide-x", 0.7, 0.6)}
+            >
               {planName ?? "…"}
             </span>
           </Link>
@@ -135,7 +190,8 @@ export function AccountPage() {
         {/* Пароль */}
         <Link
           to="/account/password"
-          className={cn(tile, "flex min-h-[140px] min-w-0 sm:min-h-[200px] flex-col justify-between gap-6 transition-colors hover:bg-secondary [grid-area:w]")}
+          className={cn(tile, "pf-ease flex min-h-[140px] min-w-0 origin-top flex-col justify-between gap-6 transition-colors hover:bg-secondary sm:min-h-[200px] [grid-area:w]")}
+          style={anim("pf-flip", 0.8, 0.3)}
         >
           <span className="flex items-center justify-between">
             <span className={tileLabel}>Пароль</span>
@@ -146,7 +202,7 @@ export function AccountPage() {
           <span className="flex flex-col gap-2">
             <span aria-hidden className="flex h-6 items-center gap-2">
               {Array.from({ length: 8 }, (_, i) => (
-                <span key={i} className="size-2.5 rounded-full bg-foreground" />
+                <span key={i} className="pf-ease size-2.5 rounded-full bg-foreground" style={anim("pf-dot", 0.4, 0.75 + i * 0.06)} />
               ))}
             </span>
             <span className="font-display text-xl font-extrabold tracking-[-0.03em] text-foreground">Сменить</span>
@@ -158,7 +214,8 @@ export function AccountPage() {
           href={contacts.telegramUrl}
           target="_blank"
           rel="noreferrer"
-          className="flex flex-col items-start justify-between gap-5 rounded-[28px] bg-foreground p-6 text-white sm:p-8 lg:min-h-[140px] lg:flex-row lg:items-center [grid-area:s]"
+          className="pf-ease flex flex-col items-start justify-between gap-5 rounded-[28px] bg-foreground p-6 text-white sm:p-8 lg:min-h-[140px] lg:flex-row lg:items-center [grid-area:s]"
+          style={anim("pf-rise", 0.9, 0.4)}
         >
           <span className="flex min-w-0 flex-col gap-1.5">
             <span className="font-display text-[26px] font-extrabold leading-tight tracking-[-0.04em] sm:text-[32px]">
@@ -168,7 +225,10 @@ export function AccountPage() {
               {contacts.telegram} в Telegram{contacts.email ? ` · ${contacts.email}` : ""}
             </span>
           </span>
-          <span className="flex h-12 shrink-0 items-center gap-2.5 rounded-full bg-white px-6 text-[15px] font-semibold text-foreground">
+          <span
+            className="pf-ease flex h-12 shrink-0 items-center gap-2.5 rounded-full bg-white px-6 text-[15px] font-semibold text-foreground"
+            style={anim("pf-slide-xr", 0.7, 0.85)}
+          >
             Написать
             <ArrowUpRight className="size-[18px]" aria-hidden />
           </span>
@@ -177,7 +237,7 @@ export function AccountPage() {
 
       {/* Пространства — было в меню аккаунта; показываем, только если их несколько */}
       {spaces.length > 1 ? (
-        <section aria-labelledby="spaces-title" className={cn(tile, "mt-3 sm:mt-4")}>
+        <section aria-labelledby="spaces-title" className={cn(tile, "pf-ease mt-3 sm:mt-4")} style={anim("pf-rise", 0.9, 0.5)}>
           <h2 id="spaces-title" className={tileLabel}>
             Пространства
           </h2>
@@ -209,7 +269,7 @@ export function AccountPage() {
         </section>
       ) : null}
 
-      <div className="mt-6 flex justify-center sm:justify-end">
+      <div className="pf-ease mt-6 flex justify-center sm:justify-end" style={anim("pf-fade", 0.5, 1.1)}>
         <button
           type="button"
           onClick={() => void logout()}

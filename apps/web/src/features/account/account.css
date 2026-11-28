@@ -1,0 +1,20 @@
+/* Анимации «Личного кабинета» — из макета владельца (ЛК учителя, 2026-11-28). */
+@keyframes pf-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pf-curtain { from { clip-path: inset(100% 0 0 0 round 28px); } to { clip-path: inset(0 0 0 0 round 28px); } }
+@keyframes pf-zoom { from { transform: scale(1.25); } to { transform: scale(1); } }
+@keyframes pf-pop { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
+@keyframes pf-line { from { transform: translateY(105%); } to { transform: none; } }
+@keyframes pf-bloom { from { clip-path: circle(0% at 100% 0%); } to { clip-path: circle(150% at 100% 0%); } }
+@keyframes pf-slide-x { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+@keyframes pf-slide-xr { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+@keyframes pf-twist { from { opacity: 0; transform: rotate(-120deg) scale(0.4); } to { opacity: 1; transform: none; } }
+@keyframes pf-flip { from { opacity: 0; transform: perspective(900px) rotateX(-75deg); } to { opacity: 1; transform: none; } }
+@keyframes pf-dot { 0% { opacity: 0; transform: scale(0); } 70% { opacity: 1; transform: scale(1.25); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes pf-rise { from { opacity: 0; transform: translateY(64px); } to { opacity: 1; transform: none; } }
+
+.pf-ease { animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); animation-fill-mode: both; }
+.pf-ease-in-out { animation-timing-function: cubic-bezier(0.7, 0, 0.2, 1); animation-fill-mode: both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-root * { animation: none !important; transition: none !important; }
+}
